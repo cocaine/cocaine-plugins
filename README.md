@@ -1,0 +1,4 @@
+cocaine-plugins
+===============
+
+Cocaine Plugins
