@@ -19,6 +19,7 @@
 */
 
 #include <boost/format.hpp>
+
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>

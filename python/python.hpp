@@ -27,10 +27,10 @@
 
 #include <Python.h>
 
-#include "cocaine/interfaces/sandbox.hpp"
+#include <cocaine/interfaces/sandbox.hpp>
 
-#include "cocaine/helpers/json.hpp"
-#include "cocaine/helpers/track.hpp"
+#include <cocaine/helpers/json.hpp>
+#include <cocaine/helpers/track.hpp>
 
 namespace cocaine { namespace engine {
 

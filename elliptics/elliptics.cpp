@@ -19,12 +19,13 @@
 */
 
 #include <boost/format.hpp>
+
+#include <cocaine/context.hpp>
+#include <cocaine/logging.hpp>
+
 #include <msgpack.hpp>
 
 #include "elliptics.hpp"
-
-#include "cocaine/context.hpp"
-#include "cocaine/logging.hpp"
 
 using namespace cocaine;
 using namespace cocaine::storages;

@@ -21,9 +21,9 @@
 #ifndef COCAINE_MONGO_STORAGE_HPP
 #define COCAINE_MONGO_STORAGE_HPP
 
-#include <mongo/client/dbclient.h>
+#include <cocaine/interfaces/storage.hpp>
 
-#include "cocaine/interfaces/storage.hpp"
+#include <mongo/client/dbclient.h>
 
 namespace cocaine { namespace storages {
 

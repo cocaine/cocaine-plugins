@@ -15,7 +15,6 @@
 #include <cocaine/interfaces/sandbox.hpp>
 
 #include <cocaine/helpers/json.hpp>
-#include <cocaine/helpers/track.hpp>
 
 extern "C" {
 	struct binary_chunk {

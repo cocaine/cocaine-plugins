@@ -18,10 +18,10 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include "filesystem_monitor.hpp"
+#include <cocaine/engine.hpp>
+#include <cocaine/job.hpp>
 
-#include "cocaine/engine.hpp"
-#include "cocaine/job.hpp"
+#include "filesystem_monitor.hpp"
 
 using namespace cocaine;
 using namespace cocaine::engine::drivers;

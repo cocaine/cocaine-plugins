@@ -19,13 +19,14 @@
 */
 
 #include <boost/format.hpp>
+
+#include <cocaine/context.hpp>
+#include <cocaine/logging.hpp>
+
 #include <mongo/client/connpool.h>
 #include <mongo/client/gridfs.h>
 
 #include "mongo.hpp"
-
-#include "cocaine/context.hpp"
-#include "cocaine/logging.hpp"
 
 using namespace cocaine;
 using namespace cocaine::storages;

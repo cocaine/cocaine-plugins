@@ -21,14 +21,15 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/format.hpp>
+
+#include <cocaine/context.hpp>
+#include <cocaine/logging.hpp>
+#include <cocaine/manifest.hpp>
+
 #include <sstream>
 
 #include "python.hpp"
 #include "objects.hpp"
-
-#include "cocaine/context.hpp"
-#include "cocaine/logging.hpp"
-#include "cocaine/manifest.hpp"
 
 using namespace cocaine;
 using namespace cocaine::engine;

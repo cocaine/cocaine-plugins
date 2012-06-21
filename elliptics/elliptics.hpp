@@ -21,9 +21,9 @@
 #ifndef COCAINE_ELLIPTICS_STORAGE_HPP
 #define COCAINE_ELLIPTICS_STORAGE_HPP
 
-#include <elliptics/cppdef.h>
+#include <cocaine/interfaces/storage.hpp>
 
-#include "cocaine/interfaces/storage.hpp"
+#include <elliptics/cppdef.h>
 
 namespace cocaine { namespace storages {
 

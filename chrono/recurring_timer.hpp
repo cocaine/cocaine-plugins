@@ -21,12 +21,12 @@
 #ifndef COCAINE_RECURRING_TIMER_DRIVER_HPP
 #define COCAINE_RECURRING_TIMER_DRIVER_HPP
 
-#include "cocaine/common.hpp"
+#include <cocaine/common.hpp>
 
 // Has to be included after common.h
 #include <ev++.h>
 
-#include "cocaine/interfaces/driver.hpp"
+#include <cocaine/interfaces/driver.hpp>
 
 namespace cocaine { namespace engine { namespace drivers {
 

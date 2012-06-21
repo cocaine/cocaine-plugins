@@ -21,15 +21,16 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/format.hpp>
+
+#include <cocaine/context.hpp>
+#include <cocaine/logging.hpp>
+#include <cocaine/manifest.hpp>
+
+#include <cocaine/interfaces/sandbox.hpp>
+
 #include <sstream>
 
 #include <v8.h>
-
-#include "cocaine/context.hpp"
-#include "cocaine/logging.hpp"
-#include "cocaine/manifest.hpp"
-
-#include "cocaine/interfaces/sandbox.hpp"
 
 namespace cocaine { namespace engine {
 

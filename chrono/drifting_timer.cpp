@@ -18,9 +18,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include "drifting_timer.hpp"
+#include <cocaine/engine.hpp>
 
-#include "cocaine/engine.hpp"
+#include "drifting_timer.hpp"
 
 using namespace cocaine::engine::drivers;
 

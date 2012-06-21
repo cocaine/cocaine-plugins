@@ -21,9 +21,9 @@
 #ifndef COCAINE_DRIFTING_TIMER_DRIVER_HPP
 #define COCAINE_DRIFTING_TIMER_DRIVER_HPP
 
-#include "recurring_timer.hpp"
+#include <cocaine/job.hpp>
 
-#include "cocaine/job.hpp"
+#include "recurring_timer.hpp"
 
 namespace cocaine { namespace engine { namespace drivers {
 
