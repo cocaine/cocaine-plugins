@@ -6,10 +6,10 @@ IF(PYTHON)
 
     EXECUTE_PROCESS(
         COMMAND python-config --libs
-        OUTPUT_VARIABLE PYTHON_LDFLAGS
+        OUTPUT_VARIABLE PYTHON_LIBS
         OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-    IF(NOT PYTHON_CFLAGS OR NOT PYTHON_LDFLAGS)
+    IF(NOT PYTHON_CFLAGS OR NOT PYTHON_LIBS)
         MESSAGE(FATAL_ERROR "Python development files are required to build.")
         RETURN()
     ENDIF()
@@ -20,11 +20,11 @@ IF(PYTHON)
         io)
 
     TARGET_LINK_LIBRARIES(python
-        cocaine-core)
+        cocaine-core
+        ${PYTHON_LIBS})
 
     SET_TARGET_PROPERTIES(python PROPERTIES
         COMPILE_FLAGS "${PYTHON_CFLAGS} -fno-strict-aliasing"
-        LINK_FLAGS "${PYTHON_LDFLAGS}"
         PREFIX ""
         SUFFIX ".cocaine-plugin")
 
