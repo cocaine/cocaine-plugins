@@ -66,7 +66,13 @@ public:
             throw configuration_error_t("malformed manifest");
         }
 
+        Json::Value script_file = args["script-file"];
+        if (!script_file.isString()) {
+            throw configuration_error_t("malformed manifest, expected args script-file to be a name of the perl script to run");
+        }
+
         boost::filesystem::path source(manifest.path);
+        source/=script_file.asString();
 
         if(boost::filesystem::is_directory(source)) {
             throw configuration_error_t("malformed manifest, expected path to perl script, got a directory.");   
