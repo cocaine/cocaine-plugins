@@ -45,6 +45,8 @@ void python_io_t::destructor(python_io_t * self) {
     self->ob_type->tp_free(self);
     
     if(!self->request.empty()){
+        static cocaine::blob_t dummy("dummyValue", strlen("dummyValue"));
+        self->request = dummy;
         self->request.clear();
     }
 }
