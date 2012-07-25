@@ -80,7 +80,7 @@ namespace {
     };
 }
 
-elliptics_storage_t::elliptics_storage_t(context_t& context, const plugin_config_t& config):
+elliptics_storage_t::elliptics_storage_t(context_t& context, const storage_config_t& config):
     category_type(context, config),
     m_log(context.log(
         (boost::format("storage/%1%")

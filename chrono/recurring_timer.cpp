@@ -26,7 +26,7 @@
 using namespace cocaine;
 using namespace cocaine::engine::drivers;
 
-recurring_timer_t::recurring_timer_t(context_t& context, engine_t& engine, const plugin_config_t& config):
+recurring_timer_t::recurring_timer_t(context_t& context, engine_t& engine, const driver_config_t& config):
     category_type(context, engine, config),
     m_event(config.args["emit"].asString()),
     m_interval(config.args.get("interval", 0.0f).asInt() / 1000.0f),

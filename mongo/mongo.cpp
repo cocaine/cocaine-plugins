@@ -32,7 +32,7 @@ using namespace cocaine;
 using namespace cocaine::storages;
 using namespace mongo;
 
-mongo_storage_t::mongo_storage_t(context_t& context, const plugin_config_t& config) try:
+mongo_storage_t::mongo_storage_t(context_t& context, const storage_config_t& config) try:
     category_type(context, config),
     m_log(context.log(
         (boost::format("storage/%1%")

@@ -26,7 +26,7 @@
 using namespace cocaine;
 using namespace cocaine::engine::drivers;
 
-filesystem_monitor_t::filesystem_monitor_t(context_t& context, engine_t& engine, const plugin_config_t& config):
+filesystem_monitor_t::filesystem_monitor_t(context_t& context, engine_t& engine, const driver_config_t& config):
     category_type(context, engine, config),
     m_path(config.args.get("path", "").asString()),
     m_watcher(engine.loop())

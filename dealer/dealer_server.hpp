@@ -42,7 +42,7 @@ class dealer_server_t:
     public:
         dealer_server_t(context_t& context,
                         engine_t& engine,
-                        const plugin_config_t& config);
+                        const driver_config_t& config);
 
         ~dealer_server_t();
 

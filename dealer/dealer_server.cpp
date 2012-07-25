@@ -32,7 +32,7 @@ using namespace cocaine;
 using namespace cocaine::engine::drivers;
 using namespace cocaine::io;
 
-dealer_server_t::dealer_server_t(context_t& context, engine_t& engine, const plugin_config_t& config):
+dealer_server_t::dealer_server_t(context_t& context, engine_t& engine, const driver_config_t& config):
     category_type(context, engine, config),
     m_context(context),
     m_log(context.log(
