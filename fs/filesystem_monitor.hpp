@@ -39,7 +39,8 @@ class filesystem_monitor_t:
     public:
         filesystem_monitor_t(context_t& context,
                              engine_t& engine,
-                             const driver_config_t& config);
+                             const std::string& name,
+                             const Json::Value& args);
 
         virtual ~filesystem_monitor_t();
 

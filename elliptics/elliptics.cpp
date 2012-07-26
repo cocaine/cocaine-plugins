@@ -80,17 +80,17 @@ namespace {
     };
 }
 
-elliptics_storage_t::elliptics_storage_t(context_t& context, const storage_config_t& config):
-    category_type(context, config),
+elliptics_storage_t::elliptics_storage_t(context_t& context, const std::string& name, const Json::Value& args):
+    category_type(context, name, args),
     m_log(context.log(
         (boost::format("storage/%1%")
-            % config.name
+            % name
         ).str()
     )),
-    m_log_adapter(m_log, config.args.get("verbosity", DNET_LOG_ERROR).asUInt()),
+    m_log_adapter(m_log, args.get("verbosity", DNET_LOG_ERROR).asUInt()),
     m_node(m_log_adapter)
 {
-    Json::Value nodes(config.args["nodes"]);
+    Json::Value nodes(args["nodes"]);
 
     if(nodes.empty() || !nodes.isObject()) {
         throw storage_error_t("no nodes has been specified");
@@ -112,7 +112,7 @@ elliptics_storage_t::elliptics_storage_t(context_t& context, const storage_confi
         }
     }
 
-    Json::Value groups(config.args["groups"]);
+    Json::Value groups(args["groups"]);
 
     if(groups.empty() || !groups.isArray()) {
         throw storage_error_t("no groups has been specified");

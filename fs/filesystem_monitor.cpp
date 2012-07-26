@@ -26,9 +26,9 @@
 using namespace cocaine;
 using namespace cocaine::engine::drivers;
 
-filesystem_monitor_t::filesystem_monitor_t(context_t& context, engine_t& engine, const driver_config_t& config):
-    category_type(context, engine, config),
-    m_path(config.args.get("path", "").asString()),
+filesystem_monitor_t::filesystem_monitor_t(context_t& context, engine_t& engine, const std::string& name, const Json::Value& args):
+    category_type(context, engine, name, args),
+    m_path(args.get("path", "").asString()),
     m_watcher(engine.loop())
 {
     if(m_path.empty()) {

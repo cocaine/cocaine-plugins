@@ -39,7 +39,8 @@ class recurring_timer_t:
     public:
         recurring_timer_t(context_t& context,
                           engine_t& engine,
-                          const driver_config_t& config);
+                          const std::string& name,
+                          const Json::Value& args);
 
         virtual ~recurring_timer_t();
 

@@ -50,7 +50,8 @@ class elliptics_storage_t:
 
     public:
         elliptics_storage_t(context_t& context,
-                            const storage_config_t& config);
+                            const std::string& name,
+                            const Json::Value& args);
 
         virtual objects::value_type get(const std::string& ns,
                                         const std::string& key);

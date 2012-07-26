@@ -33,8 +33,8 @@ drifting_timer_job_t::~drifting_timer_job_t() {
     m_driver.rearm();
 }
 
-drifting_timer_t::drifting_timer_t(context_t& context, engine_t& engine, const driver_config_t& config):
-    recurring_timer_t(context, engine, config)
+drifting_timer_t::drifting_timer_t(context_t& context, engine_t& engine, const std::string& name, const Json::Value& args):
+    recurring_timer_t(context, engine, name, args)
 { }
 
 Json::Value drifting_timer_t::info() const {

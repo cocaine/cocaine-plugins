@@ -42,7 +42,8 @@ class dealer_server_t:
     public:
         dealer_server_t(context_t& context,
                         engine_t& engine,
-                        const driver_config_t& config);
+                        const std::string& name,
+                        const Json::Value& args);
 
         ~dealer_server_t();
 

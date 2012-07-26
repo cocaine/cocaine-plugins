@@ -47,7 +47,8 @@ class drifting_timer_t:
     public:
         drifting_timer_t(context_t& context,
                          engine_t& engine,
-                         const driver_config_t& config);
+                         const std::string& name,
+                         const Json::Value& args);
 
         // Driver interface.
         virtual Json::Value info() const;

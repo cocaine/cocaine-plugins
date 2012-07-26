@@ -32,21 +32,21 @@ using namespace cocaine;
 using namespace cocaine::engine::drivers;
 using namespace cocaine::io;
 
-dealer_server_t::dealer_server_t(context_t& context, engine_t& engine, const driver_config_t& config):
-    category_type(context, engine, config),
+dealer_server_t::dealer_server_t(context_t& context, engine_t& engine, const std::string& name, const Json::Value& args):
+    category_type(context, engine, name, args),
     m_context(context),
     m_log(context.log(
         (boost::format("app/%1%/%2%")
             % engine.manifest().name
-            % config.name
+            % name
         ).str()
     )),
-    m_event(config.args["emit"].asString()),
+    m_event(args["emit"].asString()),
     m_route(
         (boost::format("%1%/%2%/%3%")
             % context.config.runtime.hostname
             % engine.manifest().name
-            % config.name
+            % name
         ).str()
     ),
     m_watcher(engine.loop()),
@@ -58,7 +58,7 @@ dealer_server_t::dealer_server_t(context_t& context, engine_t& engine, const dri
 
     try {
         m_channel.setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
-        m_channel.bind(config.args["endpoint"].asString());
+        m_channel.bind(args["endpoint"].asString());
     } catch(const zmq::error_t& e) {
         throw configuration_error_t(std::string("invalid driver endpoint - ") + e.what());
     }

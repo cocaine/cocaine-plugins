@@ -32,14 +32,14 @@ using namespace cocaine;
 using namespace cocaine::storages;
 using namespace mongo;
 
-mongo_storage_t::mongo_storage_t(context_t& context, const storage_config_t& config) try:
-    category_type(context, config),
+mongo_storage_t::mongo_storage_t(context_t& context, const std::string& name, const Json::Value& args) try:
+    category_type(context, name, args),
     m_log(context.log(
         (boost::format("storage/%1%")
-            % config.name
+            % name
         ).str()
     )),
-    m_uri(config.args["uri"].asString(), ConnectionString::SET)
+    m_uri(args["uri"].asString(), ConnectionString::SET)
 {
     if(!m_uri.isValid()) {
         throw storage_error_t("invalid mongodb uri");
