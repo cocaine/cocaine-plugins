@@ -18,33 +18,44 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <cocaine/dealer/types.hpp>
-
 #include "dealer_job.hpp"
 
 using namespace cocaine::engine;
 using namespace cocaine::engine::drivers;
 
+namespace {
+
+struct acknowledgement;
+struct chunk;
+struct error;
+struct choke;
+
+typedef boost::mpl::list<
+    acknowledgement, chunk, error, choke
+>::type category;
+
+}
+
 namespace cocaine { namespace io {
 
-template<dealer::domain Command>
-struct packed<dealer::domain, Command>:
+template<class Tag>
+struct command<category, Tag>:
     public boost::tuple<const std::string&>
 {
     typedef boost::tuple<const std::string&> tuple_type;
 
-    packed(const std::string& tag):
+    command(const std::string& tag):
         tuple_type(tag)
     { }
 };
 
 template<>
-struct packed<dealer::domain, dealer::chunk>:
+struct command<category, chunk>:
     public boost::tuple<const std::string&, zmq::message_t&>
 {
     typedef boost::tuple<const std::string&, zmq::message_t&> tuple_type;
 
-    packed(const std::string& tag, zmq::message_t& message_):
+    command(const std::string& tag, zmq::message_t& message_):
         tuple_type(tag, message)
     {
         message.move(&message_);
@@ -55,12 +66,12 @@ private:
 };
 
 template<>
-struct packed<dealer::domain, dealer::error>:
+struct command<category, error>:
     public boost::tuple<const std::string&, int, const std::string&>
 {
     typedef boost::tuple<const std::string&, int, const std::string&> tuple_type;
 
-    packed(const std::string& tag, int code, const std::string& message):
+    command(const std::string& tag, int code, const std::string& message):
         tuple_type(tag, code, message)
     { }
 };
@@ -71,28 +82,28 @@ dealer_job_t::dealer_job_t(const std::string& event,
                            const blob_t& request,
                            const policy_t& policy,
                            io::channel_t& channel,
-                           const io::route_t& route,
+                           const route_t& route,
                            const std::string& tag):
     job_t(event, request, policy),
     m_channel(channel),
     m_route(route),
     m_tag(tag)
 {
-    io::packed<dealer::domain, dealer::acknowledgement> pack(m_tag);
+    io::command<category, acknowledgement> pack(m_tag);
     m_channel.send(m_route.front(), pack);
 }
 
 void dealer_job_t::react(const events::chunk& event) {
-    io::packed<dealer::domain, dealer::chunk> pack(m_tag, event.message);
+    io::command<category, chunk> pack(m_tag, event.message);
     m_channel.send(m_route.front(), pack);
 }
 
 void dealer_job_t::react(const events::error& event) {
-    io::packed<dealer::domain, dealer::error> pack(m_tag, event.code, event.message);
+    io::command<category, error> pack(m_tag, event.code, event.message);
     m_channel.send(m_route.front(), pack);
 }
 
 void dealer_job_t::react(const events::choke& event) {
-    io::packed<dealer::domain, dealer::choke> pack(m_tag);
+    io::command<category, choke> pack(m_tag);
     m_channel.send(m_route.front(), pack);
 }

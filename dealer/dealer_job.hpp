@@ -26,6 +26,8 @@
 
 namespace cocaine { namespace engine { namespace drivers {
 
+typedef std::vector<std::string> route_t;
+
 class dealer_job_t:
     public job_t
 {
@@ -34,7 +36,7 @@ class dealer_job_t:
                      const blob_t& request,
                      const policy_t& policy,
                      io::channel_t& channel,
-                     const io::route_t& route,
+                     const route_t& route,
                      const std::string& tag);
 
         virtual void react(const events::chunk& event);
@@ -43,7 +45,7 @@ class dealer_job_t:
 
     private:
         io::channel_t& m_channel;        
-        const io::route_t m_route;
+        const route_t m_route;
         const std::string m_tag;
 };
 
