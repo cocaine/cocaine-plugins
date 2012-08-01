@@ -23,12 +23,14 @@
 using namespace cocaine::engine;
 using namespace cocaine::engine::drivers;
 
-namespace {
+namespace rpc {
 
-struct acknowledgement;
-struct chunk;
-struct error;
-struct choke;
+struct dealer_rpc_tag;
+
+struct acknowledgement { typedef dealer_rpc_tag tag; };
+struct chunk           { typedef dealer_rpc_tag tag; };
+struct error           { typedef dealer_rpc_tag tag; };
+struct choke           { typedef dealer_rpc_tag tag; };
 
 typedef boost::mpl::list<
     acknowledgement, chunk, error, choke
@@ -38,8 +40,13 @@ typedef boost::mpl::list<
 
 namespace cocaine { namespace io {
 
-template<class Tag>
-struct command<category, Tag>:
+template<>
+struct dispatch<rpc::dealer_rpc_tag> {
+    typedef rpc::category category;
+};
+
+template<>
+struct command<rpc::acknowledgement>:
     public boost::tuple<const std::string&>
 {
     typedef boost::tuple<const std::string&> tuple_type;
@@ -50,7 +57,7 @@ struct command<category, Tag>:
 };
 
 template<>
-struct command<category, chunk>:
+struct command<rpc::chunk>:
     public boost::tuple<const std::string&, zmq::message_t&>
 {
     typedef boost::tuple<const std::string&, zmq::message_t&> tuple_type;
@@ -66,13 +73,24 @@ private:
 };
 
 template<>
-struct command<category, error>:
+struct command<rpc::error>:
     public boost::tuple<const std::string&, int, const std::string&>
 {
     typedef boost::tuple<const std::string&, int, const std::string&> tuple_type;
 
     command(const std::string& tag, int code, const std::string& message):
         tuple_type(tag, code, message)
+    { }
+};
+
+template<>
+struct command<rpc::choke>:
+    public boost::tuple<const std::string&>
+{
+    typedef boost::tuple<const std::string&> tuple_type;
+
+    command(const std::string& tag):
+        tuple_type(tag)
     { }
 };
 
@@ -89,21 +107,21 @@ dealer_job_t::dealer_job_t(const std::string& event,
     m_route(route),
     m_tag(tag)
 {
-    io::command<category, acknowledgement> pack(m_tag);
+    io::command<rpc::acknowledgement> pack(m_tag);
     m_channel.send(m_route.front(), pack);
 }
 
 void dealer_job_t::react(const events::chunk& event) {
-    io::command<category, chunk> pack(m_tag, event.message);
+    io::command<rpc::chunk> pack(m_tag, event.message);
     m_channel.send(m_route.front(), pack);
 }
 
 void dealer_job_t::react(const events::error& event) {
-    io::command<category, error> pack(m_tag, event.code, event.message);
+    io::command<rpc::error> pack(m_tag, event.code, event.message);
     m_channel.send(m_route.front(), pack);
 }
 
 void dealer_job_t::react(const events::choke& event) {
-    io::command<category, choke> pack(m_tag);
+    io::command<rpc::choke> pack(m_tag);
     m_channel.send(m_route.front(), pack);
 }
