@@ -25,12 +25,12 @@ using namespace cocaine::engine::drivers;
 
 namespace rpc {
 
-struct dealer_rpc_tag;
+struct dealer_tag;
 
-struct acknowledgement { typedef dealer_rpc_tag tag; };
-struct chunk           { typedef dealer_rpc_tag tag; };
-struct error           { typedef dealer_rpc_tag tag; };
-struct choke           { typedef dealer_rpc_tag tag; };
+struct acknowledgement { typedef dealer_tag tag; };
+struct chunk           { typedef dealer_tag tag; };
+struct error           { typedef dealer_tag tag; };
+struct choke           { typedef dealer_tag tag; };
 
 typedef boost::mpl::list<
     acknowledgement, chunk, error, choke
@@ -41,7 +41,7 @@ typedef boost::mpl::list<
 namespace cocaine { namespace io {
 
 template<>
-struct dispatch<rpc::dealer_rpc_tag> {
+struct dispatch<rpc::dealer_tag> {
     typedef rpc::category category;
 };
 
