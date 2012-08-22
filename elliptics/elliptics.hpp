@@ -32,14 +32,14 @@ class log_adapter_t:
 {
     public:
         log_adapter_t(const boost::shared_ptr<logging::logger_t>& log,
-                      const uint32_t mask);
+                      const int level);
 
-        virtual void log(const uint32_t mask, const char * message);
+        virtual void log(const int level, const char * message);
         virtual unsigned long clone();
 
     private:
         boost::shared_ptr<logging::logger_t> m_log;
-        const uint32_t m_mask;
+        const int m_level;
 };
 
 class elliptics_storage_t:
