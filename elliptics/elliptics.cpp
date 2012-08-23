@@ -30,16 +30,16 @@
 using namespace cocaine;
 using namespace cocaine::storages;
 
-log_adapter_t::log_adapter_t(const boost::shared_ptr<logging::logger_t>& log, const uint32_t mask):
-    ioremap::elliptics::logger(mask),
+log_adapter_t::log_adapter_t(const boost::shared_ptr<logging::logger_t>& log, const int level):
+    ioremap::elliptics::logger(level),
     m_log(log),
-    m_mask(mask)
+    m_level(level)
 { }
 
-void log_adapter_t::log(const uint32_t mask, const char * message) {
+void log_adapter_t::log(const int level, const char * message) {
     size_t length = ::strlen(message) - 1;
     
-    switch(mask) {
+    switch(level) {
         case DNET_LOG_NOTICE:
             m_log->info("%.*s", length, message);
             break;
@@ -48,16 +48,12 @@ void log_adapter_t::log(const uint32_t mask, const char * message) {
             m_log->info("%.*s", length, message);
             break;
 
-        case DNET_LOG_TRANS:
+        case DNET_LOG_DEBUG:
             m_log->debug("%.*s", length, message);
             break;
 
         case DNET_LOG_ERROR:
             m_log->error("%.*s", length, message);
-            break;
-
-        case DNET_LOG_DSA:
-            m_log->debug("%.*s", length, message);
             break;
 
         default:
@@ -67,7 +63,7 @@ void log_adapter_t::log(const uint32_t mask, const char * message) {
 
 unsigned long log_adapter_t::clone() {
     return reinterpret_cast<unsigned long>(
-        new log_adapter_t(m_log, m_mask)
+        new log_adapter_t(m_log, m_level)
     );
 }
 
