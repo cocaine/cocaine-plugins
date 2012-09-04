@@ -24,9 +24,9 @@
 #include "recurring_timer.hpp"
 
 using namespace cocaine;
-using namespace cocaine::engine::drivers;
+using namespace cocaine::driver;
 
-recurring_timer_t::recurring_timer_t(context_t& context, engine_t& engine, const std::string& name, const Json::Value& args):
+recurring_timer_t::recurring_timer_t(context_t& context, engine::engine_t& engine, const std::string& name, const Json::Value& args):
     category_type(context, engine, name, args),
     m_event(args["emit"].asString()),
     m_interval(args.get("interval", 0.0f).asInt() / 1000.0f),
@@ -59,7 +59,7 @@ void recurring_timer_t::event(ev::timer&, int) {
 
 void recurring_timer_t::reschedule() {
     engine().enqueue(
-        boost::make_shared<job_t>(
+        boost::make_shared<engine::job_t>(
             m_event
         )
     );

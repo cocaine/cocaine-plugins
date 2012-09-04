@@ -32,7 +32,8 @@
 #include "objects.hpp"
 
 using namespace cocaine;
-using namespace cocaine::engine;
+using namespace cocaine::api;
+using namespace cocaine::sandbox;
 
 static PyMethodDef context_module_methods[] = {
     { "manifest", &python_t::manifest, METH_NOARGS, 
@@ -198,7 +199,7 @@ python_t::~python_t() {
 }
 
 void python_t::invoke(const std::string& event,
-                      io_t& io)
+                      api::io_t& io)
 {
     thread_lock_t thread(m_thread_state);
 

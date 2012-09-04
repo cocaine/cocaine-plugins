@@ -23,7 +23,8 @@
 #include "log.hpp"
 #include "python.hpp"
 
-using namespace cocaine::engine;
+using namespace cocaine::api;
+using namespace cocaine::sandbox;
 
 int log_object_t::constructor(log_object_t * self,
                               PyObject * args,

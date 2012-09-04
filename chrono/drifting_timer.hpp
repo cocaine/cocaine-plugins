@@ -25,12 +25,12 @@
 
 #include "recurring_timer.hpp"
 
-namespace cocaine { namespace engine { namespace drivers {
+namespace cocaine { namespace driver {
 
 class drifting_timer_t;
 
 struct drifting_timer_job_t:
-    public job_t
+    public engine::job_t
 {
     drifting_timer_job_t(const std::string& event,
                          drifting_timer_t& driver);
@@ -46,7 +46,7 @@ class drifting_timer_t:
 {
     public:
         drifting_timer_t(context_t& context,
-                         engine_t& engine,
+                         engine::engine_t& engine,
                          const std::string& name,
                          const Json::Value& args);
 
@@ -60,6 +60,6 @@ class drifting_timer_t:
         virtual void reschedule();
 };
 
-}}}
+}}
 
 #endif

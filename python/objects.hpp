@@ -24,7 +24,7 @@
 #include "log.hpp"
 #include "io.hpp"
 
-namespace cocaine { namespace engine {
+namespace cocaine { namespace sandbox {
 
 static PyMethodDef log_object_methods[] = {
     { "debug", (PyCFunction)log_object_t::debug, METH_VARARGS,

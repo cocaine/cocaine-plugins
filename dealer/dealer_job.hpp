@@ -24,24 +24,24 @@
 #include <cocaine/io.hpp>
 #include <cocaine/job.hpp>
 
-namespace cocaine { namespace engine { namespace drivers {
+namespace cocaine { namespace driver {
 
 typedef std::vector<std::string> route_t;
 
 class dealer_job_t:
-    public job_t
+    public engine::job_t
 {
     public:
         dealer_job_t(const std::string& event,
-                     const blob_t& request,
-                     const policy_t& policy,
+                     const std::string& request,
+                     const engine::policy_t& policy,
                      io::channel_t& channel,
                      const route_t& route,
                      const std::string& tag);
 
-        virtual void react(const events::chunk& event);
-        virtual void react(const events::error& event);
-        virtual void react(const events::choke& event);
+        virtual void react(const engine::events::chunk& event);
+        virtual void react(const engine::events::error& event);
+        virtual void react(const engine::events::choke& event);
 
     private:
         io::channel_t& m_channel;        
@@ -49,6 +49,6 @@ class dealer_job_t:
         const std::string m_tag;
 };
 
-}}}
+}}
 
 #endif

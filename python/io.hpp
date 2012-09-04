@@ -27,9 +27,13 @@
 
 #include "Python.h"
 
-namespace cocaine { namespace engine {
+namespace cocaine { 
 
-class io_t;
+namespace api {
+   struct io_t;
+}    
+    
+namespace sandbox {
 
 class python_io_t {
     public:
@@ -64,9 +68,9 @@ class python_io_t {
         static PyObject* iter_next(python_io_t * it);
 
     public:
-        io_t * io;
+        api::io_t * io;
 
-        blob_t request;
+        std::string request;
         off_t offset;
 };
 

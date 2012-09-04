@@ -26,21 +26,21 @@
 #include <cocaine/logging.hpp>
 #include <cocaine/manifest.hpp>
 
-#include <cocaine/interfaces/sandbox.hpp>
+#include <cocaine/api/sandbox.hpp>
 
 #include <sstream>
 
 #include <v8.h>
 
-namespace cocaine { namespace engine {
+namespace cocaine { namespace sandbox {
 
 using namespace v8;
 
 class javascript_t:
-    public sandbox_t
+    public api::sandbox_t
 {
     public:
-        typedef sandbox_t category_type;
+        typedef api::sandbox_t category_type;
 
     public:
         javascript_t(context_t& context, const manifest_t& manifest):
@@ -76,7 +76,7 @@ class javascript_t:
         }
 
         virtual void invoke(const std::string& event,
-                            io_t& io)
+                            api::io_t& io)
         {
             Json::Value result;
 
@@ -150,7 +150,7 @@ class javascript_t:
 };
 
 extern "C" {
-    void initialize(repository_t& repository) {
+    void initialize(api::repository_t& repository) {
         repository.insert<javascript_t>("javascript");
     }
 }

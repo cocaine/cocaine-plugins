@@ -22,7 +22,8 @@
 
 #include "drifting_timer.hpp"
 
-using namespace cocaine::engine::drivers;
+using namespace cocaine;
+using namespace cocaine::driver;
 
 drifting_timer_job_t::drifting_timer_job_t(const std::string& event, drifting_timer_t& driver):
     job_t(event),
@@ -33,7 +34,7 @@ drifting_timer_job_t::~drifting_timer_job_t() {
     m_driver.rearm();
 }
 
-drifting_timer_t::drifting_timer_t(context_t& context, engine_t& engine, const std::string& name, const Json::Value& args):
+drifting_timer_t::drifting_timer_t(context_t& context, engine::engine_t& engine, const std::string& name, const Json::Value& args):
     recurring_timer_t(context, engine, name, args)
 { }
 

@@ -29,10 +29,9 @@
 #include "dealer_job.hpp"
 
 using namespace cocaine;
-using namespace cocaine::engine::drivers;
-using namespace cocaine::io;
+using namespace cocaine::driver;
 
-dealer_server_t::dealer_server_t(context_t& context, engine_t& engine, const std::string& name, const Json::Value& args):
+dealer_server_t::dealer_server_t(context_t& context, engine::engine_t& engine, const std::string& name, const Json::Value& args):
     category_type(context, engine, name, args),
     m_context(context),
     m_log(context.log(
@@ -52,7 +51,7 @@ dealer_server_t::dealer_server_t(context_t& context, engine_t& engine, const std
     m_watcher(engine.loop()),
     m_processor(engine.loop()),
     m_check(engine.loop()),
-    m_channel(context.io(), m_route)
+    m_channel(context, m_route)
 {
     int linger = 0;
 
@@ -153,8 +152,8 @@ void dealer_server_t::process(ev::idle&, int) {
             engine().enqueue(
                 boost::make_shared<dealer_job_t>(
                     m_event,
-                    blob_t(
-                        message.data(), 
+                    std::string(
+                        static_cast<const char*>(message.data()), 
                         message.size()
                     ),
                     policy,
@@ -178,7 +177,7 @@ void dealer_server_t::check(ev::prepare&, int) {
 }
 
 extern "C" {
-    void initialize(repository_t& repository) {
+    void initialize(api::repository_t& repository) {
         repository.insert<dealer_server_t>("native-server");
     }
 }

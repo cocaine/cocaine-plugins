@@ -22,7 +22,7 @@
 #include <cocaine/logging.hpp>
 #include <cocaine/manifest.hpp>
 
-#include <cocaine/interfaces/sandbox.hpp>
+#include <cocaine/api/sandbox.hpp>
 
 #include <sstream>
 
@@ -37,11 +37,11 @@ EXTERN_C void xs_init(pTHX) {
 }
 
 namespace cocaine {
-namespace engine {
+namespace driver {
 
-class perl_t: public sandbox_t {
+class perl_t: public api::sandbox_t {
 public:
-    typedef sandbox_t category_type;
+    typedef api::sandbox_t category_type;
 
 public:
     perl_t(context_t& context, const manifest_t& manifest):
@@ -104,12 +104,12 @@ public:
         PERL_SYS_TERM();
     }
 
-    virtual void invoke(const std::string& event, io_t& io) {
+    virtual void invoke(const std::string& event, api::io_t& io) {
         log().info("%s", (std::string("invoking event ") + event + "...").c_str());
         std::string input;
         
         // Try to pull in the request w/o blocking.
-        blob_t request = io.read(0);
+        std::string request = io.read(0);
 
         if (!request.empty()) {
            input = std::string((const char*)request.data(), request.size());
@@ -185,7 +185,7 @@ private:
 };
 
 extern "C" {
-    void initialize(repository_t& repository) {
+    void initialize(api::repository_t& repository) {
         repository.insert<perl_t>("perl");
     }
 }

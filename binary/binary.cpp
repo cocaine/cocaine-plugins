@@ -24,7 +24,8 @@
 #include "binary.hpp"
 
 using namespace cocaine;
-using namespace cocaine::engine;
+using namespace cocaine::sandbox;
+
 namespace fs = boost::filesystem;
 
 binary_t::binary_t(context_t &context, const manifest_t &manifest) :
@@ -103,18 +104,18 @@ binary_t::~binary_t()
 namespace {
 	void binary_write(struct binary_io *__io, const void *data, size_t size)
 	{
-		io_t *io = (io_t *)__io->priv_io;
+        api::io_t *io = (api::io_t *)__io->priv_io;
 		io->write(data, size);
 	}
 }
 
-void binary_t::invoke(const std::string &method, io_t &io)
+void binary_t::invoke(const std::string &method, api::io_t &io)
 {
 	struct binary_io bio;
 	int err;
 
 	while (true) {
-		blob_t data = io.read(0);
+        std::string data = io.read(0);
 
 		if (!data.size())
 			break;
@@ -135,7 +136,7 @@ void binary_t::invoke(const std::string &method, io_t &io)
 }
 
 extern "C" {
-    void initialize(repository_t& repository) {
+    void initialize(api::repository_t& repository) {
         repository.insert<binary_t>("binary");
     }
 }

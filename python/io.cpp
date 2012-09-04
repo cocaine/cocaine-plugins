@@ -18,12 +18,13 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <cocaine/interfaces/sandbox.hpp>
+#include <cocaine/api/sandbox.hpp>
 
 #include "io.hpp"
 #include "python.hpp"
 
-using namespace cocaine::engine;
+using namespace cocaine::api;
+using namespace cocaine::sandbox;
 
 int python_io_t::constructor(python_io_t * self,
                              PyObject * args,

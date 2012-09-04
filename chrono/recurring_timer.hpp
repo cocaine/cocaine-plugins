@@ -26,19 +26,19 @@
 // Has to be included after common.h
 #include <ev++.h>
 
-#include <cocaine/interfaces/driver.hpp>
+#include <cocaine/api/driver.hpp>
 
-namespace cocaine { namespace engine { namespace drivers {
+namespace cocaine { namespace driver {
 
 class recurring_timer_t:
-    public driver_t
+    public api::driver_t
 {
     public:
-        typedef driver_t category_type;
+        typedef api::driver_t category_type;
 
     public:
         recurring_timer_t(context_t& context,
-                          engine_t& engine,
+                          engine::engine_t& engine,
                           const std::string& name,
                           const Json::Value& args);
 
@@ -60,6 +60,6 @@ class recurring_timer_t:
         ev::timer m_watcher;
 };
 
-}}}
+}}
 
 #endif

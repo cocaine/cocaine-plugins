@@ -29,19 +29,19 @@
 #include <cocaine/io.hpp>
 #include <cocaine/job.hpp>
 
-#include <cocaine/interfaces/driver.hpp>
+#include <cocaine/api/driver.hpp>
 
-namespace cocaine { namespace engine { namespace drivers {
+namespace cocaine { namespace driver {
 
 class dealer_server_t:
-    public driver_t
+    public api::driver_t
 {
     public:
-        typedef driver_t category_type;
+        typedef api::driver_t category_type;
 
     public:
         dealer_server_t(context_t& context,
-                        engine_t& engine,
+                        engine::engine_t& engine,
                         const std::string& name,
                         const Json::Value& args);
 
@@ -53,7 +53,7 @@ class dealer_server_t:
     private:
         typedef boost::tuple<
             std::string&,
-            policy_t&,
+            engine::policy_t&,
             zmq::message_t*
         > request_proxy_t;
 
@@ -76,6 +76,6 @@ class dealer_server_t:
         io::channel_t m_channel;
 };
 
-}}}
+}}
 
 #endif

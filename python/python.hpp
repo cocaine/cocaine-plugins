@@ -27,12 +27,12 @@
 
 #include <Python.h>
 
-#include <cocaine/interfaces/sandbox.hpp>
+#include <cocaine/api/sandbox.hpp>
 
 #include <cocaine/helpers/json.hpp>
 #include <cocaine/helpers/track.hpp>
 
-namespace cocaine { namespace engine {
+namespace cocaine { namespace sandbox {
 
 typedef track_t<PyObject*, Py_DecRef> tracked_object_t;
 
@@ -92,10 +92,10 @@ class thread_lock_t {
 };
 
 class python_t:
-    public sandbox_t
+    public api::sandbox_t
 {
     public:
-        typedef sandbox_t category_type;
+        typedef api::sandbox_t category_type;
 
     public:
         python_t(context_t& context,
@@ -104,7 +104,7 @@ class python_t:
         virtual ~python_t();
         
         virtual void invoke(const std::string& method,
-                            io_t& io);
+                            api::io_t& io);
 
     public:
         const logging::logger_t& log() const {

@@ -18,17 +18,13 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <boost/format.hpp>
-
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
-
-#include <msgpack.hpp>
 
 #include "elliptics.hpp"
 
 using namespace cocaine;
-using namespace cocaine::storages;
+using namespace cocaine::storage;
 
 log_adapter_t::log_adapter_t(const boost::shared_ptr<logging::logger_t>& log, const int level):
     ioremap::elliptics::logger(level),
@@ -78,11 +74,7 @@ namespace {
 
 elliptics_storage_t::elliptics_storage_t(context_t& context, const std::string& name, const Json::Value& args):
     category_type(context, name, args),
-    m_log(context.log(
-        (boost::format("storage/%1%")
-            % name
-        ).str()
-    )),
+    m_log(context.log(name)),
     m_log_adapter(m_log, args.get("verbosity", DNET_LOG_ERROR).asUInt()),
     m_node(m_log_adapter)
 {
@@ -126,133 +118,59 @@ elliptics_storage_t::elliptics_storage_t(context_t& context, const std::string& 
     m_node.add_groups(group_numbers);
 }
 
-objects::value_type elliptics_storage_t::get(const std::string& ns,
-                                             const std::string& key)
+std::string
+elliptics_storage_t::read(const std::string& collection,
+                          const std::string& key)
 {
-    objects::value_type object;
-
-    // Fetch the metadata first.
-    object.meta = exists(ns, key);
-    
     std::string blob;
 
     try {
-        blob = m_node.read_data_wait(
-            id(ns, key),
-            0,
-            0,
-            0,
-            0,
-            0
-        );
+        blob = m_node.read_data_wait(id(collection, key), 0, 0, 0, 0, 0);
     } catch(const std::runtime_error& e) {
         throw storage_error_t(e.what());
     }
 
-    object.blob = objects::data_type(
-        blob.data(),
-        blob.size()
-    );
-
-    return object;
+    return blob;
 }
 
-void elliptics_storage_t::put(const std::string& ns,
-                              const std::string& key,
-                              const objects::value_type& object)
+void
+elliptics_storage_t::write(const std::string& collection,
+                           const std::string& key,
+                           const std::string& blob)
 {
     try {
-        m_node.write_data_wait(
-            "meta:" + id(ns, key),
-            Json::FastWriter().write(object.meta),
-            0,
-            0,
-            0,
-            0
+        m_node.write_data_wait(id(collection, key), blob, 0, 0, 0, 0);
+        
+        std::vector<std::string> keylist(
+            list(collection)
         );
         
-        std::string blob;
+        if(std::find(keylist.begin(), keylist.end(), key) == keylist.end()) {
+            msgpack::sbuffer buffer;
+            std::string object;
+            
+            keylist.push_back(key);
+            msgpack::pack(&buffer, keylist);
+            
+            object.assign(
+                buffer.data(),
+                buffer.size()
+            );
 
-        blob.assign(
-            static_cast<const char*>(object.blob.data()),
-            object.blob.size()
-        );
-
-        m_node.write_data_wait(
-            id(ns, key),
-            blob,
-            0,
-            0,
-            0,
-            0
-        );
-
-        std::vector<std::string> keylist(list(ns));
-        
-        if(std::find(keylist.begin(), keylist.end(), key) != keylist.end()) {
-            return;
+            m_node.write_data_wait(id("system", "list:" + collection), object, 0, 0, 0, 0);
         }
-        
-        msgpack::sbuffer buffer;
-        
-        keylist.push_back(key);
-        msgpack::pack(&buffer, keylist);
-        blob.assign(buffer.data(), buffer.size());
-
-        m_node.write_data_wait(
-            "list:" + ns,
-            blob,
-            0,
-            0,
-            0,
-            0
-        );
     } catch(const std::runtime_error& e) {
         throw storage_error_t(e.what());
     }
 }
 
-objects::meta_type elliptics_storage_t::exists(const std::string& ns,
-                                               const std::string& key)
-{
-    std::string meta;
-
-    try {
-        meta = m_node.read_data_wait(
-            "meta:" + id(ns, key),
-            0,
-            0,
-            0,
-            0,
-            0
-        );
-    } catch(const std::runtime_error& e) {
-        throw storage_error_t(e.what());
-    }
-
-    Json::Reader reader;
-    objects::meta_type object;
-
-    if(!reader.parse(meta, object)) {
-        throw storage_error_t("the specified object is corrupted");
-    }
-
-    return object;
-}
-
-std::vector<std::string> elliptics_storage_t::list(const std::string& ns) {
+std::vector<std::string>
+elliptics_storage_t::list(const std::string& collection) {
     std::vector<std::string> result;
     std::string blob;
     
     try {
-        blob = m_node.read_data_wait(
-            "list:" + ns,
-            0,
-            0,
-            0,
-            0,
-            0
-        );
+        blob = m_node.read_data_wait(id("system", "list:" + collection), 0, 0, 0, 0, 0);
     } catch(const std::runtime_error& e) {
         return result;
     }
@@ -263,22 +181,19 @@ std::vector<std::string> elliptics_storage_t::list(const std::string& ns) {
         msgpack::unpack(&unpacked, blob.data(), blob.size());
         unpacked.get().convert(&result);
     } catch(const msgpack::unpack_error& e) {
-        throw storage_error_t("the namespace list object is corrupted");
+        throw storage_error_t("the collection metadata is corrupted");
     } catch(const msgpack::type_error& e) {
-        throw storage_error_t("the namespace list object is corrupted");
+        throw storage_error_t("the collection metadata is corrupted");
     }
 
     return result;
 }
 
-void elliptics_storage_t::remove(const std::string& ns,
+void elliptics_storage_t::remove(const std::string& collection,
                                  const std::string& key)
 {
     try {
-        m_node.remove("meta:" + id(ns, key));
-        m_node.remove(id(ns, key));
-
-        std::vector<std::string> keylist(list(ns)),
+        std::vector<std::string> keylist(list(collection)),
                                  updated;
 
         std::remove_copy(
@@ -289,26 +204,20 @@ void elliptics_storage_t::remove(const std::string& ns,
         );
 
         msgpack::sbuffer buffer;
-        std::string blob;
+        std::string object;
 
         msgpack::pack(&buffer, updated);
-        blob.assign(buffer.data(), buffer.size());
+        object.assign(buffer.data(), buffer.size());
 
-        m_node.write_data_wait(
-            "list:" + ns,
-            blob,
-            0,
-            0,
-            0,
-            0
-        );
+        m_node.write_data_wait(id("system", "list:" + collection), object, 0, 0, 0, 0);
+        m_node.remove(id(collection, key));
     } catch(const std::runtime_error& e) {
         throw storage_error_t(e.what());
     }
 }
 
 extern "C" {
-    void initialize(repository_t& repository) {
+    void initialize(api::repository_t& repository) {
         repository.insert<elliptics_storage_t>("elliptics");
     }
 }

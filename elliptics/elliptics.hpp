@@ -21,11 +21,11 @@
 #ifndef COCAINE_ELLIPTICS_STORAGE_HPP
 #define COCAINE_ELLIPTICS_STORAGE_HPP
 
-#include <cocaine/interfaces/storage.hpp>
+#include <cocaine/api/storage.hpp>
 
 #include <elliptics/cppdef.h>
 
-namespace cocaine { namespace storages {
+namespace cocaine { namespace storage {
 
 class log_adapter_t:
     public ioremap::elliptics::logger
@@ -43,36 +43,41 @@ class log_adapter_t:
 };
 
 class elliptics_storage_t:
-    public storage_concept<objects>
+    public api::storage_t
 {
     public:
-        typedef storage_concept<objects> category_type;
+        typedef storage_t category_type;
 
     public:
         elliptics_storage_t(context_t& context,
                             const std::string& name,
                             const Json::Value& args);
 
-        virtual objects::value_type get(const std::string& ns,
-                                        const std::string& key);
+        virtual
+        std::string
+        read(const std::string& collection,
+             const std::string& key);
 
-        virtual void put(const std::string& ns,
-                         const std::string& key,
-                         const objects::value_type& object);
+        virtual
+        void
+        write(const std::string& collection, 
+              const std::string& key, 
+              const std::string& blob);
 
-        virtual objects::meta_type exists(const std::string& ns,
-                                          const std::string& key);
+        virtual
+        std::vector<std::string>
+        list(const std::string& collection);
 
-        virtual std::vector<std::string> list(const std::string& ns);
-
-        virtual void remove(const std::string& ns,
-                            const std::string& key);
+        virtual
+        void
+        remove(const std::string& collection,
+               const std::string& key);
 
     private:
-        std::string id(const std::string& ns,
+        std::string id(const std::string& collection,
                        const std::string& key)
         {
-            return ns + '\0' + key;
+            return collection + '\0' + key;
         };
 
     private:

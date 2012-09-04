@@ -24,9 +24,9 @@
 #include "filesystem_monitor.hpp"
 
 using namespace cocaine;
-using namespace cocaine::engine::drivers;
+using namespace cocaine::driver;
 
-filesystem_monitor_t::filesystem_monitor_t(context_t& context, engine_t& engine, const std::string& name, const Json::Value& args):
+filesystem_monitor_t::filesystem_monitor_t(context_t& context, engine::engine_t& engine, const std::string& name, const Json::Value& args):
     category_type(context, engine, name, args),
     m_path(args.get("path", "").asString()),
     m_watcher(engine.loop())
@@ -54,14 +54,14 @@ Json::Value filesystem_monitor_t::info() const {
 
 void filesystem_monitor_t::event(ev::stat&, int) {
     engine().enqueue(
-        boost::make_shared<job_t>(
+        boost::make_shared<engine::job_t>(
             m_event
         )
     );
 }
 
 extern "C" {
-    void initialize(repository_t& repository) {
+    void initialize(api::repository_t& repository) {
         repository.insert<filesystem_monitor_t>("filesystem-monitor");
     }
 }

@@ -27,7 +27,7 @@
 
 #include "Python.h"
 
-namespace cocaine { namespace engine {
+namespace cocaine { namespace sandbox {
 
 class python_t;
 
