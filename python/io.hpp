@@ -70,7 +70,7 @@ class python_io_t {
     public:
         api::io_t * io;
 
-        std::string request;
+        std::string * request;
         off_t offset;
 };
 

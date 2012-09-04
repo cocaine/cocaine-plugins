@@ -37,17 +37,19 @@ int python_io_t::constructor(python_io_t * self,
     }
 
     self->io = static_cast<io_t*>(PyCObject_AsVoidPtr(io_object));
+    self->request = new std::string();
+    self->offset = 0;
 
     return 0;
 }
 
 
 void python_io_t::destructor(python_io_t * self) {
-    self->ob_type->tp_free(self);
-    
-    if(!self->request.empty()){
-        self->request.clear();
+    if(self->request){
+        delete self->request;
     }
+    
+    self->ob_type->tp_free(self);
 }
 
 PyObject* python_io_t::read(python_io_t * self,
@@ -66,22 +68,22 @@ PyObject* python_io_t::read(python_io_t * self,
         return result;
     }
 
-    if(self->request.empty()) {
+    if(self->request->empty()) {
         Py_BEGIN_ALLOW_THREADS
-            self->request = self->io->read(timeout);
+            (*self->request) = self->io->read(timeout);
         Py_END_ALLOW_THREADS
         
         self->offset = 0;
     }
 
-    if(!self->request.empty() && (self->request.size() - self->offset)) {
+    if(!self->request->empty() && (self->request->size() - self->offset)) {
         // NOTE: If the size argument is negative or omitted, read all data until EOF is reached.
-        if(size <= 0 || size > (self->request.size() - self->offset)) {
-            size = self->request.size() - self->offset;
+        if(size <= 0 || size > (self->request->size() - self->offset)) {
+            size = self->request->size() - self->offset;
         }
 
         result = PyBytes_FromStringAndSize(
-            static_cast<const char *>(self->request.data()) + self->offset,
+            static_cast<const char *>(self->request->data()) + self->offset,
             size
         );
 
@@ -157,22 +159,22 @@ PyObject* python_io_t::readline(python_io_t * self,
 {
     PyObject * result = NULL;
 
-    if(self->request.empty()) {
+    if(self->request->empty()) {
         Py_BEGIN_ALLOW_THREADS
-            self->request = self->io->read(-1);
+            (*self->request) = self->io->read(-1);
         Py_END_ALLOW_THREADS
         
         self->offset = 0;
     }
 
-    if(!self->request.empty() && (self->request.size() - self->offset)) {
-        const char * data = static_cast<const char *>(self->request.data());
+    if(!self->request->empty() && (self->request->size() - self->offset)) {
+        const char * data = static_cast<const char *>(self->request->data());
         off_t offset = self->offset;      
 
-        while((self->request.size() - offset) && data[offset++]!='\n');
+        while((self->request->size() - offset) && data[offset++]!='\n');
 
         result = PyBytes_FromStringAndSize(
-            static_cast<const char *>(self->request.data()) + self->offset,
+            static_cast<const char *>(self->request->data()) + self->offset,
             offset-self->offset
         );
 
