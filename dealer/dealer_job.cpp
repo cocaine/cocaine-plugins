@@ -30,15 +30,13 @@ struct chunk           { typedef dealer_tag tag; };
 struct error           { typedef dealer_tag tag; };
 struct choke           { typedef dealer_tag tag; };
 
-typedef boost::mpl::list<
-    acknowledgement, chunk, error, choke
->::type dealer_category;
-
 namespace cocaine { namespace io {
 
 template<>
 struct dispatch<dealer_tag> {
-    typedef dealer_category category;
+    typedef boost::mpl::list<
+        acknowledgement, chunk, error, choke
+    >::type category;
 };
 
 template<>
