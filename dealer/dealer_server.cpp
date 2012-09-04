@@ -52,7 +52,7 @@ dealer_server_t::dealer_server_t(context_t& context, engine_t& engine, const std
     m_watcher(engine.loop()),
     m_processor(engine.loop()),
     m_check(engine.loop()),
-    m_channel(context.io(), m_route)
+    m_channel(context, m_route)
 {
     int linger = 0;
 
