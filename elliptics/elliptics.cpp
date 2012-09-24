@@ -104,7 +104,7 @@ elliptics_storage_t::elliptics_storage_t(context_t& context, const std::string& 
                 nodes[*it].asInt()
             );
         } catch(const std::runtime_error& e) {
-            // Do nothing. Yes. Really.
+            // NOTE: Do nothing. Yes. Really.
         }
     }
 
@@ -114,16 +114,14 @@ elliptics_storage_t::elliptics_storage_t(context_t& context, const std::string& 
         throw storage_error_t("no groups has been specified");
     }
 
-    std::vector<int> group_numbers;
-
     std::transform(
         groups.begin(),
         groups.end(),
-        std::back_inserter(group_numbers),
+        std::back_inserter(m_groups),
         digitizer()
     );
 
-    m_node.add_groups(group_numbers);
+    m_node.add_groups(m_groups);
 }
 
 objects::value_type elliptics_storage_t::get(const std::string& ns,
@@ -161,16 +159,37 @@ void elliptics_storage_t::put(const std::string& ns,
                               const std::string& key,
                               const objects::value_type& object)
 {
+    struct dnet_id dnet_id;
+    struct timespec ts = { 0, 0 };
+        
     try {
-        m_node.write_data_wait(
+        // Writing the app manifest
+        // --------------------
+
+        m_node.transform(
             "meta:" + id(ns, key),
+            dnet_id
+        );
+
+        m_node.write_data_wait(
+            dnet_id,
             Json::FastWriter().write(object.meta),
-            0,
             0,
             0,
             0
         );
-        
+
+        m_node.write_metadata(
+            dnet_id,
+            "meta:" + id(ns, key),
+            m_groups,
+            ts,
+            0
+        );
+
+        // Writing the app package
+        // -------------------
+
         std::string blob;
 
         blob.assign(
@@ -178,14 +197,29 @@ void elliptics_storage_t::put(const std::string& ns,
             object.blob.size()
         );
 
-        m_node.write_data_wait(
+        m_node.transform(
             id(ns, key),
+            dnet_id
+        );
+
+        m_node.write_data_wait(
+            dnet_id,
             blob,
-            0,
             0,
             0,
             0
         );
+
+        m_node.write_metadata(
+            dnet_id,
+            id(ns, key),
+            m_groups,
+            ts,
+            0
+        );
+
+        // Checking if the specified key already exists in the namespace
+        // -------------------------------------------------------------
 
         std::vector<std::string> keylist(list(ns));
         
@@ -193,18 +227,33 @@ void elliptics_storage_t::put(const std::string& ns,
             return;
         }
         
+        // Updating the namespace
+        // ----------------------
+
         msgpack::sbuffer buffer;
         
         keylist.push_back(key);
         msgpack::pack(&buffer, keylist);
         blob.assign(buffer.data(), buffer.size());
 
-        m_node.write_data_wait(
+        m_node.transform(
             "list:" + ns,
+            dnet_id
+        );
+
+        m_node.write_data_wait(
+            dnet_id,
             blob,
             0,
             0,
-            0,
+            0
+        );
+
+        m_node.write_metadata(
+            dnet_id,
+            "list:" + ns,
+            m_groups,
+            ts,
             0
         );
     } catch(const std::runtime_error& e) {
@@ -274,9 +323,15 @@ std::vector<std::string> elliptics_storage_t::list(const std::string& ns) {
 void elliptics_storage_t::remove(const std::string& ns,
                                  const std::string& key)
 {
+    struct dnet_id dnet_id;
+    struct timespec ts = { 0, 0 };
+
     try {
         m_node.remove("meta:" + id(ns, key));
         m_node.remove(id(ns, key));
+
+        // Updating the namespace
+        // ----------------------
 
         std::vector<std::string> keylist(list(ns)),
                                  updated;
@@ -294,12 +349,24 @@ void elliptics_storage_t::remove(const std::string& ns,
         msgpack::pack(&buffer, updated);
         blob.assign(buffer.data(), buffer.size());
 
-        m_node.write_data_wait(
+        m_node.transform(
             "list:" + ns,
+            dnet_id
+        );
+
+        m_node.write_data_wait(
+            dnet_id,
             blob,
             0,
             0,
-            0,
+            0
+        );
+
+        m_node.write_metadata(
+            dnet_id,
+            "list:" + ns,
+            m_groups,
+            ts,
             0
         );
     } catch(const std::runtime_error& e) {
