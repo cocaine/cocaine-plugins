@@ -85,6 +85,8 @@ class elliptics_storage_t:
 
         log_adapter_t m_log_adapter;
         ioremap::elliptics::node m_node;
+
+        std::vector<int> m_groups;
 };
 
 }}

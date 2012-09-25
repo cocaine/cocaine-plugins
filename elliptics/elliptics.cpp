@@ -106,16 +106,14 @@ elliptics_storage_t::elliptics_storage_t(context_t& context, const std::string& 
         throw storage_error_t("no groups has been specified");
     }
 
-    std::vector<int> group_numbers;
-
     std::transform(
         groups.begin(),
         groups.end(),
-        std::back_inserter(group_numbers),
+        std::back_inserter(m_groups),
         digitizer()
     );
 
-    m_node.add_groups(group_numbers);
+    m_node.add_groups(m_groups);
 }
 
 std::string
@@ -138,9 +136,29 @@ elliptics_storage_t::write(const std::string& collection,
                            const std::string& key,
                            const std::string& blob)
 {
+    struct dnet_id dnet_id;
+    struct timespec ts = { 0, 0 };
+
     try {
-        m_node.write_data_wait(id(collection, key), blob, 0, 0, 0, 0);
-        
+        // Generate the key.
+        m_node.transform(
+            id(collection, key),
+            dnet_id
+        );
+
+        // Write the blob.
+        m_node.write_data_wait(dnet_id, blob, 0, 0, 0);
+
+        // Write the blob metadata.
+        m_node.write_metadata(
+            dnet_id,
+            id(collection, key),
+            m_groups,
+            ts,
+            0
+        );
+
+        // Check if the key already exists in the collection.
         std::vector<std::string> keylist(
             list(collection)
         );
@@ -157,7 +175,23 @@ elliptics_storage_t::write(const std::string& collection,
                 buffer.size()
             );
 
-            m_node.write_data_wait(id("system", "list:" + collection), object, 0, 0, 0, 0);
+            // Generate the collection object key.
+            m_node.transform(
+                id("system", "list:" + collection),
+                dnet_id
+            );
+
+            // Update the collection object.
+            m_node.write_data_wait(dnet_id, object, 0, 0, 0);
+
+            // Update the collection object metadata.
+            m_node.write_metadata(
+                dnet_id,
+                id("system", "list:" + collection),
+                m_groups,
+                ts,
+                0
+            );
         }
     } catch(const std::runtime_error& e) {
         throw storage_error_t(e.what());
@@ -192,6 +226,9 @@ elliptics_storage_t::list(const std::string& collection) {
 void elliptics_storage_t::remove(const std::string& collection,
                                  const std::string& key)
 {
+    struct dnet_id dnet_id;
+    struct timespec ts = { 0, 0 };
+
     try {
         std::vector<std::string> keylist(list(collection)),
                                  updated;
@@ -209,7 +246,25 @@ void elliptics_storage_t::remove(const std::string& collection,
         msgpack::pack(&buffer, updated);
         object.assign(buffer.data(), buffer.size());
 
-        m_node.write_data_wait(id("system", "list:" + collection), object, 0, 0, 0, 0);
+        // Generate the collection object key.
+        m_node.transform(
+            id("system", "list:" + collection),
+            dnet_id
+        );
+
+        // Update the collection object.
+        m_node.write_data_wait(dnet_id, object, 0, 0, 0);
+
+        // Update the collection object metadata.
+        m_node.write_metadata(
+            dnet_id,
+            id("system", "list:" + collection),
+            m_groups,
+            ts,
+            0
+        );
+
+        // Remove the actual key.
         m_node.remove(id(collection, key));
     } catch(const std::runtime_error& e) {
         throw storage_error_t(e.what());
