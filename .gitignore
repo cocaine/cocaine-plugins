@@ -10,3 +10,6 @@
 *.lai
 *.la
 *.a
+
+# MacOS Trash
+.DS_Store
