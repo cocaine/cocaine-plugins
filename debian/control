@@ -47,7 +47,7 @@ Description: Cocaine - Javascript Sandbox
 
 Package: libcocaine-plugin-perl
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core1 (>= 0.10)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core1 (>= 0.10),
  perl
 Provides: cocaine-plugin-perl
 Replaces: cocaine-plugin-perl
