@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.0-alpha3) lucid; urgency=low
+
+  * Building for YaC 2012.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 28 Sep 2012 22:34:53 +0400
+
 cocaine-plugins (0.10.0-alpha2) lucid; urgency=low
 
   * [........] support for the new logic in the core.

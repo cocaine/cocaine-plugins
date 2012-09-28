@@ -55,7 +55,8 @@ class javascript_t:
             boost::filesystem::ifstream input(source);
     
             if(!input) {
-                throw configuration_error_t("unable to open " + source.string());
+                boost::format message("unable to open '%s'");
+                throw configuration_error_t((message % spool).str());
             }
 
             std::stringstream stream;

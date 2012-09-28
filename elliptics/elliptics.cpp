@@ -81,7 +81,7 @@ elliptics_storage_t::elliptics_storage_t(context_t& context, const std::string& 
     Json::Value nodes(args["nodes"]);
 
     if(nodes.empty() || !nodes.isObject()) {
-        throw storage_error_t("no nodes has been specified");
+        throw configuration_error_t("no nodes has been specified");
     }
 
     Json::Value::Members node_names(nodes.getMemberNames());
@@ -103,7 +103,7 @@ elliptics_storage_t::elliptics_storage_t(context_t& context, const std::string& 
     Json::Value groups(args["groups"]);
 
     if(groups.empty() || !groups.isArray()) {
-        throw storage_error_t("no groups has been specified");
+        throw configuration_error_t("no groups has been specified");
     }
 
     std::transform(
@@ -122,6 +122,12 @@ elliptics_storage_t::read(const std::string& collection,
 {
     std::string blob;
 
+    m_log->debug(
+        "reading the '%s' object, collection: '%s'",
+        key.c_str(),
+        collection.c_str()
+    );
+
     try {
         blob = m_node.read_data_wait(id(collection, key), 0, 0, 0, 0, 0);
     } catch(const std::runtime_error& e) {
@@ -138,7 +144,13 @@ elliptics_storage_t::write(const std::string& collection,
 {
     struct dnet_id dnet_id;
     struct timespec ts = { 0, 0 };
-
+    
+    m_log->debug(
+        "writing the '%s' object, collection: '%s'",
+        key.c_str(),
+        collection.c_str()
+    );
+    
     try {
         // Generate the key.
         m_node.transform(
@@ -228,7 +240,13 @@ void elliptics_storage_t::remove(const std::string& collection,
 {
     struct dnet_id dnet_id;
     struct timespec ts = { 0, 0 };
-
+    
+    m_log->debug(
+        "removing the '%s' object, collection: '%s'",
+        key.c_str(),
+        collection.c_str()
+    );
+    
     try {
         std::vector<std::string> keylist(list(collection)),
                                  updated;

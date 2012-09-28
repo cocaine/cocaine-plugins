@@ -88,7 +88,8 @@ public:
         boost::filesystem::ifstream input(source);
 
         if(!input) {
-            throw configuration_error_t("unable to open " + source.string());
+            boost::format message("unable to open '%s'");
+            throw configuration_error_t((message % source.string()).str());
         }
 
         const char* embedding[] = {"", (char*)source.string().c_str(), "-I", (char*)source_dir.c_str()};

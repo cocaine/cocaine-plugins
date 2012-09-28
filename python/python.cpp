@@ -71,7 +71,8 @@ python_t::python_t(context_t& context, const manifest_t& manifest, const std::st
     boost::filesystem::ifstream input(source);
     
     if(!input) {
-        throw configuration_error_t("unable to open " + source.string());
+        boost::format message("unable to open '%s'");
+        throw configuration_error_t((message % source.string()).str());
     }
 
     // System paths
@@ -205,7 +206,8 @@ void python_t::invoke(const std::string& event,
     PyObject * object = PyDict_GetItemString(globals, event.c_str());
     
     if(!object) {
-        throw unrecoverable_error_t("callable '" + event + "' does not exist");
+        boost::format message("callable '%s' does not exist");
+        throw unrecoverable_error_t((message % event).str());
     }
     
     if(PyType_Check(object)) {
@@ -215,7 +217,8 @@ void python_t::invoke(const std::string& event,
     }
 
     if(!PyCallable_Check(object)) {
-        throw unrecoverable_error_t("'" + event + "' is not callable");
+        boost::format message("'%s' is not callable");
+        throw unrecoverable_error_t((message % event).str());
     }
 
     tracked_object_t args(NULL);

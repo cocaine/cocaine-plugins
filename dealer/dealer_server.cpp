@@ -57,7 +57,8 @@ dealer_server_t::dealer_server_t(context_t& context, engine::engine_t& engine, c
         m_channel.setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
         m_channel.bind(args["endpoint"].asString());
     } catch(const zmq::error_t& e) {
-        throw configuration_error_t(std::string("invalid driver endpoint - ") + e.what());
+        boost::format message("invalid driver endpoint - %s");
+        throw configuration_error_t((message % e.what()).str());
     }
 
     m_watcher.set<dealer_server_t, &dealer_server_t::event>(this);
