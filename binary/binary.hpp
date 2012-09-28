@@ -45,7 +45,7 @@ class binary_t: public api::sandbox_t {
 	public:
 		typedef api::sandbox_t category_type;
 
-		binary_t(context_t& context, const manifest_t& manifest);
+		binary_t(context_t& context, const manifest_t& manifest, const std::string& spool);
 		virtual ~binary_t();
 
 		virtual void invoke(const std::string& method, api::io_t& io);

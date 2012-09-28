@@ -99,7 +99,8 @@ class python_t:
 
     public:
         python_t(context_t& context,
-                 const manifest_t& manifest);
+                 const manifest_t& manifest,
+                 const std::string& spool);
         
         virtual ~python_t();
         

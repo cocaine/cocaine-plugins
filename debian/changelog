@@ -1,3 +1,17 @@
+cocaine-plugins (0.10.0-alpha2) lucid; urgency=low
+
+  * [........] support for the new logic in the core.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 28 Sep 2012 20:30:52 +0400
+
+cocaine-plugins (0.10.0-alpha1) lucid; urgency=low
+
+  * [5d6f2fa2] elliptics plugin now supports the new storage api.
+  * [48a9c871] dealer plugin now supports the new driver api.
+  * [........] various api changes.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 26 Sep 2012 16:06:03 +0400
+
 cocaine-plugins (0.9.1) lucid; urgency=low
 
   * Elliptics plugin now actually writes data to the storage.

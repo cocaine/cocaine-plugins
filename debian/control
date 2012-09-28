@@ -57,13 +57,13 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Cocaine - Binary Sandbox
  Binary C/C++ support for Cocaine.
 
-Package: libcocaine-plugin-mongodb
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libmongoclient | mongodb-clients
-Provides: cocaine-plugin-binary
-Replaces: cocaine-plugin-binary
-Description: Cocaine - MongoDB Storage
- MongoDB storage support for Cocaine.
+#Package: libcocaine-plugin-mongodb
+#Architecture: any
+#Depends: ${shlibs:Depends}, ${misc:Depends}, libmongoclient | mongodb-clients
+#Provides: cocaine-plugin-mongodb
+#Replaces: cocaine-plugin-mongodb
+#Description: Cocaine - MongoDB Storage
+# MongoDB storage support for Cocaine.
 
 Package: libcocaine-plugin-elliptics
 Architecture: any

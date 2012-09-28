@@ -43,21 +43,15 @@ class javascript_t:
         typedef api::sandbox_t category_type;
 
     public:
-        javascript_t(context_t& context, const manifest_t& manifest):
-            category_type(context, manifest),
+        javascript_t(context_t& context, const manifest_t& manifest, const std::string& spool):
+            category_type(context, manifest, spool),
             m_log(context.log(
                 (boost::format("app/%1%")
                     % manifest.name
                 ).str()
             ))
         {
-            Json::Value args(manifest.root["args"]);
-
-            if(!args.isObject()) {
-                throw configuration_error_t("malformed manifest");
-            }
-            
-            boost::filesystem::path source(manifest.path);
+            boost::filesystem::path source(spool);
             boost::filesystem::ifstream input(source);
     
             if(!input) {

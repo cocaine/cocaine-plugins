@@ -28,8 +28,8 @@ using namespace cocaine::sandbox;
 
 namespace fs = boost::filesystem;
 
-binary_t::binary_t(context_t &context, const manifest_t &manifest) :
-    category_type(context, manifest),
+binary_t::binary_t(context_t &context, const manifest_t &manifest, const std::string &spool) :
+    category_type(context, manifest, spool),
     m_log(context.log(
         (boost::format("app/%1%")
             % manifest.name
@@ -37,14 +37,7 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest) :
     )),
     m_process(NULL), m_cleanup(NULL)
 {
-	Json::Value args(manifest.root["args"]);
-
-	if (!args.isObject()) {
-		m_log->error("malformed manifest: no args");
-		throw configuration_error_t("malformed manifest");
-	}
-
-	boost::filesystem::path source(manifest.path);
+	boost::filesystem::path source(spool);
 
 	if (lt_dlinit() != 0)
 		throw repository_error_t("unable to initialize binary loader");
@@ -52,7 +45,7 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest) :
 	if (!boost::filesystem::is_directory(source))
 		throw repository_error_t("binary loaded object must be unpacked into directory");
 
-	Json::Value name(args["name"]);
+	Json::Value name(manifest.args["name"]);
 	if (!name.isString())
 		throw configuration_error_t("malformed manifest: args/name must be a string");
 
@@ -82,7 +75,7 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest) :
 		throw repository_error_t("invalid binary loaded: not all callbacks are present");
 	}
 
-	Json::Value config(args["config"]);
+	Json::Value config(manifest.args["config"]);
 	std::string cfg = config.toStyledString();
 
 	m_handle = (*init)(cfg.c_str(), cfg.size() + 1);

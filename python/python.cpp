@@ -41,8 +41,8 @@ static PyMethodDef context_module_methods[] = {
     { NULL, NULL, 0, NULL }
 };
 
-python_t::python_t(context_t& context, const manifest_t& manifest):
-    category_type(context, manifest),
+python_t::python_t(context_t& context, const manifest_t& manifest, const std::string& spool):
+    category_type(context, manifest, spool),
     m_log(context.log(
         (boost::format("app/%1%")
             % manifest.name
@@ -59,13 +59,7 @@ python_t::python_t(context_t& context, const manifest_t& manifest):
     PyType_Ready(&log_object_type);
     PyType_Ready(&python_io_object_type);
 
-    Json::Value args(manifest.root["args"]);
-
-    if(!args.isObject()) {
-        throw configuration_error_t("malformed manifest");
-    }
-    
-    boost::filesystem::path source(manifest.path);
+    boost::filesystem::path source(spool);
    
     // NOTE: Means it's a module.
     if(boost::filesystem::is_directory(source)) {
@@ -104,7 +98,7 @@ python_t::python_t(context_t& context, const manifest_t& manifest):
     // Context access module
     // ---------------------
 
-    m_python_manifest = wrap(args);
+    m_python_manifest = wrap(manifest.args);
 
     PyObject * context_module = Py_InitModule(
         "__context__",

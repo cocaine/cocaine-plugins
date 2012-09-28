@@ -44,8 +44,8 @@ public:
     typedef api::sandbox_t category_type;
 
 public:
-    perl_t(context_t& context, const manifest_t& manifest):
-        category_type(context, manifest),
+    perl_t(context_t& context, const manifest_t& manifest, const std::string& spool):
+        category_type(context, manifest, spool),
         m_log(context.log(
             (boost::format("app/%1%")
                 % manifest.name
@@ -60,7 +60,7 @@ public:
         my_perl = perl_alloc();
         perl_construct(my_perl);
 
-        Json::Value args(manifest.root["args"]);
+        Json::Value args(manifest.args);
 
         if(!args.isObject()) {
             throw configuration_error_t("malformed manifest");
@@ -71,7 +71,7 @@ public:
             throw configuration_error_t("malformed manifest, expected args script-file to be a name of the perl script to run");
         }
 
-        boost::filesystem::path source(manifest.path);
+        boost::filesystem::path source(spool);
         source/=script_file.asString();
 
         if(boost::filesystem::is_directory(source)) {

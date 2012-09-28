@@ -35,16 +35,14 @@ dealer_server_t::dealer_server_t(context_t& context, engine::engine_t& engine, c
     category_type(context, engine, name, args),
     m_context(context),
     m_log(context.log(
-        (boost::format("app/%1%/%2%")
-            % engine.manifest().name
+        (boost::format("app/%1%")
             % name
         ).str()
     )),
     m_event(args["emit"].asString()),
     m_route(
-        (boost::format("%1%/%2%/%3%")
+        (boost::format("%1%/%2%")
             % context.config.runtime.hostname
-            % engine.manifest().name
             % name
         ).str()
     ),
