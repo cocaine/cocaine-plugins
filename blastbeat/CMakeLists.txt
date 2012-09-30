@@ -1,6 +1,7 @@
 ADD_LIBRARY(blastbeat MODULE
     module
-    driver)
+    driver
+    job)
 
 TARGET_LINK_LIBRARIES(blastbeat
     cocaine-core)

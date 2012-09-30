@@ -19,14 +19,13 @@
 */
 
 #include <boost/format.hpp>
-#include <fstream>
 
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
-#include <cocaine/manifest.hpp>
 
 #include "driver.hpp"
+#include "job.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
@@ -39,6 +38,7 @@ blastbeat_t::blastbeat_t(context_t& context, engine::engine_t& engine, const std
             % name
         ).str()
     )),
+    m_event(args.get("emit", "").asString()),
     m_identity(args.get("identity", "").asString()),
     m_endpoint(args.get("endpoint", "").asString()),
     m_watcher(engine.loop()),
@@ -93,7 +93,7 @@ blastbeat_t::info() const {
 
 namespace {
     typedef boost::tuple<
-        zmq::message_t*,
+        io::raw<std::string>,
         io::raw<std::string>,
         zmq::message_t*
     > request_proxy_t;
@@ -111,11 +111,11 @@ blastbeat_t::process(ev::idle&,
 {
     int counter = defaults::io_bulk_size;
     
-    zmq::message_t sid,
-                   message;
-    
-    std::string type;
+    std::string sid,
+                type;
 
+    zmq::message_t message;
+    
     do {
         if(!m_socket.pending()) {
             m_processor.stop();
@@ -123,7 +123,7 @@ blastbeat_t::process(ev::idle&,
         }   
      
         request_proxy_t proxy(
-            &sid,
+            io::protect(sid),
             io::protect(type),
             &message
         );
@@ -155,6 +155,8 @@ blastbeat_t::process(ev::idle&,
             on_uwsgi(sid, message);
         } else if(type == "body") {
             on_body(sid, message);
+        } else if(type == "end") {
+            on_end(sid);
         } else {
             m_log->warning(
                 "received an unknown message type '%s'",
@@ -196,7 +198,7 @@ blastbeat_t::on_spawn() {
 }
 
 void
-blastbeat_t::on_uwsgi(zmq::message_t& sid,
+blastbeat_t::on_uwsgi(const std::string& sid,
                       zmq::message_t& message)
 {
     std::map<
@@ -232,12 +234,36 @@ blastbeat_t::on_uwsgi(zmq::message_t& sid,
     if(env["REQUEST_METHOD"] == "POST") {
         // Defer till body arrives.
     } else {
-        // Enqueue.
+        msgpack::sbuffer buffer;
+        msgpack::packer<msgpack::sbuffer> packer(buffer);
+
+        packer.pack_map(2);
+
+        packer << std::string("meta")    << env;
+        packer << std::string("request") << std::string();
+
+        engine().enqueue(
+            boost::make_shared<blastbeat_job_t>(
+                m_event,
+                std::string(
+                    buffer.data(),
+                    buffer.size()
+                ),
+                engine::policy_t(),
+                sid,
+                boost::ref(m_socket)
+            )
+        );
     }
 }
 
 void
-blastbeat_t::on_body(zmq::message_t& sid, 
+blastbeat_t::on_body(const std::string& sid, 
                      zmq::message_t& body)
 {
+}
+
+void
+blastbeat_t::on_end(const std::string& sid) {
+    m_log->debug("session ended");
 }

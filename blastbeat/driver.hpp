@@ -71,18 +71,23 @@ class blastbeat_t:
         on_spawn();
         
         void
-        on_uwsgi(zmq::message_t& sid,
+        on_uwsgi(const std::string& sid,
                  zmq::message_t& message);
         
         void
-        on_body(zmq::message_t& sid, 
+        on_body(const std::string& sid, 
                 zmq::message_t& message);
 
+        void
+        on_end(const std::string& sid); 
+    
     protected:
         context_t& m_context;
         boost::shared_ptr<logging::logger_t> m_log;
 
-        // Node ID for Blastbeat.
+        std::string m_event;
+
+        // Blastbeat configuration.
         std::string m_identity;
         std::string m_endpoint;
 
