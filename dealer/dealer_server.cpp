@@ -126,10 +126,14 @@ void dealer_server_t::process(ev::idle&, int) {
             std::string tag;
             engine::policy_t policy;
 
-            request_proxy_t proxy(tag, policy, &message);
+            request_proxy_t proxy(
+                tag,
+                policy,
+                &message
+            );
 
             try {
-                m_channel.recv_multi(proxy);
+                m_channel.recv_tuple(proxy);
             } catch(const std::runtime_error& e) {
                 m_log->error(
                     "received a corrupted request - %s",

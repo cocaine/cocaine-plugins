@@ -129,7 +129,7 @@ blastbeat_t::process(ev::idle&,
         );
 
         try {
-            m_socket.recv_multi(proxy);
+            m_socket.recv_tuple(proxy);
         } catch(const std::runtime_error& e) {
             m_log->error(
                 "received a corrupted blastbeat request, %s",
