@@ -23,7 +23,6 @@
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
-#include <cocaine/manifest.hpp>
 
 #include "dealer_server.hpp"
 #include "dealer_job.hpp"

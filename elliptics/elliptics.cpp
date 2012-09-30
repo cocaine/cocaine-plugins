@@ -32,7 +32,10 @@ log_adapter_t::log_adapter_t(const boost::shared_ptr<logging::logger_t>& log, co
     m_level(level)
 { }
 
-void log_adapter_t::log(const int level, const char * message) {
+void
+log_adapter_t::log(const int level,
+                   const char * message)
+{
     size_t length = ::strlen(message) - 1;
     
     switch(level) {
@@ -57,7 +60,8 @@ void log_adapter_t::log(const int level, const char * message) {
     };
 }
 
-unsigned long log_adapter_t::clone() {
+unsigned long
+log_adapter_t::clone() {
     return reinterpret_cast<unsigned long>(
         new log_adapter_t(m_log, m_level)
     );
@@ -66,7 +70,8 @@ unsigned long log_adapter_t::clone() {
 namespace {
     struct digitizer {
         template<class T>
-        int operator()(const T& value) {
+        int
+        operator()(const T& value) {
             return value.asInt();
         }
     };
@@ -235,8 +240,9 @@ elliptics_storage_t::list(const std::string& collection) {
     return result;
 }
 
-void elliptics_storage_t::remove(const std::string& collection,
-                                 const std::string& key)
+void
+elliptics_storage_t::remove(const std::string& collection,
+                            const std::string& key)
 {
     struct dnet_id dnet_id;
     struct timespec ts = { 0, 0 };
@@ -290,7 +296,8 @@ void elliptics_storage_t::remove(const std::string& collection,
 }
 
 extern "C" {
-    void initialize(api::repository_t& repository) {
+    void
+    initialize(api::repository_t& repository) {
         repository.insert<elliptics_storage_t>("elliptics");
     }
 }

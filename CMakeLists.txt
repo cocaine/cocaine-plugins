@@ -60,7 +60,8 @@ SET(PLUGINS
         binary
         chrono
         fs
-        dealer)
+        dealer
+        blastbeat)
 
 IF(NOT APPLE)
     SET(PLUGINS ${PLUGINS} perl)

@@ -23,7 +23,7 @@
 
 #include <cocaine/common.hpp>
 
-// Has to be included after common.h
+// Has to be included after common.hpp
 #include <ev++.h>
 
 #include <cocaine/io.hpp>

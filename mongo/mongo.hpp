@@ -21,41 +21,47 @@
 #ifndef COCAINE_MONGO_STORAGE_HPP
 #define COCAINE_MONGO_STORAGE_HPP
 
-#include <cocaine/interfaces/storage.hpp>
+#include <cocaine/api/storage.hpp>
 
 #include <mongo/client/dbclient.h>
 
-namespace cocaine { namespace storages {
+namespace cocaine { namespace storage {
 
 class mongo_storage_t:
-    public storage_concept<objects>
+    public api::storage_t
 {
     public:
-        typedef storage_concept<objects> category_type;
+        typedef api::storage_t category_type;
 
     public:
         mongo_storage_t(context_t& context,
                         const std::string& name,
                         const Json::Value& args);
 
-        virtual objects::value_type get(const std::string& ns,
-                                        const std::string& key);
+        virtual
+        std::string
+        read(const std::string& collection,
+             const std::string& key);
 
-        virtual void put(const std::string& ns,
-                         const std::string& key,
-                         const objects::value_type& value);
+        virtual
+        void
+        write(const std::string& collection, 
+              const std::string& key, 
+              const std::string& blob);
 
-        virtual objects::meta_type exists(const std::string& ns,
-                                          const std::string& key);
+        virtual
+        std::vector<std::string>
+        list(const std::string& collection);
 
-        virtual std::vector<std::string> list(const std::string& ns);
-
-        virtual void remove(const std::string& ns,
-                            const std::string& key);
+        virtual
+        void
+        remove(const std::string& collection,
+               const std::string& key);
         
     private:
-        std::string resolve(const std::string& ns) const {
-            return "cocaine." + ns;
+        std::string
+        resolve(const std::string& collection) const {
+            return "cocaine." + collection;
         }
 
     private:
