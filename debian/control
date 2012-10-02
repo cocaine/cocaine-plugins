@@ -27,6 +27,12 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core1 (>= 0.10)
 Description: Cocaine - Dealer Driver
  Dealer driver for Cocaine.
 
+Package: libcocaine-plugin-blastbeat
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core1 (>= 0.10)
+Description: Cocaine - Blastbeat Driver
+ Blastbeat driver for Cocaine.
+
 Package: libcocaine-plugin-python
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core1 (>= 0.10),

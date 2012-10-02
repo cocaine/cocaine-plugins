@@ -52,18 +52,18 @@ class blastbeat_t:
         Json::Value info() const;
 
     private:
-        // Socket event handlers.
         void
-        event(ev::io&, int);
+        event(ev::io&,
+              int);
         
         void
-        process(ev::idle&, int);
-        
-        void
-        check(ev::prepare&, int);
+        check(ev::prepare&,
+              int);
 
+        void
+        process();
+        
     private:
-        // Blastbeat event handlers.
         void
         on_ping();
         
@@ -86,14 +86,13 @@ class blastbeat_t:
         boost::shared_ptr<logging::logger_t> m_log;
 
         std::string m_event;
-
-        // Blastbeat configuration.
         std::string m_identity;
         std::string m_endpoint;
 
+        ev::loop_ref& m_loop;
+
         ev::io m_watcher; 
-        ev::idle m_processor;
-        ev::prepare m_check;
+        ev::prepare m_checker;
         
         io::socket_t m_socket;
 };

@@ -18,7 +18,10 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/split.hpp>
 #include <boost/format.hpp>
+#include <boost/tokenizer.hpp>
 
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
@@ -41,9 +44,9 @@ blastbeat_t::blastbeat_t(context_t& context, engine::engine_t& engine, const std
     m_event(args.get("emit", "").asString()),
     m_identity(args.get("identity", "").asString()),
     m_endpoint(args.get("endpoint", "").asString()),
+    m_loop(engine.loop()),
     m_watcher(engine.loop()),
-    m_processor(engine.loop()),
-    m_check(engine.loop()),
+    m_checker(engine.loop()),
     m_socket(context, ZMQ_DEALER)
 {
     int linger = 0;
@@ -69,15 +72,13 @@ blastbeat_t::blastbeat_t(context_t& context, engine::engine_t& engine, const std
 
     m_watcher.set<blastbeat_t, &blastbeat_t::event>(this);
     m_watcher.start(m_socket.fd(), ev::READ);
-    m_processor.set<blastbeat_t, &blastbeat_t::process>(this);
-    m_check.set<blastbeat_t, &blastbeat_t::check>(this);
-    m_check.start();
+    m_checker.set<blastbeat_t, &blastbeat_t::check>(this);
+    m_checker.start();
 }
 
 blastbeat_t::~blastbeat_t() {
     m_watcher.stop();
-    m_processor.stop();
-    m_check.stop();
+    m_checker.stop();
 }
 
 Json::Value
@@ -89,6 +90,25 @@ blastbeat_t::info() const {
     result["type"] = "blastbeat";
 
     return result;
+}
+
+void
+blastbeat_t::event(ev::io&, 
+                   int)
+{
+    m_checker.stop();
+
+    if(m_socket.pending()) {
+        m_checker.start();
+        process();
+    }
+}
+
+void
+blastbeat_t::check(ev::prepare&, 
+                   int)
+{
+    m_loop.feed_fd_event(m_socket.fd(), ev::READ);
 }
 
 namespace {
@@ -106,9 +126,7 @@ namespace {
 }
 
 void
-blastbeat_t::process(ev::idle&,
-                     int)
-{
+blastbeat_t::process() {
     int counter = defaults::io_bulk_size;
     
     std::string sid,
@@ -117,30 +135,18 @@ blastbeat_t::process(ev::idle&,
     zmq::message_t message;
     
     do {
-        if(!m_socket.pending()) {
-            m_processor.stop();
-            return;
-        }   
-     
         request_proxy_t proxy(
             io::protect(sid),
             io::protect(type),
             &message
         );
 
-        try {
-            m_socket.recv_tuple(proxy);
-        } catch(const std::runtime_error& e) {
-            m_log->error(
-                "received a corrupted blastbeat request, %s",
-                e.what()
-            );
-
-            m_socket.drop();
-            
-            return;
+        // Try to read the next RPC command from the bus in a
+        // non-blocking fashion. If it fails, break the loop.
+        if(!m_socket.recv_tuple(proxy, ZMQ_NOBLOCK)) {
+            return;            
         }
-
+     
         m_log->debug(
             "received a blastbeat request, type: '%s', body size: %d bytes",
             type.c_str(),
@@ -164,22 +170,6 @@ blastbeat_t::process(ev::idle&,
             );
         }
     } while(--counter);
-}
-
-void
-blastbeat_t::event(ev::io&, 
-                   int)
-{
-    if(m_socket.pending() && !m_processor.is_active()) {
-        m_processor.start();
-    }
-}
-
-void
-blastbeat_t::check(ev::prepare&, 
-                   int)
-{
-    event(m_watcher, ev::READ);
 }
 
 void
@@ -239,8 +229,31 @@ blastbeat_t::on_uwsgi(const std::string& sid,
 
         packer.pack_map(2);
 
-        packer << std::string("meta")    << env;
-        packer << std::string("request") << std::string();
+        packer << std::string("meta") << env;
+
+        // Parse the query string.
+        typedef boost::tokenizer<
+            boost::char_separator<char>
+        > tokenizer_type;
+
+        boost::char_separator<char> separator("&");
+        tokenizer_type tokenizer(env["QUERY_STRING"], separator);
+
+        std::map<
+            std::string,
+            std::string
+        > query_map;
+
+        for(tokenizer_type::const_iterator it = tokenizer.begin();
+            it != tokenizer.end();
+            ++it)
+        {
+            std::vector<std::string> pair;
+            boost::algorithm::split(pair, *it, boost::is_any_of("="));
+            query_map[pair[0]] = pair[1];
+        }
+
+        packer << std::string("request") << query_map;
 
         engine().enqueue(
             boost::make_shared<blastbeat_job_t>(
