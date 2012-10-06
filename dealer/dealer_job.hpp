@@ -33,7 +33,6 @@ class dealer_job_t:
 {
     public:
         dealer_job_t(const std::string& event,
-                     const std::string& request,
                      const engine::policy_t& policy,
                      io::channel_t& channel,
                      const route_t& route,
@@ -42,6 +41,15 @@ class dealer_job_t:
         virtual void react(const engine::events::chunk& event);
         virtual void react(const engine::events::error& event);
         virtual void react(const engine::events::choke& event);
+
+    private:
+        template<class T>
+        void send(const std::string& route,
+                  const T& message)
+        {
+            m_channel.send(io::protect(route), ZMQ_SNDMORE);
+            m_channel.send_message(message);
+        }
 
     private:
         io::channel_t& m_channel;        

@@ -78,87 +78,31 @@ namespace io {
 
 } // namespace cocaine
 
-/*
-
-template<>
-struct command<acknowledgement>:
-    public boost::tuple<const std::string&>
-{
-    typedef boost::tuple<const std::string&> tuple_type;
-
-    command(const std::string& tag):
-        tuple_type(tag)
-    { }
-};
-
-template<>
-struct command<chunk>:
-    public boost::tuple<const std::string&, zmq::message_t&>
-{
-    typedef boost::tuple<const std::string&, zmq::message_t&> tuple_type;
-
-    command(const std::string& tag, zmq::message_t& message_):
-        tuple_type(tag, message)
-    {
-        message.move(&message_);
-    }
-
-private:
-    zmq::message_t message;
-};
-
-template<>
-struct command<error>:
-    public boost::tuple<const std::string&, int, const std::string&>
-{
-    typedef boost::tuple<const std::string&, int, const std::string&> tuple_type;
-
-    command(const std::string& tag, int code, const std::string& message):
-        tuple_type(tag, code, message)
-    { }
-};
-
-template<>
-struct command<choke>:
-    public boost::tuple<const std::string&>
-{
-    typedef boost::tuple<const std::string&> tuple_type;
-
-    command(const std::string& tag):
-        tuple_type(tag)
-    { }
-};
-
-}}
-
-*/
-
 dealer_job_t::dealer_job_t(const std::string& event, 
-                           const std::string& request,
                            const policy_t& policy,
                            io::channel_t& channel,
                            const route_t& route,
                            const std::string& tag):
-    job_t(event, request, policy),
+    job_t(event, policy),
     m_channel(channel),
     m_route(route),
     m_tag(tag)
 {
     io::message<acknowledgement> message(m_tag);
-    m_channel.send(m_route.front(), message);
+    send(m_route.front(), message);
 }
 
 void dealer_job_t::react(const events::chunk& event) {
     io::message<chunk> message(m_tag, event.message);
-    m_channel.send(m_route.front(), message);
+    send(m_route.front(), message);
 }
 
 void dealer_job_t::react(const events::error& event) {
     io::message<error> message(m_tag, event.code, event.message);
-    m_channel.send(m_route.front(), message);
+    send(m_route.front(), message);
 }
 
 void dealer_job_t::react(const events::choke& event) {
     io::message<choke> message(m_tag);
-    m_channel.send(m_route.front(), message);
+    send(m_route.front(), message);
 }

@@ -24,6 +24,8 @@
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
 
+#include <cocaine/traits/policy.hpp>
+
 #include "dealer_server.hpp"
 #include "dealer_job.hpp"
 
@@ -48,7 +50,7 @@ dealer_server_t::dealer_server_t(context_t& context, engine::engine_t& engine, c
     m_watcher(engine.loop()),
     m_processor(engine.loop()),
     m_check(engine.loop()),
-    m_channel(context, m_route)
+    m_channel(context, ZMQ_ROUTER, m_route)
 {
     int linger = 0;
 
@@ -151,17 +153,22 @@ void dealer_server_t::process(ev::idle&, int) {
                 tag.c_str()
             );
             
-            engine().enqueue(
+            boost::shared_ptr<dealer_job_t> job(
                 boost::make_shared<dealer_job_t>(
                     m_event,
-                    std::string(
-                        static_cast<const char*>(message.data()), 
-                        message.size()
-                    ),
                     policy,
                     boost::ref(m_channel),
                     route,
                     tag
+                )
+            );
+
+            engine().enqueue(job);
+
+            job->push(
+                std::string(
+                    static_cast<const char*>(message.data()), 
+                    message.size()
                 )
             );
         } while(m_channel.more());
