@@ -149,7 +149,10 @@ elliptics_storage_t::write(const std::string& collection,
 {
     struct dnet_id dnet_id;
     struct timespec ts = { 0, 0 };
-    
+
+    // NOTE: Elliptcs does not initialize the contents of the keys. 
+    memset(&dnet_id, 0, sizeof(struct dnet_id));
+
     m_log->debug(
         "writing the '%s' object, collection: '%s'",
         key.c_str(),
