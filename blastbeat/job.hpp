@@ -26,15 +26,15 @@
 
 namespace cocaine { namespace driver {
 
+class blastbeat_t;
+
 class blastbeat_job_t:
     public engine::job_t
 {
     public:
         blastbeat_job_t(const std::string& event,
-                        const std::string& request,
-                        const engine::policy_t& policy,
                         const std::string& sid,
-                        io::socket_t& socket);
+                        blastbeat_t& driver);
 
         virtual
         void
@@ -50,7 +50,7 @@ class blastbeat_job_t:
 
     private:
         const std::string m_sid;
-        io::socket_t& m_socket;
+        blastbeat_t& m_driver;
         
         // Indicates that headers are already away.
         bool m_body;

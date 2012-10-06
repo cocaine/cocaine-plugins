@@ -49,9 +49,6 @@ blastbeat_t::blastbeat_t(context_t& context, engine::engine_t& engine, const std
     m_checker(engine.loop()),
     m_socket(context, ZMQ_DEALER)
 {
-    int linger = 0;
-    m_socket.setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
-    
     try {
         m_socket.setsockopt(
             ZMQ_IDENTITY,
@@ -62,7 +59,7 @@ blastbeat_t::blastbeat_t(context_t& context, engine::engine_t& engine, const std
         boost::format message("invalid driver identity - %s");
         throw configuration_error_t((message % e.what()).str());
     }
-    
+
     try {
         m_socket.connect(m_endpoint);
     } catch(const zmq::error_t& e) {
@@ -88,6 +85,7 @@ blastbeat_t::info() const {
     result["identity"] = m_identity;
     result["endpoint"] = m_endpoint;
     result["type"] = "blastbeat";
+    result["sessions"] = static_cast<Json::LargestUInt>(m_jobs.size());
 
     return result;
 }
@@ -117,7 +115,7 @@ namespace {
         io::raw<std::string>,
         zmq::message_t*
     > request_proxy_t;
-        
+
     struct uwsgi_header_t {
         uint8_t  modifier1;
         uint16_t datasize;
@@ -133,7 +131,7 @@ blastbeat_t::process() {
                 type;
 
     zmq::message_t message;
-    
+   
     do {
         request_proxy_t proxy(
             io::protect(sid),
@@ -174,12 +172,9 @@ blastbeat_t::process() {
 
 void
 blastbeat_t::on_ping() {
-    std::string empty,
-                response("pong");
-
-    m_socket.send(io::protect(empty), ZMQ_SNDMORE);
-    m_socket.send(io::protect(response), ZMQ_SNDMORE);
-    m_socket.send(io::protect(empty));
+    std::string empty;
+    
+    send("", "pong", io::protect(empty));
 }
 
 void
@@ -199,9 +194,11 @@ blastbeat_t::on_uwsgi(const std::string& sid,
     const char * ptr = static_cast<const char*>(message.data()),
                * const end = ptr + message.size();
 
-    // Skip the header.
+    // NOTE: Skip the uwsgi header, as we already know the message
+    // length and we don't need uwsgi modifiers.
     ptr += sizeof(uwsgi_header_t);
 
+    // Parse the HTTP headers.
     while(ptr < end) {
         const uint16_t * ksz,
                        * vsz;
@@ -221,62 +218,83 @@ blastbeat_t::on_uwsgi(const std::string& sid,
         env[key] = value;
     }
 
-    if(env["REQUEST_METHOD"] == "POST") {
-        // Defer till body arrives.
-    } else {
-        msgpack::sbuffer buffer;
-        msgpack::packer<msgpack::sbuffer> packer(buffer);
+    // Serialize the headers.
+    msgpack::sbuffer buffer;
+    msgpack::packer<msgpack::sbuffer> packer(buffer);
 
-        packer.pack_map(2);
+    packer.pack_map(2);
 
-        packer << std::string("meta") << env;
+    packer << std::string("meta") << env;
 
-        // Parse the query string.
-        typedef boost::tokenizer<
-            boost::char_separator<char>
-        > tokenizer_type;
+    // Parse the query string.
+    // TODO: Drop this shit from here -->
+    typedef boost::tokenizer<
+        boost::char_separator<char>
+    > tokenizer_type;
 
-        boost::char_separator<char> separator("&");
-        tokenizer_type tokenizer(env["QUERY_STRING"], separator);
+    boost::char_separator<char> separator("&");
+    tokenizer_type tokenizer(env["QUERY_STRING"], separator);
 
-        std::map<
-            std::string,
-            std::string
-        > query_map;
+    std::map<
+        std::string,
+        std::string
+    > query_map;
 
-        for(tokenizer_type::const_iterator it = tokenizer.begin();
-            it != tokenizer.end();
-            ++it)
-        {
-            std::vector<std::string> pair;
-            boost::algorithm::split(pair, *it, boost::is_any_of("="));
-            query_map[pair[0]] = pair[1];
-        }
-
-        packer << std::string("request") << query_map;
-
-        engine().enqueue(
-            boost::make_shared<blastbeat_job_t>(
-                m_event,
-                std::string(
-                    buffer.data(),
-                    buffer.size()
-                ),
-                engine::policy_t(),
-                sid,
-                boost::ref(m_socket)
-            )
-        );
+    for(tokenizer_type::const_iterator it = tokenizer.begin();
+        it != tokenizer.end();
+        ++it)
+    {
+        std::vector<std::string> pair;
+        boost::algorithm::split(pair, *it, boost::is_any_of("="));
+        query_map[pair[0]] = pair[1];
     }
+
+    packer << std::string("request") << query_map;
+    // <-- to there.
+
+    job_map_t::iterator it;
+
+    boost::tie(it, boost::tuples::ignore) = m_jobs.emplace(
+        sid,
+        boost::make_shared<blastbeat_job_t>(
+            m_event,
+            sid,
+            *this
+        )
+    );
+
+    engine().enqueue(it->second);
+
+    it->second->push(
+        std::string(
+            buffer.data(),
+            buffer.size()
+        )
+    );
 }
 
 void
 blastbeat_t::on_body(const std::string& sid, 
                      zmq::message_t& body)
 {
+    // TODO: Attach body to the job.
 }
 
 void
 blastbeat_t::on_end(const std::string& sid) {
-    m_log->debug("session ended");
+    job_map_t::iterator it(
+        m_jobs.find(sid)
+    );
+
+    if(it == m_jobs.end()) {
+        m_log->warning("unknown session termination");
+        return;
+    }
+
+    //if(it->second->state_downcast<const engine::job::complete*>() == NULL) {
+        // TODO: Cancel the job.
+    //    it->second->process_event(engine::events::choke());
+    //} 
+
+    m_jobs.erase(it);
 }

@@ -51,6 +51,26 @@ class blastbeat_t:
         virtual
         Json::Value info() const;
 
+        template<class T>
+        void
+        send(const std::string& sid,
+             const std::string& type,
+             const T& message)
+        {
+            m_socket.send_tuple(
+                boost::make_tuple(
+                    io::protect(sid),
+                    io::protect(type),
+                    message
+                )
+            );
+
+            m_loop.feed_fd_event(
+                m_socket.fd(),
+                ev::READ
+            );
+        }
+
     private:
         void
         event(ev::io&,
@@ -62,7 +82,7 @@ class blastbeat_t:
 
         void
         process();
-        
+
     private:
         void
         on_ping();
@@ -85,16 +105,26 @@ class blastbeat_t:
         context_t& m_context;
         boost::shared_ptr<logging::logger_t> m_log;
 
+        // Configuration.
         std::string m_event;
         std::string m_identity;
         std::string m_endpoint;
 
+        // I/O.
         ev::loop_ref& m_loop;
 
         ev::io m_watcher; 
         ev::prepare m_checker;
         
         io::socket_t m_socket;
+
+        // Session tracking.
+        typedef boost::unordered_map<
+            std::string,
+            boost::shared_ptr<engine::job_t>
+        > job_map_t;
+
+        job_map_t m_jobs;
 };
 
 }}

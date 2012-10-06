@@ -21,6 +21,7 @@
 #include <boost/format.hpp>
 
 #include "job.hpp"
+#include "driver.hpp"
 
 using namespace cocaine::engine;
 using namespace cocaine::driver;
@@ -72,13 +73,11 @@ namespace cocaine { namespace io {
 }}
 
 blastbeat_job_t::blastbeat_job_t(const std::string& event, 
-                                 const std::string& request,
-                                 const policy_t& policy,
                                  const std::string& sid,
-                                 io::socket_t& socket):
-    job_t(event, request, policy),
+                                 blastbeat_t& driver):
+    job_t(event),
     m_sid(sid),
-    m_socket(socket),
+    m_driver(driver),
     m_body(false)
 { }
 
@@ -105,11 +104,13 @@ blastbeat_job_t::react(const events::chunk& event) {
             return;
         }
 
-        boost::format code("HTTP/1.1 %d\r\n"),
+        // TODO: Use proper HTTP version.
+        boost::format code("HTTP/1.0 %d\r\n"),
                       header("%s: %s\r\n");
 
-        std::string type("headers"),
-                    body = (code % response.code).str();
+        std::string body(
+            (code % response.code).str()
+        );
        
         for(cocaine_response_t::header_vector_t::const_iterator it = response.headers.begin();
             it != response.headers.end();
@@ -119,35 +120,29 @@ blastbeat_job_t::react(const events::chunk& event) {
             header.clear();
         }
 
+        // TODO: Support Keep-Alive connections.
         body += (header % "Connection" % "close").str();
         body += "\r\n";
 
-        m_socket.send(io::protect(m_sid), ZMQ_SNDMORE);
-        m_socket.send(io::protect(type), ZMQ_SNDMORE);
-        m_socket.send(io::protect(body));
+        m_driver.send(m_sid, "headers", io::protect(body));
 
         m_body = true;
     } else {
-        std::string type("body");
-        
-        m_socket.send(io::protect(m_sid), ZMQ_SNDMORE);
-        m_socket.send(io::protect(type), ZMQ_SNDMORE);
-        m_socket.send(event.message);
+        m_driver.send(m_sid, "body", boost::ref(event.message)); 
     }
 }
 
 void
 blastbeat_job_t::react(const events::error& event) {
-    std::string type("headers");
-
+    std::string empty;
+    
+    // TODO: Proper error reporting.
+    m_driver.send(m_sid, "body", io::protect(empty)); 
 }
 
 void
 blastbeat_job_t::react(const events::choke& event) {
-    std::string type("end"),
-                empty;
+    std::string empty;
     
-    m_socket.send(io::protect(m_sid), ZMQ_SNDMORE);
-    m_socket.send(io::protect(type), ZMQ_SNDMORE);
-    m_socket.send(io::protect(empty));
+    m_driver.send(m_sid, "end", io::protect(empty)); 
 }
