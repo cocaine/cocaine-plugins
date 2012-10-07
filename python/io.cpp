@@ -61,7 +61,7 @@ PyObject* python_io_t::read(python_io_t * self,
     static char * keywords[] = { size_keyword, timeout_keyword, NULL };
 
     Py_ssize_t size = 0;
-    int timeout = 0;
+    int timeout = -1;
     PyObject * result = NULL;
 
     if(!PyArg_ParseTupleAndKeywords(args, kwargs, "|ni:read", keywords, &size, &timeout)) {
