@@ -6,7 +6,7 @@ IF(CGROUPS)
         isolate)
 
     TARGET_LINK_LIBRARIES(cgroups
-        cocaine-core
+        cocaine-common
         cgroup)
 
     SET_TARGET_PROPERTIES(cgroups PROPERTIES
