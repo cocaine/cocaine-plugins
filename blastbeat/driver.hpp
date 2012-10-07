@@ -73,17 +73,15 @@ class blastbeat_t:
 
     private:
         void
-        event(ev::io&,
-              int);
+        on_event(ev::io&, int);
         
         void
-        check(ev::prepare&,
-              int);
-
-        void
-        process();
+        on_check(ev::prepare&, int);
 
     private:
+        void
+        process_events();
+        
         void
         on_ping();
         

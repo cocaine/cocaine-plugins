@@ -67,9 +67,9 @@ blastbeat_t::blastbeat_t(context_t& context, engine::engine_t& engine, const std
         throw configuration_error_t((message % e.what()).str());
     }
 
-    m_watcher.set<blastbeat_t, &blastbeat_t::event>(this);
+    m_watcher.set<blastbeat_t, &blastbeat_t::on_event>(this);
     m_watcher.start(m_socket.fd(), ev::READ);
-    m_checker.set<blastbeat_t, &blastbeat_t::check>(this);
+    m_checker.set<blastbeat_t, &blastbeat_t::on_check>(this);
     m_checker.start();
 }
 
@@ -91,21 +91,17 @@ blastbeat_t::info() const {
 }
 
 void
-blastbeat_t::event(ev::io&, 
-                   int)
-{
+blastbeat_t::on_event(ev::io&, int) {
     m_checker.stop();
 
     if(m_socket.pending()) {
         m_checker.start();
-        process();
+        process_events();
     }
 }
 
 void
-blastbeat_t::check(ev::prepare&, 
-                   int)
-{
+blastbeat_t::on_check(ev::prepare&, int) {
     m_loop.feed_fd_event(m_socket.fd(), ev::READ);
 }
 
@@ -124,7 +120,7 @@ namespace {
 }
 
 void
-blastbeat_t::process() {
+blastbeat_t::process_events() {
     int counter = defaults::io_bulk_size;
     
     std::string sid,
@@ -139,10 +135,16 @@ blastbeat_t::process() {
             &message
         );
 
-        // Try to read the next RPC command from the bus in a
-        // non-blocking fashion. If it fails, break the loop.
-        if(!m_socket.recv_tuple(proxy, ZMQ_NOBLOCK)) {
-            return;            
+        {
+            io::scoped_option<
+                io::options::receive_timeout
+            > option(m_socket, 0);
+            
+            // Try to read the next RPC command from the bus in a
+            // non-blocking fashion. If it fails, break the loop.
+            if(!m_socket.recv_tuple(proxy)) {
+                return;            
+            }
         }
      
         m_log->debug(
@@ -173,7 +175,6 @@ blastbeat_t::process() {
 void
 blastbeat_t::on_ping() {
     std::string empty;
-    
     send("", "pong", io::protect(empty));
 }
 
@@ -277,7 +278,21 @@ void
 blastbeat_t::on_body(const std::string& sid, 
                      zmq::message_t& body)
 {
-    // TODO: Attach body to the job.
+    job_map_t::iterator it(
+        m_jobs.find(sid)
+    );
+
+    if(it == m_jobs.end()) {
+        m_log->warning("received an unknown session body");
+        return;
+    }
+
+    it->second->push(
+        std::string(
+            static_cast<const char*>(body.data()),
+            body.size()
+        )
+    );
 }
 
 void
@@ -287,14 +302,9 @@ blastbeat_t::on_end(const std::string& sid) {
     );
 
     if(it == m_jobs.end()) {
-        m_log->warning("unknown session termination");
+        m_log->warning("received an unknown session termination");
         return;
     }
-
-    //if(it->second->state_downcast<const engine::job::complete*>() == NULL) {
-        // TODO: Cancel the job.
-    //    it->second->process_event(engine::events::choke());
-    //} 
 
     m_jobs.erase(it);
 }

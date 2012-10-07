@@ -137,7 +137,7 @@ blastbeat_job_t::react(const events::error& event) {
     std::string empty;
     
     // TODO: Proper error reporting.
-    m_driver.send(m_sid, "body", io::protect(empty)); 
+    m_driver.send(m_sid, "retry", io::protect(empty)); 
 }
 
 void
