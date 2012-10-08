@@ -14,6 +14,7 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/format.hpp>
+#include <sstream>
 
 #include <EXTERN.h>
 #include <perl.h>
@@ -23,8 +24,6 @@
 #include <cocaine/manifest.hpp>
 
 #include <cocaine/api/sandbox.hpp>
-
-#include <sstream>
 
 EXTERN_C void boot_DynaLoader(pTHX_ CV* cv);
 

@@ -30,7 +30,8 @@
 #include <cocaine/api/sandbox.hpp>
 
 #include <cocaine/helpers/json.hpp>
-#include <cocaine/helpers/track.hpp>
+
+#include "track.hpp"
 
 namespace cocaine { namespace sandbox {
 

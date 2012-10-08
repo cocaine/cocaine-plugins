@@ -22,10 +22,7 @@
 #define COCAINE_DEALER_SERVER_DRIVER_HPP
 
 #include <cocaine/common.hpp>
-
-// Has to be included after common.hpp
-#include <ev++.h>
-
+#include <cocaine/asio.hpp>
 #include <cocaine/io.hpp>
 #include <cocaine/job.hpp>
 

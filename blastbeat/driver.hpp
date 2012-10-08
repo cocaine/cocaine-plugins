@@ -22,13 +22,10 @@
 #define COCAINE_BLASTBEAT_DRIVER_HPP
 
 #include <cocaine/common.hpp>
+#include <cocaine/asio.hpp>
+#include <cocaine/io.hpp>
 
-// Has to be included after common.hpp
-#include <ev++.h>
-
-#include "cocaine/io.hpp"
-
-#include "cocaine/api/driver.hpp"
+#include <cocaine/api/driver.hpp>
 
 namespace cocaine { namespace driver {
 

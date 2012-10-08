@@ -2,55 +2,46 @@ Source: cocaine-plugins
 Section: utils
 Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
-Build-Depends: cdbs, debhelper (>= 7.0.13), cmake, libzmq-dev (>= 2.2.0), libev-dev, libmsgpack-dev,
- libboost-dev, libboost-filesystem-dev, libboost-thread-dev, libltdl-dev, libv8-dev, python-dev,
- libperl-dev, libmongoclient-dev | mongodb-dev, elliptics-dev (>= 2.17), libcocaine-dev (>= 0.10.0),
- libcgroup-dev
+Build-Depends: cmake, cdbs, debhelper (>= 7.0.13), libzmq-dev (>= 2.2.0), libev-dev, libmsgpack-dev,
+ libboost-dev, libboost-filesystem-dev, libboost-thread-dev, libltdl-dev, python-dev, libperl-dev
+ libv8-dev, libmongoclient-dev | mongodb-dev, elliptics-dev (>= 2.17), libcgroup-dev,
+ libcocaine-dev (>= 0.10.0)
 Standards-Version: 3.9.1
 Vcs-Git: git://github.com/cocaine/cocaine-plugins.git
 Vcs-Browser: https://github.com/cocaine/cocaine-plugins
 
 Package: libcocaine-plugin-chrono
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core1 (>= 0.10)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
 Description: Cocaine - Time-based Drivers
  Time-based drivers for Cocaine.
 
 Package: libcocaine-plugin-fs
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core1 (>= 0.10)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
 Description: Cocaine - Filesystem-based Drivers
  Filesystem-based drivers for Cocaine.
 
 Package: libcocaine-plugin-dealer
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core1 (>= 0.10)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
 Description: Cocaine - Dealer Driver
  Dealer driver for Cocaine.
 
 Package: libcocaine-plugin-blastbeat
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core1 (>= 0.10)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
 Description: Cocaine - Blastbeat Driver
  Blastbeat driver for Cocaine.
 
 Package: libcocaine-plugin-python
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core1 (>= 0.10),
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10),
  python
 Provides: cocaine-plugin-python
 Replaces: cocaine-plugin-python
 Description: Cocaine - Python Sandbox
  Python scripting support for Cocaine.
-
-Package: libcocaine-plugin-javascript
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core1 (>= 0.10),
- libv8
-Provides: cocaine-plugin-javascript
-Replaces: cocaine-plugin-javascript
-Description: Cocaine - Javascript Sandbox
- Javascript scripting support for Cocaine.
 
 Package: libcocaine-plugin-perl
 Architecture: any
@@ -61,9 +52,18 @@ Replaces: cocaine-plugin-perl
 Description: Cocaine - Perl Sandbox
  Perl scripting support for Cocaine.
 
+Package: libcocaine-plugin-javascript
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10),
+ libv8
+Provides: cocaine-plugin-javascript
+Replaces: cocaine-plugin-javascript
+Description: Cocaine - Javascript Sandbox
+ Javascript scripting support for Cocaine.
+
 Package: libcocaine-plugin-binary
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core1 (>= 0.10)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
 Description: Cocaine - Binary Sandbox
  Binary C/C++ support for Cocaine.
 
@@ -71,7 +71,7 @@ Description: Cocaine - Binary Sandbox
 # 
 # Package: libcocaine-plugin-mongodb
 # Architecture: any
-# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-common1 (>= 0.10),
+# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-common2 (>= 0.10),
 #  libmongoclient | mongodb-clients
 # Provides: cocaine-plugin-mongodb
 # Replaces: cocaine-plugin-mongodb
@@ -80,7 +80,7 @@ Description: Cocaine - Binary Sandbox
 
 Package: libcocaine-plugin-elliptics
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-common1 (>= 0.10),
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-common2 (>= 0.10),
  elliptics-client (>= 2.17)
 Provides: cocaine-plugin-elliptics
 Replaces: cocaine-plugin-elliptics
@@ -89,7 +89,7 @@ Description: Cocaine - Elliptics Storage
 
 Package: libcocaine-plugin-cgroups
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core1 (>= 0.10),
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-common2 (>= 0.10),
  libcgroups
 Description: Cocaine - CGroups Isolate
  CGroups isolation support for Cocaine.

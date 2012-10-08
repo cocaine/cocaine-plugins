@@ -21,16 +21,15 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/format.hpp>
+#include <sstream>
+
+#include <v8.h>
 
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/manifest.hpp>
 
 #include <cocaine/api/sandbox.hpp>
-
-#include <sstream>
-
-#include <v8.h>
 
 namespace cocaine { namespace sandbox {
 
