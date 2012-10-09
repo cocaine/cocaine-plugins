@@ -40,10 +40,10 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest, const std::st
 	boost::filesystem::path source(spool);
 
 	if (lt_dlinit() != 0)
-		throw repository_error_t("unable to initialize binary loader");
+		throw configuration_error_t("unable to initialize binary loader");
 
 	if (!boost::filesystem::is_directory(source))
-		throw repository_error_t("binary loaded object must be unpacked into directory");
+		throw configuration_error_t("binary loaded object must be unpacked into directory");
 
 	Json::Value name(manifest.args["name"]);
 	if (!name.isString())
@@ -60,7 +60,7 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest, const std::st
 	if (!m_bin) {
 		m_log->error("unable to load binary object %s: %s", source.string().c_str(), lt_dlerror());
 		lt_dladvise_destroy(&m_advice);
-		throw repository_error_t("unable to load binary object");
+		throw configuration_error_t("unable to load binary object");
 	}
 
 	init_fn_t init = NULL;
@@ -72,7 +72,7 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest, const std::st
 		m_log->error("invalid binary loaded: init: %p, process: %p, cleanup: %p",
 				init, m_process, m_cleanup);
 		lt_dladvise_destroy(&m_advice);
-		throw repository_error_t("invalid binary loaded: not all callbacks are present");
+		throw configuration_error_t("invalid binary loaded: not all callbacks are present");
 	}
 
 	Json::Value config(manifest.args["config"]);
@@ -82,7 +82,7 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest, const std::st
 	if (!m_handle) {
 		m_log->error("binary initialization failed");
 		lt_dladvise_destroy(&m_advice);
-		throw repository_error_t("binary initialization failed");
+		throw configuration_error_t("binary initialization failed");
 	}
 
 	m_log->info("successfully initialized binary module from %s", source.string().c_str());
