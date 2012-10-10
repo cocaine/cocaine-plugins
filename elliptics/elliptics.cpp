@@ -84,7 +84,8 @@ elliptics_storage_t::elliptics_storage_t(context_t& context, const std::string& 
         ).str()
     )),
     m_log_adapter(m_log, args.get("verbosity", DNET_LOG_ERROR).asUInt()),
-    m_node(m_log_adapter)
+    m_node(m_log_adapter),
+    m_session(m_node)
 {
     Json::Value nodes(args["nodes"]);
 
@@ -104,7 +105,7 @@ elliptics_storage_t::elliptics_storage_t(context_t& context, const std::string& 
                 nodes[*it].asInt()
             );
         } catch(const std::runtime_error& e) {
-            // NOTE: Do nothing. Yes. Really.
+            // NOTE: Do nothing. Yes. Really. We only care if no remote nodes were added at all
         }
     }
 
@@ -121,7 +122,7 @@ elliptics_storage_t::elliptics_storage_t(context_t& context, const std::string& 
         digitizer()
     );
 
-    m_node.add_groups(m_groups);
+    m_session.add_groups(m_groups);
 }
 
 objects::value_type elliptics_storage_t::get(const std::string& ns,
@@ -135,7 +136,7 @@ objects::value_type elliptics_storage_t::get(const std::string& ns,
     std::string blob;
 
     try {
-        blob = m_node.read_data_wait(
+        blob = m_session.read_data_wait(
             id(ns, key),
             0,
             0,
@@ -166,12 +167,12 @@ void elliptics_storage_t::put(const std::string& ns,
         // Writing the app manifest
         // --------------------
 
-        m_node.transform(
+        m_session.transform(
             "meta:" + id(ns, key),
             dnet_id
         );
 
-        m_node.write_data_wait(
+        m_session.write_data_wait(
             dnet_id,
             Json::FastWriter().write(object.meta),
             0,
@@ -179,7 +180,7 @@ void elliptics_storage_t::put(const std::string& ns,
             0
         );
 
-        m_node.write_metadata(
+        m_session.write_metadata(
             dnet_id,
             "meta:" + id(ns, key),
             m_groups,
@@ -197,12 +198,12 @@ void elliptics_storage_t::put(const std::string& ns,
             object.blob.size()
         );
 
-        m_node.transform(
+        m_session.transform(
             id(ns, key),
             dnet_id
         );
 
-        m_node.write_data_wait(
+        m_session.write_data_wait(
             dnet_id,
             blob,
             0,
@@ -210,7 +211,7 @@ void elliptics_storage_t::put(const std::string& ns,
             0
         );
 
-        m_node.write_metadata(
+        m_session.write_metadata(
             dnet_id,
             id(ns, key),
             m_groups,
@@ -236,12 +237,12 @@ void elliptics_storage_t::put(const std::string& ns,
         msgpack::pack(&buffer, keylist);
         blob.assign(buffer.data(), buffer.size());
 
-        m_node.transform(
+        m_session.transform(
             "list:" + ns,
             dnet_id
         );
 
-        m_node.write_data_wait(
+        m_session.write_data_wait(
             dnet_id,
             blob,
             0,
@@ -249,7 +250,7 @@ void elliptics_storage_t::put(const std::string& ns,
             0
         );
 
-        m_node.write_metadata(
+        m_session.write_metadata(
             dnet_id,
             "list:" + ns,
             m_groups,
@@ -267,7 +268,7 @@ objects::meta_type elliptics_storage_t::exists(const std::string& ns,
     std::string meta;
 
     try {
-        meta = m_node.read_data_wait(
+        meta = m_session.read_data_wait(
             "meta:" + id(ns, key),
             0,
             0,
@@ -294,7 +295,7 @@ std::vector<std::string> elliptics_storage_t::list(const std::string& ns) {
     std::string blob;
     
     try {
-        blob = m_node.read_data_wait(
+        blob = m_session.read_data_wait(
             "list:" + ns,
             0,
             0,
@@ -327,8 +328,8 @@ void elliptics_storage_t::remove(const std::string& ns,
     struct timespec ts = { 0, 0 };
 
     try {
-        m_node.remove("meta:" + id(ns, key));
-        m_node.remove(id(ns, key));
+        m_session.remove("meta:" + id(ns, key));
+        m_session.remove(id(ns, key));
 
         // Updating the namespace
         // ----------------------
@@ -349,12 +350,12 @@ void elliptics_storage_t::remove(const std::string& ns,
         msgpack::pack(&buffer, updated);
         blob.assign(buffer.data(), buffer.size());
 
-        m_node.transform(
+        m_session.transform(
             "list:" + ns,
             dnet_id
         );
 
-        m_node.write_data_wait(
+        m_session.write_data_wait(
             dnet_id,
             blob,
             0,
@@ -362,7 +363,7 @@ void elliptics_storage_t::remove(const std::string& ns,
             0
         );
 
-        m_node.write_metadata(
+        m_session.write_metadata(
             dnet_id,
             "list:" + ns,
             m_groups,
