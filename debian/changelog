@@ -1,3 +1,9 @@
+cocaine-plugins (0.9.2) lucid; urgency=low
+
+  * Elliptics: merge with 2.19 upstream elliptics version
+
+ -- Evgeniy Polyakov <zbr@ioremap.net>  Wed, 10 Oct 2012 19:21:34 +0400
+
 cocaine-plugins (0.9.1) lucid; urgency=low
 
   * Elliptics plugin now actually writes data to the storage.

@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
 Build-Depends: cdbs, debhelper (>= 7.0.13), cmake, libzmq-dev (>= 2.2.0), libev-dev, libmsgpack-dev,
  libboost-dev, libboost-filesystem-dev, libboost-thread-dev, libltdl-dev, libv8-dev, python-dev,
- libperl-dev, libmongoclient-dev | mongodb-dev, elliptics-dev (>= 2.17), libcocaine-dev (>= 0.9.0)
+ libperl-dev, libmongoclient-dev | mongodb-dev, elliptics-dev (>= 2.19), libcocaine-dev (>= 0.9.0)
 Standards-Version: 3.9.1
 Vcs-Git: git://github.com/cocaine/cocaine-plugins.git
 Vcs-Browser: https://github.com/cocaine/cocaine-plugins
