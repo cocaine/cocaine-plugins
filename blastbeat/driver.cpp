@@ -147,9 +147,10 @@ blastbeat_t::process_events() {
             }
         }
      
-        m_log->debug(
+        COCAINE_LOG_DEBUG(
+            m_log,
             "received a blastbeat request, type: '%s', body size: %d bytes",
-            type.c_str(),
+            type,
             message.size()
         );
 
@@ -164,9 +165,10 @@ blastbeat_t::process_events() {
         } else if(type == "end") {
             on_end(sid);
         } else {
-            m_log->warning(
+            COCAINE_LOG_WARNING(
+                m_log,
                 "received an unknown message type '%s'",
-                type.c_str()
+                type
             );
         }
     } while(--counter);
@@ -180,7 +182,7 @@ blastbeat_t::on_ping() {
 
 void
 blastbeat_t::on_spawn() {
-    m_log->info("connected to the blastbeat server");
+    COCAINE_LOG_INFO(m_log, "connected to the blastbeat server");
 }
 
 void
@@ -283,7 +285,7 @@ blastbeat_t::on_body(const std::string& sid,
     );
 
     if(it == m_jobs.end()) {
-        m_log->warning("received an unknown session body");
+        COCAINE_LOG_WARNING(m_log, "received an unknown session body");
         return;
     }
 
@@ -302,7 +304,7 @@ blastbeat_t::on_end(const std::string& sid) {
     );
 
     if(it == m_jobs.end()) {
-        m_log->warning("received an unknown session termination");
+        COCAINE_LOG_WARNING(m_log, "received an unknown session termination");
         return;
     }
 

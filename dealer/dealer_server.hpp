@@ -44,7 +44,8 @@ class dealer_server_t:
 
         ~dealer_server_t();
 
-        // Driver interface.
+        // Driver interface
+
         virtual Json::Value info() const;
         
     private:
@@ -62,15 +63,20 @@ class dealer_server_t:
         context_t& m_context;
         boost::shared_ptr<logging::logger_t> m_log;
 
+        // Configuration
+
         const std::string m_event,
-                          m_route;
+                          m_identity;
+
+        // Dealer RPC
+        
+        io::channel_t m_channel;
+        
+        // Event loop
 
         ev::io m_watcher;
         ev::idle m_processor;
         ev::prepare m_check;
-
-        // Server RPC channel.        
-        io::channel_t m_channel;
 };
 
 }}

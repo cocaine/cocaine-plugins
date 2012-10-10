@@ -44,7 +44,8 @@ class blastbeat_t:
         virtual
         ~blastbeat_t();
 
-        // Driver interface.
+        // Driver interface
+
         virtual
         Json::Value info() const;
 
@@ -100,20 +101,25 @@ class blastbeat_t:
         context_t& m_context;
         boost::shared_ptr<logging::logger_t> m_log;
 
-        // Configuration.
+        // Configuration
+
         std::string m_event;
         std::string m_identity;
         std::string m_endpoint;
 
-        // I/O.
+        // I/O
+
+        io::socket_t m_socket;
+
+        // Event loop
+
         ev::loop_ref& m_loop;
 
         ev::io m_watcher; 
         ev::prepare m_checker;
         
-        io::socket_t m_socket;
+        // Session tracking
 
-        // Session tracking.
         typedef boost::unordered_map<
             std::string,
             boost::shared_ptr<engine::job_t>

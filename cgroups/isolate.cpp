@@ -111,21 +111,17 @@ cgroups_t::cgroups_t(context_t& context, const std::string& name, const Json::Va
                     cgroup_add_value_bool(ctl, p->c_str(), cfg[*p].asBool());
                     break;
                 } default: {
-                    m_log->warning(
-                        "cgroup controller '%s' parameter '%s' type is not supported",
-                        c->c_str(),
-                        p->c_str()
-                    );
-
+                    COCAINE_LOG_WARNING(m_log, "cgroup controller '%s' parameter '%s' type is not supported", *c, *p);
                     continue;
                 }
             }
             
-            m_log->debug(
+            COCAINE_LOG_DEBUG(
+                m_log,
                 "setting cgroup controller '%s' parameter '%s' to '%s'", 
-                c->c_str(),
-                p->c_str(),
-                boost::lexical_cast<std::string>(cfg[*p]).c_str()
+                *c,
+                *p,
+                boost::lexical_cast<std::string>(cfg[*p])
             );
         }
     }
@@ -141,7 +137,8 @@ cgroups_t::~cgroups_t() {
     int rv = 0;
 
     if((rv = cgroup_delete_cgroup(m_cgroup, false)) != 0) {
-        m_log->error(
+        COCAINE_LOG_ERROR(
+            m_log,
             "unable to delete the cgroup - %s", 
             cgroup_strerror(rv)
         );
@@ -166,7 +163,8 @@ cgroups_t::spawn(const std::string& path,
 
         // Attach to the control group.
         if((rv = cgroup_attach_task(m_cgroup)) != 0) {
-            m_log->error(
+            COCAINE_LOG_ERROR(
+                m_log,
                 "unable to attach the process to the cgroup - %s",
                 cgroup_strerror(rv)
             );
@@ -208,9 +206,10 @@ cgroups_t::spawn(const std::string& path,
             ::strerror_r(errno, buffer, 1024);
 #endif
 
-            m_log->error(
+            COCAINE_LOG_ERROR(
+                m_log,
                 "unable to execute '%s' - %s",
-                path.c_str(),
+                path,
 #ifdef _GNU_SOURCE
                 message
 #else

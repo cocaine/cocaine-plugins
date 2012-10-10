@@ -66,7 +66,7 @@ python_t::python_t(context_t& context, const manifest_t& manifest, const std::st
         source /= "__init__.py";
     }
 
-    log().debug("loading the app code from %s", source.string().c_str());
+    COCAINE_LOG_DEBUG(m_log, "loading the app code from %s", source.string());
     
     boost::filesystem::ifstream input(source);
     
@@ -247,9 +247,10 @@ void python_t::invoke(const std::string& event,
     } 
    
     if(result != Py_None) {
-        log().warning(
+        COCAINE_LOG_WARNING(
+            m_log,
             "ignoring an unused returned value of callable '%s'",
-            event.c_str()
+            event
         );
     }
 }

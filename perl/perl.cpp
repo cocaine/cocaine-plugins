@@ -94,7 +94,7 @@ public:
         const char* embedding[] = {"", (char*)source.string().c_str(), "-I", (char*)source_dir.c_str()};
         perl_parse(my_perl, xs_init, 4, (char**)embedding, NULL);
         PL_exit_flags |= PERL_EXIT_DESTRUCT_END;
-        log().info("%s", "running interpreter...");
+        COCAINE_LOG_INFO(m_log, "%s", "running interpreter...");
         perl_run(my_perl);
     }
         
@@ -105,7 +105,7 @@ public:
     }
 
     virtual void invoke(const std::string& event, api::io_t& io) {
-        log().info("%s", (std::string("invoking event ") + event + "...").c_str());
+        COCAINE_LOG_INFO(m_log, "%s", std::string("invoking event ") + event + "...");
         std::string input;
         
         // Try to pull in the request w/o blocking.

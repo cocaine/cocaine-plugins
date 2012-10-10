@@ -66,6 +66,10 @@ PyObject* log_object_t::debug(log_object_t * self,
         return NULL;
     }
 
+    if(self->sandbox->log().verbosity() < logging::debug) {
+        Py_RETURN_NONE;
+    }
+
     if(!PyArg_ParseTuple(args, "O:debug", &object)) {
         return NULL;
     }
@@ -77,7 +81,7 @@ PyObject* log_object_t::debug(log_object_t * self,
         message = PyString_AsString(object);
     }
 
-    self->sandbox->log().debug("%s", message);
+    self->sandbox->log().emit(logging::debug, "%s", message);
 
     Py_RETURN_NONE;
 }
@@ -97,6 +101,10 @@ PyObject* log_object_t::info(log_object_t * self,
         return NULL;
     }
     
+    if(self->sandbox->log().verbosity() < logging::info) {
+        Py_RETURN_NONE;
+    }
+    
     if(!PyArg_ParseTuple(args, "O:info", &object)) {
         return NULL;
     }
@@ -108,7 +116,7 @@ PyObject* log_object_t::info(log_object_t * self,
         message = PyString_AsString(object);
     }
 
-    self->sandbox->log().info("%s", message);
+    self->sandbox->log().emit(logging::info, "%s", message);
 
     Py_RETURN_NONE;
 }
@@ -128,6 +136,10 @@ PyObject* log_object_t::warning(log_object_t * self,
         return NULL;
     }
     
+    if(self->sandbox->log().verbosity() < logging::warning) {
+        Py_RETURN_NONE;
+    }
+    
     if(!PyArg_ParseTuple(args, "O:warning", &object)) {
         return NULL;
     }
@@ -139,7 +151,7 @@ PyObject* log_object_t::warning(log_object_t * self,
         message = PyString_AsString(object);
     }
 
-    self->sandbox->log().warning("%s", message);
+    self->sandbox->log().emit(logging::warning, "%s", message);
 
     Py_RETURN_NONE;
 }
@@ -159,6 +171,10 @@ PyObject* log_object_t::error(log_object_t * self,
         return NULL;
     }
     
+    if(self->sandbox->log().verbosity() < logging::error) {
+        Py_RETURN_NONE;
+    }
+    
     if(!PyArg_ParseTuple(args, "O:error", &object)) {
         return NULL;
     }
@@ -170,7 +186,7 @@ PyObject* log_object_t::error(log_object_t * self,
         message = PyString_AsString(object);
     }
 
-    self->sandbox->log().error("%s", message);
+    self->sandbox->log().emit(logging::error, "%s", message);
 
     Py_RETURN_NONE;
 }
@@ -189,13 +205,7 @@ PyObject* log_object_t::write(log_object_t * self,
         return NULL;
     }
 
-    if(!PyArg_ParseTuple(args, "s:write", &message)) {
-        return NULL;
-    }
-
-    self->sandbox->log().error("%s", message);
-
-    Py_RETURN_NONE;
+    return log_object_t::error(self, args);
 }
 
 PyObject* log_object_t::writelines(log_object_t * self,
@@ -212,6 +222,10 @@ PyObject* log_object_t::writelines(log_object_t * self,
         return NULL;
     }
 
+    if(self->sandbox->log().verbosity() < logging::error) {
+        Py_RETURN_NONE;
+    }
+    
     if(!PyArg_ParseTuple(args, "O:writelines", &lines)) {
         return NULL;
     }

@@ -58,7 +58,7 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest, const std::st
 
 	m_bin = lt_dlopenadvise(source.string().c_str(), m_advice);
 	if (!m_bin) {
-		m_log->error("unable to load binary object %s: %s", source.string().c_str(), lt_dlerror());
+		COCAINE_LOG_ERROR(m_log, "unable to load binary object %s: %s", source.string(), lt_dlerror());
 		lt_dladvise_destroy(&m_advice);
 		throw configuration_error_t("unable to load binary object");
 	}
@@ -69,7 +69,7 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest, const std::st
 	m_cleanup = reinterpret_cast<cleanup_fn_t>(lt_dlsym(m_bin, "cleanup"));
 
 	if (!m_process || !m_cleanup || !init) {
-		m_log->error("invalid binary loaded: init: %p, process: %p, cleanup: %p",
+		COCAINE_LOG_ERROR(m_log, "invalid binary loaded: init: %p, process: %p, cleanup: %p",
 				init, m_process, m_cleanup);
 		lt_dladvise_destroy(&m_advice);
 		throw configuration_error_t("invalid binary loaded: not all callbacks are present");
@@ -80,12 +80,12 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest, const std::st
 
 	m_handle = (*init)(cfg.c_str(), cfg.size() + 1);
 	if (!m_handle) {
-		m_log->error("binary initialization failed");
+		COCAINE_LOG_ERROR(m_log, "binary initialization failed");
 		lt_dladvise_destroy(&m_advice);
 		throw configuration_error_t("binary initialization failed");
 	}
 
-	m_log->info("successfully initialized binary module from %s", source.string().c_str());
+	COCAINE_LOG_INFO(m_log, "successfully initialized binary module from %s", source.string());
 }
 
 binary_t::~binary_t()
@@ -120,12 +120,12 @@ void binary_t::invoke(const std::string &method, api::io_t &io)
 
 		err = m_process(m_handle, &bio);
 		if (err < 0) {
-			m_log->error("process failed: %d", err);
+			COCAINE_LOG_ERROR(m_log, "process failed: %d", err);
 			throw unrecoverable_error_t("processing error: " + boost::lexical_cast<std::string>(err));
 		}
 	}
 
-	m_log->debug("process: method: %.*s, err: %d", (int)method.size(), method.data(), err);
+	COCAINE_LOG_DEBUG(m_log, "process: method: %.*s, err: %d", (int)method.size(), method.data(), err);
 }
 
 extern "C" {

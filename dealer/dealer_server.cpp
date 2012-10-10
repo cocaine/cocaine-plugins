@@ -41,21 +41,20 @@ dealer_server_t::dealer_server_t(context_t& context, engine::engine_t& engine, c
         ).str()
     )),
     m_event(args["emit"].asString()),
-    m_route(
+    m_identity(
         (boost::format("%1%/%2%")
-            % context.config.runtime.hostname
+            % m_context.config.runtime.hostname
             % name
         ).str()
     ),
+    m_channel(context, ZMQ_ROUTER, m_identity),
     m_watcher(engine.loop()),
     m_processor(engine.loop()),
-    m_check(engine.loop()),
-    m_channel(context, ZMQ_ROUTER, m_route)
+    m_check(engine.loop())
 {
     int linger = 0;
 
     try {
-        m_channel.setsockopt(ZMQ_LINGER, &linger, sizeof(linger));
         m_channel.bind(args["endpoint"].asString());
     } catch(const zmq::error_t& e) {
         boost::format message("invalid driver endpoint - %s");
@@ -79,7 +78,7 @@ Json::Value dealer_server_t::info() const {
     Json::Value result;
 
     result["endpoint"] = m_channel.endpoint();
-    result["route"] = m_route;
+    result["identity"] = m_identity;
     result["type"] = "native-server";
 
     return result;
@@ -113,16 +112,12 @@ void dealer_server_t::process(ev::idle&, int) {
         } while(m_channel.more());
 
         if(route.empty() || !m_channel.more()) {
-            m_log->error(
-                "received a corrupted request",
-                m_event.c_str()
-            );
-
+            COCAINE_LOG_ERROR(m_log, "received a corrupted request", m_event);
             m_channel.drop();
             return;
         }
 
-        m_log->debug("received a request from '%s'", route[0].c_str());
+        COCAINE_LOG_DEBUG(m_log, "received a request from '%s'", route[0]);
 
         do {
             std::string tag;
@@ -137,9 +132,10 @@ void dealer_server_t::process(ev::idle&, int) {
             try {
                 m_channel.recv_tuple(proxy);
             } catch(const std::runtime_error& e) {
-                m_log->error(
+                COCAINE_LOG_ERROR(
+                    m_log,
                     "received a corrupted request - %s",
-                    m_event.c_str(),
+                    m_event,
                     e.what()
                 );
         
@@ -147,10 +143,11 @@ void dealer_server_t::process(ev::idle&, int) {
                 return;
             }
 
-            m_log->debug(
+            COCAINE_LOG_DEBUG(
+                m_log,
                 "enqueuing a '%s' job with uuid: %s",
-                m_event.c_str(),
-                tag.c_str()
+                m_event,
+                tag
             );
             
             boost::shared_ptr<dealer_job_t> job(

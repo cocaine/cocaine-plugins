@@ -151,7 +151,7 @@ void zeromq_server_t::process(ev::idle&, int) {
         if(route.empty() || !m_socket.more()) {
             m_engine.app().log->error(
                 "driver '%s' got a corrupted request",
-                m_method.c_str()
+                m_method
             );
             
             m_socket.drop_remaining_parts();

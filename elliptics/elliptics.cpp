@@ -39,20 +39,20 @@ log_adapter_t::log(const int level,
     size_t length = ::strlen(message) - 1;
     
     switch(level) {
+        case DNET_LOG_DEBUG:
+            COCAINE_LOG_DEBUG(m_log, "%.*s", length, message);
+            break;
+
         case DNET_LOG_NOTICE:
-            m_log->info("%.*s", length, message);
+            COCAINE_LOG_INFO(m_log, "%.*s", length, message);
             break;
 
         case DNET_LOG_INFO:
-            m_log->info("%.*s", length, message);
-            break;
-
-        case DNET_LOG_DEBUG:
-            m_log->debug("%.*s", length, message);
+            COCAINE_LOG_INFO(m_log, "%.*s", length, message);
             break;
 
         case DNET_LOG_ERROR:
-            m_log->error("%.*s", length, message);
+            COCAINE_LOG_ERROR(m_log, "%.*s", length, message);
             break;
 
         default:
@@ -127,10 +127,11 @@ elliptics_storage_t::read(const std::string& collection,
 {
     std::string blob;
 
-    m_log->debug(
+    COCAINE_LOG_DEBUG(
+        m_log,
         "reading the '%s' object, collection: '%s'",
-        key.c_str(),
-        collection.c_str()
+        key,
+        collection
     );
 
     try {
@@ -153,10 +154,11 @@ elliptics_storage_t::write(const std::string& collection,
     // NOTE: Elliptcs does not initialize the contents of the keys. 
     memset(&dnet_id, 0, sizeof(struct dnet_id));
 
-    m_log->debug(
+    COCAINE_LOG_DEBUG(
+        m_log,
         "writing the '%s' object, collection: '%s'",
-        key.c_str(),
-        collection.c_str()
+        key,
+        collection
     );
     
     try {
@@ -250,10 +252,11 @@ elliptics_storage_t::remove(const std::string& collection,
     struct dnet_id dnet_id;
     struct timespec ts = { 0, 0 };
     
-    m_log->debug(
+    COCAINE_LOG_DEBUG(
+        m_log,
         "removing the '%s' object, collection: '%s'",
-        key.c_str(),
-        collection.c_str()
+        key,
+        collection
     );
     
     try {
