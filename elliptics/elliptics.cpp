@@ -36,23 +36,21 @@ void
 log_adapter_t::log(const int level,
                    const char * message)
 {
-    size_t length = ::strlen(message) - 1;
-    
     switch(level) {
         case DNET_LOG_DEBUG:
-            COCAINE_LOG_DEBUG(m_log, "%.*s", length, message);
+            COCAINE_LOG_DEBUG(m_log, "%s", message);
             break;
 
         case DNET_LOG_NOTICE:
-            COCAINE_LOG_INFO(m_log, "%.*s", length, message);
+            COCAINE_LOG_INFO(m_log, "%s", message);
             break;
 
         case DNET_LOG_INFO:
-            COCAINE_LOG_INFO(m_log, "%.*s", length, message);
+            COCAINE_LOG_INFO(m_log, "%s", message);
             break;
 
         case DNET_LOG_ERROR:
-            COCAINE_LOG_ERROR(m_log, "%.*s", length, message);
+            COCAINE_LOG_ERROR(m_log, "%s", message);
             break;
 
         default:
