@@ -99,7 +99,7 @@ python_t::python_t(context_t& context, const manifest_t& manifest, const std::st
     // Context access module
     // ---------------------
 
-    m_python_manifest = wrap(manifest.args);
+    m_python_manifest = wrap(manifest.sandbox.args);
 
     PyObject * context_module = Py_InitModule(
         "__context__",

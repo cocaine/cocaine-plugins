@@ -45,7 +45,7 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest, const std::st
 	if (!boost::filesystem::is_directory(source))
 		throw configuration_error_t("binary loaded object must be unpacked into directory");
 
-	Json::Value name(manifest.args["name"]);
+	Json::Value name(manifest.sandbox.args["name"]);
 	if (!name.isString())
 		throw configuration_error_t("malformed manifest: args/name must be a string");
 
@@ -75,7 +75,7 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest, const std::st
 		throw configuration_error_t("invalid binary loaded: not all callbacks are present");
 	}
 
-	Json::Value config(manifest.args["config"]);
+	Json::Value config(manifest.sandbox.args["config"]);
 	std::string cfg = config.toStyledString();
 
 	m_handle = (*init)(cfg.c_str(), cfg.size() + 1);

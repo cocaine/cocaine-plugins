@@ -59,7 +59,7 @@ public:
         my_perl = perl_alloc();
         perl_construct(my_perl);
 
-        Json::Value args(manifest.args);
+        Json::Value args(manifest.sandbox.args);
 
         if(!args.isObject()) {
             throw configuration_error_t("malformed manifest");
