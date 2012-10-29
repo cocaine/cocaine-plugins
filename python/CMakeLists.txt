@@ -24,7 +24,7 @@ IF(PYTHON)
         ${PYTHON_LIBS})
 
     SET_TARGET_PROPERTIES(python PROPERTIES
-        COMPILE_FLAGS "${PYTHON_CFLAGS} -fno-strict-aliasing"
+        COMPILE_FLAGS "${PYTHON_CFLAGS} -fno-strict-aliasing -std=c++0x"
         PREFIX ""
         SUFFIX ".cocaine-plugin")
 

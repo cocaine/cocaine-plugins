@@ -7,7 +7,8 @@ IF(BINARY)
 
     SET_TARGET_PROPERTIES(binary PROPERTIES
         PREFIX ""
-        SUFFIX ".cocaine-plugin")
+        SUFFIX ".cocaine-plugin"
+        COMPILE_FLAGS "-std=c++0x")
 
     INSTALL(TARGETS binary
         LIBRARY DESTINATION lib/cocaine

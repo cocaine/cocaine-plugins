@@ -9,7 +9,8 @@ IF(CHRONO)
 
     SET_TARGET_PROPERTIES(chrono PROPERTIES
         PREFIX ""
-        SUFFIX ".cocaine-plugin")
+        SUFFIX ".cocaine-plugin"
+        COMPILE_FLAGS "-std=c++0x")
 
     INSTALL(TARGETS chrono
         LIBRARY DESTINATION lib/cocaine

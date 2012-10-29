@@ -14,6 +14,7 @@ OPTION(PERL "Build Perl Sandbox plugin" ON)
 OPTION(BINARY "Build Binary Sandbox plugin" ON)
 OPTION(JAVASCRIPT "Build Javascript Sandbox plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" ON)
+OPTION(BLASTBEAT "Build Blastbeat Driver plugin" ON)
 OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
 
 IF(NOT APPLE)
@@ -50,8 +51,6 @@ LINK_DIRECTORIES(
     ${LIBMSGPACK_LIBRARY_DIRS}
     ${LIBZMQ_LIBRARY_DIRS}
     ${LIBCOCAINE_LIBRARY_DIRS})
-
-ADD_DEFINITIONS("-std=c++0x")
 
 SET(PLUGINS
         python
