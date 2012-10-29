@@ -13,3 +13,9 @@
 
 # MacOS Trash
 .DS_Store
+
+# CMake trash
+CMakeFiles
+CMakeCache.txt
+Makefile
+cmake_install.cmake
