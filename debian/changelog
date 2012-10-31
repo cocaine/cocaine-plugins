@@ -1,3 +1,9 @@
+cocaine-plugins (0.9.3) lucid; urgency=low
+
+  * Memset dnet_id with 0 before usage
+
+ -- Anton Kortunov <toshik@yandex-team.ru>  Wed, 31 Oct 2012 19:13:00 +0400
+
 cocaine-plugins (0.9.2) lucid; urgency=low
 
   * Elliptics: merge with 2.19 upstream elliptics version

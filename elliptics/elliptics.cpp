@@ -163,6 +163,8 @@ void elliptics_storage_t::put(const std::string& ns,
     struct dnet_id dnet_id;
     struct timespec ts = { 0, 0 };
         
+    memset(&dnet_id, 0, sizeof(struct dnet_id));
+
     try {
         // Writing the app manifest
         // --------------------
@@ -326,6 +328,8 @@ void elliptics_storage_t::remove(const std::string& ns,
 {
     struct dnet_id dnet_id;
     struct timespec ts = { 0, 0 };
+
+    memset(&dnet_id, 0, sizeof(struct dnet_id));
 
     try {
         m_session.remove("meta:" + id(ns, key));
