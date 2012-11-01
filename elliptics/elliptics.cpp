@@ -26,7 +26,8 @@
 using namespace cocaine;
 using namespace cocaine::storage;
 
-log_adapter_t::log_adapter_t(const boost::shared_ptr<logging::logger_t>& log, const int level):
+log_adapter_t::log_adapter_t(const boost::shared_ptr<logging::logger_t>& log,
+                             const int level):
     ioremap::elliptics::logger(level),
     m_log(log),
     m_level(level)
@@ -75,7 +76,9 @@ namespace {
     };
 }
 
-elliptics_storage_t::elliptics_storage_t(context_t& context, const std::string& name, const Json::Value& args):
+elliptics_storage_t::elliptics_storage_t(context_t& context,
+                                         const std::string& name,
+                                         const Json::Value& args):
     category_type(context, name, args),
     m_log(context.log(name)),
     m_log_adapter(m_log, args.get("verbosity", DNET_LOG_ERROR).asUInt()),

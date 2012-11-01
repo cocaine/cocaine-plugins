@@ -36,16 +36,20 @@ class filesystem_monitor_t:
 
     public:
         filesystem_monitor_t(context_t& context,
-                             engine::engine_t& engine,
                              const std::string& name,
-                             const Json::Value& args);
+                             const Json::Value& args,
+                             engine::engine_t& engine);
 
-        virtual ~filesystem_monitor_t();
+        virtual
+        ~filesystem_monitor_t();
 
-        virtual Json::Value info() const;
+        virtual
+        Json::Value
+        info() const;
 
     private:
-        void event(ev::stat&, int);
+        void
+        event(ev::stat&, int);
 
     private:
         const std::string m_event,

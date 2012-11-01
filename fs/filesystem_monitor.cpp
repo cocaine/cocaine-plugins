@@ -19,15 +19,19 @@
 */
 
 #include <cocaine/engine.hpp>
-#include <cocaine/job.hpp>
+
+#include <cocaine/api/job.hpp>
 
 #include "filesystem_monitor.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
 
-filesystem_monitor_t::filesystem_monitor_t(context_t& context, engine::engine_t& engine, const std::string& name, const Json::Value& args):
-    category_type(context, engine, name, args),
+filesystem_monitor_t::filesystem_monitor_t(context_t& context,
+                                           const std::string& name,
+                                           const Json::Value& args,
+                                           engine::engine_t& engine):
+    category_type(context, name, args, engine),
     m_path(args.get("path", "").asString()),
     m_watcher(engine.loop())
 {
@@ -43,7 +47,8 @@ filesystem_monitor_t::~filesystem_monitor_t() {
     m_watcher.stop();
 }
 
-Json::Value filesystem_monitor_t::info() const {
+Json::Value
+filesystem_monitor_t::info() const {
     Json::Value result;
 
     result["type"] = "filesystem-monitor";
@@ -52,7 +57,8 @@ Json::Value filesystem_monitor_t::info() const {
     return result;
 }
 
-void filesystem_monitor_t::event(ev::stat&, int) {
+void
+filesystem_monitor_t::event(ev::stat&, int) {
     engine().enqueue(
         boost::make_shared<engine::job_t>(
             m_event
@@ -61,7 +67,8 @@ void filesystem_monitor_t::event(ev::stat&, int) {
 }
 
 extern "C" {
-    void initialize(api::repository_t& repository) {
+    void
+    initialize(api::repository_t& repository) {
         repository.insert<filesystem_monitor_t>("filesystem-monitor");
     }
 }

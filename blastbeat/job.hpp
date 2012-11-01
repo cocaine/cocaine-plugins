@@ -22,7 +22,8 @@
 #define COCAINE_BLASTBEAT_JOB_HPP
 
 #include <cocaine/io.hpp>
-#include <cocaine/job.hpp>
+
+#include <cocaine/api/job.hpp>
 
 namespace cocaine { namespace driver {
 

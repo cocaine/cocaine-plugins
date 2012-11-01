@@ -21,7 +21,7 @@
 #ifndef COCAINE_DRIFTING_TIMER_DRIVER_HPP
 #define COCAINE_DRIFTING_TIMER_DRIVER_HPP
 
-#include <cocaine/job.hpp>
+#include <cocaine/api/job.hpp>
 
 #include "recurring_timer.hpp"
 
@@ -35,7 +35,8 @@ struct drifting_timer_job_t:
     drifting_timer_job_t(const std::string& event,
                          drifting_timer_t& driver);
 
-    virtual ~drifting_timer_job_t();
+    virtual
+    ~drifting_timer_job_t();
 
 private:
     drifting_timer_t& m_driver;
@@ -46,18 +47,23 @@ class drifting_timer_t:
 {
     public:
         drifting_timer_t(context_t& context,
-                         engine::engine_t& engine,
                          const std::string& name,
-                         const Json::Value& args);
+                         const Json::Value& args,
+                         engine::engine_t& engine);
 
         // Driver interface.
-        virtual Json::Value info() const;
+        virtual
+        Json::Value
+        info() const;
 
-        void rearm();
+        void
+        rearm();
 
     private:
         // Timer interface.
-        virtual void reschedule();
+        virtual
+        void
+        reschedule();
 };
 
 }}

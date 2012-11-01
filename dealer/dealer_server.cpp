@@ -23,6 +23,7 @@
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
+#include <cocaine/session.hpp>
 
 #include <cocaine/traits/policy.hpp>
 
@@ -32,8 +33,8 @@
 using namespace cocaine;
 using namespace cocaine::driver;
 
-dealer_server_t::dealer_server_t(context_t& context, engine::engine_t& engine, const std::string& name, const Json::Value& args):
-    category_type(context, engine, name, args),
+dealer_server_t::dealer_server_t(context_t& context, const std::string& name, const Json::Value& args, engine::engine_t& engine):
+    category_type(context, name, args, engine),
     m_context(context),
     m_log(context.log(
         (boost::format("app/%1%")
@@ -57,8 +58,7 @@ dealer_server_t::dealer_server_t(context_t& context, engine::engine_t& engine, c
     try {
         m_channel.bind(args["endpoint"].asString());
     } catch(const zmq::error_t& e) {
-        boost::format message("invalid driver endpoint - %s");
-        throw configuration_error_t((message % e.what()).str());
+        throw configuration_error_t("invalid driver endpoint - %s", e.what());
     }
 
     m_watcher.set<dealer_server_t, &dealer_server_t::event>(this);
@@ -74,7 +74,8 @@ dealer_server_t::~dealer_server_t() {
     m_check.stop();
 }
 
-Json::Value dealer_server_t::info() const {
+Json::Value
+dealer_server_t::info() const {
     Json::Value result;
 
     result["endpoint"] = m_channel.endpoint();
@@ -84,7 +85,8 @@ Json::Value dealer_server_t::info() const {
     return result;
 }
 
-void dealer_server_t::process(ev::idle&, int) {
+void
+dealer_server_t::process(ev::idle&, int) {
     int counter = defaults::io_bulk_size;
     
     do {
@@ -160,9 +162,11 @@ void dealer_server_t::process(ev::idle&, int) {
                 )
             );
 
-            engine().enqueue(job);
+            boost::weak_ptr<engine::session_t> session(
+                engine().enqueue(job)
+            );
 
-            job->push(
+            session.lock()->push(
                 std::string(
                     static_cast<const char*>(message.data()), 
                     message.size()
@@ -172,18 +176,21 @@ void dealer_server_t::process(ev::idle&, int) {
     } while(--counter);
 }
 
-void dealer_server_t::event(ev::io&, int) {
+void
+dealer_server_t::event(ev::io&, int) {
     if(m_channel.pending() && !m_processor.is_active()) {
         m_processor.start();
     }
 }
 
-void dealer_server_t::check(ev::prepare&, int) {
+void
+dealer_server_t::check(ev::prepare&, int) {
     event(m_watcher, ev::READ);
 }
 
 extern "C" {
-    void initialize(api::repository_t& repository) {
+    void
+    initialize(api::repository_t& repository) {
         repository.insert<dealer_server_t>("native-server");
     }
 }

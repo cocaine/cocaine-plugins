@@ -22,7 +22,8 @@
 #define COCAINE_DEALER_SERVER_JOB_HPP
 
 #include <cocaine/io.hpp>
-#include <cocaine/job.hpp>
+
+#include <cocaine/api/job.hpp>
 
 namespace cocaine { namespace driver {
 
@@ -34,25 +35,37 @@ class dealer_job_t:
     public:
         dealer_job_t(const std::string& event,
                      const engine::policy_t& policy,
-                     io::channel_t& channel,
+                     io::channel<io::policies::unique>& channel,
                      const route_t& route,
                      const std::string& tag);
 
-        virtual void react(const engine::events::chunk& event);
-        virtual void react(const engine::events::error& event);
-        virtual void react(const engine::events::choke& event);
+        virtual
+        void
+        react(const engine::events::chunk& event);
+        
+        virtual
+        void
+        react(const engine::events::error& event);
+        
+        virtual
+        void
+        react(const engine::events::choke& event);
 
     private:
         template<class T>
-        void send(const std::string& route,
-                  const T& message)
+        void
+        send(const std::string& route,
+             const T& message)
         {
-            m_channel.send(io::protect(route), ZMQ_SNDMORE);
+            m_channel.send(route, ZMQ_SNDMORE);
             m_channel.send_message(message);
         }
 
     private:
-        io::channel_t& m_channel;        
+        io::channel<
+            io::policies::unique
+        >& m_channel;        
+        
         const route_t m_route;
         const std::string m_tag;
 };

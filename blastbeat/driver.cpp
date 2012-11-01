@@ -26,6 +26,7 @@
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
+#include <cocaine/session.hpp>
 
 #include "driver.hpp"
 #include "job.hpp"
@@ -33,8 +34,11 @@
 using namespace cocaine;
 using namespace cocaine::driver;
 
-blastbeat_t::blastbeat_t(context_t& context, engine::engine_t& engine, const std::string& name, const Json::Value& args):
-    category_type(context, engine, name, args),
+blastbeat_t::blastbeat_t(context_t& context,
+                         const std::string& name,
+                         const Json::Value& args,
+                         engine::engine_t& engine):
+    category_type(context, name, args, engine),
     m_context(context),
     m_log(context.log(
         (boost::format("app/%1%")
@@ -56,15 +60,13 @@ blastbeat_t::blastbeat_t(context_t& context, engine::engine_t& engine, const std
             m_identity.size()
         );
     } catch(const zmq::error_t& e) {
-        boost::format message("invalid driver identity - %s");
-        throw configuration_error_t((message % e.what()).str());
+        throw configuration_error_t("invalid driver identity - %s", e.what());
     }
 
     try {
         m_socket.connect(m_endpoint);
     } catch(const zmq::error_t& e) {
-        boost::format message("invalid driver endpoint - %s");
-        throw configuration_error_t((message % e.what()).str());
+        throw configuration_error_t("invalid driver endpoint - %s", e.what());
     }
 
     m_watcher.set<blastbeat_t, &blastbeat_t::on_event>(this);
@@ -137,7 +139,8 @@ blastbeat_t::process_events() {
 
         {
             io::scoped_option<
-                io::options::receive_timeout
+                io::options::receive_timeout,
+                io::policies::unique
             > option(m_socket, 0);
             
             // Try to read the next RPC command from the bus in a
@@ -255,10 +258,7 @@ blastbeat_t::on_uwsgi(const std::string& sid,
     packer << std::string("request") << query_map;
     // <-- to there.
 
-    job_map_t::iterator it;
-
-    boost::tie(it, boost::tuples::ignore) = m_jobs.emplace(
-        sid,
+    boost::shared_ptr<blastbeat_job_t> job(
         boost::make_shared<blastbeat_job_t>(
             m_event,
             sid,
@@ -266,7 +266,12 @@ blastbeat_t::on_uwsgi(const std::string& sid,
         )
     );
 
-    engine().enqueue(it->second);
+    job_map_t::iterator it;
+
+    boost::tie(it, boost::tuples::ignore) = m_jobs.emplace(
+        sid,
+        engine().enqueue(job)
+    );
 
     it->second->push(
         std::string(

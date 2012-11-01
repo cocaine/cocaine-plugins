@@ -29,56 +29,14 @@
 
 #include <cocaine/api/sandbox.hpp>
 
-#include <cocaine/helpers/json.hpp>
-
 #include "track.hpp"
 
 namespace cocaine { namespace sandbox {
 
-typedef track_t<PyObject*, Py_DecRef> tracked_object_t;
-
-/*
-class interpreter_t {
-    public:
-        interpreter_t(PyThreadState ** state):
-            m_saved(NULL)
-        {
-            PyEval_AcquireLock();
-
-            if(*state == NULL) {
-                *state = Py_NewInterpreter();
-
-                if(*state == NULL) {
-                    throw unrecoverable_error("unable to create a python interpreter");
-                }
-            }
-
-            m_saved = PyThreadState_Swap(*state);
-        }
-
-        ~interpreter_t() {
-            PyThreadState_Swap(m_saved);
-            PyEval_ReleaseLock();
-        }
-
-    private:
-        PyThreadState * m_saved;
-};
-
-class thread_state_t {
-    public:
-        thread_state_t() {
-            m_saved = PyGILState_Ensure();
-        }
-
-        ~thread_state_t() {
-            PyGILState_Release(m_saved);
-        }
-
-    private:
-        PyGILState_STATE m_saved;
-};
-*/
+typedef track_t<
+    PyObject*,
+    Py_DecRef
+> tracked_object_t;
 
 class thread_lock_t {
     public:
@@ -100,32 +58,43 @@ class python_t:
 
     public:
         python_t(context_t& context,
-                 const manifest_t& manifest,
+                 const std::string& name,
+                 const Json::Value& args,
                  const std::string& spool);
         
-        virtual ~python_t();
+        virtual
+        ~python_t();
         
-        virtual void invoke(const std::string& method,
-                            api::io_t& io);
+        virtual
+        void
+        invoke(const std::string& method,
+               api::io_t& io);
 
     public:
-        const logging::logger_t& log() const {
+        const logging::logger_t&
+        log() const {
             return *m_log;
         }
     
     public:
-        static PyObject* manifest(PyObject * self,
-                                  PyObject * args);
+        static
+        PyObject*
+        args(PyObject * self,
+             PyObject * args);
         
-        static PyObject* wrap(const Json::Value& value);
+        static
+        PyObject*
+        wrap(const Json::Value& value);
         
-        static std::string exception();
+        static
+        std::string
+        exception();
 
     private:
         boost::shared_ptr<logging::logger_t> m_log;
         
-        PyObject * m_python_module;
-        tracked_object_t m_python_manifest;
+        PyObject * m_module;
+        tracked_object_t m_manifest;
         
         PyThreadState * m_thread_state;
 };

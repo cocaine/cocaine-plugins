@@ -19,15 +19,19 @@
 */
 
 #include <cocaine/engine.hpp>
-#include <cocaine/job.hpp>
+
+#include <cocaine/api/job.hpp>
 
 #include "recurring_timer.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
 
-recurring_timer_t::recurring_timer_t(context_t& context, engine::engine_t& engine, const std::string& name, const Json::Value& args):
-    category_type(context, engine, name, args),
+recurring_timer_t::recurring_timer_t(context_t& context,
+                                     const std::string& name,
+                                     const Json::Value& args,
+                                     engine::engine_t& engine):
+    category_type(context, name, args, engine),
     m_event(args["emit"].asString()),
     m_interval(args.get("interval", 0.0f).asInt() / 1000.0f),
     m_watcher(engine.loop())
@@ -44,7 +48,8 @@ recurring_timer_t::~recurring_timer_t() {
     m_watcher.stop();
 }
 
-Json::Value recurring_timer_t::info() const {
+Json::Value
+recurring_timer_t::info() const {
     Json::Value result;
 
     result["type"] = "recurring-timer";
@@ -53,11 +58,13 @@ Json::Value recurring_timer_t::info() const {
     return result;
 }
 
-void recurring_timer_t::event(ev::timer&, int) {
+void
+recurring_timer_t::event(ev::timer&, int) {
     reschedule();
 }
 
-void recurring_timer_t::reschedule() {
+void
+recurring_timer_t::reschedule() {
     engine().enqueue(
         boost::make_shared<engine::job_t>(
             m_event

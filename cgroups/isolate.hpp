@@ -44,7 +44,8 @@ class cgroups_t:
         virtual
         std::unique_ptr<api::handle_t>
         spawn(const std::string& path,
-              const std::map<std::string, std::string>& args);
+              const std::map<std::string, std::string>& args,
+              const std::map<std::string, std::string>& environment);
 
     private:
         boost::shared_ptr<logging::logger_t> m_log;

@@ -37,9 +37,9 @@ class blastbeat_t:
 
     public:
         blastbeat_t(context_t& context,
-                    engine::engine_t& engine,
                     const std::string& name,
-                    const Json::Value& args);
+                    const Json::Value& args,
+                    engine::engine_t& engine);
 
         virtual
         ~blastbeat_t();
@@ -47,7 +47,8 @@ class blastbeat_t:
         // Driver interface
 
         virtual
-        Json::Value info() const;
+        Json::Value
+        info() const;
 
         template<class T>
         void
@@ -109,7 +110,9 @@ class blastbeat_t:
 
         // I/O
 
-        io::socket_t m_socket;
+        io::socket<
+           io::policies::unique
+        > m_socket;
 
         // Event loop
 
@@ -122,7 +125,7 @@ class blastbeat_t:
 
         typedef boost::unordered_map<
             std::string,
-            boost::shared_ptr<engine::job_t>
+            boost::shared_ptr<engine::session_t>
         > job_map_t;
 
         job_map_t m_jobs;

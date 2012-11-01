@@ -24,7 +24,6 @@
 
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
-#include <cocaine/manifest.hpp>
 
 #include <sstream>
 
@@ -35,21 +34,26 @@ using namespace cocaine;
 using namespace cocaine::api;
 using namespace cocaine::sandbox;
 
-static PyMethodDef context_module_methods[] = {
-    { "manifest", &python_t::manifest, METH_NOARGS, 
+static
+PyMethodDef
+context_module_methods[] = {
+    { "args", &python_t::args, METH_NOARGS, 
         "Get the application's manifest" },
     { NULL, NULL, 0, NULL }
 };
 
-python_t::python_t(context_t& context, const manifest_t& manifest, const std::string& spool):
-    category_type(context, manifest, spool),
+python_t::python_t(context_t& context,
+                   const std::string& name,
+                   const Json::Value& args,
+                   const std::string& spool):
+    category_type(context, name, args, spool),
     m_log(context.log(
         (boost::format("app/%1%")
-            % manifest.name
+            % name
         ).str()
     )),
-    m_python_module(NULL),
-    m_python_manifest(NULL),
+    m_module(NULL),
+    m_manifest(NULL),
     m_thread_state(NULL)
 {
     Py_InitializeEx(0);
@@ -71,8 +75,7 @@ python_t::python_t(context_t& context, const manifest_t& manifest, const std::st
     boost::filesystem::ifstream input(source);
     
     if(!input) {
-        boost::format message("unable to open '%s'");
-        throw configuration_error_t((message % source.string()).str());
+        throw error_t("unable to open '%s'", source.string());
     }
 
     // System paths
@@ -99,7 +102,7 @@ python_t::python_t(context_t& context, const manifest_t& manifest, const std::st
     // Context access module
     // ---------------------
 
-    m_python_manifest = wrap(manifest.sandbox.args);
+    m_manifest = wrap(args);
 
     PyObject * context_module = Py_InitModule(
         "__context__",
@@ -117,8 +120,8 @@ python_t::python_t(context_t& context, const manifest_t& manifest, const std::st
     // App module
     // ----------
 
-    m_python_module = Py_InitModule(
-        manifest.name.c_str(),
+    m_module = Py_InitModule(
+        name.c_str(),
         NULL
     );
 
@@ -137,13 +140,13 @@ python_t::python_t(context_t& context, const manifest_t& manifest, const std::st
     Py_INCREF(builtins);
     
     PyModule_AddObject(
-        m_python_module, 
+        m_module, 
         "__builtins__",
         builtins
     );
     
     PyModule_AddStringConstant(
-        m_python_module,
+        m_module,
         "__file__",
         source.string().c_str()
     );
@@ -166,7 +169,7 @@ python_t::python_t(context_t& context, const manifest_t& manifest, const std::st
         throw unrecoverable_error_t(exception());
     }
 
-    PyObject * globals = PyModule_GetDict(m_python_module);
+    PyObject * globals = PyModule_GetDict(m_module);
     
     // NOTE: This will return None or NULL due to the Py_file_input flag above,
     // so we can safely drop it without even checking.
@@ -193,21 +196,21 @@ python_t::~python_t() {
     Py_Finalize();
 }
 
-void python_t::invoke(const std::string& event,
-                      api::io_t& io)
+void
+python_t::invoke(const std::string& event,
+                 api::io_t& io)
 {
     thread_lock_t thread(m_thread_state);
 
-    if(!m_python_module) {
+    if(!m_module) {
         throw unrecoverable_error_t("python module is not initialized");
     }
 
-    PyObject * globals = PyModule_GetDict(m_python_module);
+    PyObject * globals = PyModule_GetDict(m_module);
     PyObject * object = PyDict_GetItemString(globals, event.c_str());
     
     if(!object) {
-        boost::format message("callable '%s' does not exist");
-        throw unrecoverable_error_t((message % event).str());
+        throw unrecoverable_error_t("callable '%s' does not exist", event);
     }
     
     if(PyType_Check(object)) {
@@ -217,8 +220,7 @@ void python_t::invoke(const std::string& event,
     }
 
     if(!PyCallable_Check(object)) {
-        boost::format message("'%s' is not callable");
-        throw unrecoverable_error_t((message % event).str());
+        throw unrecoverable_error_t("'%s' is not callable", event);
     }
 
     tracked_object_t args(NULL);
@@ -255,8 +257,9 @@ void python_t::invoke(const std::string& event,
     }
 }
 
-PyObject* python_t::manifest(PyObject * self,
-                             PyObject * args)
+PyObject*
+python_t::args(PyObject * self,
+               PyObject * args)
 {
     PyObject * builtins = PyEval_GetBuiltins();
     PyObject * sandbox = PyDict_GetItemString(builtins, "__sandbox__");
@@ -271,12 +274,13 @@ PyObject* python_t::manifest(PyObject * self,
     }
 
     return PyDictProxy_New(
-        static_cast<python_t*>(PyCObject_AsVoidPtr(sandbox))->m_python_manifest
+        static_cast<python_t*>(PyCObject_AsVoidPtr(sandbox))->m_manifest
     );
 }
 
 // XXX: Check reference counting.
-PyObject* python_t::wrap(const Json::Value& value) {
+PyObject*
+python_t::wrap(const Json::Value& value) {
     PyObject * object = NULL;
 
     switch(value.type()) {
@@ -320,7 +324,8 @@ PyObject* python_t::wrap(const Json::Value& value) {
     return object;
 }
 
-std::string python_t::exception() {
+std::string
+python_t::exception() {
     tracked_object_t type(NULL), value(NULL), traceback(NULL);
     
     PyErr_Fetch(&type, &value, &traceback);
@@ -341,7 +346,8 @@ std::string python_t::exception() {
 }
 
 extern "C" {
-    void initialize(repository_t& repository) {
+    void
+    initialize(repository_t& repository) {
         repository.insert<python_t>("python");
     }
 }

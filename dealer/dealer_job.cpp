@@ -28,7 +28,7 @@ namespace cocaine {
 namespace driver {
     struct dealer_tag;
 
-    struct acknowledgement {
+    struct ack {
         typedef dealer_tag tag;
 
         typedef boost::tuple<
@@ -68,7 +68,7 @@ namespace io {
     template<>
     struct dispatch<dealer_tag> {
         typedef boost::mpl::list<
-            driver::acknowledgement,
+            driver::ack,
             driver::chunk,
             driver::error,
             driver::choke
@@ -80,7 +80,7 @@ namespace io {
 
 dealer_job_t::dealer_job_t(const std::string& event, 
                            const policy_t& policy,
-                           io::channel_t& channel,
+                           io::channel<io::policies::unique>& channel,
                            const route_t& route,
                            const std::string& tag):
     job_t(event, policy),
@@ -88,21 +88,24 @@ dealer_job_t::dealer_job_t(const std::string& event,
     m_route(route),
     m_tag(tag)
 {
-    io::message<acknowledgement> message(m_tag);
+    io::message<ack> message(m_tag);
     send(m_route.front(), message);
 }
 
-void dealer_job_t::react(const events::chunk& event) {
+void
+dealer_job_t::react(const events::chunk& event) {
     io::message<chunk> message(m_tag, event.message);
     send(m_route.front(), message);
 }
 
-void dealer_job_t::react(const events::error& event) {
+void
+dealer_job_t::react(const events::error& event) {
     io::message<error> message(m_tag, event.code, event.message);
     send(m_route.front(), message);
 }
 
-void dealer_job_t::react(const events::choke& event) {
+void
+dealer_job_t::react(const events::choke& event) {
     io::message<choke> message(m_tag);
     send(m_route.front(), message);
 }

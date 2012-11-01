@@ -43,11 +43,14 @@ public:
     typedef api::sandbox_t category_type;
 
 public:
-    perl_t(context_t& context, const manifest_t& manifest, const std::string& spool):
-        category_type(context, manifest, spool),
+    perl_t(context_t& context,
+           const std::string& name,
+           const Json::Value& args,
+           const std::string& spool):
+        category_type(context, name, args, spool),
         m_log(context.log(
             (boost::format("app/%1%")
-                % manifest.name
+                % name
             ).str()
         ))
     {
@@ -58,8 +61,6 @@ public:
 
         my_perl = perl_alloc();
         perl_construct(my_perl);
-
-        Json::Value args(manifest.sandbox.args);
 
         if(!args.isObject()) {
             throw configuration_error_t("malformed manifest");
@@ -87,8 +88,7 @@ public:
         boost::filesystem::ifstream input(source);
 
         if(!input) {
-            boost::format message("unable to open '%s'");
-            throw configuration_error_t((message % source.string()).str());
+            throw configuration_error_t("unable to open '%s'", source.string());
         }
 
         const char* embedding[] = {"", (char*)source.string().c_str(), "-I", (char*)source_dir.c_str()};

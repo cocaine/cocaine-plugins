@@ -24,9 +24,9 @@
 #include <cocaine/common.hpp>
 #include <cocaine/asio.hpp>
 #include <cocaine/io.hpp>
-#include <cocaine/job.hpp>
 
 #include <cocaine/api/driver.hpp>
+#include <cocaine/api/job.hpp>
 
 namespace cocaine { namespace driver {
 
@@ -38,15 +38,17 @@ class dealer_server_t:
 
     public:
         dealer_server_t(context_t& context,
-                        engine::engine_t& engine,
                         const std::string& name,
-                        const Json::Value& args);
+                        const Json::Value& args,
+                        engine::engine_t& engine);
 
         ~dealer_server_t();
 
         // Driver interface
 
-        virtual Json::Value info() const;
+        virtual
+        Json::Value
+        info() const;
         
     private:
         typedef boost::tuple<
@@ -55,9 +57,14 @@ class dealer_server_t:
             zmq::message_t*
         > request_proxy_t;
 
-        void event(ev::io&, int);
-        void process(ev::idle&, int);
-        void check(ev::prepare&, int);
+        void
+        event(ev::io&, int);
+        
+        void
+        process(ev::idle&, int);
+        
+        void
+        check(ev::prepare&, int);
 
     private:
         context_t& m_context;
@@ -70,7 +77,9 @@ class dealer_server_t:
 
         // Dealer RPC
         
-        io::channel_t m_channel;
+        io::channel<
+           io::policies::unique
+        > m_channel;
         
         // Event loop
 

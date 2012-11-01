@@ -27,7 +27,6 @@
 
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
-#include <cocaine/manifest.hpp>
 
 #include <cocaine/api/sandbox.hpp>
 
@@ -42,11 +41,14 @@ class javascript_t:
         typedef api::sandbox_t category_type;
 
     public:
-        javascript_t(context_t& context, const manifest_t& manifest, const std::string& spool):
-            category_type(context, manifest, spool),
+        javascript_t(context_t& context,
+                     const std::string& name,
+                     const Json::Value& args,
+                     const std::string& spool):
+            category_type(context, name, args, spool),
             m_log(context.log(
                 (boost::format("app/%1%")
-                    % manifest.name
+                    % name
                 ).str()
             ))
         {
@@ -54,8 +56,7 @@ class javascript_t:
             boost::filesystem::ifstream input(source);
     
             if(!input) {
-                boost::format message("unable to open '%s'");
-                throw configuration_error_t((message % spool).str());
+                throw configuration_error_t("unable to open '%s'", spool);
             }
 
             std::stringstream stream;
@@ -69,8 +70,10 @@ class javascript_t:
             m_v8_context.Dispose();
         }
 
-        virtual void invoke(const std::string& event,
-                            api::io_t& io)
+        virtual
+        void
+        invoke(const std::string& event,
+               api::io_t& io)
         {
             Json::Value result;
 
@@ -94,8 +97,9 @@ class javascript_t:
         }
 
     private:
-        void compile(const std::string& code,
-                     const std::string& name)
+        void
+        compile(const std::string& code,
+                const std::string& name)
         {
             HandleScope handle_scope;
 
@@ -132,7 +136,8 @@ class javascript_t:
         }
 
     private:
-        const logging::logger_t& log() const {
+        const logging::logger_t&
+        log() const {
             return *m_log;
         }
     
@@ -144,7 +149,8 @@ class javascript_t:
 };
 
 extern "C" {
-    void initialize(api::repository_t& repository) {
+    void
+    initialize(api::repository_t& repository) {
         repository.insert<javascript_t>("javascript");
     }
 }

@@ -34,8 +34,14 @@ class log_adapter_t:
         log_adapter_t(const boost::shared_ptr<logging::logger_t>& log,
                       const int level);
 
-        virtual void log(const int level, const char * message);
-        virtual unsigned long clone();
+        virtual
+        void
+        log(const int level,
+            const char * message);
+        
+        virtual
+        unsigned long
+        clone();
 
     private:
         boost::shared_ptr<logging::logger_t> m_log;

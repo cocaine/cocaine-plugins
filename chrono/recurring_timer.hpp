@@ -36,20 +36,26 @@ class recurring_timer_t:
 
     public:
         recurring_timer_t(context_t& context,
-                          engine::engine_t& engine,
                           const std::string& name,
-                          const Json::Value& args);
+                          const Json::Value& args,
+                          engine::engine_t& engine);
 
-        virtual ~recurring_timer_t();
+        virtual
+        ~recurring_timer_t();
 
         // Driver interface.
-        virtual Json::Value info() const;
+        virtual
+        Json::Value
+        info() const;
 
     private:
-        void event(ev::timer&, int);
+        void
+        event(ev::timer&, int);
 
         // Timer interface.
-        virtual void reschedule();
+        virtual
+        void
+        reschedule();
 
     protected:
         const std::string m_event;

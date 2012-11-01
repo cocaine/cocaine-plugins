@@ -26,7 +26,9 @@
 
 namespace cocaine { namespace sandbox {
 
-static PyMethodDef log_object_methods[] = {
+static
+PyMethodDef
+log_object_methods[] = {
     { "debug", (PyCFunction)log_object_t::debug, METH_VARARGS,
         "Logs a message with a Debug priority" },
     { "info", (PyCFunction)log_object_t::info, METH_VARARGS,
@@ -44,7 +46,9 @@ static PyMethodDef log_object_methods[] = {
     { NULL, NULL, 0, NULL }
 };
 
-static PyTypeObject log_object_type = {
+static
+PyTypeObject
+log_object_type = {
     PyObject_HEAD_INIT(NULL)
     0,                                          /* ob_size */
     "cocaine.context.Log",                      /* tp_name */
@@ -86,7 +90,9 @@ static PyTypeObject log_object_type = {
     PyType_GenericNew                           /* tp_new */
 };
 
-static PyMethodDef python_io_object_methods[] = {
+static
+PyMethodDef
+python_io_object_methods[] = {
     { "read", (PyCFunction)python_io_t::read,
         METH_KEYWORDS, "Pulls in a request chunk from the engine" },
     { "write", (PyCFunction)python_io_t::write,
@@ -100,7 +106,9 @@ static PyMethodDef python_io_object_methods[] = {
     { NULL }
 };
 
-static PyTypeObject python_io_object_type = {
+static
+PyTypeObject
+python_io_object_type = {
     PyObject_HEAD_INIT(NULL)
     0,                                          /* ob_size */
     "IO",                                       /* tp_name */

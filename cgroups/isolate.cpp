@@ -61,15 +61,19 @@ namespace {
     };
 }
 
-cgroups_t::cgroups_t(context_t& context, const std::string& name, const Json::Value& args):
+cgroups_t::cgroups_t(context_t& context,
+                     const std::string& name,
+                     const Json::Value& args):
     category_type(context, name, args),
     m_log(context.log(name))
 {
     int rv = 0;
 
     if((rv = cgroup_init()) != 0) {
-        boost::format message("unable to initialize the cgroups isolate - %s");
-        throw configuration_error_t((message % cgroup_strerror(rv)).str());
+        throw configuration_error_t(
+            "unable to initialize the cgroups isolate - %s",
+            cgroup_strerror(rv)
+        );
     }
     
     m_cgroup = cgroup_new_cgroup(name.c_str());
@@ -128,8 +132,7 @@ cgroups_t::cgroups_t(context_t& context, const std::string& name, const Json::Va
 
     if((rv = cgroup_create_cgroup(m_cgroup, false)) != 0) {
         cgroup_free(&m_cgroup);
-        boost::format message("unable to create the cgroup - %s");
-        throw configuration_error_t((message % cgroup_strerror(rv)).str());
+        throw configuration_error_t("unable to create the cgroup - %s", cgroup_strerror(rv));
     }
 }
 
@@ -149,7 +152,8 @@ cgroups_t::~cgroups_t() {
 
 std::unique_ptr<handle_t>
 cgroups_t::spawn(const std::string& path,
-                 const std::map<std::string, std::string>& args)
+                 const std::map<std::string, std::string>& args,
+                 const std::map<std::string, std::string>& environment)
 {
     typedef std::map<
         std::string,
@@ -172,29 +176,45 @@ cgroups_t::spawn(const std::string& path,
             std::exit(EXIT_FAILURE);
         }
 
-        char * argv[args.size() * 2 + 2];
+        char * argv[args.size() * 2 + 2],
+             * envp[environment.size() + 1];
 
-        // NOTE: First element is the executable path,
-        // last one should be null pointer.
+        // NOTE: The first element is the executable path,
+        // the last one should be null pointer.
         argv[0] = ::strdup(path.c_str());
-        argv[sizeof(argv) / sizeof(char*)] = NULL;
+        argv[sizeof(argv) / sizeof(argv[0])] = NULL;
 
-        arg_map_t::const_iterator it(args.begin());
-        
-        // NOTE: Start with the second element.
-        int n = 1;
+        // NOTE: The last element of the environment must be a null pointer.
+        envp[sizeof(envp) / sizeof(envp[0])] = NULL;
+
+        std::map<std::string, std::string>::const_iterator it;
+        int n;
+
+        it = args.begin();
+        n = 1;
         
         while(it != args.end()) {
             argv[n++] = ::strdup(it->first.c_str());
-            argv[n++] = ::strdup(it->second.c_str());
+            argv[n++] = ::strdup(it->second.c_str());   
             
             ++it;
         }
 
-        rv = ::execvp(
-            argv[0],
-            argv
-        );
+        boost::format format("%s=%s");
+
+        it = environment.begin();
+        n = 0;
+
+        while(it != environment.end()) {
+            format % it->first % it->second;
+            
+            envp[n++] = ::strdup(format.str().c_str());
+            
+            format.clear();
+            ++it;
+        }
+
+        rv = ::execve(argv[0], argv, envp);
 
         if(rv != 0) {
             char buffer[1024];

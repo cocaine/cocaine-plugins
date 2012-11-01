@@ -25,7 +25,8 @@ using namespace cocaine;
 using namespace cocaine::driver;
 
 extern "C" {
-    void initialize(api::repository_t& repository) {
+    void
+    initialize(api::repository_t& repository) {
         repository.insert<recurring_timer_t>("recurring-timer");
         repository.insert<drifting_timer_t>("drifting-timer");
     }

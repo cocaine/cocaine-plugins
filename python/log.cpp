@@ -26,9 +26,10 @@
 using namespace cocaine::api;
 using namespace cocaine::sandbox;
 
-int log_object_t::constructor(log_object_t * self,
-                              PyObject * args,
-                              PyObject * kwargs)
+int
+log_object_t::constructor(log_object_t * self,
+                          PyObject * args,
+                          PyObject * kwargs)
 {
     PyObject * builtins = PyEval_GetBuiltins();
     PyObject * sandbox = PyDict_GetItemString(builtins, "__sandbox__");
@@ -47,12 +48,14 @@ int log_object_t::constructor(log_object_t * self,
     return 0;
 }
 
-void log_object_t::destructor(log_object_t * self) {
+void
+log_object_t::destructor(log_object_t * self) {
     self->ob_type->tp_free(self);
 }
 
-PyObject* log_object_t::debug(log_object_t * self,
-                              PyObject * args)
+PyObject*
+log_object_t::debug(log_object_t * self,
+                    PyObject * args)
 {
     PyObject * object = NULL;
     const char * message = NULL;
@@ -86,8 +89,9 @@ PyObject* log_object_t::debug(log_object_t * self,
     Py_RETURN_NONE;
 }
 
-PyObject* log_object_t::info(log_object_t * self,
-                             PyObject * args)
+PyObject*
+log_object_t::info(log_object_t * self,
+                   PyObject * args)
 {
     PyObject * object = NULL;
     const char * message = NULL;
@@ -121,8 +125,9 @@ PyObject* log_object_t::info(log_object_t * self,
     Py_RETURN_NONE;
 }
 
-PyObject* log_object_t::warning(log_object_t * self,
-                                PyObject * args)
+PyObject*
+log_object_t::warning(log_object_t * self,
+                      PyObject * args)
 {
     PyObject * object = NULL;
     const char * message = NULL;
@@ -156,8 +161,9 @@ PyObject* log_object_t::warning(log_object_t * self,
     Py_RETURN_NONE;
 }
 
-PyObject* log_object_t::error(log_object_t * self,
-                              PyObject * args)
+PyObject*
+log_object_t::error(log_object_t * self,
+                    PyObject * args)
 {
     PyObject * object = NULL;
     const char * message = NULL;
@@ -191,8 +197,9 @@ PyObject* log_object_t::error(log_object_t * self,
     Py_RETURN_NONE;
 }
 
-PyObject* log_object_t::write(log_object_t * self,
-                              PyObject * args)
+PyObject*
+log_object_t::write(log_object_t * self,
+                    PyObject * args)
 {
     const char * message = NULL;
 
@@ -208,8 +215,9 @@ PyObject* log_object_t::write(log_object_t * self,
     return log_object_t::error(self, args);
 }
 
-PyObject* log_object_t::writelines(log_object_t * self,
-                                   PyObject * args)
+PyObject*
+log_object_t::writelines(log_object_t * self,
+                         PyObject * args)
 {
     PyObject * lines = NULL;
 
@@ -258,8 +266,9 @@ PyObject* log_object_t::writelines(log_object_t * self,
     Py_RETURN_NONE;
 }
 
-PyObject* log_object_t::flush(log_object_t * self,
-                              PyObject * args)
+PyObject*
+log_object_t::flush(log_object_t * self,
+                    PyObject * args)
 {
     Py_RETURN_NONE;
 }
