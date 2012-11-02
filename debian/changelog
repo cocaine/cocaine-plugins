@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.0-alpha6) lucid; urgency=low
+
+  * Alpha 6.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 02 Nov 2012 18:32:41 +0400
+
 cocaine-plugins (0.10.0-alpha4) lucid; urgency=low
 
   * Building for YaC 2012, try #2.
