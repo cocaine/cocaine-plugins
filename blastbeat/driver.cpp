@@ -48,10 +48,10 @@ blastbeat_t::blastbeat_t(context_t& context,
     m_event(args.get("emit", "").asString()),
     m_identity(args.get("identity", "").asString()),
     m_endpoint(args.get("endpoint", "").asString()),
+    m_socket(context, ZMQ_DEALER),
     m_loop(engine.loop()),
     m_watcher(engine.loop()),
-    m_checker(engine.loop()),
-    m_socket(context, ZMQ_DEALER)
+    m_checker(engine.loop())
 {
     try {
         m_socket.setsockopt(

@@ -201,8 +201,6 @@ PyObject*
 log_object_t::write(log_object_t * self,
                     PyObject * args)
 {
-    const char * message = NULL;
-
     if(!self->sandbox) {
         PyErr_SetString(
             PyExc_RuntimeError,

@@ -53,8 +53,6 @@ dealer_server_t::dealer_server_t(context_t& context, const std::string& name, co
     m_processor(engine.loop()),
     m_check(engine.loop())
 {
-    int linger = 0;
-
     try {
         m_channel.bind(args["endpoint"].asString());
     } catch(const zmq::error_t& e) {
