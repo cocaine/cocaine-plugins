@@ -44,7 +44,7 @@ dealer_server_t::dealer_server_t(context_t& context, const std::string& name, co
     m_event(args["emit"].asString()),
     m_identity(
         (boost::format("%1%/%2%")
-            % m_context.config.runtime.hostname
+            % m_context.config.network.hostname
             % name
         ).str()
     ),
@@ -53,8 +53,14 @@ dealer_server_t::dealer_server_t(context_t& context, const std::string& name, co
     m_processor(engine.loop()),
     m_check(engine.loop())
 {
+    std::string endpoint(args["endpoint"].asString());
+
     try {
-        m_channel.bind(args["endpoint"].asString());
+        if(endpoint.empty()) {
+            m_channel.bind();
+        } else {
+            m_channel.bind(endpoint);
+        }
     } catch(const zmq::error_t& e) {
         throw configuration_error_t("invalid driver endpoint - %s", e.what());
     }
