@@ -1,8 +1,8 @@
 IF(BLASTBEAT)
     ADD_LIBRARY(blastbeat MODULE
-        module
+        event
         driver
-        job)
+        module)
 
     TARGET_LINK_LIBRARIES(blastbeat
         cocaine-core)

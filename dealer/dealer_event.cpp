@@ -18,7 +18,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include "dealer_job.hpp"
+#include "dealer_event.hpp"
 
 using namespace cocaine::engine;
 using namespace cocaine::driver;
@@ -26,8 +26,6 @@ using namespace cocaine::driver;
 namespace cocaine {
 
 namespace driver {
-    struct dealer_tag;
-
     struct ack {
         typedef dealer_tag tag;
 
@@ -78,34 +76,54 @@ namespace io {
 
 } // namespace cocaine
 
-dealer_job_t::dealer_job_t(const std::string& event, 
-                           const policy_t& policy,
-                           io::channel<io::policies::unique>& channel,
-                           const route_t& route,
-                           const std::string& tag):
-    job_t(event, policy),
+dealer_event_t::dealer_event_t(const std::string& event, 
+                               const policy_t& policy,
+                               rpc_channel_t& channel,
+                               const route_t& route,
+                               const std::string& tag):
+    event_t(event, policy),
     m_channel(channel),
     m_route(route),
     m_tag(tag)
 {
-    io::message<ack> message(m_tag);
-    send(m_route.front(), message);
+    send(
+        m_route.front(),
+        io::message<driver::ack>(m_tag)
+    );
 }
 
 void
-dealer_job_t::react(const events::chunk& event) {
-    io::message<chunk> message(m_tag, event.message);
-    send(m_route.front(), message);
+dealer_event_t::on_chunk(const void * chunk,
+                         size_t size)
+{
+    zmq::message_t message(size);
+
+    memcpy(
+        message.data(),
+        chunk,
+        size
+    );
+
+    send(
+        m_route.front(),
+        io::message<driver::chunk>(m_tag, message)
+    );
 }
 
 void
-dealer_job_t::react(const events::error& event) {
-    io::message<error> message(m_tag, event.code, event.message);
-    send(m_route.front(), message);
+dealer_event_t::on_error(error_code code,
+                         const std::string& message)
+{
+    send(
+        m_route.front(),
+        io::message<driver::error>(m_tag, code, message)
+    );
 }
 
 void
-dealer_job_t::react(const events::choke& event) {
-    io::message<choke> message(m_tag);
-    send(m_route.front(), message);
+dealer_event_t::on_close() {
+    send(
+        m_route.front(),
+        io::message<driver::choke>(m_tag)
+    );
 }

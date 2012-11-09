@@ -23,12 +23,12 @@
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
-#include <cocaine/session.hpp>
+#include <cocaine/pipe.hpp>
 
 #include <cocaine/traits/policy.hpp>
 
 #include "dealer_server.hpp"
-#include "dealer_job.hpp"
+#include "dealer_event.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
@@ -151,13 +151,13 @@ dealer_server_t::process(ev::idle&, int) {
 
             COCAINE_LOG_DEBUG(
                 m_log,
-                "enqueuing a '%s' job with uuid: %s",
+                "enqueuing a '%s' event with uuid: %s",
                 m_event,
                 tag
             );
             
-            boost::shared_ptr<dealer_job_t> job(
-                boost::make_shared<dealer_job_t>(
+            boost::shared_ptr<dealer_event_t> event(
+                boost::make_shared<dealer_event_t>(
                     m_event,
                     policy,
                     boost::ref(m_channel),
@@ -166,16 +166,14 @@ dealer_server_t::process(ev::idle&, int) {
                 )
             );
 
-            boost::weak_ptr<engine::session_t> session(
-                engine().enqueue(job)
-            );
-
-            session.lock()->push(
-                std::string(
+            try {
+                engine().enqueue(event)->push(
                     static_cast<const char*>(message.data()), 
                     message.size()
-                )
-            );
+                );
+            } catch(const cocaine::error_t& e) {
+                throw;
+            }
         } while(m_channel.more());
     } while(--counter);
 }

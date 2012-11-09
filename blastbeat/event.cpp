@@ -20,7 +20,7 @@
 
 #include <boost/format.hpp>
 
-#include "job.hpp"
+#include "event.hpp"
 #include "driver.hpp"
 
 using namespace cocaine::engine;
@@ -72,17 +72,19 @@ namespace cocaine { namespace io {
     };
 }}
 
-blastbeat_job_t::blastbeat_job_t(const std::string& event, 
-                                 const std::string& sid,
-                                 blastbeat_t& driver):
-    job_t(event),
+blastbeat_event_t::blastbeat_event_t(const std::string& event, 
+                                     const std::string& sid,
+                                     blastbeat_t& driver):
+    event_t(event),
     m_sid(sid),
     m_driver(driver),
     m_body(false)
 { }
 
 void
-blastbeat_job_t::react(const events::chunk& event) {
+blastbeat_event_t::on_chunk(const void * chunk,
+                            size_t size)
+{
     if(!m_body) {
         msgpack::unpacked unpacked;
         cocaine_response_t response;
@@ -90,8 +92,8 @@ blastbeat_job_t::react(const events::chunk& event) {
         try {
             msgpack::unpack(
                 &unpacked,
-                static_cast<const char*>(event.message.data()),
-                event.message.size()
+                static_cast<const char*>(chunk),
+                size
             );
             
             io::type_traits<cocaine_response_t>::unpack(
@@ -128,12 +130,22 @@ blastbeat_job_t::react(const events::chunk& event) {
 
         m_body = true;
     } else {
-        m_driver.send(m_sid, "body", boost::ref(event.message)); 
+        zmq::message_t message(size);
+
+        memcpy(
+            message.data(),
+            chunk,
+            size
+        );
+
+        m_driver.send(m_sid, "body", boost::ref(message)); 
     }
 }
 
 void
-blastbeat_job_t::react(const events::error& event) {
+blastbeat_event_t::on_error(error_code code,
+                            const std::string& message)
+{
     std::string empty;
     
     // TODO: Proper error reporting.
@@ -141,7 +153,7 @@ blastbeat_job_t::react(const events::error& event) {
 }
 
 void
-blastbeat_job_t::react(const events::choke& event) {
+blastbeat_event_t::on_close() {
     std::string empty;
     
     m_driver.send(m_sid, "end", io::protect(empty)); 

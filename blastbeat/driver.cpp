@@ -26,10 +26,10 @@
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
-#include <cocaine/session.hpp>
+#include <cocaine/pipe.hpp>
 
 #include "driver.hpp"
-#include "job.hpp"
+#include "event.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
@@ -87,7 +87,7 @@ blastbeat_t::info() const {
     result["identity"] = m_identity;
     result["endpoint"] = m_endpoint;
     result["type"] = "blastbeat";
-    result["sessions"] = static_cast<Json::LargestUInt>(m_jobs.size());
+    result["sessions"] = static_cast<Json::LargestUInt>(m_pipes.size());
 
     return result;
 }
@@ -258,60 +258,61 @@ blastbeat_t::on_uwsgi(const std::string& sid,
     packer << std::string("request") << query_map;
     // <-- to there.
 
-    boost::shared_ptr<blastbeat_job_t> job(
-        boost::make_shared<blastbeat_job_t>(
+    boost::shared_ptr<blastbeat_event_t> event(
+        boost::make_shared<blastbeat_event_t>(
             m_event,
             sid,
             *this
         )
     );
 
-    job_map_t::iterator it;
+    try {
+        pipe_map_t::iterator it;
 
-    boost::tie(it, boost::tuples::ignore) = m_jobs.emplace(
-        sid,
-        engine().enqueue(job)
-    );
+        boost::tie(it, boost::tuples::ignore) = m_pipes.emplace(
+            sid,
+            engine().enqueue(event)
+        );
 
-    it->second->push(
-        std::string(
+        it->second->push(
             buffer.data(),
             buffer.size()
-        )
-    );
+        );
+    } catch(const cocaine::error_t& e) {
+        throw;
+    }
 }
 
 void
 blastbeat_t::on_body(const std::string& sid, 
                      zmq::message_t& body)
 {
-    job_map_t::iterator it(
-        m_jobs.find(sid)
+    pipe_map_t::iterator it(
+        m_pipes.find(sid)
     );
 
-    if(it == m_jobs.end()) {
+    if(it == m_pipes.end()) {
         COCAINE_LOG_WARNING(m_log, "received an unknown session body");
         return;
     }
 
     it->second->push(
-        std::string(
-            static_cast<const char*>(body.data()),
-            body.size()
-        )
+        static_cast<const char*>(body.data()),
+        body.size()
     );
 }
 
 void
 blastbeat_t::on_end(const std::string& sid) {
-    job_map_t::iterator it(
-        m_jobs.find(sid)
+    pipe_map_t::iterator it(
+        m_pipes.find(sid)
     );
 
-    if(it == m_jobs.end()) {
+    if(it == m_pipes.end()) {
         COCAINE_LOG_WARNING(m_log, "received an unknown session termination");
         return;
     }
 
-    m_jobs.erase(it);
+    it->second->close();
+    m_pipes.erase(it);
 }

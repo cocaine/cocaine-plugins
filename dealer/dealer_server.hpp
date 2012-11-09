@@ -26,9 +26,13 @@
 #include <cocaine/io.hpp>
 
 #include <cocaine/api/driver.hpp>
-#include <cocaine/api/job.hpp>
 
 namespace cocaine { namespace driver {
+
+typedef io::channel<
+    struct dealer_tag,
+    io::policies::unique
+> rpc_channel_t;
 
 class dealer_server_t:
     public api::driver_t
@@ -77,9 +81,7 @@ class dealer_server_t:
 
         // Dealer RPC
         
-        io::channel<
-           io::policies::unique
-        > m_channel;
+        rpc_channel_t m_channel;
         
         // Event loop
 

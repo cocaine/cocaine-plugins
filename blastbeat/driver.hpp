@@ -125,10 +125,10 @@ class blastbeat_t:
 
         typedef boost::unordered_map<
             std::string,
-            boost::shared_ptr<engine::session_t>
-        > job_map_t;
+            boost::shared_ptr<engine::pipe_t>
+        > pipe_map_t;
 
-        job_map_t m_jobs;
+        pipe_map_t m_pipes;
 };
 
 }}

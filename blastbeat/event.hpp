@@ -18,56 +18,45 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_DEALER_SERVER_JOB_HPP
-#define COCAINE_DEALER_SERVER_JOB_HPP
+#ifndef COCAINE_BLASTBEAT_JOB_HPP
+#define COCAINE_BLASTBEAT_JOB_HPP
 
 #include <cocaine/io.hpp>
 
-#include <cocaine/api/job.hpp>
+#include <cocaine/api/event.hpp>
 
 namespace cocaine { namespace driver {
 
-typedef std::vector<std::string> route_t;
+class blastbeat_t;
 
-class dealer_job_t:
-    public engine::job_t
+class blastbeat_event_t:
+    public engine::event_t
 {
     public:
-        dealer_job_t(const std::string& event,
-                     const engine::policy_t& policy,
-                     io::channel<io::policies::unique>& channel,
-                     const route_t& route,
-                     const std::string& tag);
+        blastbeat_event_t(const std::string& event,
+                          const std::string& sid,
+                          blastbeat_t& driver);
 
         virtual
         void
-        react(const engine::events::chunk& event);
+        on_chunk(const void * chunk,
+                 size_t size);
         
         virtual
         void
-        react(const engine::events::error& event);
+        on_error(error_code code,
+                 const std::string& message);
         
         virtual
         void
-        react(const engine::events::choke& event);
-
-    private:
-        template<class T>
-        void
-        send(const std::string& route,
-             const T& message)
-        {
-            m_channel.send(route, ZMQ_SNDMORE);
-            m_channel.send_message(message);
-        }
+        on_close();
 
     private:
-        io::channel<
-            io::policies::unique
-        >& m_channel;        
+        const std::string m_sid;
+        blastbeat_t& m_driver;
         
-        const route_t m_route;
-        const std::string m_tag;
+        // Indicates that headers are already away.
+        bool m_body;
 };
 
 }}

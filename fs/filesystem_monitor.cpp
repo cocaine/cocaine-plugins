@@ -20,7 +20,7 @@
 
 #include <cocaine/engine.hpp>
 
-#include <cocaine/api/job.hpp>
+#include <cocaine/api/event.hpp>
 
 #include "filesystem_monitor.hpp"
 
@@ -59,11 +59,15 @@ filesystem_monitor_t::info() const {
 
 void
 filesystem_monitor_t::event(ev::stat&, int) {
-    engine().enqueue(
-        boost::make_shared<engine::job_t>(
-            m_event
-        )
-    );
+    try {
+        engine().enqueue(
+            boost::make_shared<engine::event_t>(
+                m_event
+            )
+        );
+    } catch(const cocaine::error_t& e) {
+        throw;
+    }
 }
 
 extern "C" {

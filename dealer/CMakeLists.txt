@@ -1,6 +1,6 @@
 IF(DEALER)
     ADD_LIBRARY(dealer MODULE
-        dealer_job
+        dealer_event
         dealer_server)
 
     TARGET_LINK_LIBRARIES(dealer
