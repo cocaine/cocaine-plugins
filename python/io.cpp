@@ -73,7 +73,11 @@ python_io_t::read(python_io_t * self,
 
     if(self->request->empty()) {
         Py_BEGIN_ALLOW_THREADS
-            (*self->request) = self->io->read(timeout);
+            try {
+                (*self->request) = self->io->read(timeout);
+            } catch(const cocaine::error_t& e) {
+                self->request->clear();
+            }
         Py_END_ALLOW_THREADS
         
         self->offset = 0;
@@ -116,7 +120,11 @@ python_io_t::write(python_io_t * self,
 
     Py_BEGIN_ALLOW_THREADS
         if(message && size) {
-            self->io->write(message, size);
+            try {
+                self->io->write(message, size);
+            } catch(cocaine::error_t& e) {
+                // Do nothing.
+            }
         }
     Py_END_ALLOW_THREADS
 
