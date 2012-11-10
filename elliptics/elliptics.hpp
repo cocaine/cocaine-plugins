@@ -52,7 +52,7 @@ class elliptics_storage_t:
     public api::storage_t
 {
     public:
-        typedef storage_t category_type;
+        typedef api::storage_t category_type;
 
     public:
         elliptics_storage_t(context_t& context,
