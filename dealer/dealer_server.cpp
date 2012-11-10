@@ -103,7 +103,7 @@ dealer_server_t::process(ev::idle&, int) {
         route_t route;
 
         do {
-            m_channel.recv(&message);
+            m_channel.recv(message);
 
             if(!message.size()) {
                 break;
@@ -129,14 +129,8 @@ dealer_server_t::process(ev::idle&, int) {
             std::string tag;
             engine::policy_t policy;
 
-            request_proxy_t proxy(
-                tag,
-                policy,
-                &message
-            );
-
             try {
-                m_channel.recv_tuple(proxy);
+                m_channel.recv_tuple(boost::tie(tag, policy, message));
             } catch(const std::runtime_error& e) {
                 COCAINE_LOG_ERROR(
                     m_log,

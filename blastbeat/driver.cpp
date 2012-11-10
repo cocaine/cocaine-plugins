@@ -111,7 +111,7 @@ namespace {
     typedef boost::tuple<
         io::raw<std::string>,
         io::raw<std::string>,
-        zmq::message_t*
+        zmq::message_t&
     > request_proxy_t;
 
     struct uwsgi_header_t {
@@ -134,7 +134,7 @@ blastbeat_t::process_events() {
         request_proxy_t proxy(
             io::protect(sid),
             io::protect(type),
-            &message
+            message
         );
 
         {

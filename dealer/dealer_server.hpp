@@ -55,12 +55,6 @@ class dealer_server_t:
         info() const;
         
     private:
-        typedef boost::tuple<
-            std::string&,
-            engine::policy_t&,
-            zmq::message_t*
-        > request_proxy_t;
-
         void
         event(ev::io&, int);
         
