@@ -18,8 +18,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_PYTHON_SANDBOX_IO_HPP
-#define COCAINE_PYTHON_SANDBOX_IO_HPP
+#ifndef COCAINE_PYTHON_SANDBOX_WRITABLE_STREAM_HPP
+#define COCAINE_PYTHON_SANDBOX_WRITABLE_STREAM_HPP
 
 // NOTE: These are being redefined in Python.h
 #undef _POSIX_C_SOURCE
@@ -27,68 +27,46 @@
 
 #include "Python.h"
 
+#include <cocaine/common.hpp>
+
 namespace cocaine { 
 
 namespace api {
-   struct io_t;
+   struct stream_t;
 }    
-    
+
 namespace sandbox {
 
-class python_io_t {
+struct writable_stream_t {
     public:
         PyObject_HEAD
 
         static
         int
-        constructor(python_io_t * self,
-                    PyObject * args,
-                    PyObject * kwargs);
-
-        static
-        void
-        destructor(python_io_t * self);
-
-        static
-        PyObject*
-        read(python_io_t * self,
+        ctor(writable_stream_t * self,
              PyObject * args,
              PyObject * kwargs);
 
         static
-        PyObject* write(python_io_t * self,
-                        PyObject * args);
-
-        // static
-        // PyObject*
-        // delegate(python_io_t * self, 
-        //          PyObject * args,
-        //          PyObject * kwargs);
-
-        // WSGI requirements.
+        void
+        dtor(writable_stream_t * self);
 
         static
         PyObject*
-        readline(python_io_t * self,
-                 PyObject * args,
-                 PyObject * kwargs);
+        write(writable_stream_t * self,
+              PyObject * args);
 
         static
         PyObject*
-        readlines(python_io_t * self,
-                  PyObject * args,
-                  PyObject * kwargs);
-        
-        static
-        PyObject*
-        iter_next(python_io_t * it);
+        close(writable_stream_t * self,
+              PyObject * args);
 
     public:
-        api::io_t * io;
-
-        std::string * request;
-        off_t offset;
+        api::stream_t * base;
 };
 
 }}
+
+extern PyTypeObject writable_stream_object_type;
+
 #endif

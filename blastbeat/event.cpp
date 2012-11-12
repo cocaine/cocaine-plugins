@@ -155,6 +155,6 @@ blastbeat_event_t::on_error(error_code code,
 void
 blastbeat_event_t::on_close() {
     std::string empty;
-    
+
     m_driver.send(m_sid, "end", io::protect(empty)); 
 }

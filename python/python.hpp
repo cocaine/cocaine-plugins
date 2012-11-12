@@ -38,17 +38,22 @@ typedef track_t<
     Py_DecRef
 > tracked_object_t;
 
-class thread_lock_t {
-    public:
-        thread_lock_t(PyThreadState * thread) {
-            BOOST_ASSERT(thread != 0);
-            PyEval_RestoreThread(thread);
-        }
+struct thread_lock_t {
+    thread_lock_t(PyThreadState * thread) {
+        BOOST_ASSERT(thread != 0);
+        PyEval_RestoreThread(thread);
+    }
 
-        ~thread_lock_t() {
-            PyEval_SaveThread();
-        }
+    ~thread_lock_t() {
+        PyEval_SaveThread();
+    }
 };
+
+PyObject*
+wrap(const Json::Value& value);
+
+std::string
+exception();
 
 class python_t:
     public api::sandbox_t
@@ -66,36 +71,26 @@ class python_t:
         ~python_t();
         
         virtual
-        void
+        boost::shared_ptr<api::stream_t>
         invoke(const std::string& method,
-               api::io_t& io);
+               const boost::shared_ptr<api::stream_t>& upstream);
 
     public:
+        PyThreadState*
+        thread_state() {
+            return m_thread_state;
+        }
+
         const logging::logger_t&
         log() const {
             return *m_log;
         }
-    
-    public:
-        static
-        PyObject*
-        args(PyObject * self,
-             PyObject * args);
-        
-        static
-        PyObject*
-        wrap(const Json::Value& value);
-        
-        static
-        std::string
-        exception();
 
     private:
+        context_t& m_context;
         boost::shared_ptr<logging::logger_t> m_log;
         
         PyObject * m_module;
-        tracked_object_t m_manifest;
-        
         PyThreadState * m_thread_state;
 };
 

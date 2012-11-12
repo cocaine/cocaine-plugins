@@ -28,259 +28,16 @@
 #include <sstream>
 
 #include "python.hpp"
-#include "objects.hpp"
+
+#include "log.hpp"
+#include "readable_stream.hpp"
+#include "writable_stream.hpp"
 
 using namespace cocaine;
-using namespace cocaine::api;
 using namespace cocaine::sandbox;
 
-static
-PyMethodDef
-context_module_methods[] = {
-    { "args", &python_t::args, METH_NOARGS, 
-        "Get the application's manifest" },
-    { NULL, NULL, 0, NULL }
-};
-
-python_t::python_t(context_t& context,
-                   const std::string& name,
-                   const Json::Value& args,
-                   const std::string& spool):
-    category_type(context, name, args, spool),
-    m_log(context.log(
-        (boost::format("app/%1%")
-            % name
-        ).str()
-    )),
-    m_module(NULL),
-    m_manifest(NULL),
-    m_thread_state(NULL)
-{
-    Py_InitializeEx(0);
-    PyEval_InitThreads();
-
-    // Initializing types.
-    PyType_Ready(&log_object_type);
-    PyType_Ready(&python_io_object_type);
-
-    boost::filesystem::path source(spool);
-   
-    // NOTE: Means it's a module.
-    if(boost::filesystem::is_directory(source)) {
-        source /= "__init__.py";
-    }
-
-    COCAINE_LOG_DEBUG(m_log, "loading the app code from %s", source.string());
-    
-    boost::filesystem::ifstream input(source);
-    
-    if(!input) {
-        throw error_t("unable to open '%s'", source.string());
-    }
-
-    // System paths
-    // ------------
-
-    static char key[] = "path";
-
-    // NOTE: Prepend the current app location to the sys.path,
-    // so that it could import various local stuff from there.
-    PyObject * syspaths = PySys_GetObject(key);
-    
-    tracked_object_t path(
-        PyString_FromString(
-#if BOOST_FILESYSTEM_VERSION == 3
-            source.parent_path().string().c_str()
-#else
-            source.branch_path().string().c_str()
-#endif
-        )
-    );
-
-    PyList_Insert(syspaths, 0, path);
-
-    // Context access module
-    // ---------------------
-
-    m_manifest = wrap(args);
-
-    PyObject * context_module = Py_InitModule(
-        "__context__",
-        context_module_methods
-    );
-
-    Py_INCREF(&log_object_type);
-
-    PyModule_AddObject(
-        context_module,
-        "Log",
-        reinterpret_cast<PyObject*>(&log_object_type)
-    );
-
-    // App module
-    // ----------
-
-    m_module = Py_InitModule(
-        name.c_str(),
-        NULL
-    );
-
-    PyObject * builtins = PyEval_GetBuiltins();
-
-    tracked_object_t sandbox(
-        PyCObject_FromVoidPtr(this, NULL)
-    );
-
-    PyDict_SetItemString(
-        builtins,
-        "__sandbox__",
-        sandbox
-    );
-
-    Py_INCREF(builtins);
-    
-    PyModule_AddObject(
-        m_module, 
-        "__builtins__",
-        builtins
-    );
-    
-    PyModule_AddStringConstant(
-        m_module,
-        "__file__",
-        source.string().c_str()
-    );
-
-    // Code evaluation
-    // ---------------
-
-    std::stringstream stream;
-    stream << input.rdbuf();
-
-    tracked_object_t bytecode(
-        Py_CompileString(
-            stream.str().c_str(),
-            source.string().c_str(),
-            Py_file_input
-        )
-    );
-
-    if(PyErr_Occurred()) {
-        throw unrecoverable_error_t(exception());
-    }
-
-    PyObject * globals = PyModule_GetDict(m_module);
-    
-    // NOTE: This will return None or NULL due to the Py_file_input flag above,
-    // so we can safely drop it without even checking.
-    tracked_object_t result(
-        PyEval_EvalCode(
-            reinterpret_cast<PyCodeObject*>(*bytecode), 
-            globals,
-            NULL
-        )
-    );
-    
-    if(PyErr_Occurred()) {
-        throw unrecoverable_error_t(exception());
-    }
-
-    m_thread_state = PyEval_SaveThread();
-}
-
-python_t::~python_t() {
-    if(m_thread_state) {
-        PyEval_RestoreThread(m_thread_state); 
-    }
-        
-    Py_Finalize();
-}
-
-void
-python_t::invoke(const std::string& event,
-                 api::io_t& io)
-{
-    thread_lock_t thread(m_thread_state);
-
-    if(!m_module) {
-        throw unrecoverable_error_t("python module is not initialized");
-    }
-
-    PyObject * globals = PyModule_GetDict(m_module);
-    PyObject * object = PyDict_GetItemString(globals, event.c_str());
-    
-    if(!object) {
-        throw unrecoverable_error_t("callable '%s' does not exist", event);
-    }
-    
-    if(PyType_Check(object)) {
-        if(PyType_Ready(reinterpret_cast<PyTypeObject*>(object)) != 0) {
-            throw unrecoverable_error_t(exception());
-        }
-    }
-
-    if(!PyCallable_Check(object)) {
-        throw unrecoverable_error_t("'%s' is not callable", event);
-    }
-
-    tracked_object_t args(NULL);
-
-    // Passing io_t object to the python io_t wrapper.
-    tracked_object_t io_object(
-        PyCObject_FromVoidPtr(&io, NULL)
-    );
-
-    args = PyTuple_Pack(1, *io_object);
-
-    tracked_object_t io_proxy(
-        PyObject_Call(
-            reinterpret_cast<PyObject*>(&python_io_object_type), 
-            args,
-            NULL
-        )
-    );
-
-    args = PyTuple_Pack(1, *io_proxy);
-
-    tracked_object_t result(PyObject_Call(object, args, NULL));
-
-    if(PyErr_Occurred()) {
-        throw recoverable_error_t(exception());
-    } 
-   
-    if(result != Py_None) {
-        COCAINE_LOG_WARNING(
-            m_log,
-            "ignoring an unused returned value of callable '%s'",
-            event
-        );
-    }
-}
-
 PyObject*
-python_t::args(PyObject * self,
-               PyObject * args)
-{
-    PyObject * builtins = PyEval_GetBuiltins();
-    PyObject * sandbox = PyDict_GetItemString(builtins, "__sandbox__");
-
-    if(!sandbox) {
-        PyErr_SetString(
-            PyExc_RuntimeError,
-            "Corrupted context"
-        );
-
-        return NULL;
-    }
-
-    return PyDictProxy_New(
-        static_cast<python_t*>(PyCObject_AsVoidPtr(sandbox))->m_manifest
-    );
-}
-
-// XXX: Check reference counting.
-PyObject*
-python_t::wrap(const Json::Value& value) {
+cocaine::sandbox::wrap(const Json::Value& value) {
     PyObject * object = NULL;
 
     switch(value.type()) {
@@ -325,7 +82,7 @@ python_t::wrap(const Json::Value& value) {
 }
 
 std::string
-python_t::exception() {
+cocaine::sandbox::exception() {
     tracked_object_t type(NULL), value(NULL), traceback(NULL);
     
     PyErr_Fetch(&type, &value, &traceback);
@@ -345,9 +102,259 @@ python_t::exception() {
     return result;
 }
 
-extern "C" {
-    void
-    initialize(repository_t& repository) {
-        repository.insert<python_t>("python");
+python_t::python_t(context_t& context,
+                   const std::string& name,
+                   const Json::Value& args,
+                   const std::string& spool):
+    category_type(context, name, args, spool),
+    m_context(context),
+    m_log(context.log(
+        (boost::format("app/%1%")
+            % name
+        ).str()
+    )),
+    m_module(NULL),
+    m_thread_state(NULL)
+{
+    Py_InitializeEx(0);
+    PyEval_InitThreads();
+
+    // Initializing types
+
+    PyType_Ready(&log_object_type);
+    PyType_Ready(&readable_stream_object_type);
+    PyType_Ready(&writable_stream_object_type);
+
+    boost::filesystem::path source(spool);
+   
+    // NOTE: Means it's a module.
+    if(boost::filesystem::is_directory(source)) {
+        source /= "__init__.py";
     }
+
+    COCAINE_LOG_DEBUG(m_log, "loading the app code from %s", source.string());
+    
+    boost::filesystem::ifstream input(source);
+    
+    if(!input) {
+        throw error_t("unable to open '%s'", source.string());
+    }
+
+    // System paths
+
+    std::unique_ptr<char, void(*)(void*)> key(::strdup("path"), &::free);
+
+    // NOTE: Prepend the current app location to the sys.path,
+    // so that it could import various local stuff from there.
+    PyObject * syspaths = PySys_GetObject(key.get());
+    
+    tracked_object_t path(
+        PyString_FromString(
+#if BOOST_FILESYSTEM_VERSION == 3
+            source.parent_path().string().c_str()
+#else
+            source.branch_path().string().c_str()
+#endif
+        )
+    );
+
+    PyList_Insert(syspaths, 0, path);
+
+    // Context access module
+
+    PyObject * context_module = Py_InitModule(
+        "__context__",
+        NULL
+    );
+
+    Py_INCREF(&log_object_type);
+
+    PyModule_AddObject(
+        context_module,
+        "Log",
+        reinterpret_cast<PyObject*>(&log_object_type)
+    );
+
+    Py_INCREF(&readable_stream_object_type);
+
+    PyModule_AddObject(
+        context_module,
+        "ReadableStream",
+        reinterpret_cast<PyObject*>(&readable_stream_object_type)
+    );
+
+    Py_INCREF(&writable_stream_object_type);
+
+    PyModule_AddObject(
+        context_module,
+        "WritableStream",
+        reinterpret_cast<PyObject*>(&writable_stream_object_type)
+    );
+    
+    PyModule_AddObject(
+        context_module,
+        "args",
+        PyDictProxy_New(wrap(args))
+    );
+
+    // App module
+
+    m_module = Py_InitModule(
+        name.c_str(),
+        NULL
+    );
+
+    PyObject * builtins = PyEval_GetBuiltins();
+
+    PyDict_SetItemString(
+        builtins,
+        "__sandbox__",
+        PyCObject_FromVoidPtr(this, NULL)
+    );
+
+    Py_INCREF(builtins);
+    
+    PyModule_AddObject(
+        m_module, 
+        "__builtins__",
+        builtins
+    );
+    
+    PyModule_AddStringConstant(
+        m_module,
+        "__file__",
+        source.string().c_str()
+    );
+
+    // Code evaluation
+
+    std::stringstream stream;
+    stream << input.rdbuf();
+
+    tracked_object_t bytecode(
+        Py_CompileString(
+            stream.str().c_str(),
+            source.string().c_str(),
+            Py_file_input
+        )
+    );
+
+    if(PyErr_Occurred()) {
+        throw unrecoverable_error_t(exception());
+    }
+
+    PyObject * globals = PyModule_GetDict(m_module);
+    
+    // NOTE: This will return None or NULL due to the Py_file_input flag above,
+    // so we can safely drop it without even checking.
+    tracked_object_t result(
+        PyEval_EvalCode(
+            reinterpret_cast<PyCodeObject*>(*bytecode), 
+            globals,
+            NULL
+        )
+    );
+    
+    if(PyErr_Occurred()) {
+        throw unrecoverable_error_t(exception());
+    }
+
+    m_thread_state = PyEval_SaveThread();
 }
+
+python_t::~python_t() {
+    if(m_thread_state) {
+        PyEval_RestoreThread(m_thread_state); 
+    }
+        
+    Py_Finalize();
+}
+
+boost::shared_ptr<api::stream_t>
+python_t::invoke(const std::string& event,
+                 const boost::shared_ptr<api::stream_t>& upstream)
+{
+    thread_lock_t thread(m_thread_state);
+
+    if(!m_module) {
+        throw unrecoverable_error_t("python module is not initialized");
+    }
+
+    PyObject * globals = PyModule_GetDict(m_module);
+    PyObject * object = PyDict_GetItemString(globals, event.c_str());
+   
+    // Validate the arguments
+
+    if(!object) {
+        throw unrecoverable_error_t("callable '%s' does not exist", event);
+    }
+    
+    if(PyType_Check(object)) {
+        if(PyType_Ready(reinterpret_cast<PyTypeObject*>(object)) != 0) {
+            throw unrecoverable_error_t(exception());
+        }
+    }
+
+    if(!PyCallable_Check(object)) {
+        throw unrecoverable_error_t("'%s' is not callable", event);
+    }
+
+    // Create the request object
+
+    boost::shared_ptr<api::stream_t> downstream(
+        boost::make_shared<request_emitter_t>(*this)
+    );
+
+    // Pack the arguments
+
+    tracked_object_t args(NULL);
+
+    tracked_object_t request_ptr_object(
+        PyCObject_FromVoidPtr(downstream.get(), NULL)
+    );
+
+    args = PyTuple_Pack(1, *request_ptr_object);
+
+    tracked_object_t request_object(
+        PyObject_Call(
+            reinterpret_cast<PyObject*>(&readable_stream_object_type), 
+            args,
+            NULL
+        )
+    );
+
+    tracked_object_t response_ptr_object(
+        PyCObject_FromVoidPtr(upstream.get(), NULL)
+    );
+    
+    args = PyTuple_Pack(1, *response_ptr_object);
+
+    tracked_object_t response_object(
+        PyObject_Call(
+            reinterpret_cast<PyObject*>(&writable_stream_object_type), 
+            args,
+            NULL
+        )
+    );
+    
+    args = PyTuple_Pack(2, *request_object, *response_object);
+
+    // Call the event handler
+
+    tracked_object_t result(PyObject_Call(object, args, NULL));
+
+    if(PyErr_Occurred()) {
+        throw recoverable_error_t(exception());
+    } 
+   
+    if(result != Py_None) {
+        COCAINE_LOG_WARNING(
+            m_log,
+            "ignoring an unused returned value of callable '%s'",
+            event
+        );
+    }
+
+    return downstream;
+}
+

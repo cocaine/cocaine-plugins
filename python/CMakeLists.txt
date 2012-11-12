@@ -17,7 +17,10 @@ IF(PYTHON)
     ADD_LIBRARY(python MODULE
         python
         log
-        io)
+        emitter
+        readable_stream
+        writable_stream
+        module)
 
     TARGET_LINK_LIBRARIES(python
         cocaine-core
