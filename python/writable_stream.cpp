@@ -22,8 +22,6 @@
 
 #include "writable_stream.hpp"
 
-#include "python.hpp"
-
 using namespace cocaine::sandbox;
 
 int

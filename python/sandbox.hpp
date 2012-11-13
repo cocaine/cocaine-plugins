@@ -55,6 +55,8 @@ wrap(const Json::Value& value);
 std::string
 exception();
 
+struct event_source_t;
+
 class python_t:
     public api::sandbox_t
 {
@@ -81,15 +83,24 @@ class python_t:
             return m_thread_state;
         }
 
-        const logging::logger_t&
-        log() const {
-            return *m_log;
+        const logging::logger_t*
+        logger() const {
+            return m_log.get();
+        }
+
+        event_source_t*
+        emitter() {
+            return m_emitter.get();
         }
 
     private:
         context_t& m_context;
         boost::shared_ptr<logging::logger_t> m_log;
+
+        // Main event source.
+        boost::shared_ptr<event_source_t> m_emitter;
         
+        // Python state objects.
         PyObject * m_module;
         PyThreadState * m_thread_state;
 };

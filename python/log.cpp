@@ -22,7 +22,7 @@
 
 #include "log.hpp"
 
-#include "python.hpp"
+#include "sandbox.hpp"
 
 using namespace cocaine::api;
 using namespace cocaine::sandbox;
@@ -42,7 +42,7 @@ log_t::ctor(log_t * self,
     
     self->base = static_cast<python_t*>(
         PyCObject_AsVoidPtr(sandbox)
-    );
+    )->logger();
 
     return 0;
 }
@@ -70,7 +70,7 @@ log_t::debug(log_t * self,
         message = PyString_AsString(object);
     }
 
-    self->base->log().emit(logging::debug, "%s", message);
+    COCAINE_LOG_DEBUG(self->base, "%s", message);
 
     Py_RETURN_NONE;
 }
@@ -93,7 +93,7 @@ log_t::info(log_t * self,
         message = PyString_AsString(object);
     }
 
-    self->base->log().emit(logging::info, "%s", message);
+    COCAINE_LOG_INFO(self->base, "%s", message);
 
     Py_RETURN_NONE;
 }
@@ -116,7 +116,7 @@ log_t::warning(log_t * self,
         message = PyString_AsString(object);
     }
 
-    self->base->log().emit(logging::warning, "%s", message);
+    COCAINE_LOG_WARNING(self->base, "%s", message);
 
     Py_RETURN_NONE;
 }
@@ -139,7 +139,7 @@ log_t::error(log_t * self,
         message = PyString_AsString(object);
     }
 
-    self->base->log().emit(logging::error, "%s", message);
+    COCAINE_LOG_ERROR(self->base, "%s", message);
 
     Py_RETURN_NONE;
 }

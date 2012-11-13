@@ -18,9 +18,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include "emitter.hpp"
+#include "event_source.hpp"
 
-#include "python.hpp"
+#include "sandbox.hpp"
 
 using namespace cocaine::sandbox;
 
@@ -40,13 +40,13 @@ namespace {
     };
 }
 
-emitter_t::~emitter_t() {
+event_source_t::~event_source_t() {
     std::for_each(m_slots.begin(), m_slots.end(), dispose_t());
 }
 
 void
-emitter_t::on(const std::string& event,
-              PyObject * callback)
+event_source_t::on(const std::string& event,
+                   PyObject * callback)
 {
     slot_t& slot = m_slots[event];
 
@@ -59,21 +59,27 @@ emitter_t::on(const std::string& event,
     slot.emplace_back(callback);
 }
 
-void
-emitter_t::invoke(const std::string& event,
-                  PyObject * args,
-                  PyObject * kwargs)
+bool
+event_source_t::invoke(const std::string& event,
+                       PyObject * args,
+                       PyObject * kwargs)
 {
     slot_t& slot = m_slots[event];
+
+    if(slot.empty()) {
+        return false;
+    }
 
     for(slot_t::const_iterator it = slot.begin();
         it != slot.end();
         ++it)
     {
-        PyObject_Call(*it, args, kwargs);
+        // NOTE: We can safely drop result here, as it's not needed.
+        tracked_object_t result = PyObject_Call(*it, args, kwargs);
     
         if(PyErr_Occurred()) {
             throw cocaine::error_t(exception());
         }
     }
 }
+

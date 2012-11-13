@@ -18,7 +18,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include "python.hpp"
+#include "sandbox.hpp"
 
 using namespace cocaine;
 using namespace cocaine::sandbox;

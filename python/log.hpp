@@ -27,9 +27,13 @@
 
 #include "Python.h"
 
-namespace cocaine { namespace sandbox {
-
-class python_t;
+namespace cocaine {
+    
+namespace logging {
+    struct logger_t;
+}
+    
+namespace sandbox {
 
 struct log_t {
     PyObject_HEAD
@@ -82,7 +86,7 @@ struct log_t {
           PyObject * args);
 
 public:
-    python_t * base;
+    const logging::logger_t * base;
 };
 
 }}

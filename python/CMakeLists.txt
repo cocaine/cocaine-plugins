@@ -15,11 +15,12 @@ IF(PYTHON)
     ENDIF()
 
     ADD_LIBRARY(python MODULE
-        python
         log
-        emitter
+        event_source
+        dispatch
         readable_stream
         writable_stream
+        sandbox
         module)
 
     TARGET_LINK_LIBRARIES(python

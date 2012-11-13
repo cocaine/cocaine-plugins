@@ -27,9 +27,10 @@
 
 #include <sstream>
 
-#include "python.hpp"
+#include "sandbox.hpp"
 
 #include "log.hpp"
+#include "dispatch.hpp"
 #include "readable_stream.hpp"
 #include "writable_stream.hpp"
 
@@ -113,6 +114,7 @@ python_t::python_t(context_t& context,
             % name
         ).str()
     )),
+    m_emitter(new event_source_t()),
     m_module(NULL),
     m_thread_state(NULL)
 {
@@ -122,6 +124,7 @@ python_t::python_t(context_t& context,
     // Initializing types
 
     PyType_Ready(&log_object_type);
+    PyType_Ready(&dispatch_object_type);
     PyType_Ready(&readable_stream_object_type);
     PyType_Ready(&writable_stream_object_type);
 
@@ -137,7 +140,7 @@ python_t::python_t(context_t& context,
     boost::filesystem::ifstream input(source);
     
     if(!input) {
-        throw error_t("unable to open '%s'", source.string());
+        throw cocaine::error_t("unable to open '%s'", source.string());
     }
 
     // System paths
@@ -175,6 +178,14 @@ python_t::python_t(context_t& context,
         reinterpret_cast<PyObject*>(&log_object_type)
     );
 
+    Py_INCREF(&dispatch_object_type);
+
+    PyModule_AddObject(
+        context_module,
+        "Dispatch",
+        reinterpret_cast<PyObject*>(&dispatch_object_type)
+    );
+    
     Py_INCREF(&readable_stream_object_type);
 
     PyModule_AddObject(
@@ -240,7 +251,7 @@ python_t::python_t(context_t& context,
     );
 
     if(PyErr_Occurred()) {
-        throw unrecoverable_error_t(exception());
+        throw cocaine::error_t("%s", exception());
     }
 
     PyObject * globals = PyModule_GetDict(m_module);
@@ -256,7 +267,7 @@ python_t::python_t(context_t& context,
     );
     
     if(PyErr_Occurred()) {
-        throw unrecoverable_error_t(exception());
+        throw cocaine::error_t("%s", exception());
     }
 
     m_thread_state = PyEval_SaveThread();
@@ -276,33 +287,8 @@ python_t::invoke(const std::string& event,
 {
     thread_lock_t thread(m_thread_state);
 
-    if(!m_module) {
-        throw unrecoverable_error_t("python module is not initialized");
-    }
-
-    PyObject * globals = PyModule_GetDict(m_module);
-    PyObject * object = PyDict_GetItemString(globals, event.c_str());
-   
-    // Validate the arguments
-
-    if(!object) {
-        throw unrecoverable_error_t("callable '%s' does not exist", event);
-    }
-    
-    if(PyType_Check(object)) {
-        if(PyType_Ready(reinterpret_cast<PyTypeObject*>(object)) != 0) {
-            throw unrecoverable_error_t(exception());
-        }
-    }
-
-    if(!PyCallable_Check(object)) {
-        throw unrecoverable_error_t("'%s' is not callable", event);
-    }
-
-    // Create the request object
-
     boost::shared_ptr<api::stream_t> downstream(
-        boost::make_shared<request_emitter_t>(*this)
+        boost::make_shared<request_stream_t>(*this)
     );
 
     // Pack the arguments
@@ -341,20 +327,14 @@ python_t::invoke(const std::string& event,
 
     // Call the event handler
 
-    tracked_object_t result(PyObject_Call(object, args, NULL));
-
-    if(PyErr_Occurred()) {
-        throw recoverable_error_t(exception());
-    } 
-   
-    if(result != Py_None) {
-        COCAINE_LOG_WARNING(
-            m_log,
-            "ignoring an unused returned value of callable '%s'",
-            event
-        );
+    if(!m_emitter->invoke(event, args, NULL)) {
+        throw cocaine::error_t("the event is not supported");
     }
 
+    if(PyErr_Occurred()) {
+        throw cocaine::error_t("%s", exception());
+    } 
+   
     return downstream;
 }
 

@@ -18,76 +18,41 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <cocaine/api/sandbox.hpp>
-
-#include "readable_stream.hpp"
+#include "dispatch.hpp"
 
 #include "sandbox.hpp"
 
 using namespace cocaine::sandbox;
 
-request_stream_t::request_stream_t(python_t& sandbox):
-    m_sandbox(sandbox)
-{ }
-
-void
-request_stream_t::push(const void * chunk,
-                       size_t size)
-{
-    thread_lock_t lock(m_sandbox.thread_state()); 
-
-    tracked_object_t buffer = PyString_FromStringAndSize(
-        static_cast<const char*>(chunk),
-        size
-    );
-
-    tracked_object_t args = PyTuple_Pack(1, *buffer);
-
-    invoke("chunk", args, NULL);
-}
-
-void
-request_stream_t::close() {
-    thread_lock_t lock(m_sandbox.thread_state()); 
-    
-    tracked_object_t args = PyTuple_New(0);
-    
-    invoke("close", args, NULL);
-}
-
 int
-readable_stream_t::ctor(readable_stream_t * self,
-                        PyObject * args,
-                        PyObject * kwargs)
+dispatch_t::ctor(dispatch_t * self,
+                 PyObject * args,
+                 PyObject * kwargs)
 {
-    PyObject * stream;
-
-    if(!PyArg_ParseTuple(args, "O", &stream)) {
-        return -1;
-    }
-
-    if(!stream || !PyCObject_Check(stream)) {
+    PyObject * builtins = PyEval_GetBuiltins();
+    PyObject * sandbox = PyDict_GetItemString(builtins, "__sandbox__");
+    
+    if(!sandbox || !PyCObject_Check(sandbox)) {
         PyErr_SetString(PyExc_RuntimeError, "The context is corrupted");
         return -1;
     }
-
-    self->base = static_cast<request_stream_t*>(
-        PyCObject_AsVoidPtr(stream)
-    );
+    
+    self->base = static_cast<python_t*>(
+        PyCObject_AsVoidPtr(sandbox)
+    )->emitter();
 
     return 0;
 }
 
-
 void
-readable_stream_t::dtor(readable_stream_t * self) {
+dispatch_t::dtor(dispatch_t * self) {
     self->ob_type->tp_free(self);
 }
 
 PyObject*
-readable_stream_t::on(readable_stream_t * self,
-                      PyObject * args,
-                      PyObject * kwargs)
+dispatch_t::on(dispatch_t * self,
+               PyObject * args,
+               PyObject * kwargs)
 {
     static char event_keyword[] = "event";
     static char callback_keyword[] = "callback";
@@ -116,20 +81,20 @@ readable_stream_t::on(readable_stream_t * self,
 
 static
 PyMethodDef
-readable_stream_object_methods[] = {
-    { "on", (PyCFunction)readable_stream_t::on,
+dispatch_object_methods[] = {
+    { "on", (PyCFunction)dispatch_t::on,
         METH_KEYWORDS, "Binds a callback method to the specified event" },
     { NULL }
 };
 
 PyTypeObject
-readable_stream_object_type = {
+dispatch_object_type = {
     PyObject_HEAD_INIT(NULL)
     0,                                          /* ob_size */
-    "cocaine.context.ReadableStream",           /* tp_name */
-    sizeof(readable_stream_t),                  /* tp_basicsize */
+    "cocaine.context.Dispatch",                 /* tp_name */
+    sizeof(dispatch_t),                         /* tp_basicsize */
     0,                                          /* tp_itemsize */
-    (destructor)readable_stream_t::dtor,        /* tp_dealloc */
+    (destructor)dispatch_t::dtor,               /* tp_dealloc */
     0,                                          /* tp_print */
     0,                                          /* tp_getattr */
     0,                                          /* tp_setattr */
@@ -145,14 +110,14 @@ readable_stream_object_type = {
     0,                                          /* tp_setattro */
     0,                                          /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT,                         /* tp_flags */
-    "Readable Stream Object",                   /* tp_doc */
+    "Event Dispatch Object",                    /* tp_doc */
     0,                                          /* tp_traverse */
     0,                                          /* tp_clear */
     0,                                          /* tp_richcompare */
     0,                                          /* tp_weaklistoffset */
     0,                                          /* tp_iter */
     0,                                          /* tp_iternext */
-    readable_stream_object_methods,             /* tp_methods */
+    dispatch_object_methods,                    /* tp_methods */
     0,                                          /* tp_members */
     0,                                          /* tp_getset */
     0,                                          /* tp_base */
@@ -160,7 +125,7 @@ readable_stream_object_type = {
     0,                                          /* tp_descr_get */
     0,                                          /* tp_descr_set */
     0,                                          /* tp_dictoffset */
-    (initproc)readable_stream_t::ctor,          /* tp_init */
+    (initproc)dispatch_t::ctor,                 /* tp_init */
     0,                                          /* tp_alloc */
     PyType_GenericNew                           /* tp_new */
 };

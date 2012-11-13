@@ -18,8 +18,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_PYTHON_SANDBOX_EMITTER_HPP
-#define COCAINE_PYTHON_SANDBOX_EMITTER_HPP
+#ifndef COCAINE_PYTHON_SANDBOX_DISPATCH_HPP
+#define COCAINE_PYTHON_SANDBOX_DISPATCH_HPP
 
 // NOTE: These are being redefined in Python.h
 #undef _POSIX_C_SOURCE
@@ -29,37 +29,37 @@
 
 #include <cocaine/common.hpp>
 
+#include "event_source.hpp"
+
 namespace cocaine { namespace sandbox {
 
-struct emitter_t {
-    ~emitter_t();
+struct dispatch_t {
+    PyObject_HEAD
 
+    static
+    int
+    ctor(dispatch_t * self,
+         PyObject * args,
+         PyObject * kwargs);
+
+    static
     void
-    on(const std::string& event,
-       PyObject * callback);
+    dtor(dispatch_t * self);
 
-    void
-    invoke(const std::string& event,
-           PyObject * args,
-           PyObject * kwargs);
+    // Event binding
 
-private:
-    typedef std::vector<
-        PyObject*
-    > slot_t;
+    static
+    PyObject*
+    on(dispatch_t * self,
+       PyObject * args,
+       PyObject * kwargs);
 
-#if BOOST_VERSION >= 103600
-    typedef boost::unordered_map<
-#else
-    typedef std::map<
-#endif
-        std::string,
-        slot_t
-    > slot_map_t;
-    
-    slot_map_t m_slots;
+public:
+    event_source_t * base;
 };
 
 }}
+
+extern PyTypeObject dispatch_object_type;
 
 #endif
