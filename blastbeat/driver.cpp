@@ -190,11 +190,6 @@ void
 blastbeat_t::on_uwsgi(const std::string& sid,
                       zmq::message_t& message)
 {
-    typedef std::map<
-        std::string,
-        std::string
-    > env_t;
-
     boost::shared_ptr<blastbeat_event_t> event(
         boost::make_shared<blastbeat_event_t>(
             m_event,
@@ -215,7 +210,10 @@ blastbeat_t::on_uwsgi(const std::string& sid,
         return;
     }
 
-    env_t env;
+    std::map<
+        std::string,
+        std::string
+    > env;
 
     const char * ptr = static_cast<const char*>(message.data()),
                * const end = ptr + message.size();

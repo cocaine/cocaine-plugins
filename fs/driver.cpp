@@ -40,6 +40,7 @@ fs_t::fs_t(context_t& context,
             % name
         ).str()
     )),
+    m_event(args.get("emit", "").asString()),
     m_path(args.get("path", "").asString()),
     m_watcher(engine.loop())
 {
@@ -66,11 +67,30 @@ fs_t::info() const {
 }
 
 void
-fs_t::on_event(ev::stat&, int) {
+fs_t::on_event(ev::stat& w, int) {
+    msgpack::sbuffer buffer;
+    msgpack::packer<msgpack::sbuffer> packer(buffer);
+
+    packer.pack_array(10);
+
+    packer << w.attr.st_mode
+           << w.attr.st_ino
+           << w.attr.st_dev
+           << w.attr.st_nlink
+           << w.attr.st_uid
+           << w.attr.st_gid
+           << w.attr.st_size
+           << w.attr.st_atime
+           << w.attr.st_mtime
+           << w.attr.st_ctime;
+
     try {
-        engine().enqueue(boost::make_shared<fs_event_t>(m_event));
+        engine().enqueue(boost::make_shared<fs_event_t>(m_event))->push(
+            buffer.data(),
+            buffer.size()
+        );
     } catch(const cocaine::error_t& e) {
-        COCAINE_LOG_ERROR(m_log, "unable to schedule an event - %s", e.what());
+        COCAINE_LOG_ERROR(m_log, "unable to enqueue an event - %s", e.what());
     }
 }
 

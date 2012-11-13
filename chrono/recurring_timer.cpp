@@ -69,7 +69,7 @@ recurring_timer_t::enqueue(const boost::shared_ptr<engine::event_t>& event) {
     try {
         engine().enqueue(event);
     } catch(const cocaine::error_t& e) {
-        COCAINE_LOG_ERROR(m_log, "unable to schedule an event - %s", e.what());
+        COCAINE_LOG_ERROR(m_log, "unable to enqueue an event - %s", e.what());
     }
 }
 
