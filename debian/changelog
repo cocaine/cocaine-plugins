@@ -1,32 +1,9 @@
-cocaine-plugins (0.10.0-alpha6) lucid; urgency=low
+cocaine-plugins (0.10.0) lucid; urgency=low
 
-  * Alpha 6.
-
- -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 02 Nov 2012 18:32:41 +0400
-
-cocaine-plugins (0.10.0-alpha4) lucid; urgency=low
-
-  * Building for YaC 2012, try #2.
-
- -- Andrey Sibiryov <kobolog@yandex-team.ru>  Sun, 30 Sep 2012 17:54:13 +0400
-
-cocaine-plugins (0.10.0-alpha3) lucid; urgency=low
-
-  * Building for YaC 2012.
-
- -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 28 Sep 2012 22:34:53 +0400
-
-cocaine-plugins (0.10.0-alpha2) lucid; urgency=low
-
-  * [........] support for the new logic in the core.
-
- -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 28 Sep 2012 20:30:52 +0400
-
-cocaine-plugins (0.10.0-alpha1) lucid; urgency=low
-
-  * [5d6f2fa2] elliptics plugin now supports the new storage api.
-  * [48a9c871] dealer plugin now supports the new driver api.
-  * [........] various api changes.
+  * New Python API.
+  * Javascript sandbox dropped in favor of node.js module.
+  * Useful filesystem monitor.
+  * TBD.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 26 Sep 2012 16:06:03 +0400
 
