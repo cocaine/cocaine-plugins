@@ -183,17 +183,39 @@ blastbeat_t::on_ping() {
 
 void
 blastbeat_t::on_spawn() {
-    COCAINE_LOG_INFO(m_log, "connected to the blastbeat server");
+    COCAINE_LOG_INFO(m_log, "connected to a blastbeat server");
 }
 
 void
 blastbeat_t::on_uwsgi(const std::string& sid,
                       zmq::message_t& message)
 {
-    std::map<
+    typedef std::map<
         std::string,
         std::string
-    > env;
+    > env_t;
+
+    boost::shared_ptr<blastbeat_event_t> event(
+        boost::make_shared<blastbeat_event_t>(
+            m_event,
+            sid,
+            *this
+        )
+    );
+
+    stream_map_t::iterator it;
+
+    try {
+        boost::tie(it, boost::tuples::ignore) = m_streams.emplace(
+            sid,
+            engine().enqueue(event)
+        );
+    } catch(const cocaine::error_t& e) {
+        COCAINE_LOG_ERROR(m_log, "unable to enqueue an event - %s", e.what());
+        return;
+    }
+
+    env_t env;
 
     const char * ptr = static_cast<const char*>(message.data()),
                * const end = ptr + message.size();
@@ -226,54 +248,7 @@ blastbeat_t::on_uwsgi(const std::string& sid,
     msgpack::sbuffer buffer;
     msgpack::packer<msgpack::sbuffer> packer(buffer);
 
-    packer.pack_map(2);
-
-    packer << std::string("meta") << env;
-
-    // Parse the query string.
-    // TODO: Drop this shit from here -->
-    typedef boost::tokenizer<
-        boost::char_separator<char>
-    > tokenizer_type;
-
-    boost::char_separator<char> separator("&");
-    tokenizer_type tokenizer(env["QUERY_STRING"], separator);
-
-    std::map<
-        std::string,
-        std::string
-    > query_map;
-
-    for(tokenizer_type::const_iterator it = tokenizer.begin();
-        it != tokenizer.end();
-        ++it)
-    {
-        std::vector<std::string> pair;
-        boost::algorithm::split(pair, *it, boost::is_any_of("="));
-        query_map[pair[0]] = pair[1];
-    }
-
-    packer << std::string("request") << query_map;
-    // <-- to there.
-
-    boost::shared_ptr<blastbeat_event_t> event(
-        boost::make_shared<blastbeat_event_t>(
-            m_event,
-            sid,
-            *this
-        )
-    );
-
-    stream_map_t::iterator it;
-
-    try {
-        boost::tie(it, boost::tuples::ignore) = m_streams.emplace(
-            sid,
-            engine().enqueue(event)
-        );
-    } catch(const cocaine::error_t& e) {
-        COCAINE_LOG_ERROR(m_log, "unable to enqueue an event - %s", e.what());
-    }
+    packer << env;
 
     try {
         it->second->push(
