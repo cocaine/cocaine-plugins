@@ -12,7 +12,6 @@ OPTION(DEALER "Build Dealer Driver plugin" ON)
 OPTION(PYTHON "Build Python Sandbox plugin" ON)
 OPTION(PERL "Build Perl Sandbox plugin" ON)
 OPTION(BINARY "Build Binary Sandbox plugin" ON)
-OPTION(JAVASCRIPT "Build Javascript Sandbox plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" ON)
 OPTION(BLASTBEAT "Build Blastbeat Driver plugin" ON)
 OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
@@ -54,7 +53,6 @@ LINK_DIRECTORIES(
 
 SET(PLUGINS
         python
-        javascript
         #mongo
         elliptics
         binary
