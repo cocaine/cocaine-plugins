@@ -18,9 +18,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
+#include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
-
-#include <cocaine/api/event.hpp>
+#include <cocaine/logging.hpp>
 
 #include "recurring_timer.hpp"
 
@@ -32,6 +32,12 @@ recurring_timer_t::recurring_timer_t(context_t& context,
                                      const Json::Value& args,
                                      engine::engine_t& engine):
     category_type(context, name, args, engine),
+    m_context(context),
+    m_log(context.log(
+        (boost::format("app/%1%")
+            % name
+        ).str()
+    )),
     m_event(args["emit"].asString()),
     m_interval(args.get("interval", 0.0f).asInt() / 1000.0f),
     m_watcher(engine.loop())
@@ -40,7 +46,7 @@ recurring_timer_t::recurring_timer_t(context_t& context,
         throw configuration_error_t("no interval has been specified");
     }
 
-    m_watcher.set<recurring_timer_t, &recurring_timer_t::event>(this);
+    m_watcher.set<recurring_timer_t, &recurring_timer_t::on_event>(this);
     m_watcher.start(m_interval, m_interval);
 }
 
@@ -59,19 +65,21 @@ recurring_timer_t::info() const {
 }
 
 void
-recurring_timer_t::event(ev::timer&, int) {
-    reschedule();
+recurring_timer_t::enqueue(const boost::shared_ptr<engine::event_t>& event) {
+    try {
+        engine().enqueue(event);
+    } catch(const cocaine::error_t& e) {
+        COCAINE_LOG_ERROR(m_log, "unable to schedule an event - %s", e.what());
+    }
 }
 
 void
 recurring_timer_t::reschedule() {
-    try {
-        engine().enqueue(
-            boost::make_shared<engine::event_t>(
-                m_event
-            )
-        );
-    } catch(const cocaine::error_t& e) {
-        throw;
-    }
+    enqueue(boost::make_shared<recurring_event_t>(m_event));
 }
+
+void
+recurring_timer_t::on_event(ev::timer&, int) {
+    reschedule();
+}
+

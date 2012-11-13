@@ -23,17 +23,19 @@
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
-#include <cocaine/pipe.hpp>
 
 #include <cocaine/traits/policy.hpp>
 
-#include "dealer_server.hpp"
-#include "dealer_event.hpp"
+#include "driver.hpp"
+#include "event.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
 
-dealer_server_t::dealer_server_t(context_t& context, const std::string& name, const Json::Value& args, engine::engine_t& engine):
+dealer_t::dealer_t(context_t& context,
+                   const std::string& name,
+                   const Json::Value& args,
+                   engine::engine_t& engine):
     category_type(context, name, args, engine),
     m_context(context),
     m_log(context.log(
@@ -50,8 +52,7 @@ dealer_server_t::dealer_server_t(context_t& context, const std::string& name, co
     ),
     m_channel(context, ZMQ_ROUTER, m_identity),
     m_watcher(engine.loop()),
-    m_processor(engine.loop()),
-    m_check(engine.loop())
+    m_checker(engine.loop())
 {
     std::string endpoint(args["endpoint"].asString());
 
@@ -65,21 +66,19 @@ dealer_server_t::dealer_server_t(context_t& context, const std::string& name, co
         throw configuration_error_t("invalid driver endpoint - %s", e.what());
     }
 
-    m_watcher.set<dealer_server_t, &dealer_server_t::event>(this);
+    m_watcher.set<dealer_t, &dealer_t::on_event>(this);
     m_watcher.start(m_channel.fd(), ev::READ);
-    m_processor.set<dealer_server_t, &dealer_server_t::process>(this);
-    m_check.set<dealer_server_t, &dealer_server_t::check>(this);
-    m_check.start();
+    m_checker.set<dealer_t, &dealer_t::on_check>(this);
+    m_checker.start();
 }
 
-dealer_server_t::~dealer_server_t() {
+dealer_t::~dealer_t() {
     m_watcher.stop();
-    m_processor.stop();
-    m_check.stop();
+    m_checker.stop();
 }
 
 Json::Value
-dealer_server_t::info() const {
+dealer_t::info() const {
     Json::Value result;
 
     result["endpoint"] = m_channel.endpoint();
@@ -90,20 +89,39 @@ dealer_server_t::info() const {
 }
 
 void
-dealer_server_t::process(ev::idle&, int) {
+dealer_t::on_event(ev::io&, int) {
+    m_checker.stop();
+
+    if(m_channel.pending()) {
+        m_checker.start();
+        process_events();
+    }
+}
+
+void
+dealer_t::on_check(ev::prepare&, int) {
+    engine().loop().feed_fd_event(m_channel.fd(), ev::READ);
+}
+
+void
+dealer_t::process_events() {
     int counter = defaults::io_bulk_size;
     
     do {
-        if(!m_channel.pending()) {
-            m_processor.stop();
-            return;
-        }
-       
         zmq::message_t message;
         route_t route;
 
         do {
-            m_channel.recv(message);
+            {
+                io::scoped_option<
+                    io::options::receive_timeout,
+                    io::policies::unique
+                > option(m_channel, 0);
+                
+                if(!m_channel.recv(message)) {
+                    return;
+                }
+            }
 
             if(!message.size()) {
                 break;
@@ -140,12 +158,13 @@ dealer_server_t::process(ev::idle&, int) {
                 );
         
                 m_channel.drop();
+
                 return;
             }
 
             COCAINE_LOG_DEBUG(
                 m_log,
-                "enqueuing a '%s' event with uuid: %s",
+                "enqueuing event type '%s' with uuid: %s",
                 m_event,
                 tag
             );
@@ -166,27 +185,10 @@ dealer_server_t::process(ev::idle&, int) {
                     message.size()
                 );
             } catch(const cocaine::error_t& e) {
-                throw;
+                event->abort(resource_error, e.what());
+                event->close();
             }
         } while(m_channel.more());
     } while(--counter);
 }
 
-void
-dealer_server_t::event(ev::io&, int) {
-    if(m_channel.pending() && !m_processor.is_active()) {
-        m_processor.start();
-    }
-}
-
-void
-dealer_server_t::check(ev::prepare&, int) {
-    event(m_watcher, ev::READ);
-}
-
-extern "C" {
-    void
-    initialize(api::repository_t& repository) {
-        repository.insert<dealer_server_t>("native-server");
-    }
-}

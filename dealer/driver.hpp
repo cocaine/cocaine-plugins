@@ -18,61 +18,67 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_DEALER_SERVER_EVENT_HPP
-#define COCAINE_DEALER_SERVER_EVENT_HPP
+#ifndef COCAINE_DEALER_DRIVER_HPP
+#define COCAINE_DEALER_DRIVER_HPP
 
+#include <cocaine/common.hpp>
+#include <cocaine/asio.hpp>
 #include <cocaine/io.hpp>
 
-#include <cocaine/api/event.hpp>
+#include <cocaine/api/driver.hpp>
 
 namespace cocaine { namespace driver {
-
-typedef std::vector<std::string> route_t;
 
 typedef io::channel<
     struct dealer_tag,
     io::policies::unique
 > rpc_channel_t;
 
-class dealer_event_t:
-    public engine::event_t
+class dealer_t:
+    public api::driver_t
 {
     public:
-        dealer_event_t(const std::string& event,
-                       const engine::policy_t& policy,
-                       rpc_channel_t& channel,
-                       const route_t& route,
-                       const std::string& tag);
+        typedef api::driver_t category_type;
+
+    public:
+        dealer_t(context_t& context,
+                 const std::string& name,
+                 const Json::Value& args,
+                 engine::engine_t& engine);
+
+        ~dealer_t();
 
         virtual
-        void
-        on_chunk(const void * chunk,
-                 size_t size);
+        Json::Value
+        info() const;
         
-        virtual
+    private:
         void
-        on_error(error_code code,
-                 const std::string& message);
+        on_event(ev::io&, int);
         
-        virtual
         void
-        on_close();
+        on_check(ev::prepare&, int);
+
+        void
+        process_events();
 
     private:
-        template<class T>
-        void
-        send(const std::string& route,
-             const T& message)
-        {
-            m_channel.send(route, ZMQ_SNDMORE);
-            m_channel.send_message(message);
-        }
+        context_t& m_context;
+        boost::shared_ptr<logging::logger_t> m_log;
 
-    private:
-        rpc_channel_t& m_channel;        
+        // Configuration
+
+        const std::string m_event,
+                          m_identity;
+
+        // Dealer RPC
         
-        const route_t m_route;
-        const std::string m_tag;
+        rpc_channel_t m_channel;
+        
+        // Event loop
+
+        ev::io m_watcher;
+        ev::prepare m_checker;
 };
 
 }}

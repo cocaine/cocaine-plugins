@@ -18,7 +18,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include "dealer_event.hpp"
+#include "event.hpp"
 
 using namespace cocaine::engine;
 using namespace cocaine::driver;
@@ -93,8 +93,8 @@ dealer_event_t::dealer_event_t(const std::string& event,
 }
 
 void
-dealer_event_t::on_chunk(const void * chunk,
-                         size_t size)
+dealer_event_t::push(const void * chunk,
+                     size_t size)
 {
     zmq::message_t message(size);
 
@@ -111,8 +111,16 @@ dealer_event_t::on_chunk(const void * chunk,
 }
 
 void
-dealer_event_t::on_error(error_code code,
-                         const std::string& message)
+dealer_event_t::close() {
+    send(
+        m_route.front(),
+        io::message<driver::choke>(m_tag)
+    );
+}
+
+void
+dealer_event_t::abort(error_code code,
+                      const std::string& message)
 {
     send(
         m_route.front(),
@@ -120,10 +128,3 @@ dealer_event_t::on_error(error_code code,
     );
 }
 
-void
-dealer_event_t::on_close() {
-    send(
-        m_route.front(),
-        io::message<driver::choke>(m_tag)
-    );
-}

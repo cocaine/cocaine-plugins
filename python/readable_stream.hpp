@@ -56,6 +56,11 @@ struct request_stream_t:
     void
     close();
 
+    virtual
+    void
+    abort(error_code code,
+          const std::string& message);
+
 private:
     python_t& m_sandbox;
 };

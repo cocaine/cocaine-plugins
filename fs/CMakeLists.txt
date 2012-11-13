@@ -1,6 +1,7 @@
 IF(FS)
     ADD_LIBRARY(fs MODULE
-        filesystem_monitor)
+        driver
+        module)
 
     TARGET_LINK_LIBRARIES(fs
         cocaine-core)

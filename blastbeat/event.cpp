@@ -82,8 +82,8 @@ blastbeat_event_t::blastbeat_event_t(const std::string& event,
 { }
 
 void
-blastbeat_event_t::on_chunk(const void * chunk,
-                            size_t size)
+blastbeat_event_t::push(const void * chunk,
+                        size_t size)
 {
     if(!m_body) {
         msgpack::unpacked unpacked;
@@ -143,8 +143,14 @@ blastbeat_event_t::on_chunk(const void * chunk,
 }
 
 void
-blastbeat_event_t::on_error(error_code code,
-                            const std::string& message)
+blastbeat_event_t::close() {
+    std::string empty;
+    m_driver.send(m_sid, "end", io::protect(empty)); 
+}
+
+void
+blastbeat_event_t::abort(error_code code,
+                         const std::string& message)
 {
     std::string empty;
     
@@ -152,9 +158,3 @@ blastbeat_event_t::on_error(error_code code,
     m_driver.send(m_sid, "retry", io::protect(empty)); 
 }
 
-void
-blastbeat_event_t::on_close() {
-    std::string empty;
-
-    m_driver.send(m_sid, "end", io::protect(empty)); 
-}

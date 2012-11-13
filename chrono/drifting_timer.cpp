@@ -25,13 +25,13 @@
 using namespace cocaine;
 using namespace cocaine::driver;
 
-drifting_timer_event_t::drifting_timer_event_t(const std::string& event,
-                                               drifting_timer_t& driver):
-    event_t(event),
+drifting_event_t::drifting_event_t(const std::string& event,
+                                   drifting_timer_t& driver):
+    recurring_event_t(event),
     m_driver(driver)
 { }
 
-drifting_timer_event_t::~drifting_timer_event_t() {
+drifting_event_t::~drifting_event_t() {
     m_driver.rearm();
 }
 
@@ -52,22 +52,19 @@ drifting_timer_t::info() const {
 }
 
 void
+drifting_timer_t::reschedule() {
+    m_watcher.stop();
+
+    enqueue(
+        boost::make_shared<drifting_event_t>(
+            m_event,
+            boost::ref(*this)
+        )
+    );
+}
+
+void
 drifting_timer_t::rearm() {
     m_watcher.again();
 }
 
-void
-drifting_timer_t::reschedule() {
-    m_watcher.stop();
-
-    try {
-        engine().enqueue(
-            boost::make_shared<drifting_timer_event_t>(
-                m_event,
-                boost::ref(*this)
-            )
-        );
-    } catch(const cocaine::error_t& e) {
-        throw;
-    }
-}

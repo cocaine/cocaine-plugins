@@ -27,13 +27,9 @@
 
 #include "Python.h"
 
-namespace cocaine {
-    
-namespace logging {
-    struct logger_t;
-}
-    
-namespace sandbox {
+#include <cocaine/common.hpp>
+
+namespace cocaine { namespace sandbox {
 
 struct log_t {
     PyObject_HEAD

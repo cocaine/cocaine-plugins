@@ -1,7 +1,8 @@
 IF(DEALER)
     ADD_LIBRARY(dealer MODULE
-        dealer_event
-        dealer_server)
+        event
+        driver
+        module)
 
     TARGET_LINK_LIBRARIES(dealer
         cocaine-core)

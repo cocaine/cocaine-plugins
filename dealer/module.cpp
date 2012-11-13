@@ -18,45 +18,14 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_BLASTBEAT_EVENT_HPP
-#define COCAINE_BLASTBEAT_EVENT_HPP
+#include "driver.hpp"
 
-#include <cocaine/api/event.hpp>
+using namespace cocaine;
+using namespace cocaine::driver;
 
-namespace cocaine { namespace driver {
-
-class blastbeat_t;
-
-class blastbeat_event_t:
-    public engine::event_t
-{
-    public:
-        blastbeat_event_t(const std::string& event,
-                          const std::string& sid,
-                          blastbeat_t& driver);
-
-        virtual
-        void
-        push(const void * chunk,
-             size_t size);
-        
-        virtual
-        void
-        close();
-
-        virtual
-        void
-        abort(error_code code,
-              const std::string& message);
-        
-    private:
-        const std::string m_sid;
-        blastbeat_t& m_driver;
-        
-        // Indicates that headers are already away.
-        bool m_body;
-};
-
-}}
-
-#endif
+extern "C" {
+    void
+    initialize(api::repository_t& repository) {
+        repository.insert<dealer_t>("native-server");
+    }
+}

@@ -44,8 +44,6 @@ class blastbeat_t:
         virtual
         ~blastbeat_t();
 
-        // Driver interface
-
         virtual
         Json::Value
         info() const;
@@ -64,10 +62,7 @@ class blastbeat_t:
                 )
             );
 
-            m_loop.feed_fd_event(
-                m_socket.fd(),
-                ev::READ
-            );
+            on_check(m_checker, ev::PREPARE);
         }
 
     private:
@@ -77,7 +72,6 @@ class blastbeat_t:
         void
         on_check(ev::prepare&, int);
 
-    private:
         void
         process_events();
         
@@ -116,8 +110,6 @@ class blastbeat_t:
 
         // Event loop
 
-        ev::loop_ref& m_loop;
-
         ev::io m_watcher; 
         ev::prepare m_checker;
         
@@ -125,10 +117,10 @@ class blastbeat_t:
 
         typedef boost::unordered_map<
             std::string,
-            boost::shared_ptr<engine::pipe_t>
-        > pipe_map_t;
+            boost::shared_ptr<api::stream_t>
+        > stream_map_t;
 
-        pipe_map_t m_pipes;
+        stream_map_t m_streams;
 };
 
 }}

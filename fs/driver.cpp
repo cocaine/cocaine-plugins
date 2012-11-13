@@ -18,20 +18,28 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
+#include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
+#include <cocaine/logging.hpp>
 
 #include <cocaine/api/event.hpp>
 
-#include "filesystem_monitor.hpp"
+#include "driver.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
 
-filesystem_monitor_t::filesystem_monitor_t(context_t& context,
-                                           const std::string& name,
-                                           const Json::Value& args,
-                                           engine::engine_t& engine):
+fs_t::fs_t(context_t& context,
+           const std::string& name,
+           const Json::Value& args,
+           engine::engine_t& engine):
     category_type(context, name, args, engine),
+    m_context(context),
+    m_log(context.log(
+        (boost::format("app/%1%")
+            % name
+        ).str()
+    )),
     m_path(args.get("path", "").asString()),
     m_watcher(engine.loop())
 {
@@ -39,16 +47,16 @@ filesystem_monitor_t::filesystem_monitor_t(context_t& context,
         throw configuration_error_t("no path has been specified");
     }
     
-    m_watcher.set<filesystem_monitor_t, &filesystem_monitor_t::event>(this);
+    m_watcher.set<fs_t, &fs_t::on_event>(this);
     m_watcher.start(m_path.c_str());
 }
 
-filesystem_monitor_t::~filesystem_monitor_t() {
+fs_t::~fs_t() {
     m_watcher.stop();
 }
 
 Json::Value
-filesystem_monitor_t::info() const {
+fs_t::info() const {
     Json::Value result;
 
     result["type"] = "filesystem-monitor";
@@ -58,21 +66,11 @@ filesystem_monitor_t::info() const {
 }
 
 void
-filesystem_monitor_t::event(ev::stat&, int) {
+fs_t::on_event(ev::stat&, int) {
     try {
-        engine().enqueue(
-            boost::make_shared<engine::event_t>(
-                m_event
-            )
-        );
+        engine().enqueue(boost::make_shared<fs_event_t>(m_event));
     } catch(const cocaine::error_t& e) {
-        throw;
+        COCAINE_LOG_ERROR(m_log, "unable to schedule an event - %s", e.what());
     }
 }
 
-extern "C" {
-    void
-    initialize(api::repository_t& repository) {
-        repository.insert<filesystem_monitor_t>("filesystem-monitor");
-    }
-}

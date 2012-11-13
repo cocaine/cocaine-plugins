@@ -18,7 +18,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <cocaine/api/sandbox.hpp>
+#include <cocaine/api/stream.hpp>
 
 #include "readable_stream.hpp"
 
@@ -36,12 +36,16 @@ request_stream_t::push(const void * chunk,
 {
     thread_lock_t lock(m_sandbox.thread_state()); 
 
-    tracked_object_t buffer = PyString_FromStringAndSize(
-        static_cast<const char*>(chunk),
-        size
+    tracked_object_t buffer(
+        PyString_FromStringAndSize(
+            static_cast<const char*>(chunk),
+            size
+        )
     );
 
-    tracked_object_t args = PyTuple_Pack(1, *buffer);
+    tracked_object_t args(
+        PyTuple_Pack(1, *buffer)
+    );
 
     invoke("chunk", args, NULL);
 }
@@ -50,9 +54,31 @@ void
 request_stream_t::close() {
     thread_lock_t lock(m_sandbox.thread_state()); 
     
-    tracked_object_t args = PyTuple_New(0);
+    tracked_object_t args(PyTuple_New(0));
     
     invoke("close", args, NULL);
+}
+
+void
+request_stream_t::abort(error_code code,
+                        const std::string& message)
+{
+    thread_lock_t lock(m_sandbox.thread_state()); 
+    
+    tracked_object_t code_object(PyLong_FromLong(code));
+
+    tracked_object_t message_object(
+        PyString_FromStringAndSize(
+            message.data(),
+            message.size()
+        )
+    );
+    
+    tracked_object_t args(
+        PyTuple_Pack(2, *code_object, *message_object)
+    );
+
+    invoke("error", args, NULL);
 }
 
 int

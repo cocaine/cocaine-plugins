@@ -25,23 +25,48 @@
 #include <cocaine/asio.hpp>
 
 #include <cocaine/api/driver.hpp>
+#include <cocaine/api/event.hpp>
 
 namespace cocaine { namespace driver {
 
-class filesystem_monitor_t:
+struct fs_event_t:
+    public engine::event_t
+{
+    fs_event_t(const std::string& event):
+        engine::event_t(event)
+    { }
+
+    virtual
+    void
+    push(const void*,
+         size_t)
+    { }
+
+    virtual
+    void
+    close() { }
+
+    virtual
+    void
+    abort(error_code,
+          const std::string&)
+    { }
+};
+
+class fs_t:
     public api::driver_t
 {
     public:
         typedef api::driver_t category_type;
 
     public:
-        filesystem_monitor_t(context_t& context,
-                             const std::string& name,
-                             const Json::Value& args,
-                             engine::engine_t& engine);
+        fs_t(context_t& context,
+             const std::string& name,
+             const Json::Value& args,
+             engine::engine_t& engine);
 
         virtual
-        ~filesystem_monitor_t();
+        ~fs_t();
 
         virtual
         Json::Value
@@ -49,9 +74,12 @@ class filesystem_monitor_t:
 
     private:
         void
-        event(ev::stat&, int);
+        on_event(ev::stat&, int);
 
     private:
+        context_t& m_context;
+        boost::shared_ptr<logging::logger_t> m_log;
+        
         const std::string m_event,
                           m_path;
 

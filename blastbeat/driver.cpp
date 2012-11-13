@@ -26,7 +26,6 @@
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
-#include <cocaine/pipe.hpp>
 
 #include "driver.hpp"
 #include "event.hpp"
@@ -49,7 +48,6 @@ blastbeat_t::blastbeat_t(context_t& context,
     m_identity(args.get("identity", "").asString()),
     m_endpoint(args.get("endpoint", "").asString()),
     m_socket(context, ZMQ_DEALER),
-    m_loop(engine.loop()),
     m_watcher(engine.loop()),
     m_checker(engine.loop())
 {
@@ -87,7 +85,7 @@ blastbeat_t::info() const {
     result["identity"] = m_identity;
     result["endpoint"] = m_endpoint;
     result["type"] = "blastbeat";
-    result["sessions"] = static_cast<Json::LargestUInt>(m_pipes.size());
+    result["sessions"] = static_cast<Json::LargestUInt>(m_streams.size());
 
     return result;
 }
@@ -104,7 +102,7 @@ blastbeat_t::on_event(ev::io&, int) {
 
 void
 blastbeat_t::on_check(ev::prepare&, int) {
-    m_loop.feed_fd_event(m_socket.fd(), ev::READ);
+    engine().loop().feed_fd_event(m_socket.fd(), ev::READ);
 }
 
 namespace {
@@ -266,20 +264,24 @@ blastbeat_t::on_uwsgi(const std::string& sid,
         )
     );
 
-    try {
-        pipe_map_t::iterator it;
+    stream_map_t::iterator it;
 
-        boost::tie(it, boost::tuples::ignore) = m_pipes.emplace(
+    try {
+        boost::tie(it, boost::tuples::ignore) = m_streams.emplace(
             sid,
             engine().enqueue(event)
         );
+    } catch(const cocaine::error_t& e) {
+        COCAINE_LOG_ERROR(m_log, "unable to enqueue an event - %s", e.what());
+    }
 
+    try {
         it->second->push(
             buffer.data(),
             buffer.size()
         );
     } catch(const cocaine::error_t& e) {
-        throw;
+        COCAINE_LOG_ERROR(m_log, "unable to push data to a session - %s", e.what());
     }
 }
 
@@ -287,32 +289,41 @@ void
 blastbeat_t::on_body(const std::string& sid, 
                      zmq::message_t& body)
 {
-    pipe_map_t::iterator it(
-        m_pipes.find(sid)
+    stream_map_t::iterator it(
+        m_streams.find(sid)
     );
 
-    if(it == m_pipes.end()) {
+    if(it == m_streams.end()) {
         COCAINE_LOG_WARNING(m_log, "received an unknown session body");
         return;
     }
 
-    it->second->push(
-        static_cast<const char*>(body.data()),
-        body.size()
-    );
+    try {
+        it->second->push(
+            static_cast<const char*>(body.data()),
+            body.size()
+        );
+    } catch(const cocaine::error_t& e) {
+        COCAINE_LOG_ERROR(m_log, "unable to push a chunk to a session - %s", e.what());
+    }
 }
 
 void
 blastbeat_t::on_end(const std::string& sid) {
-    pipe_map_t::iterator it(
-        m_pipes.find(sid)
+    stream_map_t::iterator it(
+        m_streams.find(sid)
     );
 
-    if(it == m_pipes.end()) {
+    if(it == m_streams.end()) {
         COCAINE_LOG_WARNING(m_log, "received an unknown session termination");
         return;
     }
 
-    it->second->close();
-    m_pipes.erase(it);
+    try {
+        it->second->close();
+    } catch(const cocaine::error_t& e) {
+        COCAINE_LOG_ERROR(m_log, "unable to close a session - %s", e.what());
+    }
+
+    m_streams.erase(it);
 }

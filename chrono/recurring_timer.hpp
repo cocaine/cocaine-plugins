@@ -25,8 +25,33 @@
 #include <cocaine/asio.hpp>
 
 #include <cocaine/api/driver.hpp>
+#include <cocaine/api/event.hpp>
 
 namespace cocaine { namespace driver {
+
+struct recurring_event_t:
+    public engine::event_t
+{
+    recurring_event_t(const std::string& event):
+        engine::event_t(event)
+    { }
+
+    virtual
+    void
+    push(const void*,
+         size_t)
+    { }
+
+    virtual
+    void
+    close() { }
+
+    virtual
+    void
+    abort(error_code,
+          const std::string&)
+    { }
+};
 
 class recurring_timer_t:
     public api::driver_t
@@ -43,21 +68,25 @@ class recurring_timer_t:
         virtual
         ~recurring_timer_t();
 
-        // Driver interface.
         virtual
         Json::Value
         info() const;
 
-    private:
         void
-        event(ev::timer&, int);
+        enqueue(const boost::shared_ptr<engine::event_t>& event);
 
-        // Timer interface.
         virtual
         void
         reschedule();
 
+    private:
+        void
+        on_event(ev::timer&, int);
+
     protected:
+        context_t& m_context;
+        boost::shared_ptr<logging::logger_t> m_log;
+        
         const std::string m_event;
         const double m_interval;
 
