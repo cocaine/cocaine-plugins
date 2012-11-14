@@ -328,7 +328,7 @@ python_t::invoke(const std::string& event,
     // Call the event handler
 
     if(!m_emitter->invoke(event, args, NULL)) {
-        throw cocaine::error_t("the event is not supported");
+        throw cocaine::error_t("the '%s' event is not supported", event);
     }
 
     if(PyErr_Occurred()) {
