@@ -1,0 +1,19 @@
+{
+    "type" : "python",
+    "engine" : {
+        "heartbeat-timeout" : 60,
+        "pool-limit" : 200,
+        "queue-limit" : 250,
+        "grow-threshold": 1
+    },
+    "drivers" : {
+        "io" : {
+            "type" : "blastbeat",
+            "args": {
+                "emit": "hash",
+                "identity": "cocaine-node-1",
+                "endpoint": "tcp://localhost:5001"
+            }
+        }
+    }
+}
