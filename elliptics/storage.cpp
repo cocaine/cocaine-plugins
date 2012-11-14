@@ -253,6 +253,9 @@ elliptics_storage_t::remove(const std::string& collection,
     struct dnet_id dnet_id;
     struct timespec ts = { 0, 0 };
     
+    // NOTE: Elliptcs does not initialize the contents of the keys. 
+    memset(&dnet_id, 0, sizeof(struct dnet_id));
+    
     COCAINE_LOG_DEBUG(
         m_log,
         "removing the '%s' object, collection: '%s'",
