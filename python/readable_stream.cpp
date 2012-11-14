@@ -26,13 +26,13 @@
 
 using namespace cocaine::sandbox;
 
-request_stream_t::request_stream_t(python_t& sandbox):
+downstream_t::downstream_t(python_t& sandbox):
     m_sandbox(sandbox)
 { }
 
 void
-request_stream_t::push(const void * chunk,
-                       size_t size)
+downstream_t::push(const void * chunk,
+                   size_t size)
 {
     thread_lock_t lock(m_sandbox.thread_state()); 
 
@@ -51,17 +51,8 @@ request_stream_t::push(const void * chunk,
 }
 
 void
-request_stream_t::close() {
-    thread_lock_t lock(m_sandbox.thread_state()); 
-    
-    tracked_object_t args(PyTuple_New(0));
-    
-    invoke("close", args, NULL);
-}
-
-void
-request_stream_t::abort(error_code code,
-                        const std::string& message)
+downstream_t::error(error_code code,
+                    const std::string& message)
 {
     thread_lock_t lock(m_sandbox.thread_state()); 
     
@@ -79,6 +70,17 @@ request_stream_t::abort(error_code code,
     );
 
     invoke("error", args, NULL);
+
+    close();
+}
+
+void
+downstream_t::close() {
+    thread_lock_t lock(m_sandbox.thread_state()); 
+    
+    tracked_object_t args(PyTuple_New(0));
+    
+    invoke("close", args, NULL);
 }
 
 int
@@ -97,7 +99,7 @@ readable_stream_t::ctor(readable_stream_t * self,
         return -1;
     }
 
-    self->base = static_cast<request_stream_t*>(
+    self->base = static_cast<downstream_t*>(
         PyCObject_AsVoidPtr(stream)
     );
 

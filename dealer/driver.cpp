@@ -27,7 +27,7 @@
 #include <cocaine/traits/policy.hpp>
 
 #include "driver.hpp"
-#include "event.hpp"
+#include "stream.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
@@ -145,7 +145,7 @@ dealer_t::process_events() {
 
         do {
             std::string tag;
-            engine::policy_t policy;
+            api::policy_t policy;
 
             try {
                 m_channel.recv_tuple(boost::tie(tag, policy, message));
@@ -169,10 +169,8 @@ dealer_t::process_events() {
                 tag
             );
             
-            boost::shared_ptr<dealer_event_t> event(
-                boost::make_shared<dealer_event_t>(
-                    m_event,
-                    policy,
+            boost::shared_ptr<dealer_stream_t> stream(
+                boost::make_shared<dealer_stream_t>(
                     boost::ref(m_channel),
                     route,
                     tag
@@ -180,13 +178,12 @@ dealer_t::process_events() {
             );
 
             try {
-                engine().enqueue(event)->push(
+                engine().enqueue(api::event_t(m_event, policy), stream)->push(
                     static_cast<const char*>(message.data()), 
                     message.size()
                 );
             } catch(const cocaine::error_t& e) {
-                event->abort(resource_error, e.what());
-                event->close();
+                stream->error(resource_error, e.what());
             }
         } while(m_channel.more());
     } while(--counter);

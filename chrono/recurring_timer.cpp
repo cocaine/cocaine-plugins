@@ -22,6 +22,9 @@
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
 
+#include <cocaine/api/event.hpp>
+#include <cocaine/api/stream.hpp>
+
 #include "recurring_timer.hpp"
 
 using namespace cocaine;
@@ -65,9 +68,11 @@ recurring_timer_t::info() const {
 }
 
 void
-recurring_timer_t::enqueue(const boost::shared_ptr<engine::event_t>& event) {
+recurring_timer_t::enqueue(const api::event_t& event,
+                           const boost::shared_ptr<api::stream_t>& stream)
+{
     try {
-        engine().enqueue(event);
+        engine().enqueue(event, stream);
     } catch(const cocaine::error_t& e) {
         COCAINE_LOG_ERROR(m_log, "unable to enqueue an event - %s", e.what());
     }
@@ -75,7 +80,7 @@ recurring_timer_t::enqueue(const boost::shared_ptr<engine::event_t>& event) {
 
 void
 recurring_timer_t::reschedule() {
-    enqueue(boost::make_shared<recurring_event_t>(m_event));
+    enqueue(api::event_t(m_event), boost::make_shared<api::null_stream_t>());
 }
 
 void

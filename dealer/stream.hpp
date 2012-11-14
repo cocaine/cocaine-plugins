@@ -23,7 +23,7 @@
 
 #include <cocaine/io.hpp>
 
-#include <cocaine/api/event.hpp>
+#include <cocaine/api/stream.hpp>
 
 namespace cocaine { namespace driver {
 
@@ -34,15 +34,13 @@ typedef io::channel<
     io::policies::unique
 > rpc_channel_t;
 
-class dealer_event_t:
-    public engine::event_t
+class dealer_stream_t:
+    public api::stream_t
 {
     public:
-        dealer_event_t(const std::string& event,
-                       const engine::policy_t& policy,
-                       rpc_channel_t& channel,
-                       const route_t& route,
-                       const std::string& tag);
+        dealer_stream_t(rpc_channel_t& channel,
+                        const route_t& route,
+                        const std::string& tag);
 
         virtual
         void
@@ -51,13 +49,13 @@ class dealer_event_t:
         
         virtual
         void
-        close();
-
-        virtual
-        void
-        abort(error_code code,
+        error(error_code code,
               const std::string& message);
         
+        virtual
+        void
+        close();
+
     private:
         template<class T>
         void

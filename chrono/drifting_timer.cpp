@@ -18,20 +18,18 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <cocaine/engine.hpp>
+#include <cocaine/api/event.hpp>
 
 #include "drifting_timer.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
 
-drifting_event_t::drifting_event_t(const std::string& event,
-                                   drifting_timer_t& driver):
-    recurring_event_t(event),
+drifting_stream_t::drifting_stream_t(drifting_timer_t& driver):
     m_driver(driver)
 { }
 
-drifting_event_t::~drifting_event_t() {
+drifting_stream_t::~drifting_stream_t() {
     m_driver.rearm();
 }
 
@@ -56,10 +54,8 @@ drifting_timer_t::reschedule() {
     m_watcher.stop();
 
     enqueue(
-        boost::make_shared<drifting_event_t>(
-            m_event,
-            boost::ref(*this)
-        )
+        api::event_t(m_event),
+        boost::make_shared<drifting_stream_t>(boost::ref(*this))
     );
 }
 

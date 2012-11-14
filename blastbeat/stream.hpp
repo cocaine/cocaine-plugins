@@ -18,22 +18,21 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_BLASTBEAT_EVENT_HPP
-#define COCAINE_BLASTBEAT_EVENT_HPP
+#ifndef COCAINE_BLASTBEAT_STREAM_HPP
+#define COCAINE_BLASTBEAT_STREAM_HPP
 
-#include <cocaine/api/event.hpp>
+#include <cocaine/api/stream.hpp>
 
 namespace cocaine { namespace driver {
 
 class blastbeat_t;
 
-class blastbeat_event_t:
-    public engine::event_t
+class blastbeat_stream_t:
+    public api::stream_t
 {
     public:
-        blastbeat_event_t(const std::string& event,
-                          const std::string& sid,
-                          blastbeat_t& driver);
+        blastbeat_stream_t(const std::string& sid,
+                           blastbeat_t& driver);
 
         virtual
         void
@@ -42,13 +41,13 @@ class blastbeat_event_t:
         
         virtual
         void
-        close();
-
-        virtual
-        void
-        abort(error_code code,
+        error(error_code code,
               const std::string& message);
         
+        virtual
+        void
+        close();
+
     private:
         const std::string m_sid;
         blastbeat_t& m_driver;

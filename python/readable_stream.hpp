@@ -41,11 +41,11 @@ namespace sandbox {
 
 class python_t;
 
-struct request_stream_t:
+struct downstream_t:
     public api::stream_t,
     public event_source_t
 {
-    request_stream_t(python_t& sandbox);
+    downstream_t(python_t& sandbox);
 
     virtual
     void
@@ -54,12 +54,12 @@ struct request_stream_t:
 
     virtual
     void
-    close();
+    error(error_code code,
+          const std::string& message);
 
     virtual
     void
-    abort(error_code code,
-          const std::string& message);
+    close();
 
 private:
     python_t& m_sandbox;
@@ -87,7 +87,7 @@ struct readable_stream_t {
        PyObject * kwargs);
 
 public:
-    request_stream_t * base;
+    downstream_t * base;
 };
 
 }}

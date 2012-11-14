@@ -25,33 +25,8 @@
 #include <cocaine/asio.hpp>
 
 #include <cocaine/api/driver.hpp>
-#include <cocaine/api/event.hpp>
 
 namespace cocaine { namespace driver {
-
-struct fs_event_t:
-    public engine::event_t
-{
-    fs_event_t(const std::string& event):
-        engine::event_t(event)
-    { }
-
-    virtual
-    void
-    push(const void*,
-         size_t)
-    { }
-
-    virtual
-    void
-    close() { }
-
-    virtual
-    void
-    abort(error_code,
-          const std::string&)
-    { }
-};
 
 class fs_t:
     public api::driver_t

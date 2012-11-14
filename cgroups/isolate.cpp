@@ -23,10 +23,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "isolate.hpp"
-
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
+
+#include "isolate.hpp"
 
 using namespace cocaine;
 using namespace cocaine::api;

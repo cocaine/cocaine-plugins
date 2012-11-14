@@ -11,7 +11,8 @@ IF(ELLIPTICS)
         ${LIBEBLOB_LIBRARY_DIRS})
 
     ADD_LIBRARY(elliptics MODULE
-        elliptics)
+        storage
+        module)
 
     TARGET_LINK_LIBRARIES(elliptics
         cocaine-common

@@ -18,9 +18,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include "event.hpp"
+#include "stream.hpp"
 
-using namespace cocaine::engine;
+using namespace cocaine;
 using namespace cocaine::driver;
 
 namespace cocaine {
@@ -76,12 +76,9 @@ namespace io {
 
 } // namespace cocaine
 
-dealer_event_t::dealer_event_t(const std::string& event, 
-                               const policy_t& policy,
-                               rpc_channel_t& channel,
-                               const route_t& route,
-                               const std::string& tag):
-    event_t(event, policy),
+dealer_stream_t::dealer_stream_t(rpc_channel_t& channel,
+                                 const route_t& route,
+                                 const std::string& tag):
     m_channel(channel),
     m_route(route),
     m_tag(tag)
@@ -93,8 +90,8 @@ dealer_event_t::dealer_event_t(const std::string& event,
 }
 
 void
-dealer_event_t::push(const void * chunk,
-                     size_t size)
+dealer_stream_t::push(const void * chunk,
+                      size_t size)
 {
     zmq::message_t message(size);
 
@@ -111,20 +108,21 @@ dealer_event_t::push(const void * chunk,
 }
 
 void
-dealer_event_t::close() {
-    send(
-        m_route.front(),
-        io::message<driver::choke>(m_tag)
-    );
-}
-
-void
-dealer_event_t::abort(error_code code,
-                      const std::string& message)
+dealer_stream_t::error(error_code code,
+                       const std::string& message)
 {
     send(
         m_route.front(),
         io::message<driver::error>(m_tag, code, message)
     );
+
+    close();
 }
 
+void
+dealer_stream_t::close() {
+    send(
+        m_route.front(),
+        io::message<driver::choke>(m_tag)
+    );
+}

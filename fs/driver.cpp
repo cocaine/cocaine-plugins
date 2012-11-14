@@ -23,6 +23,7 @@
 #include <cocaine/logging.hpp>
 
 #include <cocaine/api/event.hpp>
+#include <cocaine/api/stream.hpp>
 
 #include "driver.hpp"
 
@@ -85,7 +86,7 @@ fs_t::on_event(ev::stat& w, int) {
            << w.attr.st_ctime;
 
     try {
-        engine().enqueue(boost::make_shared<fs_event_t>(m_event))->push(
+        engine().enqueue(api::event_t(m_event), boost::make_shared<api::null_stream_t>())->push(
             buffer.data(),
             buffer.size()
         );

@@ -27,8 +27,10 @@
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
 
+#include <cocaine/api/event.hpp>
+
 #include "driver.hpp"
-#include "event.hpp"
+#include "stream.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
@@ -190,9 +192,8 @@ void
 blastbeat_t::on_uwsgi(const std::string& sid,
                       zmq::message_t& message)
 {
-    boost::shared_ptr<blastbeat_event_t> event(
-        boost::make_shared<blastbeat_event_t>(
-            m_event,
+    boost::shared_ptr<blastbeat_stream_t> stream(
+        boost::make_shared<blastbeat_stream_t>(
             sid,
             *this
         )
@@ -203,7 +204,7 @@ blastbeat_t::on_uwsgi(const std::string& sid,
     try {
         boost::tie(it, boost::tuples::ignore) = m_streams.emplace(
             sid,
-            engine().enqueue(event)
+            engine().enqueue(api::event_t(m_event), stream)
         );
     } catch(const cocaine::error_t& e) {
         COCAINE_LOG_ERROR(m_log, "unable to enqueue an event - %s", e.what());

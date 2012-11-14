@@ -21,7 +21,7 @@
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
-#include "elliptics.hpp"
+#include "storage.hpp"
 
 using namespace cocaine;
 using namespace cocaine::storage;
@@ -302,9 +302,3 @@ elliptics_storage_t::remove(const std::string& collection,
     }
 }
 
-extern "C" {
-    void
-    initialize(api::repository_t& repository) {
-        repository.insert<elliptics_storage_t>("elliptics");
-    }
-}
