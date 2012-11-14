@@ -81,5 +81,7 @@ event_source_t::invoke(const std::string& event,
             throw cocaine::error_t(exception());
         }
     }
+
+    return true;
 }
 
