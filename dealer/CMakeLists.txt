@@ -1,6 +1,6 @@
 IF(DEALER)
     ADD_LIBRARY(dealer MODULE
-        event
+        stream
         driver
         module)
 

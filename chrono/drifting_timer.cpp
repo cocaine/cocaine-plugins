@@ -18,6 +18,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
+#include <boost/ref.hpp>
+
 #include <cocaine/api/event.hpp>
 
 #include "drifting_timer.hpp"

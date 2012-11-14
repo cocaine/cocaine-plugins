@@ -1,6 +1,6 @@
 IF(BLASTBEAT)
     ADD_LIBRARY(blastbeat MODULE
-        event
+        stream
         driver
         module)
 

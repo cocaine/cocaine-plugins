@@ -29,13 +29,7 @@
 
 #include <cocaine/common.hpp>
 
-namespace cocaine { 
-
-namespace api {
-   struct stream_t;
-}    
-
-namespace sandbox {
+namespace cocaine { namespace sandbox {
 
 struct writable_stream_t {
     public:

@@ -288,20 +288,20 @@ python_t::invoke(const std::string& event,
     thread_lock_t thread(m_thread_state);
 
     boost::shared_ptr<api::stream_t> downstream(
-        boost::make_shared<request_stream_t>(*this)
+        boost::make_shared<downstream_t>(*this)
     );
 
     // Pack the arguments
 
     tracked_object_t args(NULL);
 
-    tracked_object_t request_ptr_object(
+    tracked_object_t downstream_ptr_object(
         PyCObject_FromVoidPtr(downstream.get(), NULL)
     );
 
-    args = PyTuple_Pack(1, *request_ptr_object);
+    args = PyTuple_Pack(1, *downstream_ptr_object);
 
-    tracked_object_t request_object(
+    tracked_object_t downstream_object(
         PyObject_Call(
             reinterpret_cast<PyObject*>(&readable_stream_object_type), 
             args,
@@ -309,13 +309,13 @@ python_t::invoke(const std::string& event,
         )
     );
 
-    tracked_object_t response_ptr_object(
+    tracked_object_t upstream_ptr_object(
         PyCObject_FromVoidPtr(upstream.get(), NULL)
     );
     
-    args = PyTuple_Pack(1, *response_ptr_object);
+    args = PyTuple_Pack(1, *upstream_ptr_object);
 
-    tracked_object_t response_object(
+    tracked_object_t upstream_object(
         PyObject_Call(
             reinterpret_cast<PyObject*>(&writable_stream_object_type), 
             args,
@@ -323,7 +323,7 @@ python_t::invoke(const std::string& event,
         )
     );
     
-    args = PyTuple_Pack(2, *request_object, *response_object);
+    args = PyTuple_Pack(2, *downstream_object, *upstream_object);
 
     // Call the event handler
 

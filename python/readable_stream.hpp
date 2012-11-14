@@ -29,15 +29,11 @@
 
 #include <cocaine/common.hpp>
 
+#include <cocaine/api/stream.hpp>
+
 #include "event_source.hpp"
 
-namespace cocaine {
-
-namespace api {
-    struct stream_t;
-}
-
-namespace sandbox {
+namespace cocaine { namespace sandbox {
 
 class python_t;
 
