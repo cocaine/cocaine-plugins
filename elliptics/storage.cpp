@@ -82,7 +82,8 @@ elliptics_storage_t::elliptics_storage_t(context_t& context,
     category_type(context, name, args),
     m_log(context.log(name)),
     m_log_adapter(m_log, args.get("verbosity", DNET_LOG_ERROR).asUInt()),
-    m_node(m_log_adapter)
+    m_node(m_log_adapter),
+    m_session(m_node)
 {
     Json::Value nodes(args["nodes"]);
 
@@ -102,7 +103,7 @@ elliptics_storage_t::elliptics_storage_t(context_t& context,
                 nodes[*it].asInt()
             );
         } catch(const std::runtime_error& e) {
-            // Do nothing. Yes. Really.
+            // Do nothing. Yes. Really. We only care if no remote nodes were added at all.
         }
     }
 
@@ -119,7 +120,7 @@ elliptics_storage_t::elliptics_storage_t(context_t& context,
         digitizer()
     );
 
-    m_node.add_groups(m_groups);
+    m_session.add_groups(m_groups);
 }
 
 std::string
@@ -136,7 +137,7 @@ elliptics_storage_t::read(const std::string& collection,
     );
 
     try {
-        blob = m_node.read_data_wait(id(collection, key), 0, 0, 0, 0, 0);
+        blob = m_session.read_data_wait(id(collection, key), 0, 0, 0, 0, 0);
     } catch(const std::runtime_error& e) {
         throw storage_error_t(e.what());
     }
@@ -164,16 +165,16 @@ elliptics_storage_t::write(const std::string& collection,
     
     try {
         // Generate the key.
-        m_node.transform(
+        m_session.transform(
             id(collection, key),
             dnet_id
         );
 
         // Write the blob.
-        m_node.write_data_wait(dnet_id, blob, 0, 0, 0);
+        m_session.write_data_wait(dnet_id, blob, 0, 0, 0);
 
         // Write the blob metadata.
-        m_node.write_metadata(
+        m_session.write_metadata(
             dnet_id,
             id(collection, key),
             m_groups,
@@ -199,16 +200,16 @@ elliptics_storage_t::write(const std::string& collection,
             );
 
             // Generate the collection object key.
-            m_node.transform(
+            m_session.transform(
                 id("system", "list:" + collection),
                 dnet_id
             );
 
             // Update the collection object.
-            m_node.write_data_wait(dnet_id, object, 0, 0, 0);
+            m_session.write_data_wait(dnet_id, object, 0, 0, 0);
 
             // Update the collection object metadata.
-            m_node.write_metadata(
+            m_session.write_metadata(
                 dnet_id,
                 id("system", "list:" + collection),
                 m_groups,
@@ -227,7 +228,7 @@ elliptics_storage_t::list(const std::string& collection) {
     std::string blob;
     
     try {
-        blob = m_node.read_data_wait(id("system", "list:" + collection), 0, 0, 0, 0, 0);
+        blob = m_session.read_data_wait(id("system", "list:" + collection), 0, 0, 0, 0, 0);
     } catch(const std::runtime_error& e) {
         return result;
     }
@@ -281,16 +282,16 @@ elliptics_storage_t::remove(const std::string& collection,
         object.assign(buffer.data(), buffer.size());
 
         // Generate the collection object key.
-        m_node.transform(
+        m_session.transform(
             id("system", "list:" + collection),
             dnet_id
         );
 
         // Update the collection object.
-        m_node.write_data_wait(dnet_id, object, 0, 0, 0);
+        m_session.write_data_wait(dnet_id, object, 0, 0, 0);
 
         // Update the collection object metadata.
-        m_node.write_metadata(
+        m_session.write_metadata(
             dnet_id,
             id("system", "list:" + collection),
             m_groups,
@@ -299,7 +300,7 @@ elliptics_storage_t::remove(const std::string& collection,
         );
 
         // Remove the actual key.
-        m_node.remove(id(collection, key));
+        m_session.remove(id(collection, key));
     } catch(const std::runtime_error& e) {
         throw storage_error_t(e.what());
     }
