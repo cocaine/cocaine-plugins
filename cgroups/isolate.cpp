@@ -176,8 +176,8 @@ cgroups_t::spawn(const std::string& path,
             std::exit(EXIT_FAILURE);
         }
 
-        char * argv[args.size() * 2 + 2],
-             * envp[environment.size() + 1];
+        char * argv[args.size() * 2 + 2];
+        // char * envp[environment.size() + 1];
 
         // NOTE: The first element is the executable path,
         // the last one should be null pointer.
@@ -185,7 +185,7 @@ cgroups_t::spawn(const std::string& path,
         argv[sizeof(argv) / sizeof(argv[0])] = NULL;
 
         // NOTE: The last element of the environment must be a null pointer.
-        envp[sizeof(envp) / sizeof(envp[0])] = NULL;
+        // envp[sizeof(envp) / sizeof(envp[0])] = NULL;
 
         std::map<std::string, std::string>::const_iterator it;
         int n;
@@ -200,6 +200,11 @@ cgroups_t::spawn(const std::string& path,
             ++it;
         }
 
+        if(!environment.empty()) {
+            COCAINE_LOG_WARNING(m_log, "environment passing is not yet implemented");
+        }
+        
+        /*
         boost::format format("%s=%s");
 
         it = environment.begin();
@@ -213,8 +218,9 @@ cgroups_t::spawn(const std::string& path,
             format.clear();
             ++it;
         }
+        */
 
-        rv = ::execve(argv[0], argv, envp);
+        rv = ::execv(argv[0], argv);
 
         if(rv != 0) {
             char buffer[1024];
