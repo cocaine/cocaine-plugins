@@ -83,8 +83,8 @@ class python_t:
             return m_thread_state;
         }
 
-        const logging::logger_t*
-        logger() const {
+        logging::logger_t*
+        logger() {
             return m_log.get();
         }
 
