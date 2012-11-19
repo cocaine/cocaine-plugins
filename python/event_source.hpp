@@ -32,6 +32,7 @@
 namespace cocaine { namespace sandbox {
 
 struct event_source_t {
+    virtual
     ~event_source_t();
 
     void
