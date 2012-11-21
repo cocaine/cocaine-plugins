@@ -115,14 +115,9 @@ class blastbeat_t:
         
         // Session tracking
 
-        struct io_pair_t {
-            boost::shared_ptr<api::stream_t> upstream;
-            boost::shared_ptr<api::stream_t> downstream;
-        };
-
         typedef boost::unordered_map<
             std::string,
-            io_pair_t
+            boost::shared_ptr<api::stream_t>
         > stream_map_t;
 
         stream_map_t m_streams;

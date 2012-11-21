@@ -202,14 +202,9 @@ blastbeat_t::on_uwsgi(const std::string& sid,
     stream_map_t::iterator it;
 
     try {
-        io_pair_t io = {
-            upstream,
-            engine().enqueue(api::event_t(m_event), upstream)
-        };
-
         boost::tie(it, boost::tuples::ignore) = m_streams.emplace(
             sid,
-            io
+            engine().enqueue(api::event_t(m_event), upstream)
         );
     } catch(const cocaine::error_t& e) {
         COCAINE_LOG_ERROR(m_log, "unable to enqueue an event - %s", e.what());
@@ -255,7 +250,7 @@ blastbeat_t::on_uwsgi(const std::string& sid,
     packer << env;
 
     try {
-        it->second.downstream->push(
+        it->second->push(
             buffer.data(),
             buffer.size()
         );
@@ -278,7 +273,7 @@ blastbeat_t::on_body(const std::string& sid,
     }
 
     try {
-        it->second.downstream->push(
+        it->second->push(
             static_cast<const char*>(body.data()),
             body.size()
         );
@@ -299,7 +294,7 @@ blastbeat_t::on_end(const std::string& sid) {
     }
 
 //    try {
-//        it->second.downstream->close();
+//        it->second->close();
 //    } catch(const cocaine::error_t& e) {
 //        COCAINE_LOG_ERROR(m_log, "unable to close a session - %s", e.what());
 //    }
