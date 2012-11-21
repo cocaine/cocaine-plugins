@@ -18,6 +18,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
+#include <cocaine/traits/message.hpp>
+
 #include "stream.hpp"
 
 using namespace cocaine;
@@ -30,7 +32,7 @@ namespace driver {
         typedef dealer_tag tag;
 
         typedef boost::tuple<
-            const std::string&
+            std::string
         > tuple_type;
     };
 
@@ -38,8 +40,8 @@ namespace driver {
         typedef dealer_tag tag;
 
         typedef boost::tuple<
-            const std::string&,
-            zmq::message_t&
+            std::string,
+            std::string
         > tuple_type;
     };
 
@@ -47,9 +49,9 @@ namespace driver {
         typedef dealer_tag tag;
 
         typedef boost::tuple<
-            const std::string&,
+            std::string,
             int,
-            const std::string&
+            std::string
         > tuple_type;
     };
 
@@ -57,7 +59,7 @@ namespace driver {
         typedef dealer_tag tag;
         
         typedef boost::tuple<
-            const std::string&
+            std::string
         > tuple_type;
     };
 }
@@ -90,20 +92,12 @@ dealer_stream_t::dealer_stream_t(rpc_channel_t& channel,
 }
 
 void
-dealer_stream_t::push(const void * chunk,
+dealer_stream_t::push(const char * chunk,
                       size_t size)
 {
-    zmq::message_t message(size);
-
-    memcpy(
-        message.data(),
-        chunk,
-        size
-    );
-
     send(
         m_route.front(),
-        io::message<driver::chunk>(m_tag, message)
+        io::message<driver::chunk>(m_tag, std::string(chunk, size))
     );
 }
 

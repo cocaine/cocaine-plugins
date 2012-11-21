@@ -31,16 +31,13 @@ downstream_t::downstream_t(python_t& sandbox):
 { }
 
 void
-downstream_t::push(const void * chunk,
+downstream_t::push(const char * chunk,
                    size_t size)
 {
     thread_lock_t lock(m_sandbox.thread_state()); 
 
     tracked_object_t buffer(
-        PyString_FromStringAndSize(
-            static_cast<const char*>(chunk),
-            size
-        )
+        PyString_FromStringAndSize(chunk, size)
     );
 
     tracked_object_t args(

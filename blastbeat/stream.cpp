@@ -80,7 +80,7 @@ blastbeat_stream_t::blastbeat_stream_t(const std::string& sid,
 { }
 
 void
-blastbeat_stream_t::push(const void * chunk,
+blastbeat_stream_t::push(const char * chunk,
                          size_t size)
 {
     if(!m_body) {
@@ -88,11 +88,7 @@ blastbeat_stream_t::push(const void * chunk,
         cocaine_response_t response;
 
         try {
-            msgpack::unpack(
-                &unpacked,
-                static_cast<const char*>(chunk),
-                size
-            );
+            msgpack::unpack(&unpacked, chunk, size);
             
             io::type_traits<cocaine_response_t>::unpack(
                 unpacked.get(),

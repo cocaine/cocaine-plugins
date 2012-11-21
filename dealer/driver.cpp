@@ -148,7 +148,7 @@ dealer_t::process_events() {
             api::policy_t policy;
 
             try {
-                m_channel.recv_tuple(boost::tie(tag, policy, message));
+                m_channel.recv_multipart(boost::tie(tag, policy, message));
             } catch(const std::runtime_error& e) {
                 COCAINE_LOG_ERROR(
                     m_log,

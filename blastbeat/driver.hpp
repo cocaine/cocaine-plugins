@@ -54,7 +54,7 @@ class blastbeat_t:
              const std::string& type,
              const T& message)
         {
-            m_socket.send_tuple(
+            m_socket.send_multipart(
                 boost::make_tuple(
                     io::protect(sid),
                     io::protect(type),
@@ -115,9 +115,14 @@ class blastbeat_t:
         
         // Session tracking
 
+        struct io_pair_t {
+            boost::shared_ptr<api::stream_t> upstream;
+            boost::shared_ptr<api::stream_t> downstream;
+        };
+
         typedef boost::unordered_map<
             std::string,
-            boost::shared_ptr<api::stream_t>
+            io_pair_t
         > stream_map_t;
 
         stream_map_t m_streams;

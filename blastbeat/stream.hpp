@@ -36,7 +36,7 @@ class blastbeat_stream_t:
 
         virtual
         void
-        push(const void * chunk,
+        push(const char * chunk,
              size_t size);
         
         virtual

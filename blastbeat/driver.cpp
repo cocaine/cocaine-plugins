@@ -145,7 +145,7 @@ blastbeat_t::process_events() {
             
             // Try to read the next RPC command from the bus in a
             // non-blocking fashion. If it fails, break the loop.
-            if(!m_socket.recv_tuple(proxy)) {
+            if(!m_socket.recv_multipart(proxy)) {
                 return;            
             }
         }
@@ -192,7 +192,7 @@ void
 blastbeat_t::on_uwsgi(const std::string& sid,
                       zmq::message_t& message)
 {
-    boost::shared_ptr<blastbeat_stream_t> stream(
+    boost::shared_ptr<blastbeat_stream_t> upstream(
         boost::make_shared<blastbeat_stream_t>(
             sid,
             *this
@@ -202,9 +202,14 @@ blastbeat_t::on_uwsgi(const std::string& sid,
     stream_map_t::iterator it;
 
     try {
+        io_pair_t io = {
+            upstream,
+            engine().enqueue(api::event_t(m_event), upstream)
+        };
+
         boost::tie(it, boost::tuples::ignore) = m_streams.emplace(
             sid,
-            engine().enqueue(api::event_t(m_event), stream)
+            io
         );
     } catch(const cocaine::error_t& e) {
         COCAINE_LOG_ERROR(m_log, "unable to enqueue an event - %s", e.what());
@@ -250,7 +255,7 @@ blastbeat_t::on_uwsgi(const std::string& sid,
     packer << env;
 
     try {
-        it->second->push(
+        it->second.downstream->push(
             buffer.data(),
             buffer.size()
         );
@@ -273,7 +278,7 @@ blastbeat_t::on_body(const std::string& sid,
     }
 
     try {
-        it->second->push(
+        it->second.downstream->push(
             static_cast<const char*>(body.data()),
             body.size()
         );
@@ -293,11 +298,11 @@ blastbeat_t::on_end(const std::string& sid) {
         return;
     }
 
-    try {
-        it->second->close();
-    } catch(const cocaine::error_t& e) {
-        COCAINE_LOG_ERROR(m_log, "unable to close a session - %s", e.what());
-    }
+//    try {
+//        it->second.downstream->close();
+//    } catch(const cocaine::error_t& e) {
+//        COCAINE_LOG_ERROR(m_log, "unable to close a session - %s", e.what());
+//    }
 
     m_streams.erase(it);
 }
