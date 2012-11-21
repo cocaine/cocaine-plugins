@@ -293,11 +293,11 @@ blastbeat_t::on_end(const std::string& sid) {
         return;
     }
 
-//    try {
-//        it->second->close();
-//    } catch(const cocaine::error_t& e) {
-//        COCAINE_LOG_ERROR(m_log, "unable to close a session - %s", e.what());
-//    }
+    try {
+        it->second->close();
+    } catch(const cocaine::error_t& e) {
+        COCAINE_LOG_ERROR(m_log, "unable to close a session - %s", e.what());
+    }
 
     m_streams.erase(it);
 }
