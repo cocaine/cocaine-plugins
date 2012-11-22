@@ -115,7 +115,7 @@ dealer_t::process_events() {
             {
                 io::scoped_option<
                     io::options::receive_timeout,
-                    io::policies::unique
+                    rpc_channel_t
                 > option(m_channel, 0);
                 
                 if(!m_channel.recv(message)) {
@@ -148,7 +148,7 @@ dealer_t::process_events() {
             api::policy_t policy;
 
             try {
-                m_channel.recv_multipart(boost::tie(tag, policy, message));
+                m_channel.recv_multipart(tag, policy, message);
             } catch(const std::runtime_error& e) {
                 COCAINE_LOG_ERROR(
                     m_log,

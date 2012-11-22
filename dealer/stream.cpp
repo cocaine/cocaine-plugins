@@ -18,8 +18,6 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <cocaine/traits/message.hpp>
-
 #include "stream.hpp"
 
 using namespace cocaine;
@@ -31,7 +29,7 @@ namespace driver {
     struct ack {
         typedef dealer_tag tag;
 
-        typedef boost::tuple<
+        typedef boost::mpl::list<
             std::string
         > tuple_type;
     };
@@ -39,7 +37,7 @@ namespace driver {
     struct chunk {
         typedef dealer_tag tag;
 
-        typedef boost::tuple<
+        typedef boost::mpl::list<
             std::string,
             std::string
         > tuple_type;
@@ -48,7 +46,7 @@ namespace driver {
     struct error {
         typedef dealer_tag tag;
 
-        typedef boost::tuple<
+        typedef boost::mpl::list<
             std::string,
             int,
             std::string
@@ -58,7 +56,7 @@ namespace driver {
     struct choke {
         typedef dealer_tag tag;
         
-        typedef boost::tuple<
+        typedef boost::mpl::list<
             std::string
         > tuple_type;
     };
@@ -85,9 +83,9 @@ dealer_stream_t::dealer_stream_t(rpc_channel_t& channel,
     m_route(route),
     m_tag(tag)
 {
-    send(
+    send<driver::ack>(
         m_route.front(),
-        io::message<driver::ack>(m_tag)
+        m_tag
     );
 }
 
@@ -95,9 +93,10 @@ void
 dealer_stream_t::push(const char * chunk,
                       size_t size)
 {
-    send(
+    send<driver::chunk>(
         m_route.front(),
-        io::message<driver::chunk>(m_tag, std::string(chunk, size))
+        m_tag,
+        std::string(chunk, size)
     );
 }
 
@@ -105,9 +104,11 @@ void
 dealer_stream_t::error(error_code code,
                        const std::string& message)
 {
-    send(
+    send<driver::error>(
         m_route.front(),
-        io::message<driver::error>(m_tag, code, message)
+        m_tag,
+        static_cast<int>(code),
+        message
     );
 
     close();
@@ -115,8 +116,8 @@ dealer_stream_t::error(error_code code,
 
 void
 dealer_stream_t::close() {
-    send(
+    send<driver::choke>(
         m_route.front(),
-        io::message<driver::choke>(m_tag)
+        m_tag
     );
 }

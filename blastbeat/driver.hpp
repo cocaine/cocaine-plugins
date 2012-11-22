@@ -52,14 +52,12 @@ class blastbeat_t:
         void
         send(const std::string& sid,
              const std::string& type,
-             const T& message)
+             T&& message)
         {
             m_socket.send_multipart(
-                boost::make_tuple(
-                    io::protect(sid),
-                    io::protect(type),
-                    message
-                )
+                io::protect(sid),
+                io::protect(type),
+                message
             );
 
             on_check(m_checker, ev::PREPARE);
@@ -104,9 +102,11 @@ class blastbeat_t:
 
         // I/O
 
-        io::socket<
-           io::policies::unique
-        > m_socket;
+        typedef io::socket<
+            io::policies::unique
+        > blastbeat_socket_t;
+
+        blastbeat_socket_t m_socket;
 
         // Event loop
 

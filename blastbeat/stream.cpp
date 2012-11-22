@@ -132,7 +132,7 @@ blastbeat_stream_t::push(const char * chunk,
             size
         );
 
-        m_driver.send(m_sid, "body", boost::ref(message)); 
+        m_driver.send(m_sid, "body", message); 
     }
 }
 

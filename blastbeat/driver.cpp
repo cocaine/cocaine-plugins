@@ -131,21 +131,15 @@ blastbeat_t::process_events() {
     zmq::message_t message;
    
     do {
-        request_proxy_t proxy(
-            io::protect(sid),
-            io::protect(type),
-            message
-        );
-
         {
             io::scoped_option<
                 io::options::receive_timeout,
-                io::policies::unique
+                blastbeat_socket_t
             > option(m_socket, 0);
             
             // Try to read the next RPC command from the bus in a
             // non-blocking fashion. If it fails, break the loop.
-            if(!m_socket.recv_multipart(proxy)) {
+            if(!m_socket.recv_multipart(io::protect(sid), io::protect(type), message)) {
                 return;            
             }
         }

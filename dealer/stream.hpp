@@ -57,13 +57,13 @@ class dealer_stream_t:
         close();
 
     private:
-        template<class T>
-        void
+        template<class Event, typename... Args>
+        bool
         send(const std::string& route,
-             const T& message)
+             Args&&... args)
         {
-            m_channel.send(route, ZMQ_SNDMORE);
-            m_channel.send_message(message);
+            return m_channel.send(route, ZMQ_SNDMORE) &&
+                   m_channel.send<Event>(std::forward<Args>(args)...);
         }
 
     private:
