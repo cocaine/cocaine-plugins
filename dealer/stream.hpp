@@ -29,14 +29,14 @@ namespace cocaine { namespace driver {
 
 typedef std::vector<std::string> route_t;
 
-typedef io::channel<
-    struct dealer_tag,
-    io::policies::unique
-> rpc_channel_t;
-
 class dealer_stream_t:
     public api::stream_t
 {
+    typedef io::channel<
+        struct dealer_tag,
+        io::policies::unique
+    > rpc_channel_t;
+
     public:
         dealer_stream_t(rpc_channel_t& channel,
                         const route_t& route,

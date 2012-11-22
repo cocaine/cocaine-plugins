@@ -102,11 +102,9 @@ class blastbeat_t:
 
         // I/O
 
-        typedef io::socket<
+        io::socket<
             io::policies::unique
-        > blastbeat_socket_t;
-
-        blastbeat_socket_t m_socket;
+        > m_socket;
 
         // Event loop
 

@@ -18,10 +18,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <boost/algorithm/string/classification.hpp>
-#include <boost/algorithm/string/split.hpp>
 #include <boost/format.hpp>
-#include <boost/tokenizer.hpp>
+#include <boost/tuple/tuple.hpp>
 
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
@@ -108,12 +106,6 @@ blastbeat_t::on_check(ev::prepare&, int) {
 }
 
 namespace {
-    typedef boost::tuple<
-        io::raw<std::string>,
-        io::raw<std::string>,
-        zmq::message_t&
-    > request_proxy_t;
-
     struct uwsgi_header_t {
         uint8_t  modifier1;
         uint16_t datasize;
@@ -133,14 +125,13 @@ blastbeat_t::process_events() {
     do {
         {
             io::scoped_option<
-                io::options::receive_timeout,
-                blastbeat_socket_t
+                io::options::receive_timeout
             > option(m_socket, 0);
             
             // Try to read the next RPC command from the bus in a
             // non-blocking fashion. If it fails, break the loop.
             if(!m_socket.recv_multipart(io::protect(sid), io::protect(type), message)) {
-                return;            
+                return;
             }
         }
      

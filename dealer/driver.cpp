@@ -114,8 +114,7 @@ dealer_t::process_events() {
         do {
             {
                 io::scoped_option<
-                    io::options::receive_timeout,
-                    rpc_channel_t
+                    io::options::receive_timeout
                 > option(m_channel, 0);
                 
                 if(!m_channel.recv(message)) {

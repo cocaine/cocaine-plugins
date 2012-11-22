@@ -29,11 +29,6 @@
 
 namespace cocaine { namespace driver {
 
-typedef io::channel<
-    struct dealer_tag,
-    io::policies::unique
-> rpc_channel_t;
-
 class dealer_t:
     public api::driver_t
 {
@@ -73,6 +68,11 @@ class dealer_t:
 
         // Dealer RPC
         
+        typedef io::channel<
+            struct dealer_tag,
+            io::policies::unique
+        > rpc_channel_t;
+
         rpc_channel_t m_channel;
         
         // Event loop
