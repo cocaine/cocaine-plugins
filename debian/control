@@ -43,20 +43,24 @@ Replaces: cocaine-plugin-python
 Description: Cocaine - Python Sandbox
  Python scripting support for Cocaine.
 
-Package: libcocaine-plugin-perl
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core1 (>= 0.10),
- perl
-Provides: cocaine-plugin-perl
-Replaces: cocaine-plugin-perl
-Description: Cocaine - Perl Sandbox
- Perl scripting support for Cocaine.
+# NOTE: Doesn't support the new API yet.
+# 
+# Package: libcocaine-plugin-perl
+# Architecture: any
+# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10),
+#  perl
+# Provides: cocaine-plugin-perl
+# Replaces: cocaine-plugin-perl
+# Description: Cocaine - Perl Sandbox
+#  Perl scripting support for Cocaine.
 
-Package: libcocaine-plugin-binary
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
-Description: Cocaine - Binary Sandbox
- Binary C/C++ support for Cocaine.
+# NOTE: Doesn't support the new API yet.
+# 
+# Package: libcocaine-plugin-binary
+# Architecture: any
+# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
+# Description: Cocaine - Binary Sandbox
+#  Binary C/C++ support for Cocaine.
 
 # NOTE: Doesn't support the new API yet.
 # 

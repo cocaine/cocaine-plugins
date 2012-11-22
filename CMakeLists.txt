@@ -55,16 +55,16 @@ SET(PLUGINS
         python
         #mongo
         elliptics
-        binary
+        #binary
         chrono
         fs
         dealer
         blastbeat
         cgroups)
 
-IF(NOT APPLE)
-    SET(PLUGINS ${PLUGINS} perl)
-ENDIF()
+# IF(NOT APPLE)
+#     SET(PLUGINS ${PLUGINS} perl)
+# ENDIF()
 
 FOREACH(PLUGIN ${PLUGINS})
     ADD_SUBDIRECTORY(${PLUGIN})
