@@ -1,17 +1,19 @@
-IF(FS)
-    ADD_LIBRARY(fs MODULE
+IF(BLASTBEAT)
+    ADD_LIBRARY(blastbeat MODULE
+        stream
         driver
         module)
 
-    TARGET_LINK_LIBRARIES(fs
+    TARGET_LINK_LIBRARIES(blastbeat
         cocaine-core)
 
-    SET_TARGET_PROPERTIES(fs PROPERTIES
+    SET_TARGET_PROPERTIES(blastbeat PROPERTIES
         PREFIX ""
         SUFFIX ".cocaine-plugin"
         COMPILE_FLAGS "-std=c++0x")
 
-    INSTALL(TARGETS fs
+    INSTALL(
+        TARGETS blastbeat
         LIBRARY DESTINATION lib/cocaine
         COMPONENT runtime)
-ENDIF(FS)
+ENDIF(BLASTBEAT)

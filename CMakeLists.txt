@@ -12,8 +12,9 @@ OPTION(DEALER "Build Dealer Driver plugin" ON)
 OPTION(PYTHON "Build Python Sandbox plugin" ON)
 OPTION(PERL "Build Perl Sandbox plugin" ON)
 OPTION(BINARY "Build Binary Sandbox plugin" ON)
-OPTION(JAVASCRIPT "Build Javascript Sandbox plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" ON)
+OPTION(BLASTBEAT "Build Blastbeat Driver plugin" ON)
+OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
 
 IF(NOT APPLE)
     OPTION(ELLIPTICS "Build Elliptics Storage plugin" ON)
@@ -50,16 +51,16 @@ LINK_DIRECTORIES(
     ${LIBZMQ_LIBRARY_DIRS}
     ${LIBCOCAINE_LIBRARY_DIRS})
 
-
 SET(PLUGINS
         python
-        javascript
-        mongo
+        #mongo
         elliptics
         binary
         chrono
         fs
-        dealer)
+        dealer
+        blastbeat
+        cgroups)
 
 IF(NOT APPLE)
     SET(PLUGINS ${PLUGINS} perl)

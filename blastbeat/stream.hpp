@@ -18,37 +18,44 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_DEALER_SERVER_JOB_HPP
-#define COCAINE_DEALER_SERVER_JOB_HPP
+#ifndef COCAINE_BLASTBEAT_STREAM_HPP
+#define COCAINE_BLASTBEAT_STREAM_HPP
 
-#include <cocaine/io.hpp>
-#include <cocaine/job.hpp>
+#include <cocaine/api/stream.hpp>
 
-namespace cocaine { namespace engine { namespace drivers {
+namespace cocaine { namespace driver {
 
-typedef std::vector<std::string> route_t;
+class blastbeat_t;
 
-class dealer_job_t:
-    public job_t
+class blastbeat_stream_t:
+    public api::stream_t
 {
     public:
-        dealer_job_t(const std::string& event,
-                     const blob_t& request,
-                     const policy_t& policy,
-                     io::channel_t& channel,
-                     const route_t& route,
-                     const std::string& tag);
+        blastbeat_stream_t(const std::string& sid,
+                           blastbeat_t& driver);
 
-        virtual void react(const events::chunk& event);
-        virtual void react(const events::error& event);
-        virtual void react(const events::choke& event);
+        virtual
+        void
+        push(const char * chunk,
+             size_t size);
+        
+        virtual
+        void
+        error(error_code code,
+              const std::string& message);
+        
+        virtual
+        void
+        close();
 
     private:
-        io::channel_t& m_channel;        
-        const route_t m_route;
-        const std::string m_tag;
+        const std::string m_sid;
+        blastbeat_t& m_driver;
+        
+        // Indicates that headers are already away.
+        bool m_body;
 };
 
-}}}
+}}
 
 #endif

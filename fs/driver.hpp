@@ -22,40 +22,45 @@
 #define COCAINE_FILESYSTEM_MONITOR_DRIVER_HPP
 
 #include <cocaine/common.hpp>
+#include <cocaine/asio.hpp>
 
-// Has to be included after common.h
-#include <ev++.h>
+#include <cocaine/api/driver.hpp>
 
-#include <cocaine/interfaces/driver.hpp>
+namespace cocaine { namespace driver {
 
-namespace cocaine { namespace engine { namespace drivers {
-
-class filesystem_monitor_t:
-    public driver_t
+class fs_t:
+    public api::driver_t
 {
     public:
-        typedef driver_t category_type;
+        typedef api::driver_t category_type;
 
     public:
-        filesystem_monitor_t(context_t& context,
-                             engine_t& engine,
-                             const std::string& name,
-                             const Json::Value& args);
+        fs_t(context_t& context,
+             const std::string& name,
+             const Json::Value& args,
+             engine::engine_t& engine);
 
-        virtual ~filesystem_monitor_t();
+        virtual
+        ~fs_t();
 
-        virtual Json::Value info() const;
+        virtual
+        Json::Value
+        info() const;
 
     private:
-        void event(ev::stat&, int);
+        void
+        on_event(ev::stat&, int);
 
     private:
+        context_t& m_context;
+        boost::shared_ptr<logging::logger_t> m_log;
+        
         const std::string m_event,
                           m_path;
 
         ev::stat m_watcher;
 };
 
-}}}
+}}
 
 #endif

@@ -9,9 +9,10 @@ IF(ELLIPTICS)
     LINK_DIRECTORIES(
         ${LIBELLIPTICS_LIBRARY_DIRS}
         ${LIBEBLOB_LIBRARY_DIRS})
-    
+
     ADD_LIBRARY(elliptics MODULE
-        elliptics)
+        storage
+        module)
 
     TARGET_LINK_LIBRARIES(elliptics
         cocaine-common
@@ -19,7 +20,8 @@ IF(ELLIPTICS)
 
     SET_TARGET_PROPERTIES(elliptics PROPERTIES
         PREFIX ""
-        SUFFIX ".cocaine-plugin")
+        SUFFIX ".cocaine-plugin"
+        COMPILE_FLAGS "-std=c++0x")
 
     INSTALL(TARGETS elliptics
         LIBRARY DESTINATION lib/cocaine

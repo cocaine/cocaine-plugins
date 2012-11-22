@@ -24,38 +24,32 @@
 #include "binary.hpp"
 
 using namespace cocaine;
-using namespace cocaine::engine;
+using namespace cocaine::sandbox;
+
 namespace fs = boost::filesystem;
 
-binary_t::binary_t(context_t &context, const manifest_t &manifest) :
-    category_type(context, manifest),
+binary_t::binary_t(context_t &context, const std::string &name, const Json::Value &args, const std::string &spool) :
+    category_type(context, name, args, spool),
     m_log(context.log(
         (boost::format("app/%1%")
-            % manifest.name
+            % name
         ).str()
     )),
     m_process(NULL), m_cleanup(NULL)
 {
-	Json::Value args(manifest.root["args"]);
-
-	if (!args.isObject()) {
-		m_log->error("malformed manifest: no args");
-		throw configuration_error_t("malformed manifest");
-	}
-
-	boost::filesystem::path source(manifest.path);
+	boost::filesystem::path source(spool);
 
 	if (lt_dlinit() != 0)
-		throw repository_error_t("unable to initialize binary loader");
+		throw configuration_error_t("unable to initialize binary loader");
 
 	if (!boost::filesystem::is_directory(source))
-		throw repository_error_t("binary loaded object must be unpacked into directory");
+		throw configuration_error_t("binary loaded object must be unpacked into directory");
 
-	Json::Value name(args["name"]);
-	if (!name.isString())
+	Json::Value filename(args["name"]);
+	if (!filename.isString())
 		throw configuration_error_t("malformed manifest: args/name must be a string");
 
-	source /= name.asString();
+	source /= filename.asString();
 
 	fs::path path(source);
 
@@ -64,9 +58,9 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest) :
 
 	m_bin = lt_dlopenadvise(source.string().c_str(), m_advice);
 	if (!m_bin) {
-		m_log->error("unable to load binary object %s: %s", source.string().c_str(), lt_dlerror());
+		COCAINE_LOG_ERROR(m_log, "unable to load binary object %s: %s", source.string(), lt_dlerror());
 		lt_dladvise_destroy(&m_advice);
-		throw repository_error_t("unable to load binary object");
+		throw configuration_error_t("unable to load binary object");
 	}
 
 	init_fn_t init = NULL;
@@ -75,10 +69,10 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest) :
 	m_cleanup = reinterpret_cast<cleanup_fn_t>(lt_dlsym(m_bin, "cleanup"));
 
 	if (!m_process || !m_cleanup || !init) {
-		m_log->error("invalid binary loaded: init: %p, process: %p, cleanup: %p",
+		COCAINE_LOG_ERROR(m_log, "invalid binary loaded: init: %p, process: %p, cleanup: %p",
 				init, m_process, m_cleanup);
 		lt_dladvise_destroy(&m_advice);
-		throw repository_error_t("invalid binary loaded: not all callbacks are present");
+		throw configuration_error_t("invalid binary loaded: not all callbacks are present");
 	}
 
 	Json::Value config(args["config"]);
@@ -86,12 +80,12 @@ binary_t::binary_t(context_t &context, const manifest_t &manifest) :
 
 	m_handle = (*init)(cfg.c_str(), cfg.size() + 1);
 	if (!m_handle) {
-		m_log->error("binary initialization failed");
+		COCAINE_LOG_ERROR(m_log, "binary initialization failed");
 		lt_dladvise_destroy(&m_advice);
-		throw repository_error_t("binary initialization failed");
+		throw configuration_error_t("binary initialization failed");
 	}
 
-	m_log->info("successfully initialized binary module from %s", source.string().c_str());
+	COCAINE_LOG_INFO(m_log, "successfully initialized binary module from %s", source.string());
 }
 
 binary_t::~binary_t()
@@ -103,18 +97,18 @@ binary_t::~binary_t()
 namespace {
 	void binary_write(struct binary_io *__io, const void *data, size_t size)
 	{
-		io_t *io = (io_t *)__io->priv_io;
+        api::io_t *io = (api::io_t *)__io->priv_io;
 		io->write(data, size);
 	}
 }
 
-void binary_t::invoke(const std::string &method, io_t &io)
+void binary_t::invoke(const std::string &method, api::io_t &io)
 {
 	struct binary_io bio;
 	int err;
 
 	while (true) {
-		blob_t data = io.read(0);
+        std::string data = io.read(0);
 
 		if (!data.size())
 			break;
@@ -126,16 +120,16 @@ void binary_t::invoke(const std::string &method, io_t &io)
 
 		err = m_process(m_handle, &bio);
 		if (err < 0) {
-			m_log->error("process failed: %d", err);
+			COCAINE_LOG_ERROR(m_log, "process failed: %d", err);
 			throw unrecoverable_error_t("processing error: " + boost::lexical_cast<std::string>(err));
 		}
 	}
 
-	m_log->debug("process: method: %.*s, err: %d", (int)method.size(), method.data(), err);
+	COCAINE_LOG_DEBUG(m_log, "process: method: %.*s, err: %d", (int)method.size(), method.data(), err);
 }
 
 extern "C" {
-    void initialize(repository_t& repository) {
+    void initialize(api::repository_t& repository) {
         repository.insert<binary_t>("binary");
     }
 }

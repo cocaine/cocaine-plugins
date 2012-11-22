@@ -10,11 +10,8 @@
 
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
-#include <cocaine/manifest.hpp>
 
-#include <cocaine/interfaces/sandbox.hpp>
-
-#include <cocaine/helpers/json.hpp>
+#include <cocaine/api/sandbox.hpp>
 
 extern "C" {
 	struct binary_chunk {
@@ -35,27 +32,27 @@ extern "C" {
 	};
 }
 
-namespace cocaine { namespace engine {
+namespace cocaine { namespace sandbox {
 
 typedef void *(* init_fn_t)(const char *cfg, const size_t size);
 typedef void (* cleanup_fn_t)(void *);
 typedef int (* process_fn_t)(void *, struct binary_io *);
 
-class binary_t: public sandbox_t {
+class binary_t: public api::sandbox_t {
 	public:
-		typedef sandbox_t category_type;
+		typedef api::sandbox_t category_type;
 
-		binary_t(context_t& context, const manifest_t& manifest);
+		binary_t(context_t& context, const std::string& name, const Json::Value& args, const std::string& spool);
 		virtual ~binary_t();
 
-		virtual void invoke(const std::string& method, io_t& io);
+		virtual void invoke(const std::string& method, api::io_t& io);
 
 		const logging::logger_t& log() const {
 			return *m_log;
 		}
 
 	private:
-        	boost::shared_ptr<logging::logger_t> m_log;
+		boost::shared_ptr<logging::logger_t> m_log;
 		lt_dladvise m_advice;
 		process_fn_t m_process;
 		cleanup_fn_t m_cleanup;

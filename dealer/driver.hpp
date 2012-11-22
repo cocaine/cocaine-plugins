@@ -18,64 +18,69 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_DEALER_SERVER_DRIVER_HPP
-#define COCAINE_DEALER_SERVER_DRIVER_HPP
+#ifndef COCAINE_DEALER_DRIVER_HPP
+#define COCAINE_DEALER_DRIVER_HPP
 
 #include <cocaine/common.hpp>
-
-// Has to be included after common.h
-#include <ev++.h>
-
+#include <cocaine/asio.hpp>
 #include <cocaine/io.hpp>
-#include <cocaine/job.hpp>
 
-#include <cocaine/interfaces/driver.hpp>
+#include <cocaine/api/driver.hpp>
 
-namespace cocaine { namespace engine { namespace drivers {
+namespace cocaine { namespace driver {
 
-class dealer_server_t:
-    public driver_t
+typedef io::channel<
+    struct dealer_tag,
+    io::policies::unique
+> rpc_channel_t;
+
+class dealer_t:
+    public api::driver_t
 {
     public:
-        typedef driver_t category_type;
+        typedef api::driver_t category_type;
 
     public:
-        dealer_server_t(context_t& context,
-                        engine_t& engine,
-                        const std::string& name,
-                        const Json::Value& args);
+        dealer_t(context_t& context,
+                 const std::string& name,
+                 const Json::Value& args,
+                 engine::engine_t& engine);
 
-        ~dealer_server_t();
+        ~dealer_t();
 
-        // Driver interface.
-        virtual Json::Value info() const;
+        virtual
+        Json::Value
+        info() const;
         
     private:
-        typedef boost::tuple<
-            std::string&,
-            policy_t&,
-            zmq::message_t*
-        > request_proxy_t;
+        void
+        on_event(ev::io&, int);
+        
+        void
+        on_check(ev::prepare&, int);
 
-        void event(ev::io&, int);
-        void process(ev::idle&, int);
-        void check(ev::prepare&, int);
+        void
+        process_events();
 
     private:
         context_t& m_context;
         boost::shared_ptr<logging::logger_t> m_log;
 
+        // Configuration
+
         const std::string m_event,
-                          m_route;
+                          m_identity;
+
+        // Dealer RPC
+        
+        rpc_channel_t m_channel;
+        
+        // Event loop
 
         ev::io m_watcher;
-        ev::idle m_processor;
-        ev::prepare m_check;
-
-        // Server RPC channel.        
-        io::channel_t m_channel;
+        ev::prepare m_checker;
 };
 
-}}}
+}}
 
 #endif

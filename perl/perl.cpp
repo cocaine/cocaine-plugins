@@ -14,6 +14,7 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/format.hpp>
+#include <sstream>
 
 #include <EXTERN.h>
 #include <perl.h>
@@ -22,9 +23,7 @@
 #include <cocaine/logging.hpp>
 #include <cocaine/manifest.hpp>
 
-#include <cocaine/interfaces/sandbox.hpp>
-
-#include <sstream>
+#include <cocaine/api/sandbox.hpp>
 
 EXTERN_C void boot_DynaLoader(pTHX_ CV* cv);
 
@@ -37,18 +36,21 @@ EXTERN_C void xs_init(pTHX) {
 }
 
 namespace cocaine {
-namespace engine {
+namespace driver {
 
-class perl_t: public sandbox_t {
+class perl_t: public api::sandbox_t {
 public:
-    typedef sandbox_t category_type;
+    typedef api::sandbox_t category_type;
 
 public:
-    perl_t(context_t& context, const manifest_t& manifest):
-        category_type(context, manifest),
+    perl_t(context_t& context,
+           const std::string& name,
+           const Json::Value& args,
+           const std::string& spool):
+        category_type(context, name, args, spool),
         m_log(context.log(
             (boost::format("app/%1%")
-                % manifest.name
+                % name
             ).str()
         ))
     {
@@ -60,8 +62,6 @@ public:
         my_perl = perl_alloc();
         perl_construct(my_perl);
 
-        Json::Value args(manifest.root["args"]);
-
         if(!args.isObject()) {
             throw configuration_error_t("malformed manifest");
         }
@@ -71,7 +71,7 @@ public:
             throw configuration_error_t("malformed manifest, expected args script-file to be a name of the perl script to run");
         }
 
-        boost::filesystem::path source(manifest.path);
+        boost::filesystem::path source(spool);
         source/=script_file.asString();
 
         if(boost::filesystem::is_directory(source)) {
@@ -88,13 +88,13 @@ public:
         boost::filesystem::ifstream input(source);
 
         if(!input) {
-            throw configuration_error_t("unable to open " + source.string());
+            throw configuration_error_t("unable to open '%s'", source.string());
         }
 
         const char* embedding[] = {"", (char*)source.string().c_str(), "-I", (char*)source_dir.c_str()};
         perl_parse(my_perl, xs_init, 4, (char**)embedding, NULL);
         PL_exit_flags |= PERL_EXIT_DESTRUCT_END;
-        log().info("%s", "running interpreter...");
+        COCAINE_LOG_INFO(m_log, "%s", "running interpreter...");
         perl_run(my_perl);
     }
         
@@ -104,12 +104,12 @@ public:
         PERL_SYS_TERM();
     }
 
-    virtual void invoke(const std::string& event, io_t& io) {
-        log().info("%s", (std::string("invoking event ") + event + "...").c_str());
+    virtual void invoke(const std::string& event, api::io_t& io) {
+        COCAINE_LOG_INFO(m_log, "%s", std::string("invoking event ") + event + "...");
         std::string input;
         
         // Try to pull in the request w/o blocking.
-        blob_t request = io.read(0);
+        std::string request = io.read(0);
 
         if (!request.empty()) {
            input = std::string((const char*)request.data(), request.size());
@@ -185,7 +185,7 @@ private:
 };
 
 extern "C" {
-    void initialize(repository_t& repository) {
+    void initialize(api::repository_t& repository) {
         repository.insert<perl_t>("perl");
     }
 }

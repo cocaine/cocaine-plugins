@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2011-2012 Andrey Sibiryov <me@kobology.ru>
+    Copyright (C) 2011-2012 Alexander Eliseev <admin@inkvi.com>
     Copyright (c) 2011-2012 Other contributors as noted in the AUTHORS file.
 
     This file is part of Cocaine.
@@ -18,8 +18,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_PYTHON_SANDBOX_LOG_HPP
-#define COCAINE_PYTHON_SANDBOX_LOG_HPP
+#ifndef COCAINE_PYTHON_SANDBOX_WRITABLE_STREAM_HPP
+#define COCAINE_PYTHON_SANDBOX_WRITABLE_STREAM_HPP
 
 // NOTE: These are being redefined in Python.h
 #undef _POSIX_C_SOURCE
@@ -31,62 +31,36 @@
 
 namespace cocaine { namespace sandbox {
 
-struct log_t {
-    PyObject_HEAD
+struct writable_stream_t {
+    public:
+        PyObject_HEAD
 
-    static
-    int
-    ctor(log_t * self,
-         PyObject * args,
-         PyObject * kwargs);
+        static
+        int
+        ctor(writable_stream_t * self,
+             PyObject * args,
+             PyObject * kwargs);
 
-    static
-    void
-    dtor(log_t * self);
+        static
+        void
+        dtor(writable_stream_t * self);
 
-    static
-    PyObject*
-    debug(log_t * self,
-          PyObject * args);
+        static
+        PyObject*
+        write(writable_stream_t * self,
+              PyObject * args);
 
-    static
-    PyObject*
-    info(log_t * self,
-         PyObject * args);
+        static
+        PyObject*
+        close(writable_stream_t * self,
+              PyObject * args);
 
-    static
-    PyObject*
-    warning(log_t * self,
-            PyObject * args);
-
-    static
-    PyObject*
-    error(log_t * self,
-          PyObject * args);
-
-    // WSGI requirements.
-    
-    static
-    PyObject*
-    write(log_t * self,
-          PyObject * args);
-
-    static
-    PyObject*
-    writelines(log_t * self,
-               PyObject * args);
-
-    static
-    PyObject*
-    flush(log_t * self,
-          PyObject * args);
-
-public:
-    logging::logger_t * base;
+    public:
+        api::stream_t * base;
 };
 
 }}
 
-extern PyTypeObject log_object_type;
+extern PyTypeObject writable_stream_object_type;
 
 #endif

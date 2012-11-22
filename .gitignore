@@ -1,12 +1,5 @@
-# Compiled Object files
-*.slo
-*.lo
-*.o
+# Generated files
+include/cocaine/config.hpp
 
-# Compiled Dynamic libraries
-*.so
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
+# Build directory
+build/*

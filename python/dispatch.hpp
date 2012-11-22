@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2011-2012 Andrey Sibiryov <me@kobology.ru>
+    Copyright (C) 2011-2012 Alexander Eliseev <admin@inkvi.com>
     Copyright (c) 2011-2012 Other contributors as noted in the AUTHORS file.
 
     This file is part of Cocaine.
@@ -18,8 +18,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_PYTHON_SANDBOX_LOG_HPP
-#define COCAINE_PYTHON_SANDBOX_LOG_HPP
+#ifndef COCAINE_PYTHON_SANDBOX_DISPATCH_HPP
+#define COCAINE_PYTHON_SANDBOX_DISPATCH_HPP
 
 // NOTE: These are being redefined in Python.h
 #undef _POSIX_C_SOURCE
@@ -29,64 +29,37 @@
 
 #include <cocaine/common.hpp>
 
+#include "event_source.hpp"
+
 namespace cocaine { namespace sandbox {
 
-struct log_t {
+struct dispatch_t {
     PyObject_HEAD
 
     static
     int
-    ctor(log_t * self,
+    ctor(dispatch_t * self,
          PyObject * args,
          PyObject * kwargs);
 
     static
     void
-    dtor(log_t * self);
+    dtor(dispatch_t * self);
+
+    // Event binding
 
     static
     PyObject*
-    debug(log_t * self,
-          PyObject * args);
-
-    static
-    PyObject*
-    info(log_t * self,
-         PyObject * args);
-
-    static
-    PyObject*
-    warning(log_t * self,
-            PyObject * args);
-
-    static
-    PyObject*
-    error(log_t * self,
-          PyObject * args);
-
-    // WSGI requirements.
-    
-    static
-    PyObject*
-    write(log_t * self,
-          PyObject * args);
-
-    static
-    PyObject*
-    writelines(log_t * self,
-               PyObject * args);
-
-    static
-    PyObject*
-    flush(log_t * self,
-          PyObject * args);
+    on(dispatch_t * self,
+       PyObject * args,
+       PyObject * kwargs);
 
 public:
-    logging::logger_t * base;
+    event_source_t * base;
 };
 
 }}
 
-extern PyTypeObject log_object_type;
+extern PyTypeObject dispatch_object_type;
 
 #endif

@@ -18,57 +18,41 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_RECURRING_TIMER_DRIVER_HPP
-#define COCAINE_RECURRING_TIMER_DRIVER_HPP
+#ifndef COCAINE_CGROUP_ISOLATE_HPP
+#define COCAINE_CGROUP_ISOLATE_HPP
 
-#include <cocaine/common.hpp>
-#include <cocaine/asio.hpp>
+#include <cocaine/api/isolate.hpp>
 
-#include <cocaine/api/driver.hpp>
+struct cgroup;
 
-namespace cocaine { namespace driver {
+namespace cocaine { namespace isolate {
 
-class recurring_timer_t:
-    public api::driver_t
+class cgroups_t:
+    public api::isolate_t
 {
     public:
-        typedef api::driver_t category_type;
+        typedef api::isolate_t category_type;
 
     public:
-        recurring_timer_t(context_t& context,
-                          const std::string& name,
-                          const Json::Value& args,
-                          engine::engine_t& engine);
+        cgroups_t(context_t& context,
+                  const std::string& name,
+                  const Json::Value& args);
 
         virtual
-        ~recurring_timer_t();
+        ~cgroups_t();
 
         virtual
-        Json::Value
-        info() const;
-
-        void
-        enqueue(const api::event_t& event,
-                const boost::shared_ptr<api::stream_t>& stream);
-
-        virtual
-        void
-        reschedule();
+        std::unique_ptr<api::handle_t>
+        spawn(const std::string& path,
+              const std::map<std::string, std::string>& args,
+              const std::map<std::string, std::string>& environment);
 
     private:
-        void
-        on_event(ev::timer&, int);
-
-    protected:
-        context_t& m_context;
         boost::shared_ptr<logging::logger_t> m_log;
         
-        const std::string m_event;
-        const double m_interval;
-
-        ev::timer m_watcher;
+        cgroup * m_cgroup;
 };
 
-}}
+}} // namespace cocaine::storage
 
 #endif

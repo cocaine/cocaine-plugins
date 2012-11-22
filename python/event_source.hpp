@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2011-2012 Andrey Sibiryov <me@kobology.ru>
+    Copyright (C) 2011-2012 Alexander Eliseev <admin@inkvi.com>
     Copyright (c) 2011-2012 Other contributors as noted in the AUTHORS file.
 
     This file is part of Cocaine.
@@ -18,8 +18,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_PYTHON_SANDBOX_LOG_HPP
-#define COCAINE_PYTHON_SANDBOX_LOG_HPP
+#ifndef COCAINE_PYTHON_SANDBOX_EVENT_SOURCE_HPP
+#define COCAINE_PYTHON_SANDBOX_EVENT_SOURCE_HPP
 
 // NOTE: These are being redefined in Python.h
 #undef _POSIX_C_SOURCE
@@ -31,62 +31,37 @@
 
 namespace cocaine { namespace sandbox {
 
-struct log_t {
-    PyObject_HEAD
+struct event_source_t {
+    virtual
+    ~event_source_t();
 
-    static
-    int
-    ctor(log_t * self,
-         PyObject * args,
-         PyObject * kwargs);
-
-    static
     void
-    dtor(log_t * self);
+    on(const std::string& event,
+       PyObject * callback);
 
-    static
-    PyObject*
-    debug(log_t * self,
-          PyObject * args);
+    bool
+    invoke(const std::string& event,
+           PyObject * args,
+           PyObject * kwargs);
 
-    static
-    PyObject*
-    info(log_t * self,
-         PyObject * args);
+private:
+    typedef std::vector<
+        PyObject*
+    > slot_t;
 
-    static
-    PyObject*
-    warning(log_t * self,
-            PyObject * args);
-
-    static
-    PyObject*
-    error(log_t * self,
-          PyObject * args);
-
-    // WSGI requirements.
+#if BOOST_VERSION >= 103600
+    typedef boost::unordered_map<
+#else
+    typedef std::map<
+#endif
+        std::string,
+        slot_t
+    > slot_map_t;
     
-    static
-    PyObject*
-    write(log_t * self,
-          PyObject * args);
-
-    static
-    PyObject*
-    writelines(log_t * self,
-               PyObject * args);
-
-    static
-    PyObject*
-    flush(log_t * self,
-          PyObject * args);
-
-public:
-    logging::logger_t * base;
+    slot_map_t m_slots;
 };
 
 }}
 
-extern PyTypeObject log_object_type;
 
 #endif

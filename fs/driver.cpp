@@ -25,15 +25,15 @@
 #include <cocaine/api/event.hpp>
 #include <cocaine/api/stream.hpp>
 
-#include "recurring_timer.hpp"
+#include "driver.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
 
-recurring_timer_t::recurring_timer_t(context_t& context,
-                                     const std::string& name,
-                                     const Json::Value& args,
-                                     engine::engine_t& engine):
+fs_t::fs_t(context_t& context,
+           const std::string& name,
+           const Json::Value& args,
+           engine::engine_t& engine):
     category_type(context, name, args, engine),
     m_context(context),
     m_log(context.log(
@@ -41,50 +41,57 @@ recurring_timer_t::recurring_timer_t(context_t& context,
             % name
         ).str()
     )),
-    m_event(args["emit"].asString()),
-    m_interval(args.get("interval", 0.0f).asInt() / 1000.0f),
+    m_event(args.get("emit", "").asString()),
+    m_path(args.get("path", "").asString()),
     m_watcher(engine.loop())
 {
-    if(m_interval <= 0.0f) {
-        throw configuration_error_t("no interval has been specified");
+    if(m_path.empty()) {
+        throw configuration_error_t("no path has been specified");
     }
-
-    m_watcher.set<recurring_timer_t, &recurring_timer_t::on_event>(this);
-    m_watcher.start(m_interval, m_interval);
+    
+    m_watcher.set<fs_t, &fs_t::on_event>(this);
+    m_watcher.start(m_path.c_str());
 }
 
-recurring_timer_t::~recurring_timer_t() {
+fs_t::~fs_t() {
     m_watcher.stop();
 }
 
 Json::Value
-recurring_timer_t::info() const {
+fs_t::info() const {
     Json::Value result;
 
-    result["type"] = "recurring-timer";
-    result["interval"] = m_interval;
+    result["type"] = "filesystem-monitor";
+    result["path"] = m_path;
 
     return result;
 }
 
 void
-recurring_timer_t::enqueue(const api::event_t& event,
-                           const boost::shared_ptr<api::stream_t>& stream)
-{
+fs_t::on_event(ev::stat& w, int) {
+    msgpack::sbuffer buffer;
+    msgpack::packer<msgpack::sbuffer> packer(buffer);
+
+    packer.pack_array(10);
+
+    packer << w.attr.st_mode
+           << w.attr.st_ino
+           << w.attr.st_dev
+           << w.attr.st_nlink
+           << w.attr.st_uid
+           << w.attr.st_gid
+           << w.attr.st_size
+           << w.attr.st_atime
+           << w.attr.st_mtime
+           << w.attr.st_ctime;
+
     try {
-        engine().enqueue(event, stream);
+        engine().enqueue(api::event_t(m_event), boost::make_shared<api::null_stream_t>())->push(
+            buffer.data(),
+            buffer.size()
+        );
     } catch(const cocaine::error_t& e) {
         COCAINE_LOG_ERROR(m_log, "unable to enqueue an event - %s", e.what());
     }
-}
-
-void
-recurring_timer_t::reschedule() {
-    enqueue(api::event_t(m_event), boost::make_shared<api::null_stream_t>());
-}
-
-void
-recurring_timer_t::on_event(ev::timer&, int) {
-    reschedule();
 }
 

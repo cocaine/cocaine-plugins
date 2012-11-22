@@ -15,16 +15,20 @@ IF(PYTHON)
     ENDIF()
 
     ADD_LIBRARY(python MODULE
-        python
         log
-        io)
+        event_source
+        dispatch
+        readable_stream
+        writable_stream
+        sandbox
+        module)
 
     TARGET_LINK_LIBRARIES(python
         cocaine-core
         ${PYTHON_LIBS})
 
     SET_TARGET_PROPERTIES(python PROPERTIES
-        COMPILE_FLAGS "${PYTHON_CFLAGS} -fno-strict-aliasing"
+        COMPILE_FLAGS "${PYTHON_CFLAGS} -fno-strict-aliasing -std=c++0x"
         PREFIX ""
         SUFFIX ".cocaine-plugin")
 

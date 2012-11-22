@@ -29,7 +29,7 @@
 #include "mongo.hpp"
 
 using namespace cocaine;
-using namespace cocaine::storages;
+using namespace cocaine::storage;
 using namespace mongo;
 
 mongo_storage_t::mongo_storage_t(context_t& context, const std::string& name, const Json::Value& args) try:

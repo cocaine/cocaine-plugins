@@ -16,7 +16,7 @@ IF(PERL)
         cocaine-common)
 
     SET_TARGET_PROPERTIES(perl PROPERTIES
-        COMPILE_FLAGS "${PERL_CFLAGS}"
+        COMPILE_FLAGS "${PERL_CFLAGS} -std=c++0x"
         LINK_FLAGS "${PERL_LDFLAGS}"
         PREFIX ""
         SUFFIX ".cocaine-plugin")

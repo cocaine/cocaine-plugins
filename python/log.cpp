@@ -21,49 +21,43 @@
 #include <cocaine/logging.hpp>
 
 #include "log.hpp"
-#include "python.hpp"
 
-using namespace cocaine::engine;
+#include "sandbox.hpp"
 
-int log_object_t::constructor(log_object_t * self,
-                              PyObject * args,
-                              PyObject * kwargs)
+using namespace cocaine::api;
+using namespace cocaine::sandbox;
+
+int
+log_t::ctor(log_t * self,
+            PyObject * args,
+            PyObject * kwargs)
 {
     PyObject * builtins = PyEval_GetBuiltins();
     PyObject * sandbox = PyDict_GetItemString(builtins, "__sandbox__");
     
-    if(sandbox) {
-        self->sandbox = static_cast<python_t*>(PyCObject_AsVoidPtr(sandbox));
-    } else {
-        PyErr_SetString(
-            PyExc_RuntimeError,
-            "Corrupted context"
-        );
-
+    if(!sandbox || !PyCObject_Check(sandbox)) {
+        PyErr_SetString(PyExc_RuntimeError, "The context is corrupted");
         return -1;
     }
+    
+    self->base = static_cast<python_t*>(
+        PyCObject_AsVoidPtr(sandbox)
+    )->logger();
 
     return 0;
 }
 
-void log_object_t::destructor(log_object_t * self) {
+void
+log_t::dtor(log_t * self) {
     self->ob_type->tp_free(self);
 }
 
-PyObject* log_object_t::debug(log_object_t * self,
-                              PyObject * args)
+PyObject*
+log_t::debug(log_t * self,
+             PyObject * args)
 {
     PyObject * object = NULL;
     const char * message = NULL;
-
-    if(!self->sandbox) {
-        PyErr_SetString(
-            PyExc_RuntimeError,
-            "Not initialized"
-        );
-
-        return NULL;
-    }
 
     if(!PyArg_ParseTuple(args, "O:debug", &object)) {
         return NULL;
@@ -76,26 +70,18 @@ PyObject* log_object_t::debug(log_object_t * self,
         message = PyString_AsString(object);
     }
 
-    self->sandbox->log().debug("%s", message);
+    COCAINE_LOG_DEBUG(self->base, "%s", message);
 
     Py_RETURN_NONE;
 }
 
-PyObject* log_object_t::info(log_object_t * self,
-                             PyObject * args)
+PyObject*
+log_t::info(log_t * self,
+            PyObject * args)
 {
     PyObject * object = NULL;
     const char * message = NULL;
 
-    if(!self->sandbox) {
-        PyErr_SetString(
-            PyExc_RuntimeError,
-            "Not initialized"
-        );
-
-        return NULL;
-    }
-    
     if(!PyArg_ParseTuple(args, "O:info", &object)) {
         return NULL;
     }
@@ -107,26 +93,18 @@ PyObject* log_object_t::info(log_object_t * self,
         message = PyString_AsString(object);
     }
 
-    self->sandbox->log().info("%s", message);
+    COCAINE_LOG_INFO(self->base, "%s", message);
 
     Py_RETURN_NONE;
 }
 
-PyObject* log_object_t::warning(log_object_t * self,
-                                PyObject * args)
+PyObject*
+log_t::warning(log_t * self,
+               PyObject * args)
 {
     PyObject * object = NULL;
     const char * message = NULL;
 
-    if(!self->sandbox) {
-        PyErr_SetString(
-            PyExc_RuntimeError,
-            "Not initialized"
-        );
-
-        return NULL;
-    }
-    
     if(!PyArg_ParseTuple(args, "O:warning", &object)) {
         return NULL;
     }
@@ -138,26 +116,18 @@ PyObject* log_object_t::warning(log_object_t * self,
         message = PyString_AsString(object);
     }
 
-    self->sandbox->log().warning("%s", message);
+    COCAINE_LOG_WARNING(self->base, "%s", message);
 
     Py_RETURN_NONE;
 }
 
-PyObject* log_object_t::error(log_object_t * self,
-                              PyObject * args)
+PyObject*
+log_t::error(log_t * self,
+             PyObject * args)
 {
     PyObject * object = NULL;
     const char * message = NULL;
 
-    if(!self->sandbox) {
-        PyErr_SetString(
-            PyExc_RuntimeError,
-            "Not initialized"
-        );
-
-        return NULL;
-    }
-    
     if(!PyArg_ParseTuple(args, "O:error", &object)) {
         return NULL;
     }
@@ -169,47 +139,23 @@ PyObject* log_object_t::error(log_object_t * self,
         message = PyString_AsString(object);
     }
 
-    self->sandbox->log().error("%s", message);
+    COCAINE_LOG_ERROR(self->base, "%s", message);
 
     Py_RETURN_NONE;
 }
 
-PyObject* log_object_t::write(log_object_t * self,
-                              PyObject * args)
+PyObject*
+log_t::write(log_t * self,
+             PyObject * args)
 {
-    const char * message = NULL;
-
-    if(!self->sandbox) {
-        PyErr_SetString(
-            PyExc_RuntimeError,
-            "Not initialized"
-        );
-
-        return NULL;
-    }
-
-    if(!PyArg_ParseTuple(args, "s:write", &message)) {
-        return NULL;
-    }
-
-    self->sandbox->log().error("%s", message);
-
-    Py_RETURN_NONE;
+    return log_t::error(self, args);
 }
 
-PyObject* log_object_t::writelines(log_object_t * self,
-                                   PyObject * args)
+PyObject*
+log_t::writelines(log_t * self,
+                  PyObject * args)
 {
     PyObject * lines = NULL;
-
-    if(!self->sandbox) {
-        PyErr_SetString(
-            PyExc_RuntimeError,
-            "Not initialized"
-        );
-
-        return NULL;
-    }
 
     if(!PyArg_ParseTuple(args, "O:writelines", &lines)) {
         return NULL;
@@ -243,8 +189,73 @@ PyObject* log_object_t::writelines(log_object_t * self,
     Py_RETURN_NONE;
 }
 
-PyObject* log_object_t::flush(log_object_t * self,
-                              PyObject * args)
+PyObject*
+log_t::flush(log_t * self,
+             PyObject * args)
 {
     Py_RETURN_NONE;
 }
+
+static
+PyMethodDef
+log_object_methods[] = {
+    { "debug", (PyCFunction)log_t::debug, METH_VARARGS,
+        "Logs a message with a Debug priority" },
+    { "info", (PyCFunction)log_t::info, METH_VARARGS,
+        "Logs a message with an Information priority" },
+    { "warning", (PyCFunction)log_t::warning, METH_VARARGS,
+        "Logs a message with a Warning priority" },
+    { "error", (PyCFunction)log_t::error, METH_VARARGS,
+        "Logs a message with an Error priority" },
+    { "write", (PyCFunction)log_t::write, METH_VARARGS,
+        "Writes a message to the error stream" },
+    { "writelines", (PyCFunction)log_t::writelines, METH_VARARGS,
+        "Writes messages from the iterable to the error stream" },
+    { "flush", (PyCFunction)log_t::flush, METH_NOARGS,
+        "Flushes the error stream" },
+    { NULL, NULL, 0, NULL }
+};
+
+PyTypeObject
+log_object_type = {
+    PyObject_HEAD_INIT(NULL)
+    0,                                          /* ob_size */
+    "cocaine.context.Log",                      /* tp_name */
+    sizeof(log_t),                              /* tp_basicsize */
+    0,                                          /* tp_itemsize */
+    (destructor)log_t::dtor,                    /* tp_dealloc */
+    0,                                          /* tp_print */
+    0,                                          /* tp_getattr */
+    0,                                          /* tp_setattr */
+    0,                                          /* tp_compare */
+    0,                                          /* tp_repr */
+    0,                                          /* tp_as_number */
+    0,                                          /* tp_as_sequence */
+    0,                                          /* tp_as_mapping */
+    0,                                          /* tp_hash */
+    0,                                          /* tp_call */
+    0,                                          /* tp_str */
+    0,                                          /* tp_getattro */
+    0,                                          /* tp_setattro */
+    0,                                          /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT,                         /* tp_flags */
+    "Log Object",                               /* tp_doc */
+    0,                                          /* tp_traverse */
+    0,                                          /* tp_clear */
+    0,                                          /* tp_richcompare */
+    0,                                          /* tp_weaklistoffset */
+    0,                                          /* tp_iter */
+    0,                                          /* tp_iternext */
+    log_object_methods,                         /* tp_methods */
+    0,                                          /* tp_members */
+    0,                                          /* tp_getset */
+    0,                                          /* tp_base */
+    0,                                          /* tp_dict */
+    0,                                          /* tp_descr_get */
+    0,                                          /* tp_descr_set */
+    0,                                          /* tp_dictoffset */
+    (initproc)log_t::ctor,                      /* tp_init */
+    0,                                          /* tp_alloc */
+    PyType_GenericNew                           /* tp_new */
+};
+

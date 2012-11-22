@@ -18,50 +18,14 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_DRIFTING_TIMER_DRIVER_HPP
-#define COCAINE_DRIFTING_TIMER_DRIVER_HPP
+#include "driver.hpp"
 
-#include <cocaine/api/stream.hpp>
+using namespace cocaine;
+using namespace cocaine::driver;
 
-#include "recurring_timer.hpp"
-
-namespace cocaine { namespace driver {
-
-class drifting_timer_t;
-
-struct drifting_stream_t:
-    public api::null_stream_t
-{
-    drifting_stream_t(drifting_timer_t& driver);
-
-    virtual
-    ~drifting_stream_t();
-
-private:
-    drifting_timer_t& m_driver;
-};
-
-class drifting_timer_t:
-    public recurring_timer_t
-{
-    public:
-        drifting_timer_t(context_t& context,
-                         const std::string& name,
-                         const Json::Value& args,
-                         engine::engine_t& engine);
-
-        virtual
-        Json::Value
-        info() const;
-
-        virtual
-        void
-        reschedule();
-        
-        void
-        rearm();
-};
-
-}}
-
-#endif
+extern "C" {
+    void
+    initialize(api::repository_t& repository) {
+        repository.insert<dealer_t>("native-server");
+    }
+}

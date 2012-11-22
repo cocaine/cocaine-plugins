@@ -1,5 +1,5 @@
 /*
-    Copyright (c) 2011-2012 Andrey Sibiryov <me@kobology.ru>
+    Copyright (C) 2011-2012 Alexander Eliseev <admin@inkvi.com>
     Copyright (c) 2011-2012 Other contributors as noted in the AUTHORS file.
 
     This file is part of Cocaine.
@@ -18,8 +18,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_PYTHON_SANDBOX_LOG_HPP
-#define COCAINE_PYTHON_SANDBOX_LOG_HPP
+#ifndef COCAINE_PYTHON_SANDBOX_READABLE_STREAM_HPP
+#define COCAINE_PYTHON_SANDBOX_READABLE_STREAM_HPP
 
 // NOTE: These are being redefined in Python.h
 #undef _POSIX_C_SOURCE
@@ -29,64 +29,65 @@
 
 #include <cocaine/common.hpp>
 
+#include <cocaine/api/stream.hpp>
+
+#include "event_source.hpp"
+
 namespace cocaine { namespace sandbox {
 
-struct log_t {
+class python_t;
+
+struct downstream_t:
+    public api::stream_t,
+    public event_source_t
+{
+    downstream_t(python_t& sandbox);
+
+    virtual
+    void
+    push(const char * chunk,
+         size_t size);
+
+    virtual
+    void
+    error(error_code code,
+          const std::string& message);
+
+    virtual
+    void
+    close();
+
+private:
+    python_t& m_sandbox;
+};
+
+struct readable_stream_t {
     PyObject_HEAD
 
     static
     int
-    ctor(log_t * self,
+    ctor(readable_stream_t * self,
          PyObject * args,
          PyObject * kwargs);
 
     static
     void
-    dtor(log_t * self);
+    dtor(readable_stream_t * self);
+
+    // Event binding
 
     static
     PyObject*
-    debug(log_t * self,
-          PyObject * args);
-
-    static
-    PyObject*
-    info(log_t * self,
-         PyObject * args);
-
-    static
-    PyObject*
-    warning(log_t * self,
-            PyObject * args);
-
-    static
-    PyObject*
-    error(log_t * self,
-          PyObject * args);
-
-    // WSGI requirements.
-    
-    static
-    PyObject*
-    write(log_t * self,
-          PyObject * args);
-
-    static
-    PyObject*
-    writelines(log_t * self,
-               PyObject * args);
-
-    static
-    PyObject*
-    flush(log_t * self,
-          PyObject * args);
+    on(readable_stream_t * self,
+       PyObject * args,
+       PyObject * kwargs);
 
 public:
-    logging::logger_t * base;
+    downstream_t * base;
 };
 
 }}
 
-extern PyTypeObject log_object_type;
+extern PyTypeObject readable_stream_object_type;
 
 #endif
