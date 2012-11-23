@@ -97,7 +97,6 @@ class blastbeat_t:
         // Configuration
 
         std::string m_event;
-        std::string m_identity;
         std::string m_endpoint;
 
         // I/O
