@@ -144,7 +144,7 @@ zmq_t::process_events() {
         } while(m_socket.more());
 
         if(route.empty() || !m_socket.more()) {
-            COCAINE_LOG_ERROR(m_log, "received a corrupted request", m_event);
+            COCAINE_LOG_ERROR(m_log, "received a corrupted request");
             m_socket.drop();
             return;
         }

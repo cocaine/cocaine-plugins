@@ -58,10 +58,13 @@ class zmq_t:
         send(const std::string& route,
              T&& message)
         {
+            const std::string empty;
+
             on_check(m_checker, ev::PREPARE);
 
             return m_socket.send_multipart(
-                route,
+                io::protect(route),
+                io::protect(empty),
                 message
             );
         }
