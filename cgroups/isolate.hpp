@@ -48,6 +48,7 @@ class cgroups_t:
               const std::map<std::string, std::string>& environment);
 
     private:
+        context_t& m_context;
         boost::shared_ptr<logging::logger_t> m_log;
         
         cgroup * m_cgroup;

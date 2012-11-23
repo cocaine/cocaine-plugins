@@ -18,8 +18,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_DEALER_DRIVER_HPP
-#define COCAINE_DEALER_DRIVER_HPP
+#ifndef COCAINE_ZEROMQ_SERVER_DRIVER_HPP
+#define COCAINE_ZEROMQ_SERVER_DRIVER_HPP
 
 #include <cocaine/common.hpp>
 #include <cocaine/asio.hpp>
@@ -29,34 +29,41 @@
 
 namespace cocaine { namespace driver {
 
-class dealer_t:
+class zmq_t:
     public api::driver_t
 {
     public:
         typedef api::driver_t category_type;
 
     public:
-        dealer_t(context_t& context,
-                 const std::string& name,
-                 const Json::Value& args,
-                 engine::engine_t& engine);
+        zmq_t(context_t& context,
+              const std::string& name,
+              const Json::Value& args,
+              engine::engine_t& engine);
 
         virtual
-        ~dealer_t();
+        ~zmq_t();
 
         virtual
         Json::Value
         info() const;
-        
-        template<class Event, typename... Args>
+
+        logging::logger_t*
+        log() {
+            return m_log.get();
+        }
+
+        template<class T>
         bool
         send(const std::string& route,
-             Args&&... args)
+             T&& message)
         {
             on_check(m_checker, ev::PREPARE);
-           
-            return m_channel.send(route, ZMQ_SNDMORE) &&
-                   m_channel.send<Event>(std::forward<Args>(args)...);
+
+            return m_socket.send_multipart(
+                route,
+                message
+            );
         }
 
     private:
@@ -78,15 +85,12 @@ class dealer_t:
         const std::string m_event;
         const std::string m_identity;
 
-        // Dealer RPC
-        
-        typedef io::channel<
-            struct dealer_tag,
-            io::policies::unique
-        > rpc_channel_t;
+        // I/O
 
-        rpc_channel_t m_channel;
-        
+        io::socket<
+            io::policies::unique
+        > m_socket;
+
         // Event loop
 
         ev::io m_watcher;

@@ -49,18 +49,18 @@ class blastbeat_t:
         info() const;
 
         template<class T>
-        void
+        bool
         send(const std::string& sid,
              const std::string& type,
              T&& message)
         {
-            m_socket.send_multipart(
+            on_check(m_checker, ev::PREPARE);
+
+            return m_socket.send_multipart(
                 io::protect(sid),
                 io::protect(type),
                 message
             );
-
-            on_check(m_checker, ev::PREPARE);
         }
 
     private:
@@ -96,8 +96,8 @@ class blastbeat_t:
 
         // Configuration
 
-        std::string m_event;
-        std::string m_endpoint;
+        const std::string m_event;
+        const std::string m_endpoint;
 
         // I/O
 

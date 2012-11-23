@@ -15,6 +15,7 @@ OPTION(BINARY "Build Binary Sandbox plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" ON)
 OPTION(BLASTBEAT "Build Blastbeat Driver plugin" ON)
 OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
+OPTION(ZEROMQ "Build ZeroMQ Driver plugin" ON)
 
 IF(NOT APPLE)
     OPTION(ELLIPTICS "Build Elliptics Storage plugin" ON)
@@ -60,7 +61,8 @@ SET(PLUGINS
         fs
         dealer
         blastbeat
-        cgroups)
+        cgroups
+        zeromq)
 
 # IF(NOT APPLE)
 #     SET(PLUGINS ${PLUGINS} perl)

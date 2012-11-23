@@ -80,6 +80,7 @@ elliptics_storage_t::elliptics_storage_t(context_t& context,
                                          const std::string& name,
                                          const Json::Value& args):
     category_type(context, name, args),
+    m_context(context),
     m_log(context.log(name)),
     m_log_adapter(m_log, args.get("verbosity", DNET_LOG_ERROR).asUInt()),
     m_node(m_log_adapter),

@@ -18,8 +18,8 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_DEALER_EVENT_HPP
-#define COCAINE_DEALER_EVENT_HPP
+#ifndef COCAINE_DEALER_STREAM_HPP
+#define COCAINE_DEALER_STREAM_HPP
 
 #include <cocaine/io.hpp>
 
@@ -27,50 +27,38 @@
 
 namespace cocaine { namespace driver {
 
-typedef std::vector<std::string> route_t;
+typedef std::vector<
+    std::string
+> route_t;
 
-class dealer_stream_t:
+class dealer_t;
+
+struct dealer_stream_t:
     public api::stream_t
 {
-    typedef io::channel<
-        struct dealer_tag,
-        io::policies::unique
-    > rpc_channel_t;
+    dealer_stream_t(dealer_t& driver,
+                    const route_t& route,
+                    const std::string& tag);
 
-    public:
-        dealer_stream_t(rpc_channel_t& channel,
-                        const route_t& route,
-                        const std::string& tag);
+    virtual
+    void
+    push(const char * chunk,
+         size_t size);
+    
+    virtual
+    void
+    error(error_code code,
+          const std::string& message);
+    
+    virtual
+    void
+    close();
 
-        virtual
-        void
-        push(const char * chunk,
-             size_t size);
-        
-        virtual
-        void
-        error(error_code code,
-              const std::string& message);
-        
-        virtual
-        void
-        close();
-
-    private:
-        template<class Event, typename... Args>
-        bool
-        send(const std::string& route,
-             Args&&... args)
-        {
-            return m_channel.send(route, ZMQ_SNDMORE) &&
-                   m_channel.send<Event>(std::forward<Args>(args)...);
-        }
-
-    private:
-        rpc_channel_t& m_channel;        
-        
-        const route_t m_route;
-        const std::string m_tag;
+private:
+    dealer_t& m_driver;        
+    
+    const route_t m_route;
+    const std::string m_tag;
 };
 
 }}

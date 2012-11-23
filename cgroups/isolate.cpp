@@ -29,7 +29,6 @@
 #include "isolate.hpp"
 
 using namespace cocaine;
-using namespace cocaine::api;
 using namespace cocaine::isolate;
 
 namespace {
@@ -64,6 +63,7 @@ cgroups_t::cgroups_t(context_t& context,
                      const std::string& name,
                      const Json::Value& args):
     category_type(context, name, args),
+    m_context(context),
     m_log(context.log(name))
 {
     int rv = 0;
@@ -250,7 +250,7 @@ cgroups_t::spawn(const std::string& path,
         throw system_error_t("fork() failed");
     }
     
-    return std::unique_ptr<handle_t>(
+    return std::unique_ptr<api::handle_t>(
         new process_handle_t(pid)
     );
 }

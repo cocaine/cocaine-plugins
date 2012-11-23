@@ -55,8 +55,8 @@ class fs_t:
         context_t& m_context;
         boost::shared_ptr<logging::logger_t> m_log;
         
-        const std::string m_event,
-                          m_path;
+        const std::string m_event;
+        const std::string m_path;
 
         ev::stat m_watcher;
 };

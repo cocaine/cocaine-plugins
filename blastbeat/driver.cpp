@@ -178,8 +178,8 @@ blastbeat_t::on_uwsgi(const std::string& sid,
 {
     boost::shared_ptr<blastbeat_stream_t> upstream(
         boost::make_shared<blastbeat_stream_t>(
-            sid,
-            *this
+            *this,
+            sid
         )
     );
 

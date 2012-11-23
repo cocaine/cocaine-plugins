@@ -23,7 +23,7 @@
 #include "stream.hpp"
 #include "driver.hpp"
 
-using namespace cocaine::engine;
+using namespace cocaine;
 using namespace cocaine::driver;
 
 namespace {
@@ -72,10 +72,10 @@ namespace cocaine { namespace io {
     };
 }}
 
-blastbeat_stream_t::blastbeat_stream_t(const std::string& sid,
-                                       blastbeat_t& driver):
-    m_sid(sid),
+blastbeat_stream_t::blastbeat_stream_t(blastbeat_t& driver,
+                                       const std::string& sid):
     m_driver(driver),
+    m_sid(sid),
     m_body(false)
 { }
 

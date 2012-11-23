@@ -24,18 +24,19 @@
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
 
-#include <cocaine/traits/policy.hpp>
+#include <cocaine/api/event.hpp>
 
 #include "driver.hpp"
 #include "stream.hpp"
 
+
 using namespace cocaine;
 using namespace cocaine::driver;
 
-dealer_t::dealer_t(context_t& context,
-                   const std::string& name,
-                   const Json::Value& args,
-                   engine::engine_t& engine):
+zmq_t::zmq_t(context_t& context,
+             const std::string& name,
+             const Json::Value& args,
+             engine::engine_t& engine):
     category_type(context, name, args, engine),
     m_context(context),
     m_log(context.log(
@@ -50,63 +51,73 @@ dealer_t::dealer_t(context_t& context,
             % name
         ).str()
     ),
-    m_channel(context, ZMQ_ROUTER, m_identity),
+    m_socket(context, ZMQ_ROUTER),
     m_watcher(engine.loop()),
     m_checker(engine.loop())
 {
+    try {
+        m_socket.setsockopt(
+            ZMQ_IDENTITY,
+            m_identity.data(),
+            m_identity.size()
+        );
+    } catch(const zmq::error_t& e) {
+        throw configuration_error_t("invalid driver identity - %s", e.what());
+    }
+
     std::string endpoint(args["endpoint"].asString());
 
     try {
         if(endpoint.empty()) {
-            m_channel.bind();
+            m_socket.bind();
         } else {
-            m_channel.bind(endpoint);
+            m_socket.bind(endpoint);
         }
     } catch(const zmq::error_t& e) {
         throw configuration_error_t("invalid driver endpoint - %s", e.what());
     }
 
-    m_watcher.set<dealer_t, &dealer_t::on_event>(this);
-    m_watcher.start(m_channel.fd(), ev::READ);
-    m_checker.set<dealer_t, &dealer_t::on_check>(this);
+    m_watcher.set<zmq_t, &zmq_t::on_event>(this);
+    m_watcher.start(m_socket.fd(), ev::READ);
+    m_checker.set<zmq_t, &zmq_t::on_check>(this);
     m_checker.start();
 }
 
-dealer_t::~dealer_t() {
+zmq_t::~zmq_t() {
     m_watcher.stop();
     m_checker.stop();
 }
 
 Json::Value
-dealer_t::info() const {
+zmq_t::info() const {
     Json::Value result;
 
-    result["endpoint"] = m_channel.endpoint();
+    result["type"] = "zeromq-server";
+    result["endpoint"] = m_socket.endpoint();
     result["identity"] = m_identity;
-    result["type"] = "native-server";
 
     return result;
 }
 
 void
-dealer_t::on_event(ev::io&, int) {
+zmq_t::on_event(ev::io&, int) {
     m_checker.stop();
 
-    if(m_channel.pending()) {
+    if(m_socket.pending()) {
         m_checker.start();
         process_events();
     }
 }
 
-void
-dealer_t::on_check(ev::prepare&, int) {
-    engine().loop().feed_fd_event(m_channel.fd(), ev::READ);
+void 
+zmq_t::on_check(ev::prepare&, int) {
+    engine().loop().feed_fd_event(m_socket.fd(), ev::READ);
 }
 
 void
-dealer_t::process_events() {
+zmq_t::process_events() {
     int counter = defaults::io_bulk_size;
-    
+
     do {
         zmq::message_t message;
         route_t route;
@@ -115,9 +126,9 @@ dealer_t::process_events() {
             {
                 io::scoped_option<
                     io::options::receive_timeout
-                > option(m_channel, 0);
+                > option(m_socket, 0);
                 
-                if(!m_channel.recv(message)) {
+                if(!m_socket.recv(message)) {
                     return;
                 }
             }
@@ -130,59 +141,37 @@ dealer_t::process_events() {
                 static_cast<const char*>(message.data()),
                 message.size()
             );
-        } while(m_channel.more());
+        } while(m_socket.more());
 
-        if(route.empty() || !m_channel.more()) {
+        if(route.empty() || !m_socket.more()) {
             COCAINE_LOG_ERROR(m_log, "received a corrupted request", m_event);
-            m_channel.drop();
+            m_socket.drop();
             return;
         }
 
-        COCAINE_LOG_DEBUG(m_log, "received a request from '%s'", route[0]);
+        boost::shared_ptr<zmq_stream_t> upstream(
+            boost::make_shared<zmq_stream_t>(
+                *this,
+                route
+            )
+        );
 
-        do {
-            std::string tag;
-            api::policy_t policy;
+        boost::shared_ptr<api::stream_t> downstream;
 
-            try {
-                m_channel.recv_multipart(tag, policy, message);
-            } catch(const std::runtime_error& e) {
-                COCAINE_LOG_ERROR(
-                    m_log,
-                    "received a corrupted request - %s",
-                    m_event,
-                    e.what()
-                );
+        try {
+            downstream = engine().enqueue(api::event_t(m_event), upstream);
+        } catch(const cocaine::error_t& e) {
+            upstream->error(resource_error, e.what());
+        }
         
-                m_channel.drop();
+        do {
+            m_socket.recv(message);
 
-                return;
-            }
-
-            COCAINE_LOG_DEBUG(
-                m_log,
-                "enqueuing event type '%s' with uuid: %s",
-                m_event,
-                tag
+            downstream->push(
+                static_cast<const char*>(message.data()),
+                message.size()
             );
-            
-            boost::shared_ptr<dealer_stream_t> stream(
-                boost::make_shared<dealer_stream_t>(
-                    boost::ref(m_channel),
-                    route,
-                    tag
-                )
-            );
-
-            try {
-                engine().enqueue(api::event_t(m_event, policy), stream)->push(
-                    static_cast<const char*>(message.data()), 
-                    message.size()
-                );
-            } catch(const cocaine::error_t& e) {
-                stream->error(resource_error, e.what());
-            }
-        } while(m_channel.more());
+        } while(m_socket.more());
     } while(--counter);
 }
 

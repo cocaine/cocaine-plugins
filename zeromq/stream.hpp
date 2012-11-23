@@ -18,29 +18,47 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_ZEROMQ_SINK_DRIVER_HPP
-#define COCAINE_ZEROMQ_SINK_DRIVER_HPP
+#ifndef COCAINE_ZEROMQ_SERVER_STREAM_HPP
+#define COCAINE_ZEROMQ_SERVER_STREAM_HPP
 
-#include "cocaine/drivers/zeromq_server.hpp"
+#include <cocaine/api/stream.hpp>
 
-namespace cocaine { namespace engine { namespace drivers {
+namespace cocaine { namespace driver {
 
-class zeromq_sink_t:
-    public zeromq_server_t
+typedef std::vector<
+    std::string
+> route_t;
+
+class zmq_t;
+
+struct zmq_stream_t:
+    public api::stream_t
 {
-    public:
-        zeromq_sink_t(engine_t& engine,
-                      const std::string& method, 
-                      const Json::Value& args);
+    zmq_stream_t(zmq_t& driver,
+                 const route_t& route);
 
-        // Driver interface.
-        virtual Json::Value info() /* const */;
+    virtual
+    void
+    push(const char * chunk,
+         size_t size);
+    
+    virtual
+    void
+    error(error_code code,
+          const std::string& message);
+    
+    virtual
+    void
+    close();
 
-    protected:
-        // Server interface.
-        virtual void process(ev::idle&, int);
+private:
+    zmq_t& m_driver;
+
+    // NOTE: Even though all parts of the routing information is available
+    // only the first part will be used for responding.
+    const route_t m_route;
 };
 
-}}}
+}}
 
 #endif

@@ -19,6 +19,7 @@
 */
 
 #include "stream.hpp"
+#include "driver.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
@@ -76,14 +77,14 @@ namespace io {
 
 } // namespace cocaine
 
-dealer_stream_t::dealer_stream_t(rpc_channel_t& channel,
+dealer_stream_t::dealer_stream_t(dealer_t& driver,
                                  const route_t& route,
                                  const std::string& tag):
-    m_channel(channel),
+    m_driver(driver),
     m_route(route),
     m_tag(tag)
 {
-    send<driver::ack>(
+    m_driver.send<driver::ack>(
         m_route.front(),
         m_tag
     );
@@ -93,7 +94,7 @@ void
 dealer_stream_t::push(const char * chunk,
                       size_t size)
 {
-    send<driver::chunk>(
+    m_driver.send<driver::chunk>(
         m_route.front(),
         m_tag,
         std::string(chunk, size)
@@ -104,7 +105,7 @@ void
 dealer_stream_t::error(error_code code,
                        const std::string& message)
 {
-    send<driver::error>(
+    m_driver.send<driver::error>(
         m_route.front(),
         m_tag,
         static_cast<int>(code),
@@ -116,7 +117,7 @@ dealer_stream_t::error(error_code code,
 
 void
 dealer_stream_t::close() {
-    send<driver::choke>(
+    m_driver.send<driver::choke>(
         m_route.front(),
         m_tag
     );

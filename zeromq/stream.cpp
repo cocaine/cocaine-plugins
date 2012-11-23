@@ -18,45 +18,52 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#ifndef COCAINE_BLASTBEAT_STREAM_HPP
-#define COCAINE_BLASTBEAT_STREAM_HPP
+#include <cocaine/logging.hpp>
 
-#include <cocaine/api/stream.hpp>
+#include "stream.hpp"
+#include "driver.hpp"
 
-namespace cocaine { namespace driver {
+using namespace cocaine;
+using namespace cocaine::driver;
 
-class blastbeat_t;
+zmq_stream_t::zmq_stream_t(zmq_t& driver,
+                           const route_t& route):
+    m_driver(driver),
+    m_route(route)
+{ }
 
-struct blastbeat_stream_t:
-    public api::stream_t
+void
+zmq_stream_t::push(const char * chunk,
+                   size_t size)
 {
-    blastbeat_stream_t(blastbeat_t& driver,
-                       const std::string& sid);
+    zmq::message_t message(size);
 
-    virtual
-    void
-    push(const char * chunk,
-         size_t size);
+    std::memcpy(
+        message.data(),
+        chunk,
+        size
+    );
     
-    virtual
-    void
-    error(error_code code,
-          const std::string& message);
-    
-    virtual
-    void
-    close();
+    m_driver.send(
+        m_route.front(),
+        message
+    );
+}
 
-private:
-    blastbeat_t& m_driver;
-    
-    // Blastbeat session ID for this stream.
-    const std::string m_sid;
-    
-    // Indicates that headers are already away.
-    bool m_body;
-};
+void
+zmq_stream_t::error(error_code code,
+                    const std::string& message)
+{
+    COCAINE_LOG_ERROR(
+        m_driver.log(),
+        "error while processing an event: [%d] %s",
+        code,
+        message
+    );
+}
 
-}}
+void
+zmq_stream_t::close() {
+    // Pass.
+}
 
-#endif

@@ -45,6 +45,8 @@ class log_adapter_t:
 
     private:
         boost::shared_ptr<logging::logger_t> m_log;
+
+        // XXX: Figure out if it's a right way to set the logging level.
         const int m_level;
 };
 
@@ -87,6 +89,7 @@ class elliptics_storage_t:
         };
 
     private:
+        context_t& m_context;
         boost::shared_ptr<logging::logger_t> m_log;
 
         log_adapter_t m_log_adapter;
