@@ -45,7 +45,6 @@ blastbeat_t::blastbeat_t(context_t& context,
         ).str()
     )),
     m_event(args.get("emit", "").asString()),
-    m_identity(args.get("identity", "").asString()),
     m_endpoint(args.get("endpoint", "").asString()),
     m_socket(context, ZMQ_DEALER),
     m_watcher(engine.loop()),
@@ -54,8 +53,8 @@ blastbeat_t::blastbeat_t(context_t& context,
     try {
         m_socket.setsockopt(
             ZMQ_IDENTITY,
-            m_identity.data(),
-            m_identity.size()
+            m_context.config.network.hostname.data(),
+            m_context.config.network.hostname.size()
         );
     } catch(const zmq::error_t& e) {
         throw configuration_error_t("invalid driver identity - %s", e.what());
@@ -82,9 +81,9 @@ Json::Value
 blastbeat_t::info() const {
     Json::Value result;
 
-    result["identity"] = m_identity;
-    result["endpoint"] = m_endpoint;
     result["type"] = "blastbeat";
+    result["endpoint"] = m_endpoint;
+    result["identity"] = m_context.config.network.hostname;
     result["sessions"] = static_cast<Json::LargestUInt>(m_streams.size());
 
     return result;
