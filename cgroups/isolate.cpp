@@ -149,7 +149,7 @@ cgroups_t::~cgroups_t() {
     cgroup_free(&m_cgroup);
 }
 
-std::unique_ptr<handle_t>
+std::unique_ptr<api::handle_t>
 cgroups_t::spawn(const std::string& path,
                  const std::map<std::string, std::string>& args,
                  const std::map<std::string, std::string>& environment)

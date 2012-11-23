@@ -20,7 +20,7 @@ Package: libcocaine-plugin-fs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
 Description: Cocaine - Filesystem-based Drivers
- Filesystem-based drivers for Cocaine.
+ Filesystem driver for Cocaine.
 
 Package: libcocaine-plugin-dealer
 Architecture: any
@@ -89,3 +89,8 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-common2 (>= 0.10),
 Description: Cocaine - CGroups Isolate
  CGroups isolation support for Cocaine.
 
+Package: libcocaine-plugin-zeromq
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-common2 (>= 0.10)
+Description: Cocaine - ZeroMQ Driver
+ Raw ZeroMQ driver for Cocaine.

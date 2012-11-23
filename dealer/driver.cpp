@@ -168,7 +168,7 @@ dealer_t::process_events() {
             
             boost::shared_ptr<dealer_stream_t> stream(
                 boost::make_shared<dealer_stream_t>(
-                    boost::ref(m_channel),
+                    *this,
                     route,
                     tag
                 )

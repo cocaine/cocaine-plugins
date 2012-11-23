@@ -27,5 +27,6 @@ extern "C" {
     void
     initialize(api::repository_t& repository) {
         repository.insert<dealer_t>("native-server");
+        repository.insert<dealer_t>("dealer-server");
     }
 }
