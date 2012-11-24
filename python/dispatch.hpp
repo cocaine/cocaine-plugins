@@ -27,9 +27,9 @@
 
 #include "Python.h"
 
-#include <cocaine/common.hpp>
-
 #include "event_source.hpp"
+
+#include <cocaine/common.hpp>
 
 namespace cocaine { namespace sandbox {
 

@@ -19,6 +19,7 @@
 */
 
 #include "stream.hpp"
+
 #include "driver.hpp"
 
 using namespace cocaine;

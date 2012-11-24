@@ -18,11 +18,11 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <cocaine/logging.hpp>
-
 #include "log.hpp"
 
 #include "sandbox.hpp"
+
+#include <cocaine/logging.hpp>
 
 using namespace cocaine::api;
 using namespace cocaine::sandbox;

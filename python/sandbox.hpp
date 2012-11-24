@@ -27,9 +27,9 @@
 
 #include <Python.h>
 
-#include <cocaine/api/sandbox.hpp>
-
 #include "track.hpp"
+
+#include <cocaine/api/sandbox.hpp>
 
 namespace cocaine { namespace sandbox {
 

@@ -18,15 +18,16 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <boost/lexical_cast.hpp>
-#include <libcgroup.h>
-#include <sys/wait.h>
-#include <unistd.h>
+#include "isolate.hpp"
 
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
-#include "isolate.hpp"
+#include <boost/lexical_cast.hpp>
+
+#include <libcgroup.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 using namespace cocaine;
 using namespace cocaine::isolate;

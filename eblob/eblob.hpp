@@ -21,10 +21,11 @@
 #ifndef COCAINE_EBLOB_STORAGE_HPP
 #define COCAINE_EBLOB_STORAGE_HPP
 
-#include <boost/filesystem.hpp>
-#include <eblob/eblob.hpp>
+#include <cocaine/interfaces/storage.hpp>
 
-#include "cocaine/interfaces/storage.hpp"
+#include <boost/filesystem.hpp>
+
+#include <eblob/eblob.hpp>
 
 namespace cocaine { namespace storages {
 

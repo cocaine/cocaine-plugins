@@ -17,11 +17,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>. 
  */
 
-#include <boost/filesystem.hpp>
-#include <boost/format.hpp>
-#include <boost/lexical_cast.hpp>
-
 #include "binary.hpp"
+
+#include <boost/filesystem.hpp>
+#include <boost/lexical_cast.hpp>
 
 using namespace cocaine;
 using namespace cocaine::sandbox;
@@ -31,9 +30,7 @@ namespace fs = boost::filesystem;
 binary_t::binary_t(context_t &context, const std::string &name, const Json::Value &args, const std::string &spool) :
     category_type(context, name, args, spool),
     m_log(context.log(
-        (boost::format("app/%1%")
-            % name
-        ).str()
+        cocaine::format("app/%1%", name)
     )),
     m_process(NULL), m_cleanup(NULL)
 {

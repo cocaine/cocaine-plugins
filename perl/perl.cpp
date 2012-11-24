@@ -11,11 +11,6 @@
 // limitations under the License.
 //
 
-#include <boost/filesystem/fstream.hpp>
-#include <boost/filesystem/operations.hpp>
-#include <boost/format.hpp>
-#include <sstream>
-
 #include <EXTERN.h>
 #include <perl.h>
 
@@ -24,6 +19,11 @@
 #include <cocaine/manifest.hpp>
 
 #include <cocaine/api/sandbox.hpp>
+
+#include <sstream>
+
+#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem/operations.hpp>
 
 EXTERN_C void boot_DynaLoader(pTHX_ CV* cv);
 
@@ -49,9 +49,7 @@ public:
            const std::string& spool):
         category_type(context, name, args, spool),
         m_log(context.log(
-            (boost::format("app/%1%")
-                % name
-            ).str()
+            cocaine::format("app/%1%", name)
         ))
     {
         int argc = 0;

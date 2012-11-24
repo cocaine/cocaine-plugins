@@ -18,10 +18,10 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
+#include "storage.hpp"
+
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
-
-#include "storage.hpp"
 
 using namespace cocaine;
 using namespace cocaine::storage;

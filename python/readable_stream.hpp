@@ -27,11 +27,11 @@
 
 #include "Python.h"
 
+#include "event_source.hpp"
+
 #include <cocaine/common.hpp>
 
 #include <cocaine/api/stream.hpp>
-
-#include "event_source.hpp"
 
 namespace cocaine { namespace sandbox {
 

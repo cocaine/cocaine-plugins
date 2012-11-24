@@ -20,11 +20,10 @@
 
 #include "eblob.hpp"
 
+#include <cocaine/context.hpp>
+#include <cocaine/registry.hpp>
+
 #include <boost/tuple/tuple.hpp>
-
-#include "cocaine/context.hpp"
-
-#include "cocaine/registry.hpp"
 
 using namespace cocaine::core;
 using namespace cocaine::storages;

@@ -18,15 +18,13 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <boost/format.hpp>
+#include "mongo.hpp"
 
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
 #include <mongo/client/connpool.h>
 #include <mongo/client/gridfs.h>
-
-#include "mongo.hpp"
 
 using namespace cocaine;
 using namespace cocaine::storage;
@@ -35,9 +33,7 @@ using namespace mongo;
 mongo_storage_t::mongo_storage_t(context_t& context, const std::string& name, const Json::Value& args) try:
     category_type(context, name, args),
     m_log(context.log(
-        (boost::format("storage/%1%")
-            % name
-        ).str()
+        cocaine::format("storage/%1%", name)
     )),
     m_uri(args["uri"].asString(), ConnectionString::SET)
 {

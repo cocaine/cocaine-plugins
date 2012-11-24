@@ -18,14 +18,14 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
+#include "driver.hpp"
+
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
 
 #include <cocaine/api/event.hpp>
 #include <cocaine/api/stream.hpp>
-
-#include "driver.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
@@ -37,9 +37,7 @@ fs_t::fs_t(context_t& context,
     category_type(context, name, args, engine),
     m_context(context),
     m_log(context.log(
-        (boost::format("app/%1%")
-            % name
-        ).str()
+        cocaine::format("app/%1%", name)
     )),
     m_event(args.get("emit", "").asString()),
     m_path(args.get("path", "").asString()),

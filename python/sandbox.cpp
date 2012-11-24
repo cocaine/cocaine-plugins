@@ -18,21 +18,20 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <boost/filesystem/fstream.hpp>
-#include <boost/filesystem/operations.hpp>
-#include <boost/format.hpp>
+#include "sandbox.hpp"
+
+#include "log.hpp"
+#include "readable_stream.hpp"
+#include "writable_stream.hpp"
+#include "dispatch.hpp"
 
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
 #include <sstream>
 
-#include "sandbox.hpp"
-
-#include "log.hpp"
-#include "dispatch.hpp"
-#include "readable_stream.hpp"
-#include "writable_stream.hpp"
+#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem/operations.hpp>
 
 using namespace cocaine;
 using namespace cocaine::sandbox;
@@ -91,16 +90,11 @@ cocaine::sandbox::exception() {
     tracked_object_t name(PyObject_Str(type));
     tracked_object_t message(PyObject_Str(value));
     
-    boost::format formatter("uncaught exception %s: %s");
-    
-    std::string result(
-        (formatter
-            % PyString_AsString(name)
-            % PyString_AsString(message)
-        ).str()
+    return cocaine::format(
+        "uncaught exception %s: %s",
+        PyString_AsString(name),
+        PyString_AsString(message)
     );
-
-    return result;
 }
 
 python_t::python_t(context_t& context,
@@ -110,9 +104,7 @@ python_t::python_t(context_t& context,
     category_type(context, name, args, spool),
     m_context(context),
     m_log(context.log(
-        (boost::format("app/%1%")
-            % name
-        ).str()
+        cocaine::format("app/%1%", name)
     )),
     m_emitter(new event_source_t()),
     m_module(NULL),
@@ -124,9 +116,9 @@ python_t::python_t(context_t& context,
     // Initializing types
 
     PyType_Ready(&log_object_type);
-    PyType_Ready(&dispatch_object_type);
     PyType_Ready(&readable_stream_object_type);
     PyType_Ready(&writable_stream_object_type);
+    PyType_Ready(&dispatch_object_type);
 
     boost::filesystem::path source(spool);
    
@@ -178,14 +170,6 @@ python_t::python_t(context_t& context,
         reinterpret_cast<PyObject*>(&log_object_type)
     );
 
-    Py_INCREF(&dispatch_object_type);
-
-    PyModule_AddObject(
-        context_module,
-        "Dispatch",
-        reinterpret_cast<PyObject*>(&dispatch_object_type)
-    );
-    
     Py_INCREF(&readable_stream_object_type);
 
     PyModule_AddObject(
@@ -200,6 +184,14 @@ python_t::python_t(context_t& context,
         context_module,
         "WritableStream",
         reinterpret_cast<PyObject*>(&writable_stream_object_type)
+    );
+    
+    Py_INCREF(&dispatch_object_type);
+
+    PyModule_AddObject(
+        context_module,
+        "Dispatch",
+        reinterpret_cast<PyObject*>(&dispatch_object_type)
     );
     
     PyModule_AddObject(

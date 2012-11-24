@@ -18,10 +18,11 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <boost/format.hpp>
-
 #include "stream.hpp"
+
 #include "driver.hpp"
+
+#include <boost/format.hpp>
 
 using namespace cocaine;
 using namespace cocaine::driver;
@@ -101,13 +102,10 @@ blastbeat_stream_t::push(const char * chunk,
         }
 
         // TODO: Use proper HTTP version.
-        boost::format code("HTTP/1.0 %d\r\n"),
-                      header("%s: %s\r\n");
-
-        std::string body(
-            (code % response.code).str()
-        );
+        std::string body = cocaine::format("HTTP/1.0 %d\r\n", response.code);
        
+        boost::format header("%s: %s\r\n");
+
         for(cocaine_response_t::header_vector_t::const_iterator it = response.headers.begin();
             it != response.headers.end();
             ++it)

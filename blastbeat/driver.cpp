@@ -18,8 +18,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <boost/format.hpp>
-#include <boost/tuple/tuple.hpp>
+#include "driver.hpp"
+
+#include "stream.hpp"
 
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
@@ -27,8 +28,7 @@
 
 #include <cocaine/api/event.hpp>
 
-#include "driver.hpp"
-#include "stream.hpp"
+#include <boost/tuple/tuple.hpp>
 
 using namespace cocaine;
 using namespace cocaine::driver;
@@ -40,9 +40,7 @@ blastbeat_t::blastbeat_t(context_t& context,
     category_type(context, name, args, engine),
     m_context(context),
     m_log(context.log(
-        (boost::format("app/%1%")
-            % name
-        ).str()
+        cocaine::format("app/%1%", name)
     )),
     m_event(args.get("emit", "").asString()),
     m_endpoint(args.get("endpoint", "").asString()),

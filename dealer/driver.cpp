@@ -18,16 +18,15 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>. 
 */
 
-#include <boost/format.hpp>
+#include "driver.hpp"
+
+#include "stream.hpp"
 
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
 
 #include <cocaine/traits/policy.hpp>
-
-#include "driver.hpp"
-#include "stream.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
@@ -39,16 +38,11 @@ dealer_t::dealer_t(context_t& context,
     category_type(context, name, args, engine),
     m_context(context),
     m_log(context.log(
-        (boost::format("app/%1%")
-            % name
-        ).str()
+        cocaine::format("app/%1%", name)
     )),
     m_event(args["emit"].asString()),
     m_identity(
-        (boost::format("%1%/%2%")
-            % m_context.config.network.hostname
-            % name
-        ).str()
+        cocaine::format("%1%/%2%", m_context.config.network.hostname, name)
     ),
     m_channel(context, ZMQ_ROUTER, m_identity),
     m_watcher(engine.loop()),
