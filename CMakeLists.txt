@@ -1,7 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 PROJECT(COCAINE-PLUGINS)
 
-SET(COCAINE_VERSION 0.8)
+SET(COCAINE_VERSION 0.10)
 
 SET(CMAKE_MODULE_PATH 
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
@@ -62,7 +62,9 @@ SET(PLUGINS
         dealer
         blastbeat
         cgroups
-        zeromq)
+        zeromq
+        server
+        logging)
 
 # IF(NOT APPLE)
 #     SET(PLUGINS ${PLUGINS} perl)
