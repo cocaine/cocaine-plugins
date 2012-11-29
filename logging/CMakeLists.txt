@@ -1,5 +1,6 @@
 ADD_LIBRARY(logging MODULE
     service
+    logger
     module)
 
 TARGET_LINK_LIBRARIES(logging

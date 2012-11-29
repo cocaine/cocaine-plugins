@@ -19,13 +19,14 @@
 */
 
 #include "service.hpp"
+#include "logger.hpp"
 
 using namespace cocaine;
-using namespace cocaine::service;
 
 extern "C" {
     void
     initialize(api::repository_t& repository) {
-        repository.insert<logging_t>("logging");
+        repository.insert<service::logging_t>("logging");
+        repository.insert<logger::remote_t>("remote");
     }
 }
