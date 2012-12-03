@@ -21,6 +21,7 @@
 #include "service.hpp"
 
 #include <boost/bind.hpp>
+#include <boost/tuple/tuple.hpp>
 
 using namespace cocaine;
 using namespace cocaine::service;
@@ -29,13 +30,17 @@ logging_t::logging_t(context_t& context,
                      const std::string& name,
                      const Json::Value& args):
     category_type(context, name, args),
-    api::reactor<io::tags::logging_tag>(context, "logging", args)
+    api::reactor<io::tags::logging_tag>(context, name, args),
+    m_context(context)
 {
     on<io::service::emit>(
         boost::bind(&logging_t::on_emit, this, _1, _2, _3)
     );
 
-    m_sink = context.get<api::logger_t>("logger/core");
+    COCAINE_LOG_INFO(
+        m_context.log("logging"),
+        "the service has started"
+    );
 }
 
 void
@@ -53,9 +58,19 @@ logging_t::on_emit(int priority,
                    std::string source,
                    std::string message)
 {
-    m_sink->emit(
-       static_cast<logging::priorities>(priority),
-       source,
-       message
+    log_map_t::iterator it = m_logs.find(source);
+
+    if(it == m_logs.end()) {
+        boost::tie(it, boost::tuples::ignore) = m_logs.emplace(
+            source,
+            m_context.log(source)
+        );
+    }
+
+    COCAINE_LOG(
+        it->second,
+        static_cast<logging::priorities>(priority),
+        "%s",
+        message
     );
 }

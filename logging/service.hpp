@@ -80,7 +80,18 @@ class logging_t:
                 std::string message);
 
     private:
-        api::category_traits<api::logger_t>::ptr_type m_sink;
+        context_t& m_context;
+
+#if BOOST_VERSION >= 103600
+        typedef boost::unordered_map<
+#else
+        typedef std::map<
+#endif
+            std::string,
+            boost::shared_ptr<logging::logger_t>
+        > log_map_t;
+
+        log_map_t m_logs;
 };
 
 }}

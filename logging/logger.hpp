@@ -27,6 +27,7 @@
 #include <cocaine/api/logger.hpp>
 
 #include <boost/circular_buffer.hpp>
+#include <boost/tuple/tuple.hpp>
 
 namespace cocaine { namespace logger {
 
@@ -48,9 +49,14 @@ class remote_t:
              const std::string& message);
 
     private:
-        // NOTE: This is the maximum number of buffered log messages before the
-        // logging service will be assumed dead.
-        const uint64_t m_watermark;
+        void
+        dump();
+
+    private:
+        context_t& m_context;
+
+        // Logger name, keeping it for a fallback logger instantiation.
+        const std::string m_name;
 
         api::client<io::tags::logging_tag> m_client;
 
@@ -65,10 +71,11 @@ class remote_t:
         // dump the cached messages to the failback logger.
         boost::circular_buffer<log_entry_t> m_ring;
 
-        // NOTE: The fallback logger.
-        api::logger_ptr_t m_fallback;
+        // NOTE: A configuration for the  fallback logger, in case the logging
+        // service dies.
+        config_t::component_t m_fallback;
 };
 
-}} // namespace cocaine::sink
+}} // namespace cocaine::logger
 
 #endif

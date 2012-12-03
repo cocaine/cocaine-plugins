@@ -27,40 +27,14 @@ remote_t::remote_t(context_t& context,
                    const std::string& name,
                    const Json::Value& args):
     category_type(context, name, args),
-    m_watermark(args["fallback"].get("watermark", 0).asUInt64()),
-    m_client(context, "logging", m_watermark),
-    m_ring(m_watermark)
+    m_context(context),
+    m_name(name),
+    m_client(context, "logging", 10),
+    m_ring(10)
 {
-    config_t::component_t cfg = {
+    m_fallback = {
         args["fallback"].get("type", "unspecified").asString(),
         args["fallback"]["args"]
-    };
-
-    try {
-        m_fallback = context.get<api::logger_t>(cfg.type, context, "cocaine", cfg.args);
-    } catch(const api::repository_error_t& e) {
-        // Ignore it, continue without a fallback logger.
-    }
-}
-
-namespace {
-    struct dump_t {
-        dump_t(api::logger_ptr_t logger):
-            m_logger(logger)
-        { }
-
-        template<class T>
-        void
-        operator()(const T& entry) {
-            m_logger->emit(
-                boost::get<0>(entry),
-                boost::get<1>(entry),
-                boost::get<2>(entry)
-            );
-        }
-
-    private:
-        api::logger_ptr_t m_logger;
     };
 }
 
@@ -79,7 +53,46 @@ remote_t::emit(logging::priorities priority,
         std::move(message)
     );
 
-    if(!success && m_fallback) {
-        std::for_each(m_ring.begin(), m_ring.end(), dump_t(m_fallback));
+    if(!success) {
+        try {
+            dump();
+        } catch(...) {
+            // Nothing we can do here, just ignore it.
+        }
     }
+}
+
+namespace {
+    struct dump_t {
+        dump_t(api::logger_ptr_t& logger):
+            m_logger(logger)
+        { }
+
+        template<class T>
+        void
+        operator()(const T& entry) {
+            m_logger->emit(
+                boost::get<0>(entry),
+                boost::get<1>(entry),
+                boost::get<2>(entry)
+            );
+        }
+
+    private:
+        api::logger_ptr_t& m_logger;
+    };
+}
+
+void
+remote_t::dump() {
+    auto logger = m_context.get<api::logger_t>(
+        m_fallback.type,
+        m_context,
+        m_name,
+        m_fallback.args
+    );
+    
+    std::for_each(m_ring.begin(), m_ring.end(), dump_t(logger));
+    
+    m_ring.clear();
 }
