@@ -26,6 +26,8 @@
 #include <cocaine/api/client.hpp>
 #include <cocaine/api/logger.hpp>
 
+#include <boost/circular_buffer.hpp>
+
 namespace cocaine { namespace logger {
 
 class remote_t:
@@ -46,7 +48,25 @@ class remote_t:
              const std::string& message);
 
     private:
+        // NOTE: This is the maximum number of buffered log messages before the
+        // logging service will be assumed dead.
+        const uint64_t m_watermark;
+
         api::client<io::tags::logging_tag> m_client;
+
+        typedef boost::tuple<
+            logging::priorities,
+            std::string,
+            std::string
+        > log_entry_t;
+
+        // NOTE: Store the most recent 'watermark' log messages in a circular
+        // buffer so that if the logging service goes away, we could safely
+        // dump the cached messages to the failback logger.
+        boost::circular_buffer<log_entry_t> m_ring;
+
+        // NOTE: The fallback logger.
+        api::logger_ptr_t m_fallback;
 };
 
 }} // namespace cocaine::sink

@@ -27,17 +27,59 @@ remote_t::remote_t(context_t& context,
                    const std::string& name,
                    const Json::Value& args):
     category_type(context, name, args),
-    m_client(context, "logging")
-{ }
+    m_watermark(args["fallback"].get("watermark", 0).asUInt64()),
+    m_client(context, "logging", m_watermark),
+    m_ring(m_watermark)
+{
+    config_t::component_t cfg = {
+        args["fallback"].get("type", "unspecified").asString(),
+        args["fallback"]["args"]
+    };
+
+    try {
+        m_fallback = context.get<api::logger_t>(cfg.type, context, "cocaine", cfg.args);
+    } catch(const api::repository_error_t& e) {
+        // Ignore it, continue without a fallback logger.
+    }
+}
+
+namespace {
+    struct dump_t {
+        dump_t(api::logger_ptr_t logger):
+            m_logger(logger)
+        { }
+
+        template<class T>
+        void
+        operator()(const T& entry) {
+            m_logger->emit(
+                boost::get<0>(entry),
+                boost::get<1>(entry),
+                boost::get<2>(entry)
+            );
+        }
+
+    private:
+        api::logger_ptr_t m_logger;
+    };
+}
 
 void
 remote_t::emit(logging::priorities priority,
                const std::string& source,
                const std::string& message)
 {
-    m_client.send<io::service::emit>(
-        static_cast<int>(priority),
-        source,
-        message
+    m_ring.push_front(
+        boost::make_tuple(priority, source, message)
     );
+
+    bool success = m_client.send<io::service::emit>(
+        static_cast<int>(priority),
+        std::move(source),
+        std::move(message)
+    );
+
+    if(!success && m_fallback) {
+        std::for_each(m_ring.begin(), m_ring.end(), dump_t(m_fallback));
+    }
 }
