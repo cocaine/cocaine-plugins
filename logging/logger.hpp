@@ -55,9 +55,6 @@ class remote_t:
     private:
         context_t& m_context;
 
-        // Logger name, keeping it for a fallback logger instantiation.
-        const std::string m_name;
-
         api::client<io::tags::logging_tag> m_client;
 
         typedef boost::tuple<
@@ -70,10 +67,9 @@ class remote_t:
         // buffer so that if the logging service goes away, we could safely
         // dump the cached messages to the failback logger.
         boost::circular_buffer<log_entry_t> m_ring;
-
-        // NOTE: A configuration for the  fallback logger, in case the logging
-        // service dies.
-        config_t::component_t m_fallback;
+        
+        // NOTE: Fallback logger name.
+        const std::string m_fallback;
 };
 
 }} // namespace cocaine::logger

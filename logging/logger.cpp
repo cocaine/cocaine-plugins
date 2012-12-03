@@ -28,15 +28,10 @@ remote_t::remote_t(context_t& context,
                    const Json::Value& args):
     category_type(context, name, args),
     m_context(context),
-    m_name(name),
     m_client(context, "logging", 10),
-    m_ring(10)
-{
-    m_fallback = {
-        args["fallback"].get("type", "unspecified").asString(),
-        args["fallback"]["args"]
-    };
-}
+    m_ring(10),
+    m_fallback(args["fallback"].asString())
+{ }
 
 void
 remote_t::emit(logging::priorities priority,
@@ -85,13 +80,9 @@ namespace {
 
 void
 remote_t::dump() {
-    auto logger = m_context.get<api::logger_t>(
-        m_fallback.type,
-        m_context,
-        m_name,
-        m_fallback.args
-    );
-    
+    auto logger = api::logger(m_context, m_fallback);
+
+    // Dump the ring buffer to the fallback logger, if it exists.
     std::for_each(m_ring.begin(), m_ring.end(), dump_t(logger));
     
     m_ring.clear();
