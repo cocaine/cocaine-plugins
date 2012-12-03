@@ -401,9 +401,7 @@ void server_t::recover() {
         std::string
     > runlist_t;
 
-    api::category_traits<api::storage_t>::ptr_type storage(
-        m_context.get<api::storage_t>("storage/core")
-    );
+    auto storage = api::storage(m_context, "core");
 
     COCAINE_LOG_INFO(m_log, "reading the '%s' runlist", m_runlist);
     
