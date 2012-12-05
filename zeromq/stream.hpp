@@ -35,6 +35,7 @@ struct zmq_stream_t:
     public api::stream_t
 {
     zmq_stream_t(zmq_t& driver,
+                 const std::shared_ptr<logging::log_t>& log,
                  const route_t& route);
 
     virtual
@@ -53,6 +54,7 @@ struct zmq_stream_t:
 
 private:
     zmq_t& m_driver;
+    std::shared_ptr<logging::log_t> m_log;
 
     // NOTE: Even though all parts of the routing information is available
     // only the first part will be used for responding.

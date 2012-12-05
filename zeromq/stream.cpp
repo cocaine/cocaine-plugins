@@ -26,10 +26,13 @@
 
 using namespace cocaine;
 using namespace cocaine::driver;
+using namespace cocaine::logging;
 
 zmq_stream_t::zmq_stream_t(zmq_t& driver,
+                           const std::shared_ptr<log_t>& log,
                            const route_t& route):
     m_driver(driver),
+    m_log(log),
     m_route(route)
 { }
 
@@ -56,7 +59,7 @@ zmq_stream_t::error(error_code code,
                     const std::string& message)
 {
     COCAINE_LOG_ERROR(
-        m_driver.log(),
+        m_log,
         "error while processing an event: [%d] %s",
         code,
         message

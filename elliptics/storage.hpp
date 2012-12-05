@@ -31,7 +31,7 @@ class log_adapter_t:
     public ioremap::elliptics::logger
 {
     public:
-        log_adapter_t(const boost::shared_ptr<logging::logger_t>& log,
+        log_adapter_t(const std::shared_ptr<logging::log_t>& log,
                       const int level);
 
         virtual
@@ -44,7 +44,7 @@ class log_adapter_t:
         clone();
 
     private:
-        boost::shared_ptr<logging::logger_t> m_log;
+        std::shared_ptr<logging::log_t> m_log;
 
         // XXX: Figure out if it's a right way to set the logging level.
         const int m_level;

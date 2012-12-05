@@ -48,11 +48,6 @@ class zmq_t:
         Json::Value
         info() const;
 
-        const std::unique_ptr<logging::log_t>&
-        log() {
-            return m_log;
-        }
-
         template<class T>
         bool
         send(const std::string& route,
@@ -81,7 +76,7 @@ class zmq_t:
 
     private:
         context_t& m_context;
-        std::unique_ptr<logging::log_t> m_log;
+        std::shared_ptr<logging::log_t> m_log;
 
         // Configuration
 

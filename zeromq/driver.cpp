@@ -130,6 +130,7 @@ zmq_t::process_events() {
         boost::shared_ptr<zmq_stream_t> upstream(
             boost::make_shared<zmq_stream_t>(
                 *this,
+                m_log,
                 route
             )
         );
