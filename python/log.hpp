@@ -82,7 +82,7 @@ struct log_t {
           PyObject * args);
 
 public:
-    logging::logger_t * base;
+    logging::log_t * base;
 };
 
 }}

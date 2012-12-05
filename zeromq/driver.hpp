@@ -48,9 +48,9 @@ class zmq_t:
         Json::Value
         info() const;
 
-        logging::logger_t*
+        const std::unique_ptr<logging::log_t>&
         log() {
-            return m_log.get();
+            return m_log;
         }
 
         template<class T>
@@ -81,12 +81,11 @@ class zmq_t:
 
     private:
         context_t& m_context;
-        boost::shared_ptr<logging::logger_t> m_log;
+        std::unique_ptr<logging::log_t> m_log;
 
         // Configuration
 
         const std::string m_event;
-        const std::string m_identity;
 
         // I/O
 

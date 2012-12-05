@@ -30,6 +30,7 @@
 
 using namespace cocaine;
 using namespace cocaine::driver;
+using namespace cocaine::logging;
 
 dealer_t::dealer_t(context_t& context,
                    const std::string& name,
@@ -37,12 +38,10 @@ dealer_t::dealer_t(context_t& context,
                    engine::engine_t& engine):
     category_type(context, name, args, engine),
     m_context(context),
-    m_log(context.log(
-        cocaine::format("app/%1%", name)
-    )),
+    m_log(new log_t(context, cocaine::format("app/%s", name))),
     m_event(args["emit"].asString()),
     m_identity(
-        cocaine::format("%1%/%2%", m_context.config.network.hostname, name)
+        cocaine::format("%s/%s", m_context.config.network.hostname, name)
     ),
     m_channel(context, ZMQ_ROUTER, m_identity),
     m_watcher(engine.loop()),

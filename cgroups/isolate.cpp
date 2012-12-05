@@ -31,6 +31,7 @@
 
 using namespace cocaine;
 using namespace cocaine::isolate;
+using namespace cocaine::logging;
 
 namespace {
     struct process_handle_t:
@@ -65,7 +66,7 @@ cgroups_t::cgroups_t(context_t& context,
                      const Json::Value& args):
     category_type(context, name, args),
     m_context(context),
-    m_log(context.log(name))
+    m_log(new log_t(context, name))
 {
     int rv = 0;
 

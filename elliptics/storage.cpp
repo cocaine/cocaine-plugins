@@ -24,9 +24,10 @@
 #include <cocaine/logging.hpp>
 
 using namespace cocaine;
+using namespace cocaine::logging;
 using namespace cocaine::storage;
 
-log_adapter_t::log_adapter_t(const boost::shared_ptr<logging::logger_t>& log,
+log_adapter_t::log_adapter_t(const std::shared_ptr<logging::log_t>& log,
                              const int level):
     ioremap::elliptics::logger(level),
     m_log(log),
@@ -81,7 +82,7 @@ elliptics_storage_t::elliptics_storage_t(context_t& context,
                                          const Json::Value& args):
     category_type(context, name, args),
     m_context(context),
-    m_log(context.log(name)),
+    m_log(new log_t(context, name)),
     m_log_adapter(m_log, args.get("verbosity", DNET_LOG_ERROR).asUInt()),
     m_node(m_log_adapter),
     m_session(m_node)

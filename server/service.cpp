@@ -33,6 +33,7 @@
 
 using namespace cocaine;
 using namespace cocaine::io;
+using namespace cocaine::logging;
 using namespace cocaine::service;
 
 server_t::server_t(context_t& context, 
@@ -40,7 +41,7 @@ server_t::server_t(context_t& context,
                    const Json::Value& args):
     category_type(context, name, args),
     m_context(context),
-    m_log(context.log("server")),
+    m_log(new log_t(context, name)),
     m_server(context, ZMQ_REP),
     m_runlist(args.get("runlist", "unspecified").asString()),
     m_auth(context),

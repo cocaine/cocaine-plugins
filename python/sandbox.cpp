@@ -103,9 +103,7 @@ python_t::python_t(context_t& context,
                    const std::string& spool):
     category_type(context, name, args, spool),
     m_context(context),
-    m_log(context.log(
-        cocaine::format("app/%1%", name)
-    )),
+    m_log(new logging::log_t(context, cocaine::format("app/%s", name))),
     m_emitter(new event_source_t()),
     m_module(NULL),
     m_thread_state(NULL)

@@ -20,10 +20,13 @@
 
 #include "service.hpp"
 
+#include <cocaine/logging.hpp>
+
 #include <boost/bind.hpp>
 #include <boost/tuple/tuple.hpp>
 
 using namespace cocaine;
+using namespace cocaine::logging;
 using namespace cocaine::service;
 
 logging_t::logging_t(context_t& context,
@@ -35,11 +38,6 @@ logging_t::logging_t(context_t& context,
 {
     on<io::service::emit>(
         boost::bind(&logging_t::on_emit, this, _1, _2, _3)
-    );
-
-    COCAINE_LOG_INFO(
-        m_context.log("logging"),
-        "the service has started"
     );
 }
 
@@ -63,7 +61,7 @@ logging_t::on_emit(int priority,
     if(it == m_logs.end()) {
         boost::tie(it, boost::tuples::ignore) = m_logs.emplace(
             source,
-            m_context.log(source)
+            new log_t(m_context, source)
         );
     }
 

@@ -29,6 +29,7 @@
 
 using namespace cocaine;
 using namespace cocaine::driver;
+using namespace cocaine::logging;
 
 fs_t::fs_t(context_t& context,
            const std::string& name,
@@ -36,9 +37,7 @@ fs_t::fs_t(context_t& context,
            engine::engine_t& engine):
     category_type(context, name, args, engine),
     m_context(context),
-    m_log(context.log(
-        cocaine::format("app/%1%", name)
-    )),
+    m_log(new log_t(context, cocaine::format("app/%s", name))),
     m_event(args.get("emit", "").asString()),
     m_path(args.get("path", "").asString()),
     m_watcher(engine.loop())

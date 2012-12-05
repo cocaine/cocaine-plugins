@@ -90,7 +90,7 @@ class elliptics_storage_t:
 
     private:
         context_t& m_context;
-        boost::shared_ptr<logging::logger_t> m_log;
+        std::shared_ptr<logging::log_t> m_log;
 
         log_adapter_t m_log_adapter;
         ioremap::elliptics::node m_node;

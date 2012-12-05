@@ -30,6 +30,7 @@
 
 using namespace cocaine;
 using namespace cocaine::driver;
+using namespace cocaine::logging;
 
 zmq_t::zmq_t(context_t& context,
              const std::string& name,
@@ -37,27 +38,12 @@ zmq_t::zmq_t(context_t& context,
              engine::engine_t& engine):
     category_type(context, name, args, engine),
     m_context(context),
-    m_log(context.log(
-        cocaine::format("app/%1%", name)
-    )),
+    m_log(new log_t(context, cocaine::format("app/%s", name))),
     m_event(args["emit"].asString()),
-    m_identity(
-        cocaine::format("%1%/%2%", m_context.config.network.hostname, name)
-    ),
     m_socket(context, ZMQ_ROUTER),
     m_watcher(engine.loop()),
     m_checker(engine.loop())
 {
-    try {
-        m_socket.setsockopt(
-            ZMQ_IDENTITY,
-            m_identity.data(),
-            m_identity.size()
-        );
-    } catch(const zmq::error_t& e) {
-        throw configuration_error_t("invalid driver identity - %s", e.what());
-    }
-
     std::string endpoint(args["endpoint"].asString());
 
     try {
@@ -87,7 +73,6 @@ zmq_t::info() const {
 
     result["type"] = "zeromq-server";
     result["endpoint"] = m_socket.endpoint();
-    result["identity"] = m_identity;
 
     return result;
 }

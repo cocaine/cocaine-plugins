@@ -78,12 +78,7 @@ class python_t:
                const boost::shared_ptr<api::stream_t>& upstream);
 
     public:
-        PyThreadState*
-        thread_state() {
-            return m_thread_state;
-        }
-
-        logging::logger_t*
+        logging::log_t*
         logger() {
             return m_log.get();
         }
@@ -93,12 +88,17 @@ class python_t:
             return m_emitter.get();
         }
 
+        PyThreadState*
+        thread_state() {
+            return m_thread_state;
+        }
+
     private:
         context_t& m_context;
-        boost::shared_ptr<logging::logger_t> m_log;
+        std::unique_ptr<logging::log_t> m_log;
 
         // Main event source.
-        boost::shared_ptr<event_source_t> m_emitter;
+        std::unique_ptr<event_source_t> m_emitter;
         
         // Python state objects.
         PyObject * m_module;
