@@ -31,7 +31,6 @@ using namespace cocaine;
 using namespace cocaine::storages;
 
 log_adapter_t::log_adapter_t(const boost::shared_ptr<logging::logger_t>& log, const int level):
-    ioremap::elliptics::logger(level),
     m_log(log),
     m_level(level)
 { }
@@ -59,12 +58,6 @@ void log_adapter_t::log(const int level, const char * message) {
         default:
             break;
     };
-}
-
-unsigned long log_adapter_t::clone() {
-    return reinterpret_cast<unsigned long>(
-        new log_adapter_t(m_log, m_level)
-    );
 }
 
 namespace {
@@ -122,7 +115,7 @@ elliptics_storage_t::elliptics_storage_t(context_t& context, const std::string& 
         digitizer()
     );
 
-    m_session.add_groups(m_groups);
+    m_session.set_groups(m_groups);
 }
 
 objects::value_type elliptics_storage_t::get(const std::string& ns,
@@ -136,14 +129,7 @@ objects::value_type elliptics_storage_t::get(const std::string& ns,
     std::string blob;
 
     try {
-        blob = m_session.read_data_wait(
-            id(ns, key),
-            0,
-            0,
-            0,
-            0,
-            0
-        );
+        blob = m_session.read_data_wait(id(ns, key), 0, 0);
     } catch(const std::runtime_error& e) {
         throw storage_error_t(e.what());
     }
@@ -177,8 +163,6 @@ void elliptics_storage_t::put(const std::string& ns,
         m_session.write_data_wait(
             dnet_id,
             Json::FastWriter().write(object.meta),
-            0,
-            0,
             0
         );
 
@@ -186,8 +170,7 @@ void elliptics_storage_t::put(const std::string& ns,
             dnet_id,
             "meta:" + id(ns, key),
             m_groups,
-            ts,
-            0
+            ts
         );
 
         // Writing the app package
@@ -208,8 +191,6 @@ void elliptics_storage_t::put(const std::string& ns,
         m_session.write_data_wait(
             dnet_id,
             blob,
-            0,
-            0,
             0
         );
 
@@ -217,8 +198,7 @@ void elliptics_storage_t::put(const std::string& ns,
             dnet_id,
             id(ns, key),
             m_groups,
-            ts,
-            0
+            ts
         );
 
         // Checking if the specified key already exists in the namespace
@@ -247,8 +227,6 @@ void elliptics_storage_t::put(const std::string& ns,
         m_session.write_data_wait(
             dnet_id,
             blob,
-            0,
-            0,
             0
         );
 
@@ -256,8 +234,7 @@ void elliptics_storage_t::put(const std::string& ns,
             dnet_id,
             "list:" + ns,
             m_groups,
-            ts,
-            0
+            ts
         );
     } catch(const std::runtime_error& e) {
         throw storage_error_t(e.what());
@@ -272,9 +249,6 @@ objects::meta_type elliptics_storage_t::exists(const std::string& ns,
     try {
         meta = m_session.read_data_wait(
             "meta:" + id(ns, key),
-            0,
-            0,
-            0,
             0,
             0
         );
@@ -299,9 +273,6 @@ std::vector<std::string> elliptics_storage_t::list(const std::string& ns) {
     try {
         blob = m_session.read_data_wait(
             "list:" + ns,
-            0,
-            0,
-            0,
             0,
             0
         );
@@ -362,8 +333,6 @@ void elliptics_storage_t::remove(const std::string& ns,
         m_session.write_data_wait(
             dnet_id,
             blob,
-            0,
-            0,
             0
         );
 
@@ -371,8 +340,7 @@ void elliptics_storage_t::remove(const std::string& ns,
             dnet_id,
             "list:" + ns,
             m_groups,
-            ts,
-            0
+            ts
         );
     } catch(const std::runtime_error& e) {
         throw storage_error_t(e.what());

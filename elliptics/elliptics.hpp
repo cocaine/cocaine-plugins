@@ -31,11 +31,9 @@ class log_adapter_t:
     public ioremap::elliptics::logger
 {
     public:
-        log_adapter_t(const boost::shared_ptr<logging::logger_t>& log,
-                      const int level);
+        explicit log_adapter_t(const boost::shared_ptr<logging::logger_t>& log, const int level);
 
         virtual void log(const int level, const char * message);
-        virtual unsigned long clone();
 
     private:
         boost::shared_ptr<logging::logger_t> m_log;
