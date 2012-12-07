@@ -1,3 +1,9 @@
+cocaine-plugins (0.9.4) unstable; urgency=low
+
+  * Updated to elliptics 2.20
+
+ -- Evgeniy Polyakov <zbr@ioremap.net>  Sat, 08 Dec 2012 00:16:33 +0400
+
 cocaine-plugins (0.9.3) lucid; urgency=low
 
   * Memset dnet_id with 0 before usage
