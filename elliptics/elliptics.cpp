@@ -102,7 +102,7 @@ elliptics_storage_t::elliptics_storage_t(context_t& context, const std::string& 
                 it->c_str(),
                 nodes[*it].asInt()
             );
-        } catch(const std::runtime_error& e) {
+        } catch(const ioremap::elliptics::error& e) {
             // NOTE: Do nothing. Yes. Really. We only care if no remote nodes were added at all
         }
     }
@@ -135,7 +135,7 @@ objects::value_type elliptics_storage_t::get(const std::string& ns,
 
     try {
         blob = m_session.read_data_wait(id(ns, key), 0, 0);
-    } catch(const std::runtime_error& e) {
+    } catch(const ioremap::elliptics::error &e) {
         throw storage_error_t(e.what());
     }
 
@@ -241,7 +241,7 @@ void elliptics_storage_t::put(const std::string& ns,
             m_groups,
             ts
         );
-    } catch(const std::runtime_error& e) {
+    } catch(const ioremap::elliptics::error& e) {
         throw storage_error_t(e.what());
     }
 }
@@ -257,7 +257,7 @@ objects::meta_type elliptics_storage_t::exists(const std::string& ns,
             0,
             0
         );
-    } catch(const std::runtime_error& e) {
+    } catch(const ioremap::elliptics::error& e) {
         throw storage_error_t(e.what());
     }
 
@@ -281,7 +281,7 @@ std::vector<std::string> elliptics_storage_t::list(const std::string& ns) {
             0,
             0
         );
-    } catch(const std::runtime_error& e) {
+    } catch(const ioremap::elliptics::error& e) {
         return result;
     }
 
@@ -347,7 +347,7 @@ void elliptics_storage_t::remove(const std::string& ns,
             m_groups,
             ts
         );
-    } catch(const std::runtime_error& e) {
+    } catch(const ioremap::elliptics::error& e) {
         throw storage_error_t(e.what());
     }
 }
