@@ -27,17 +27,23 @@
 
 namespace cocaine { namespace storages {
 
-class log_adapter_t:
-    public ioremap::elliptics::logger
+class log_adapter_impl_t:
+    public ioremap::elliptics::logger_interface
 {
     public:
-        explicit log_adapter_t(const boost::shared_ptr<logging::logger_t>& log, const int level);
+        log_adapter_impl_t(const boost::shared_ptr<logging::logger_t>& log);
 
         virtual void log(const int level, const char * message);
 
     private:
         boost::shared_ptr<logging::logger_t> m_log;
-        const int m_level;
+};
+
+class log_adapter_t:
+    public ioremap::elliptics::logger
+{
+    public:
+        explicit log_adapter_t(const boost::shared_ptr<logging::logger_t>& log, const int level);
 };
 
 class elliptics_storage_t:

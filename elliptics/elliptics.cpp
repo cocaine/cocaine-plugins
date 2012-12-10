@@ -30,14 +30,15 @@
 using namespace cocaine;
 using namespace cocaine::storages;
 
-log_adapter_t::log_adapter_t(const boost::shared_ptr<logging::logger_t>& log, const int level):
-    m_log(log),
-    m_level(level)
-{ }
+log_adapter_impl_t::log_adapter_impl_t(const boost::shared_ptr<logging::logger_t> &log):
+    m_log(log)
+{
+}
 
-void log_adapter_t::log(const int level, const char * message) {
+void log_adapter_impl_t::log(const int level, const char *message)
+{
     size_t length = ::strlen(message) - 1;
-    
+
     switch(level) {
         case DNET_LOG_NOTICE:
             m_log->info("%.*s", length, message);
@@ -59,6 +60,10 @@ void log_adapter_t::log(const int level, const char * message) {
             break;
     };
 }
+
+log_adapter_t::log_adapter_t(const boost::shared_ptr<logging::logger_t>& log, const int level):
+    ioremap::elliptics::logger(new log_adapter_impl_t(log), level)
+{ }
 
 namespace {
     struct digitizer {
