@@ -27,27 +27,24 @@
 
 namespace cocaine { namespace storage {
 
+class log_adapter_impl_t:
+    public ioremap::elliptics::logger_interface
+{
+    public:
+        log_adapter_impl_t(const std::shared_ptr<logging::log_t>& log);
+
+        virtual void log(const int level, const char *msg);
+
+    private:
+        std::shared_ptr<logging::log_t> m_log;
+};
+
 class log_adapter_t:
     public ioremap::elliptics::logger
 {
     public:
         log_adapter_t(const std::shared_ptr<logging::log_t>& log,
                       const int level);
-
-        virtual
-        void
-        log(const int level,
-            const char * message);
-        
-        virtual
-        unsigned long
-        clone();
-
-    private:
-        std::shared_ptr<logging::log_t> m_log;
-
-        // XXX: Figure out if it's a right way to set the logging level.
-        const int m_level;
 };
 
 class elliptics_storage_t:
