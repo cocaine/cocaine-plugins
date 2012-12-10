@@ -27,16 +27,15 @@ using namespace cocaine;
 using namespace cocaine::logging;
 using namespace cocaine::storage;
 
-log_adapter_t::log_adapter_t(const std::shared_ptr<logging::log_t>& log,
-                             const int level):
-    ioremap::elliptics::logger(level),
-    m_log(log),
-    m_level(level)
-{ }
+
+log_adapter_impl_t::log_adapter_impl_t(const std::shared_ptr<logging::log_t> &log):
+    m_log(log)
+{
+}
 
 void
-log_adapter_t::log(const int level,
-                   const char * message)
+log_adapter_impl_t::log(const int level,
+                        const char *message)
 {
     switch(level) {
         case DNET_LOG_DEBUG:
@@ -60,12 +59,10 @@ log_adapter_t::log(const int level,
     };
 }
 
-unsigned long
-log_adapter_t::clone() {
-    return reinterpret_cast<unsigned long>(
-        new log_adapter_t(m_log, m_level)
-    );
-}
+log_adapter_t::log_adapter_t(const std::shared_ptr<logging::log_t>& log,
+                             const int level):
+    ioremap::elliptics::logger(new log_adapter_impl_t(log), level)
+{ }
 
 namespace {
     struct digitizer {
@@ -122,7 +119,7 @@ elliptics_storage_t::elliptics_storage_t(context_t& context,
         digitizer()
     );
 
-    m_session.add_groups(m_groups);
+    m_session.set_groups(m_groups);
 }
 
 std::string
@@ -139,7 +136,7 @@ elliptics_storage_t::read(const std::string& collection,
     );
 
     try {
-        blob = m_session.read_data_wait(id(collection, key), 0, 0, 0, 0, 0);
+        blob = m_session.read_data_wait(id(collection, key), 0, 0);
     } catch(const std::runtime_error& e) {
         throw storage_error_t(e.what());
     }
@@ -173,15 +170,14 @@ elliptics_storage_t::write(const std::string& collection,
         );
 
         // Write the blob.
-        m_session.write_data_wait(dnet_id, blob, 0, 0, 0);
+        m_session.write_data_wait(dnet_id, blob, 0);
 
         // Write the blob metadata.
         m_session.write_metadata(
             dnet_id,
             id(collection, key),
             m_groups,
-            ts,
-            0
+            ts
         );
 
         // Check if the key already exists in the collection.
@@ -208,15 +204,14 @@ elliptics_storage_t::write(const std::string& collection,
             );
 
             // Update the collection object.
-            m_session.write_data_wait(dnet_id, object, 0, 0, 0);
+            m_session.write_data_wait(dnet_id, object, 0);
 
             // Update the collection object metadata.
             m_session.write_metadata(
                 dnet_id,
                 id("system", "list:" + collection),
                 m_groups,
-                ts,
-                0
+                ts
             );
         }
     } catch(const std::runtime_error& e) {
@@ -230,7 +225,7 @@ elliptics_storage_t::list(const std::string& collection) {
     std::string blob;
     
     try {
-        blob = m_session.read_data_wait(id("system", "list:" + collection), 0, 0, 0, 0, 0);
+        blob = m_session.read_data_wait(id("system", "list:" + collection), 0, 0);
     } catch(const std::runtime_error& e) {
         return result;
     }
@@ -290,15 +285,14 @@ elliptics_storage_t::remove(const std::string& collection,
         );
 
         // Update the collection object.
-        m_session.write_data_wait(dnet_id, object, 0, 0, 0);
+        m_session.write_data_wait(dnet_id, object, 0);
 
         // Update the collection object metadata.
         m_session.write_metadata(
             dnet_id,
             id("system", "list:" + collection),
             m_groups,
-            ts,
-            0
+            ts
         );
 
         // Remove the actual key.
@@ -307,4 +301,3 @@ elliptics_storage_t::remove(const std::string& collection,
         throw storage_error_t(e.what());
     }
 }
-
