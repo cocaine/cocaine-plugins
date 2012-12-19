@@ -25,58 +25,58 @@
 using namespace cocaine;
 using namespace cocaine::driver;
 
-namespace cocaine {
+namespace cocaine { namespace io {
+    namespace tags {
+        struct dealer_tag;
+    }
 
-namespace driver {
-    struct ack {
-        typedef dealer_tag tag;
+    namespace dealer {
+        struct ack {
+            typedef tags::dealer_tag tag;
 
-        typedef boost::mpl::list<
-            std::string
-        > tuple_type;
-    };
+            typedef boost::mpl::list<
+                std::string
+            > tuple_type;
+        };
 
-    struct chunk {
-        typedef dealer_tag tag;
+        struct chunk {
+            typedef tags::dealer_tag tag;
 
-        typedef boost::mpl::list<
-            std::string,
-            std::string
-        > tuple_type;
-    };
+            typedef boost::mpl::list<
+                std::string,
+                std::string
+            > tuple_type;
+        };
 
-    struct error {
-        typedef dealer_tag tag;
+        struct error {
+            typedef tags::dealer_tag tag;
 
-        typedef boost::mpl::list<
-            std::string,
-            int,
-            std::string
-        > tuple_type;
-    };
+            typedef boost::mpl::list<
+                std::string,
+                int,
+                std::string
+            > tuple_type;
+        };
 
-    struct choke {
-        typedef dealer_tag tag;
-        
-        typedef boost::mpl::list<
-            std::string
-        > tuple_type;
-    };
-}
+        struct choke {
+            typedef tags::dealer_tag tag;
+            
+            typedef boost::mpl::list<
+                std::string
+            > tuple_type;
+        };
+    }
 
-namespace io {
     template<>
-    struct dispatch<dealer_tag> {
+    struct protocol<tags::dealer_tag> {
         typedef boost::mpl::list<
-            driver::ack,
-            driver::chunk,
-            driver::error,
-            driver::choke
-        >::type category;
+            dealer::ack,
+            dealer::chunk,
+            dealer::error,
+            dealer::choke
+        >::type type;
     };
-}
-
-} // namespace cocaine
+}} // namespace cocaine::io
 
 dealer_stream_t::dealer_stream_t(dealer_t& driver,
                                  const route_t& route,
@@ -85,7 +85,7 @@ dealer_stream_t::dealer_stream_t(dealer_t& driver,
     m_route(route),
     m_tag(tag)
 {
-    m_driver.send<driver::ack>(
+    m_driver.send<io::dealer::ack>(
         m_route.front(),
         m_tag
     );
@@ -95,7 +95,7 @@ void
 dealer_stream_t::push(const char * chunk,
                       size_t size)
 {
-    m_driver.send<driver::chunk>(
+    m_driver.send<io::dealer::chunk>(
         m_route.front(),
         m_tag,
         std::string(chunk, size)
@@ -106,7 +106,7 @@ void
 dealer_stream_t::error(error_code code,
                        const std::string& message)
 {
-    m_driver.send<driver::error>(
+    m_driver.send<io::dealer::error>(
         m_route.front(),
         m_tag,
         static_cast<int>(code),
@@ -118,7 +118,7 @@ dealer_stream_t::error(error_code code,
 
 void
 dealer_stream_t::close() {
-    m_driver.send<driver::choke>(
+    m_driver.send<io::dealer::choke>(
         m_route.front(),
         m_tag
     );

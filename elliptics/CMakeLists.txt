@@ -15,7 +15,7 @@ IF(ELLIPTICS)
         module)
 
     TARGET_LINK_LIBRARIES(elliptics
-        cocaine-common
+        cocaine-core
         elliptics_cpp)
 
     SET_TARGET_PROPERTIES(elliptics PROPERTIES

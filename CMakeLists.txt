@@ -62,9 +62,7 @@ SET(PLUGINS
         dealer
         blastbeat
         cgroups
-        zeromq
-        server
-        logging)
+        zeromq)
 
 # IF(NOT APPLE)
 #     SET(PLUGINS ${PLUGINS} perl)

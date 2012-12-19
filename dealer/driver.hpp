@@ -23,7 +23,7 @@
 
 #include <cocaine/common.hpp>
 #include <cocaine/asio.hpp>
-#include <cocaine/io.hpp>
+#include <cocaine/channel.hpp>
 
 #include <cocaine/api/driver.hpp>
 
@@ -80,12 +80,7 @@ class dealer_t:
 
         // Dealer RPC
         
-        typedef io::channel<
-            struct dealer_tag,
-            io::policies::unique
-        > rpc_channel_t;
-
-        rpc_channel_t m_channel;
+        io::unique_channel_t m_channel;
         
         // Event loop
 
