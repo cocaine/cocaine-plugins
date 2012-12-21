@@ -23,6 +23,9 @@
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
+#include <cerrno>
+#include <cstring>
+
 #include <boost/lexical_cast.hpp>
 
 #include <libcgroup.h>
@@ -163,6 +166,23 @@ cgroups_t::spawn(const std::string& path,
     
     pid_t pid = ::fork();
 
+    if(pid < 0) {
+        char buffer[1024],
+             * message;
+
+#ifdef _GNU_SOURCE
+        message = ::strerror_r(errno, buffer, 1024);
+#else
+        ::strerror_r(errno, buffer, 1024);
+
+        // NOTE: XSI-compliant strerror_r() returns int instead of the
+        // string buffer, so complete the job manually.
+        message = buffer;
+#endif
+
+        throw cocaine::error_t("unable to fork - %s", message);
+    }
+
     if(pid == 0) {
         int rv = 0;
 
@@ -248,8 +268,6 @@ cgroups_t::spawn(const std::string& path,
 
             std::exit(EXIT_FAILURE);
         }
-    } else if(pid < 0) {
-        throw system_error_t("fork() failed");
     }
     
     return std::unique_ptr<api::handle_t>(
