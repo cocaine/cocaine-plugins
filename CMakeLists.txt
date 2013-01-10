@@ -17,10 +17,10 @@ OPTION(BLASTBEAT "Build Blastbeat Driver plugin" ON)
 OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
 OPTION(ZEROMQ "Build ZeroMQ Driver plugin" ON)
 
-IF(NOT LINUX)
-    OPTION(ELLIPTICS "Build Elliptics Storage plugin" OFF)
-ELSE()
+IF(UNIX AND NOT APPLE AND NOT CYGWIN)
     OPTION(ELLIPTICS "Build Elliptics Storage plugin" ON)
+ELSE()
+    OPTION(ELLIPTICS "Build Elliptics Storage plugin" OFF)
 ENDIF()
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
