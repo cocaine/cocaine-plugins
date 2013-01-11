@@ -3,7 +3,7 @@ IF(BINARY)
         binary.cpp)
 
     TARGET_LINK_LIBRARIES(binary
-        cocaine-common)
+        cocaine-core)
 
     SET_TARGET_PROPERTIES(binary PROPERTIES
         PREFIX ""
