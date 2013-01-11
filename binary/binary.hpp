@@ -25,10 +25,8 @@ extern "C" {
 
 	struct binary_io {
 		struct binary_chunk	chunk;
-
 		binary_write_fn		write;
-
-		void			*priv_io;
+		void				*priv_io;
 	};
 }
 
@@ -45,19 +43,20 @@ class binary_t: public api::sandbox_t {
 		binary_t(context_t& context, const std::string& name, const Json::Value& args, const std::string& spool);
 		virtual ~binary_t();
 
-		virtual void invoke(const std::string& method, api::io_t& io);
+		virtual boost::shared_ptr<api::stream_t> invoke(const std::string& method, const boost::shared_ptr<api::stream_t>& upstream);
 
-		const logging::logger_t& log() const {
+		const logging::log_t& log() const {
 			return *m_log;
 		}
 
-	private:
-		boost::shared_ptr<logging::logger_t> m_log;
-		lt_dladvise m_advice;
+		std::unique_ptr<logging::log_t> m_log;
 		process_fn_t m_process;
+		void *m_handle;
+
+	private:
+		lt_dladvise m_advice;
 		cleanup_fn_t m_cleanup;
 		lt_dlhandle m_bin;
-		void *m_handle;
 };
 
 }}

@@ -22,6 +22,8 @@
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <cocaine/api/stream.hpp>
+
 using namespace cocaine;
 using namespace cocaine::sandbox;
 
@@ -29,9 +31,7 @@ namespace fs = boost::filesystem;
 
 binary_t::binary_t(context_t &context, const std::string &name, const Json::Value &args, const std::string &spool) :
     category_type(context, name, args, spool),
-    m_log(context.log(
-        cocaine::format("app/%1%", name)
-    )),
+    m_log(new logging::log_t(context, cocaine::format("app/%1%", name))),
     m_process(NULL), m_cleanup(NULL)
 {
 	boost::filesystem::path source(spool);
@@ -94,35 +94,63 @@ binary_t::~binary_t()
 namespace {
 	void binary_write(struct binary_io *__io, const void *data, size_t size)
 	{
-        api::io_t *io = (api::io_t *)__io->priv_io;
-		io->write(data, size);
+		api::stream_t * stream = static_cast<api::stream_t*>(__io->priv_io);
+		stream->push(static_cast<const char*>(data), size);
 	}
+	
+	struct downstream_t:
+		public api::stream_t
+	{
+		downstream_t(binary_t * parent,
+			         const boost::shared_ptr<api::stream_t>& upstream):
+			m_parent(parent),
+			m_upstream(upstream)
+		{ }
+
+		virtual void push(const char * data, size_t size)
+		{
+			struct binary_io bio;
+			int err;
+
+			bio.chunk.data = data;
+			bio.chunk.size = size;
+			bio.priv_io = static_cast<void*>(m_upstream.get());
+			bio.write = binary_write;
+
+			COCAINE_LOG_INFO(m_parent->m_log, "downstream got chunk size: %llu", size);
+
+			err = m_parent->m_process(m_parent->m_handle, &bio);
+
+			if(err < 0) {
+				COCAINE_LOG_ERROR(m_parent->m_log, "process failed: %d", err);
+				m_upstream->error(invocation_error, "processing error: " + boost::lexical_cast<std::string>(err));
+			}
+
+			COCAINE_LOG_INFO(m_parent->m_log, "downstream processing done; closing upstream");
+
+			m_upstream->close();
+		}
+
+		virtual void error(error_code code, const std::string& message)
+		{
+			COCAINE_LOG_ERROR(m_parent->m_log, "downstream got err: %d, %s; closing upstream", code, message);
+			m_upstream->close();
+		}
+
+		virtual void close()
+		{
+			COCAINE_LOG_ERROR(m_parent->m_log, "downstream got close; closing upstream");
+			m_upstream->close();
+		}
+
+		binary_t * m_parent;
+		boost::shared_ptr<api::stream_t> m_upstream;
+	};
 }
 
-void binary_t::invoke(const std::string &method, api::io_t &io)
+boost::shared_ptr<api::stream_t> binary_t::invoke(const std::string &method, const boost::shared_ptr<api::stream_t>& upstream)
 {
-	struct binary_io bio;
-	int err;
-
-	while (true) {
-        std::string data = io.read(0);
-
-		if (!data.size())
-			break;
-
-		bio.chunk.data = (const char *)data.data();
-		bio.chunk.size = data.size();
-		bio.priv_io = (void *)&io;
-		bio.write = binary_write;
-
-		err = m_process(m_handle, &bio);
-		if (err < 0) {
-			COCAINE_LOG_ERROR(m_log, "process failed: %d", err);
-			throw unrecoverable_error_t("processing error: " + boost::lexical_cast<std::string>(err));
-		}
-	}
-
-	COCAINE_LOG_DEBUG(m_log, "process: method: %.*s, err: %d", (int)method.size(), method.data(), err);
+	return boost::make_shared<downstream_t>(this, upstream);
 }
 
 extern "C" {

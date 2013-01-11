@@ -139,7 +139,7 @@ dealer_t::process_events() {
 
             try {
                 m_channel.recv_multipart(tag, policy, message);
-            } catch(const std::runtime_error& e) {
+            } catch(const std::exception& e) {
                 COCAINE_LOG_ERROR(
                     m_log,
                     "received a corrupted request - %s",

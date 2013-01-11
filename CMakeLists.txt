@@ -56,7 +56,7 @@ SET(PLUGINS
         python
         #mongo
         elliptics
-        #binary
+        binary
         chrono
         fs
         dealer
