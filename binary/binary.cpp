@@ -126,9 +126,7 @@ namespace {
 				m_upstream->error(invocation_error, "processing error: " + boost::lexical_cast<std::string>(err));
 			}
 
-			COCAINE_LOG_INFO(m_parent->m_log, "downstream processing done; closing upstream");
-
-			m_upstream->close();
+			COCAINE_LOG_INFO(m_parent->m_log, "downstream processing done");
 		}
 
 		virtual void error(error_code code, const std::string& message)
@@ -139,7 +137,7 @@ namespace {
 
 		virtual void close()
 		{
-			COCAINE_LOG_ERROR(m_parent->m_log, "downstream got close; closing upstream");
+			COCAINE_LOG_INFO(m_parent->m_log, "downstream got close; closing upstream");
 			m_upstream->close();
 		}
 
