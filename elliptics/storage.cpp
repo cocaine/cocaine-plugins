@@ -27,7 +27,6 @@ using namespace cocaine;
 using namespace cocaine::logging;
 using namespace cocaine::storage;
 
-
 log_adapter_impl_t::log_adapter_impl_t(const std::shared_ptr<logging::log_t> &log):
     m_log(log)
 {
@@ -101,7 +100,7 @@ elliptics_storage_t::elliptics_storage_t(context_t& context,
                 it->c_str(),
                 nodes[*it].asInt()
             );
-        } catch(const std::runtime_error& e) {
+        } catch(const ioremap::elliptics::error& e) {
             // Do nothing. Yes. Really. We only care if no remote nodes were added at all.
         }
     }
@@ -137,7 +136,7 @@ elliptics_storage_t::read(const std::string& collection,
 
     try {
         blob = m_session.read_data_wait(id(collection, key), 0, 0);
-    } catch(const std::runtime_error& e) {
+    } catch(const ioremap::elliptics::error& e) {
         throw storage_error_t(e.what());
     }
 
@@ -214,7 +213,7 @@ elliptics_storage_t::write(const std::string& collection,
                 ts
             );
         }
-    } catch(const std::runtime_error& e) {
+    } catch(const ioremap::elliptics::error& e) {
         throw storage_error_t(e.what());
     }
 }
@@ -226,7 +225,7 @@ elliptics_storage_t::list(const std::string& collection) {
     
     try {
         blob = m_session.read_data_wait(id("system", "list:" + collection), 0, 0);
-    } catch(const std::runtime_error& e) {
+    } catch(const ioremap::elliptics::error& e) {
         return result;
     }
 
@@ -297,7 +296,7 @@ elliptics_storage_t::remove(const std::string& collection,
 
         // Remove the actual key.
         m_session.remove(id(collection, key));
-    } catch(const std::runtime_error& e) {
+    } catch(const ioremap::elliptics::error& e) {
         throw storage_error_t(e.what());
     }
 }
