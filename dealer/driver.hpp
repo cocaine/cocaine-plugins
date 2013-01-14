@@ -55,7 +55,7 @@ class dealer_t:
         {
             on_check(m_checker, ev::PREPARE);
            
-            return m_channel.send(route, ZMQ_SNDMORE) &&
+            return m_channel.send(io::protect(route), ZMQ_SNDMORE) &&
                    m_channel.send<Event>(std::forward<Args>(args)...);
         }
 
