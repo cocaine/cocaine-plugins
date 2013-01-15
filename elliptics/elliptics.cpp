@@ -130,19 +130,19 @@ objects::value_type elliptics_storage_t::get(const std::string& ns,
 
     // Fetch the metadata first.
     object.meta = exists(ns, key);
-    
-    std::string blob;
+
+    ioremap::elliptics::data_pointer blob;
 
     try {
-        blob = m_session.read_data_wait(id(ns, key), 0, 0);
-    } catch(const std::runtime_error& e) {
+	blob = m_session.read_data(id(ns, key), 0, 0)->file();
+	object.blob = objects::data_type(
+	    blob.data(),
+	    blob.size()
+	);
+    } catch(const std::exception& e) {
         throw storage_error_t(e.what());
     }
 
-    object.blob = objects::data_type(
-        blob.data(),
-        blob.size()
-    );
 
     return object;
 }
@@ -165,7 +165,7 @@ void elliptics_storage_t::put(const std::string& ns,
             dnet_id
         );
 
-        m_session.write_data_wait(
+        m_session.write_data(
             dnet_id,
             Json::FastWriter().write(object.meta),
             0
@@ -193,7 +193,7 @@ void elliptics_storage_t::put(const std::string& ns,
             dnet_id
         );
 
-        m_session.write_data_wait(
+        m_session.write_data(
             dnet_id,
             blob,
             0
@@ -229,7 +229,7 @@ void elliptics_storage_t::put(const std::string& ns,
             dnet_id
         );
 
-        m_session.write_data_wait(
+        m_session.write_data(
             dnet_id,
             blob,
             0
@@ -249,22 +249,22 @@ void elliptics_storage_t::put(const std::string& ns,
 objects::meta_type elliptics_storage_t::exists(const std::string& ns,
                                                const std::string& key)
 {
-    std::string meta;
+    ioremap::elliptics::data_pointer meta;
 
     try {
-        meta = m_session.read_data_wait(
+	meta = m_session.read_data(
             "meta:" + id(ns, key),
             0,
             0
-        );
-    } catch(const std::runtime_error& e) {
+	)->file();
+    } catch(const std::exception& e) {
         throw storage_error_t(e.what());
     }
 
     Json::Reader reader;
     objects::meta_type object;
 
-    if(!reader.parse(meta, object)) {
+    if(!reader.parse(meta.to_string(), object)) {
         throw storage_error_t("the specified object is corrupted");
     }
 
@@ -273,14 +273,14 @@ objects::meta_type elliptics_storage_t::exists(const std::string& ns,
 
 std::vector<std::string> elliptics_storage_t::list(const std::string& ns) {
     std::vector<std::string> result;
-    std::string blob;
+    ioremap::elliptics::data_pointer blob;
     
     try {
-        blob = m_session.read_data_wait(
+	blob = m_session.read_data(
             "list:" + ns,
             0,
             0
-        );
+	)->file();
     } catch(const std::runtime_error& e) {
         return result;
     }
@@ -288,7 +288,7 @@ std::vector<std::string> elliptics_storage_t::list(const std::string& ns) {
     msgpack::unpacked unpacked;
 
     try {
-        msgpack::unpack(&unpacked, blob.data(), blob.size());
+	msgpack::unpack(&unpacked, blob.data<char>(), blob.size());
         unpacked.get().convert(&result);
     } catch(const msgpack::unpack_error& e) {
         throw storage_error_t("the namespace list object is corrupted");
@@ -335,7 +335,7 @@ void elliptics_storage_t::remove(const std::string& ns,
             dnet_id
         );
 
-        m_session.write_data_wait(
+        m_session.write_data(
             dnet_id,
             blob,
             0
