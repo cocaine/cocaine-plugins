@@ -246,24 +246,24 @@ cgroups_t::spawn(const std::string& path,
         rv = ::execv(argv[0], argv);
 
         if(rv != 0) {
-            char buffer[1024];
+            char buffer[1024],
+                 * message;
 
 #ifdef _GNU_SOURCE
-            char * message;
             message = ::strerror_r(errno, buffer, 1024);
 #else
             ::strerror_r(errno, buffer, 1024);
+
+            // NOTE: XSI-compliant strerror_r() returns int instead of the
+            // string buffer, so complete the job manually.
+            message = buffer;
 #endif
 
             COCAINE_LOG_ERROR(
                 m_log,
                 "unable to execute '%s' - %s",
                 path,
-#ifdef _GNU_SOURCE
                 message
-#else
-                buffer
-#endif
             );
 
             std::exit(EXIT_FAILURE);
