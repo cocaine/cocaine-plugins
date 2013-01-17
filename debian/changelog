@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.0-b5) lucid; urgency=low
+
+  * Various cool stuff.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 15 Jan 2013 21:57:46 +0400
+
 cocaine-plugins (0.10.0) lucid; urgency=low
 
   * New Python API.
