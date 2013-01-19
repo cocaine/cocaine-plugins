@@ -56,7 +56,7 @@ class dealer_t:
             on_check(m_checker, ev::PREPARE);
            
             return m_channel.send(io::protect(route), ZMQ_SNDMORE) &&
-                   m_channel.send<Event>(std::forward<Args>(args)...);
+                   m_channel.send(m_codec.pack<Event>(std::forward<Args>(args)...));
         }
 
     private:
@@ -86,6 +86,10 @@ class dealer_t:
 
         ev::io m_watcher;
         ev::prepare m_checker;
+
+        // Message serializer
+
+        io::codec_t m_codec;
 };
 
 }}
