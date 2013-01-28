@@ -99,17 +99,22 @@ dealer_t::on_check(ev::prepare&, int) {
 void
 dealer_t::process_events() {
     int counter = defaults::io_bulk_size;
-    
-    do {
-        zmq::message_t message;
-        route_t route;
+
+    // Message origin.
+    route_t route;
+
+    // Temporary message buffer.
+    zmq::message_t message;
+
+    while(counter--) {
+        route.clear();
 
         do {
             {
                 io::scoped_option<
                     io::options::receive_timeout
                 > option(m_channel, 0);
-                
+
                 if(!m_channel.recv(message)) {
                     return;
                 }
@@ -146,7 +151,7 @@ dealer_t::process_events() {
                     m_event,
                     e.what()
                 );
-        
+
                 m_channel.drop();
 
                 return;
@@ -158,7 +163,7 @@ dealer_t::process_events() {
                 m_event,
                 tag
             );
-            
+
             boost::shared_ptr<dealer_stream_t> stream(
                 boost::make_shared<dealer_stream_t>(
                     *this,
@@ -176,6 +181,6 @@ dealer_t::process_events() {
                 stream->error(resource_error, e.what());
             }
         } while(m_channel.more());
-    } while(--counter);
+    }
 }
 

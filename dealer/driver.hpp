@@ -23,7 +23,8 @@
 
 #include <cocaine/common.hpp>
 #include <cocaine/asio.hpp>
-#include <cocaine/channel.hpp>
+#include <cocaine/io.hpp>
+#include <cocaine/messaging.hpp>
 
 #include <cocaine/api/driver.hpp>
 
@@ -55,8 +56,8 @@ class dealer_t:
         {
             on_check(m_checker, ev::PREPARE);
            
-            return m_channel.send(io::protect(route), ZMQ_SNDMORE) &&
-                   m_channel.send(m_codec.pack<Event>(std::forward<Args>(args)...));
+            return m_channel.send(route, ZMQ_SNDMORE) &&
+                   m_channel.send(io::codec::pack<Event>(std::forward<Args>(args)...));
         }
 
     private:
@@ -80,16 +81,12 @@ class dealer_t:
 
         // Dealer RPC
         
-        io::unique_channel_t m_channel;
+        io::socket_t m_channel;
         
         // Event loop
 
         ev::io m_watcher;
         ev::prepare m_checker;
-
-        // Message serializer
-
-        io::codec_t m_codec;
 };
 
 }}

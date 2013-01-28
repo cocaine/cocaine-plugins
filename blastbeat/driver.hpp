@@ -57,8 +57,8 @@ class blastbeat_t:
             on_check(m_checker, ev::PREPARE);
 
             return m_socket.send_multipart(
-                io::protect(sid),
-                io::protect(type),
+                sid,
+                type,
                 message
             );
         }
@@ -101,9 +101,7 @@ class blastbeat_t:
 
         // I/O
 
-        io::socket<
-            io::policies::unique
-        > m_socket;
+        io::socket_t m_socket;
 
         // Event loop
 

@@ -118,7 +118,7 @@ blastbeat_stream_t::push(const char * chunk,
         body += (header % "Connection" % "close").str();
         body += "\r\n";
 
-        m_driver.send(m_sid, "headers", io::protect(body));
+        m_driver.send(m_sid, "headers", body);
 
         m_body = true;
     } else {
@@ -141,12 +141,12 @@ blastbeat_stream_t::error(error_code,
     std::string empty;
     
     // TODO: Proper error reporting.
-    m_driver.send(m_sid, "retry", io::protect(empty)); 
+    m_driver.send(m_sid, "retry", empty); 
 }
 
 void
 blastbeat_stream_t::close() {
     std::string empty;
 
-    m_driver.send(m_sid, "end", io::protect(empty)); 
+    m_driver.send(m_sid, "end", empty); 
 }

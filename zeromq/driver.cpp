@@ -96,9 +96,14 @@ void
 zmq_t::process_events() {
     int counter = defaults::io_bulk_size;
 
-    do {
-        zmq::message_t message;
-        route_t route;
+    // Message origin.
+    route_t route;
+
+    // Temporary message buffer.
+    zmq::message_t message;
+
+    while(counter--) {
+        route.clear();
 
         do {
             {
@@ -151,6 +156,6 @@ zmq_t::process_events() {
                 message.size()
             );
         } while(m_socket.more());
-    } while(--counter);
+    }
 }
 

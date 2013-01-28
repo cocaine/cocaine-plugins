@@ -112,13 +112,15 @@ namespace {
 void
 blastbeat_t::process_events() {
     int counter = defaults::io_bulk_size;
-    
-    std::string sid,
-                type;
 
+    // RPC payload. 
+    std::string sid;
+    std::string type;
+
+    // Temporary message buffer.
     zmq::message_t message;
    
-    do {
+    while(counter--) {
         {
             io::scoped_option<
                 io::options::receive_timeout
@@ -126,7 +128,7 @@ blastbeat_t::process_events() {
             
             // Try to read the next RPC command from the bus in a
             // non-blocking fashion. If it fails, break the loop.
-            if(!m_socket.recv_multipart(io::protect(sid), io::protect(type), message)) {
+            if(!m_socket.recv_multipart(sid, type, message)) {
                 return;
             }
         }
@@ -155,13 +157,14 @@ blastbeat_t::process_events() {
                 type
             );
         }
-    } while(--counter);
+    }
 }
 
 void
 blastbeat_t::on_ping() {
     std::string empty;
-    send("", "pong", io::protect(empty));
+
+    send("", "pong", empty);
 }
 
 void

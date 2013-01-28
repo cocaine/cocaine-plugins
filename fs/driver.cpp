@@ -27,6 +27,8 @@
 #include <cocaine/api/event.hpp>
 #include <cocaine/api/stream.hpp>
 
+#include <msgpack.hpp>
+
 using namespace cocaine;
 using namespace cocaine::driver;
 using namespace cocaine::logging;
