@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "storage.hpp"
@@ -151,7 +151,7 @@ elliptics_storage_t::write(const std::string& collection,
     struct dnet_id dnet_id;
     struct timespec ts = { 0, 0 };
 
-    // NOTE: Elliptcs does not initialize the contents of the keys. 
+    // NOTE: Elliptcs does not initialize the contents of the keys.
     memset(&dnet_id, 0, sizeof(struct dnet_id));
 
     COCAINE_LOG_DEBUG(
@@ -160,7 +160,7 @@ elliptics_storage_t::write(const std::string& collection,
         key,
         collection
     );
-    
+
     try {
         // Generate the key.
         m_session.transform(
@@ -183,14 +183,14 @@ elliptics_storage_t::write(const std::string& collection,
         std::vector<std::string> keylist(
             list(collection)
         );
-        
+
         if(std::find(keylist.begin(), keylist.end(), key) == keylist.end()) {
             msgpack::sbuffer buffer;
             std::string object;
-            
+
             keylist.push_back(key);
             msgpack::pack(&buffer, keylist);
-            
+
             object.assign(
                 buffer.data(),
                 buffer.size()
@@ -222,7 +222,7 @@ std::vector<std::string>
 elliptics_storage_t::list(const std::string& collection) {
     std::vector<std::string> result;
     std::string blob;
-    
+
     try {
         blob = m_session.read_data(id("system", "list:" + collection), 0, 0)->file().to_string();
     } catch(const ioremap::elliptics::error& e) {
@@ -249,17 +249,17 @@ elliptics_storage_t::remove(const std::string& collection,
 {
     struct dnet_id dnet_id;
     struct timespec ts = { 0, 0 };
-    
-    // NOTE: Elliptcs does not initialize the contents of the keys. 
+
+    // NOTE: Elliptcs does not initialize the contents of the keys.
     memset(&dnet_id, 0, sizeof(struct dnet_id));
-    
+
     COCAINE_LOG_DEBUG(
         m_log,
         "removing the '%s' object, collection: '%s'",
         key,
         collection
     );
-    
+
     try {
         std::vector<std::string> keylist(list(collection)),
                                  updated;
