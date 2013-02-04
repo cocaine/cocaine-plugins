@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
 Build-Depends: cmake, cdbs, debhelper (>= 7.0.13), libzmq-dev (>= 2.2.0), libev-dev, libmsgpack-dev,
  libboost-dev, libboost-filesystem-dev, libboost-thread-dev, libltdl-dev, python-dev, libperl-dev,
- elliptics-dev (>= 2.20), libcgroup-dev, libcocaine-dev (>= 0.10.0)
+ elliptics-dev (>= 2.21), libcgroup-dev, libcocaine-dev (>= 0.10.0)
 #libmongoclient-dev | mongodb-dev
 Standards-Version: 3.9.1
 Vcs-Git: git://github.com/cocaine/cocaine-plugins.git
@@ -54,13 +54,11 @@ Description: Cocaine - Python Sandbox
 # Description: Cocaine - Perl Sandbox
 #  Perl scripting support for Cocaine.
 
-# NOTE: Doesn't support the new API yet.
-# 
-# Package: libcocaine-plugin-binary
-# Architecture: any
-# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
-# Description: Cocaine - Binary Sandbox
-#  Binary C/C++ support for Cocaine.
+Package: libcocaine-plugin-binary
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
+Description: Cocaine - Binary Sandbox
+ Binary C/C++ support for Cocaine.
 
 # NOTE: Doesn't support the new API yet.
 # 
@@ -76,7 +74,7 @@ Description: Cocaine - Python Sandbox
 Package: libcocaine-plugin-elliptics
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10),
- elliptics-client (>= 2.19)
+ elliptics-client (>= 2.21)
 Provides: cocaine-plugin-elliptics
 Replaces: cocaine-plugin-elliptics
 Description: Cocaine - Elliptics Storage
