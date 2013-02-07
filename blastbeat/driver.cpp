@@ -44,8 +44,8 @@ blastbeat_t::blastbeat_t(context_t& context,
     m_event(args.get("emit", "").asString()),
     m_endpoint(args.get("endpoint", "").asString()),
     m_socket(context, ZMQ_DEALER),
-    m_watcher(engine.loop()),
-    m_checker(engine.loop())
+    m_watcher(engine.service().loop()),
+    m_checker(engine.service().loop())
 {
     try {
         m_socket.setsockopt(
@@ -98,7 +98,7 @@ blastbeat_t::on_event(ev::io&, int) {
 
 void
 blastbeat_t::on_check(ev::prepare&, int) {
-    engine().loop().feed_fd_event(m_socket.fd(), ev::READ);
+    engine().service().loop().feed_fd_event(m_socket.fd(), ev::READ);
 }
 
 namespace {

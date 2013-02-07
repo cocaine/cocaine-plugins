@@ -40,7 +40,7 @@ recurring_timer_t::recurring_timer_t(context_t& context,
     m_log(new log_t(context, cocaine::format("app/%s", name))),
     m_event(args["emit"].asString()),
     m_interval(args.get("interval", 0.0f).asInt() / 1000.0f),
-    m_watcher(engine.loop())
+    m_watcher(engine.service().loop())
 {
     if(m_interval <= 0.0f) {
         throw configuration_error_t("no interval has been specified");

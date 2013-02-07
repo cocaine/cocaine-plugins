@@ -41,8 +41,8 @@ zmq_t::zmq_t(context_t& context,
     m_log(new log_t(context, cocaine::format("app/%s", name))),
     m_event(args["emit"].asString()),
     m_socket(context, ZMQ_ROUTER),
-    m_watcher(engine.loop()),
-    m_checker(engine.loop())
+    m_watcher(engine.service().loop()),
+    m_checker(engine.service().loop())
 {
     std::string endpoint(args["endpoint"].asString());
 
@@ -89,7 +89,7 @@ zmq_t::on_event(ev::io&, int) {
 
 void
 zmq_t::on_check(ev::prepare&, int) {
-    engine().loop().feed_fd_event(m_socket.fd(), ev::READ);
+    engine().service().loop().feed_fd_event(m_socket.fd(), ev::READ);
 }
 
 void

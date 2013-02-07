@@ -42,7 +42,7 @@ fs_t::fs_t(context_t& context,
     m_log(new log_t(context, cocaine::format("app/%s", name))),
     m_event(args.get("emit", "").asString()),
     m_path(args.get("path", "").asString()),
-    m_watcher(engine.loop())
+    m_watcher(engine.service().loop())
 {
     if(m_path.empty()) {
         throw configuration_error_t("no path has been specified");

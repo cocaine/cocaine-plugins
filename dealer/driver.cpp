@@ -44,8 +44,8 @@ dealer_t::dealer_t(context_t& context,
         cocaine::format("%s/%s", m_context.config.network.hostname, name)
     ),
     m_channel(context, ZMQ_ROUTER, m_identity),
-    m_watcher(engine.loop()),
-    m_checker(engine.loop())
+    m_watcher(engine.service().loop()),
+    m_checker(engine.service().loop())
 {
     std::string endpoint(args["endpoint"].asString());
 
@@ -93,7 +93,7 @@ dealer_t::on_event(ev::io&, int) {
 
 void
 dealer_t::on_check(ev::prepare&, int) {
-    engine().loop().feed_fd_event(m_channel.fd(), ev::READ);
+    engine().service().loop().feed_fd_event(m_channel.fd(), ev::READ);
 }
 
 void
