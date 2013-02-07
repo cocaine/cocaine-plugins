@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "driver.hpp"
@@ -174,7 +174,7 @@ dealer_t::process_events() {
 
             try {
                 engine().enqueue(api::event_t(m_event, policy), stream)->push(
-                    static_cast<const char*>(message.data()), 
+                    static_cast<const char*>(message.data()),
                     message.size()
                 );
             } catch(const cocaine::error_t& e) {

@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "isolate.hpp"
@@ -79,12 +79,12 @@ cgroups_t::cgroups_t(context_t& context,
             cgroup_strerror(rv)
         );
     }
-    
+
     m_cgroup = cgroup_new_cgroup(name.c_str());
 
     // TODO: Check if it changes anything.
     cgroup_set_uid_gid(m_cgroup, getuid(), getgid(), getuid(), getgid());
-    
+
     Json::Value::Members controllers(args.getMemberNames());
 
     for(Json::Value::Members::iterator c = controllers.begin();
@@ -96,9 +96,9 @@ cgroups_t::cgroups_t(context_t& context,
         if(!cfg.isObject() || cfg.empty()) {
             continue;
         }
-        
+
         cgroup_controller * ctl = cgroup_add_controller(m_cgroup, c->c_str());
-        
+
         Json::Value::Members parameters(cfg.getMemberNames());
 
         for(Json::Value::Members::iterator p = parameters.begin();
@@ -123,10 +123,10 @@ cgroups_t::cgroups_t(context_t& context,
                     continue;
                 }
             }
-            
+
             COCAINE_LOG_DEBUG(
                 m_log,
-                "setting cgroup controller '%s' parameter '%s' to '%s'", 
+                "setting cgroup controller '%s' parameter '%s' to '%s'",
                 *c,
                 *p,
                 boost::lexical_cast<std::string>(cfg[*p])
@@ -146,7 +146,7 @@ cgroups_t::~cgroups_t() {
     if((rv = cgroup_delete_cgroup(m_cgroup, false)) != 0) {
         COCAINE_LOG_ERROR(
             m_log,
-            "unable to delete the cgroup - %s", 
+            "unable to delete the cgroup - %s",
             cgroup_strerror(rv)
         );
     }
@@ -163,7 +163,7 @@ cgroups_t::spawn(const std::string& path,
         std::string,
         std::string
     > arg_map_t;
-    
+
     pid_t pid = ::fork();
 
     if(pid < 0) {
@@ -213,11 +213,11 @@ cgroups_t::spawn(const std::string& path,
 
         it = args.begin();
         n = 1;
-        
+
         while(it != args.end()) {
             argv[n++] = ::strdup(it->first.c_str());
-            argv[n++] = ::strdup(it->second.c_str());   
-            
+            argv[n++] = ::strdup(it->second.c_str());
+
             ++it;
         }
 
@@ -233,9 +233,9 @@ cgroups_t::spawn(const std::string& path,
 
         while(it != environment.end()) {
             format % it->first % it->second;
-            
+
             envp[n++] = ::strdup(format.str().c_str());
-            
+
             format.clear();
             ++it;
         }
@@ -269,7 +269,7 @@ cgroups_t::spawn(const std::string& path,
             std::exit(EXIT_FAILURE);
         }
     }
-    
+
     return std::unique_ptr<api::handle_t>(
         new process_handle_t(pid)
     );

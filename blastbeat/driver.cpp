@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "driver.hpp"
@@ -113,26 +113,26 @@ void
 blastbeat_t::process_events() {
     int counter = defaults::io_bulk_size;
 
-    // RPC payload. 
+    // RPC payload.
     std::string sid;
     std::string type;
 
     // Temporary message buffer.
     zmq::message_t message;
-   
+
     while(counter--) {
         {
             io::scoped_option<
                 io::options::receive_timeout
             > option(m_socket, 0);
-            
+
             // Try to read the next RPC command from the bus in a
             // non-blocking fashion. If it fails, break the loop.
             if(!m_socket.recv_multipart(sid, type, message)) {
                 return;
             }
         }
-     
+
         COCAINE_LOG_DEBUG(
             m_log,
             "received a blastbeat request, type: '%s', body size: %d bytes",
@@ -244,7 +244,7 @@ blastbeat_t::on_uwsgi(const std::string& sid,
 }
 
 void
-blastbeat_t::on_body(const std::string& sid, 
+blastbeat_t::on_body(const std::string& sid,
                      zmq::message_t& body)
 {
     stream_map_t::iterator it(

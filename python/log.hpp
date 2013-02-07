@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef COCAINE_PYTHON_SANDBOX_LOG_HPP
@@ -65,7 +65,7 @@ struct log_t {
           PyObject * args);
 
     // WSGI requirements.
-    
+
     static
     PyObject*
     write(log_t * self,

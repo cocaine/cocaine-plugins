@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "stream.hpp"
@@ -50,7 +50,7 @@ namespace cocaine { namespace io {
         unpack(const msgpack::object& packed,
                cocaine_response_t& object)
         {
-            if (packed.type != msgpack::type::MAP) { 
+            if (packed.type != msgpack::type::MAP) {
                 throw msgpack::type_error();
             }
 
@@ -90,7 +90,7 @@ blastbeat_stream_t::push(const char * chunk,
 
         try {
             msgpack::unpack(&unpacked, chunk, size);
-            
+
             io::type_traits<cocaine_response_t>::unpack(
                 unpacked.get(),
                 response
@@ -103,7 +103,7 @@ blastbeat_stream_t::push(const char * chunk,
 
         // TODO: Use proper HTTP version.
         std::string body = cocaine::format("HTTP/1.0 %d\r\n", response.code);
-       
+
         boost::format header("%s: %s\r\n");
 
         for(cocaine_response_t::header_vector_t::const_iterator it = response.headers.begin();
@@ -130,7 +130,7 @@ blastbeat_stream_t::push(const char * chunk,
             size
         );
 
-        m_driver.send(m_sid, "body", message); 
+        m_driver.send(m_sid, "body", message);
     }
 }
 
@@ -139,14 +139,14 @@ blastbeat_stream_t::error(error_code,
                           const std::string&)
 {
     std::string empty;
-    
+
     // TODO: Proper error reporting.
-    m_driver.send(m_sid, "retry", empty); 
+    m_driver.send(m_sid, "retry", empty);
 }
 
 void
 blastbeat_stream_t::close() {
     std::string empty;
 
-    m_driver.send(m_sid, "end", empty); 
+    m_driver.send(m_sid, "end", empty);
 }

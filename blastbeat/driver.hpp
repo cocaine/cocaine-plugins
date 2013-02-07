@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef COCAINE_BLASTBEAT_DRIVER_HPP
@@ -66,30 +66,30 @@ class blastbeat_t:
     private:
         void
         on_event(ev::io&, int);
-        
+
         void
         on_check(ev::prepare&, int);
 
         void
         process_events();
-        
+
         void
         on_ping();
-        
+
         void
         on_spawn();
-        
+
         void
         on_uwsgi(const std::string& sid,
                  zmq::message_t& message);
-        
+
         void
-        on_body(const std::string& sid, 
+        on_body(const std::string& sid,
                 zmq::message_t& message);
 
         void
-        on_end(const std::string& sid); 
-    
+        on_end(const std::string& sid);
+
     protected:
         context_t& m_context;
         std::unique_ptr<logging::log_t> m_log;
@@ -105,9 +105,9 @@ class blastbeat_t:
 
         // Event loop
 
-        ev::io m_watcher; 
+        ev::io m_watcher;
         ev::prepare m_checker;
-        
+
         // Session tracking
 
         typedef boost::unordered_map<

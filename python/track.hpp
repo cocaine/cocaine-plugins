@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef COCAINE_HELPERS_TRACK_HPP
@@ -25,7 +25,7 @@
 
 namespace cocaine { namespace helpers {
 
-template<typename T, void (*D)(T)> 
+template<typename T, void (*D)(T)>
 struct track_t {
     public:
         track_t(T object):
@@ -48,7 +48,7 @@ struct track_t {
             destroy();
             m_object = other.release();
             return *this;
-        } 
+        }
 
         T
         operator*() {

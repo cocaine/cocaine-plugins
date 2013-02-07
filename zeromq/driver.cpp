@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "driver.hpp"
@@ -87,7 +87,7 @@ zmq_t::on_event(ev::io&, int) {
     }
 }
 
-void 
+void
 zmq_t::on_check(ev::prepare&, int) {
     engine().loop().feed_fd_event(m_socket.fd(), ev::READ);
 }
@@ -110,7 +110,7 @@ zmq_t::process_events() {
                 io::scoped_option<
                     io::options::receive_timeout
                 > option(m_socket, 0);
-                
+
                 if(!m_socket.recv(message)) {
                     return;
                 }
@@ -147,7 +147,7 @@ zmq_t::process_events() {
         } catch(const cocaine::error_t& e) {
             upstream->error(resource_error, e.what());
         }
-        
+
         do {
             m_socket.recv(message);
 

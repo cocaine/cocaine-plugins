@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef COCAINE_BLASTBEAT_STREAM_HPP
@@ -37,22 +37,22 @@ struct blastbeat_stream_t:
     void
     push(const char * chunk,
          size_t size);
-    
+
     virtual
     void
     error(error_code code,
           const std::string& message);
-    
+
     virtual
     void
     close();
 
 private:
     blastbeat_t& m_driver;
-    
+
     // Blastbeat session ID for this stream.
     const std::string m_sid;
-    
+
     // Indicates that headers are already away.
     bool m_body;
 };

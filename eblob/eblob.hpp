@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef COCAINE_EBLOB_STORAGE_HPP
@@ -37,7 +37,7 @@ class eblob_collector_t:
         void complete(uint64_t, uint64_t);
 
     public:
-        inline Json::Value seal() { 
+        inline Json::Value seal() {
             return m_root;
         }
 
@@ -84,10 +84,10 @@ class eblob_storage_t:
         const boost::filesystem::path m_storage_path;
 
         typedef boost::ptr_unordered_map<
-            const std::string, 
+            const std::string,
             zbr::eblob
         > eblob_map_t;
-        
+
         eblob_map_t m_eblobs;
 
         zbr::eblob_logger m_logger;

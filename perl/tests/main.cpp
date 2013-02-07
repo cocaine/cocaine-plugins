@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
  boost::mutex::scoped_lock lock(mutex);
  boost::xtime t;
  boost::xtime_get(&t, boost::TIME_UTC);
- 
+
  t.nsec += 10000000;
  condition.timed_wait(lock, t);
  */

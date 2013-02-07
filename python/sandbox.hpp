@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef COCAINE_PYTHON_SANDBOX_HPP
@@ -68,10 +68,10 @@ class python_t:
                  const std::string& name,
                  const Json::Value& args,
                  const std::string& spool);
-        
+
         virtual
         ~python_t();
-        
+
         virtual
         boost::shared_ptr<api::stream_t>
         invoke(const std::string& method,
@@ -99,7 +99,7 @@ class python_t:
 
         // Main event source.
         std::unique_ptr<event_source_t> m_emitter;
-        
+
         // Python state objects.
         PyObject * m_module;
         PyThreadState * m_thread_state;

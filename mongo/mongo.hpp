@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef COCAINE_MONGO_STORAGE_HPP
@@ -45,8 +45,8 @@ class mongo_storage_t:
 
         virtual
         void
-        write(const std::string& collection, 
-              const std::string& key, 
+        write(const std::string& collection,
+              const std::string& key,
               const std::string& blob);
 
         virtual
@@ -57,7 +57,7 @@ class mongo_storage_t:
         void
         remove(const std::string& collection,
                const std::string& key);
-        
+
     private:
         std::string
         resolve(const std::string& collection) const {
@@ -66,7 +66,7 @@ class mongo_storage_t:
 
     private:
         boost::shared_ptr<logging::logger_t> m_log;
-        
+
         const mongo::ConnectionString m_uri;
 };
 

@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "event_source.hpp"
@@ -76,7 +76,7 @@ event_source_t::invoke(const std::string& event,
     {
         // NOTE: We can safely drop result here, as it's not needed.
         tracked_object_t result = PyObject_Call(*it, args, kwargs);
-    
+
         if(PyErr_Occurred()) {
             throw cocaine::error_t(exception());
         }
