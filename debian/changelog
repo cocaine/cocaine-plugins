@@ -1,3 +1,9 @@
+cocaine-plugins (0.9.6) lucid; urgency=low
+
+  * Experimental support for Python virtualenv bundles.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 08 Feb 2013 19:22:45 +0400
+
 cocaine-plugins (0.9.5) unstable; urgency=low
 
   * Use correct exception types in catch methods

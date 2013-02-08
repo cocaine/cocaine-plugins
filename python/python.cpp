@@ -34,11 +34,15 @@
 using namespace cocaine;
 using namespace cocaine::engine;
 
+namespace fs = boost::filesystem;
+
 static PyMethodDef context_module_methods[] = {
     { "manifest", &python_t::manifest, METH_NOARGS, 
         "Get the application's manifest" },
     { NULL, NULL, 0, NULL }
 };
+
+static char python_home[255];
 
 python_t::python_t(context_t& context, const manifest_t& manifest):
     category_type(context, manifest),
@@ -51,36 +55,92 @@ python_t::python_t(context_t& context, const manifest_t& manifest):
     m_python_manifest(NULL),
     m_thread_state(NULL)
 {
-    Py_InitializeEx(0);
-    PyEval_InitThreads();
-
-    // Initializing types.
-    PyType_Ready(&log_object_type);
-    PyType_Ready(&python_io_object_type);
-
     Json::Value args(manifest.root["args"]);
 
     if(!args.isObject()) {
         throw configuration_error_t("malformed manifest");
     }
     
-    boost::filesystem::path source(manifest.path);
+    fs::path source(manifest.path);
    
-    // NOTE: Means it's a module.
-    if(boost::filesystem::is_directory(source)) {
-        source /= "__init__.py";
+    if(args["bundle"].asBool()) {
+        std::memset(python_home, 0, sizeof(python_home));
+        std::memcpy(python_home, source.string().c_str(), source.string().size());
+        Py_SetPythonHome(python_home);
     }
 
-    log().debug("loading the app code from %s", source.string().c_str());
+    Py_InitializeEx(0);
+    PyEval_InitThreads();
+
+    PyType_Ready(&log_object_type);
+    PyType_Ready(&python_io_object_type);
     
-    boost::filesystem::ifstream input(source);
+    // Context access module
+
+    m_python_manifest = wrap(args);
+
+    PyObject * context_module = Py_InitModule(
+        "__context__",
+        context_module_methods
+    );
+
+    Py_INCREF(&log_object_type);
+
+    PyModule_AddObject(
+        context_module,
+        "Log",
+        reinterpret_cast<PyObject*>(&log_object_type)
+    );
+
+    // Sandbox access object
+
+    PyObject * builtins_module = PyEval_GetBuiltins();
+
+    tracked_object_t sandbox(
+        PyCObject_FromVoidPtr(this, NULL)
+    );
+
+    PyDict_SetItemString(
+        builtins_module,
+        "__sandbox__",
+        sandbox
+    );
     
-    if(!input) {
-        throw configuration_error_t("unable to open " + source.string());
+    if(args["bundle"].asBool()) {
+        load_bundle(manifest);
+    } else {
+        load_module(manifest);
     }
 
+    m_thread_state = PyEval_SaveThread();
+}
+
+void
+python_t::load_bundle(const manifest_t& manifest) {
+    const std::string module = manifest.root["args"]["module"].asString();
+   
+    if(module.empty()) {
+        throw configuration_error_t("the bundle module is not specified");
+    }
+
+    log().debug(
+        "loading the app bundle from the '%s' module",
+        module.c_str()
+    );
+    
+    // Try to import the specified module.
+    m_python_module = PyImport_ImportModule(module.c_str());
+
+    if(PyErr_Occurred()) {
+        throw unrecoverable_error_t(exception());
+    }
+}
+
+void
+python_t::load_module(const manifest_t& manifest) {
+    fs::path source = fs::path(manifest.path) / "__init__.py";
+    
     // System paths
-    // ------------
 
     static char key[] = "path";
 
@@ -99,27 +159,16 @@ python_t::python_t(context_t& context, const manifest_t& manifest):
     );
 
     PyList_Insert(syspaths, 0, path);
+   
+    // Code evaluation
 
-    // Context access module
-    // ---------------------
-
-    m_python_manifest = wrap(args);
-
-    PyObject * context_module = Py_InitModule(
-        "__context__",
-        context_module_methods
-    );
-
-    Py_INCREF(&log_object_type);
-
-    PyModule_AddObject(
-        context_module,
-        "Log",
-        reinterpret_cast<PyObject*>(&log_object_type)
-    );
-
-    // App module
-    // ----------
+    log().debug("loading the app code from %s", source.string().c_str());
+    
+    boost::filesystem::ifstream input(source);
+    
+    if(!input) {
+        throw configuration_error_t("unable to open " + source.string());
+    }
 
     m_python_module = Py_InitModule(
         manifest.name.c_str(),
@@ -127,16 +176,6 @@ python_t::python_t(context_t& context, const manifest_t& manifest):
     );
 
     PyObject * builtins = PyEval_GetBuiltins();
-
-    tracked_object_t sandbox(
-        PyCObject_FromVoidPtr(this, NULL)
-    );
-
-    PyDict_SetItemString(
-        builtins,
-        "__sandbox__",
-        sandbox
-    );
 
     Py_INCREF(builtins);
     
@@ -152,10 +191,8 @@ python_t::python_t(context_t& context, const manifest_t& manifest):
         source.string().c_str()
     );
 
-    // Code evaluation
-    // ---------------
-
     std::stringstream stream;
+    
     stream << input.rdbuf();
 
     tracked_object_t bytecode(
@@ -185,8 +222,6 @@ python_t::python_t(context_t& context, const manifest_t& manifest):
     if(PyErr_Occurred()) {
         throw unrecoverable_error_t(exception());
     }
-
-    m_thread_state = PyEval_SaveThread();
 }
 
 python_t::~python_t() {

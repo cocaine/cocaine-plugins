@@ -120,6 +120,10 @@ class python_t:
         static std::string exception();
 
     private:
+        void load_bundle(const manifest_t& manifest);
+        void load_module(const manifest_t& manifest);
+
+    private:
         boost::shared_ptr<logging::logger_t> m_log;
         
         PyObject * m_python_module;
