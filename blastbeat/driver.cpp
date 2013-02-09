@@ -25,6 +25,7 @@
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
+#include <cocaine/traits.hpp>
 
 #include <cocaine/api/event.hpp>
 
@@ -43,7 +44,8 @@ blastbeat_t::blastbeat_t(context_t& context,
     m_log(new log_t(context, cocaine::format("app/%s", name))),
     m_event(args.get("emit", "").asString()),
     m_endpoint(args.get("endpoint", "").asString()),
-    m_socket(context, ZMQ_DEALER),
+    m_zmq(1),
+    m_socket(m_zmq, ZMQ_DEALER),
     m_watcher(engine.service().loop()),
     m_checker(engine.service().loop())
 {
@@ -57,14 +59,25 @@ blastbeat_t::blastbeat_t(context_t& context,
         throw configuration_error_t("invalid driver identity - %s", e.what());
     }
 
+    int timeout = 0;
+    size_t timeout_size = sizeof(timeout);
+
+    m_socket.setsockopt(ZMQ_RCVTIMEO, &timeout, timeout_size);
+
     try {
-        m_socket.connect(m_endpoint);
+        m_socket.connect(m_endpoint.c_str());
     } catch(const zmq::error_t& e) {
         throw configuration_error_t("invalid driver endpoint - %s", e.what());
     }
 
+    int fd = 0;
+    size_t fd_size = sizeof(fd);
+
+    // Get the socket's file descriptor.
+    m_socket.getsockopt(ZMQ_FD, &fd, &fd_size);
+
     m_watcher.set<blastbeat_t, &blastbeat_t::on_event>(this);
-    m_watcher.start(m_socket.fd(), ev::READ);
+    m_watcher.start(fd, ev::READ);
     m_checker.set<blastbeat_t, &blastbeat_t::on_check>(this);
     m_checker.start();
 }
@@ -90,7 +103,12 @@ void
 blastbeat_t::on_event(ev::io&, int) {
     m_checker.stop();
 
-    if(m_socket.pending()) {
+    unsigned long events = 0;
+    size_t size = sizeof(events);
+
+    m_socket.getsockopt(ZMQ_EVENTS, &events, &size);
+
+    if(events & ZMQ_POLLIN) {
         m_checker.start();
         process_events();
     }
@@ -98,7 +116,12 @@ blastbeat_t::on_event(ev::io&, int) {
 
 void
 blastbeat_t::on_check(ev::prepare&, int) {
-    engine().service().loop().feed_fd_event(m_socket.fd(), ev::READ);
+    int fd = 0;
+    size_t size = sizeof(fd);
+
+    m_socket.getsockopt(ZMQ_FD, &fd, &size);
+
+    engine().service().loop().feed_fd_event(fd, ev::READ);
 }
 
 namespace {
@@ -121,16 +144,20 @@ blastbeat_t::process_events() {
     zmq::message_t message;
 
     while(counter--) {
-        {
-            io::scoped_option<
-                io::options::receive_timeout
-            > option(m_socket, 0);
+        if(!m_socket.recv(&message)) {
+            return;
+        }
 
-            // Try to read the next RPC command from the bus in a
-            // non-blocking fashion. If it fails, break the loop.
-            if(!m_socket.recv_multipart(sid, type, message)) {
-                return;
-            }
+        sid.assign(static_cast<const char*>(message.data()), message.size());
+
+        if(!m_socket.recv(&message)) {
+            return;
+        }
+
+        type.assign(static_cast<const char*>(message.data()), message.size());
+
+        if(!m_socket.recv(&message)) {
+            return;
         }
 
         COCAINE_LOG_DEBUG(

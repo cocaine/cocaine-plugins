@@ -22,6 +22,8 @@
 
 #include "driver.hpp"
 
+#include <cocaine/traits.hpp>
+
 #include <boost/format.hpp>
 
 using namespace cocaine;
@@ -118,19 +120,11 @@ blastbeat_stream_t::push(const char * chunk,
         body += (header % "Connection" % "close").str();
         body += "\r\n";
 
-        m_driver.send(m_sid, "headers", body);
+        m_driver.send(m_sid, std::string("headers"), body);
 
         m_body = true;
     } else {
-        zmq::message_t message(size);
-
-        memcpy(
-            message.data(),
-            chunk,
-            size
-        );
-
-        m_driver.send(m_sid, "body", message);
+        m_driver.send(m_sid, std::string("body"), std::string(chunk, size));
     }
 }
 
@@ -141,12 +135,12 @@ blastbeat_stream_t::error(error_code,
     std::string empty;
 
     // TODO: Proper error reporting.
-    m_driver.send(m_sid, "retry", empty);
+    m_driver.send(m_sid, std::string("retry"), empty);
 }
 
 void
 blastbeat_stream_t::close() {
     std::string empty;
 
-    m_driver.send(m_sid, "end", empty);
+    m_driver.send(m_sid, std::string("end"), empty);
 }

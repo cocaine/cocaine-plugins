@@ -22,9 +22,10 @@
 #define COCAINE_RECURRING_TIMER_DRIVER_HPP
 
 #include <cocaine/common.hpp>
-#include <cocaine/asio.hpp>
 
 #include <cocaine/api/driver.hpp>
+
+#include <cocaine/asio/service.hpp>
 
 namespace cocaine { namespace driver {
 
