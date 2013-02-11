@@ -122,7 +122,7 @@ class blastbeat_t:
 
         typedef boost::unordered_map<
             std::string,
-            boost::shared_ptr<api::stream_t>
+            std::shared_ptr<api::stream_t>
         > stream_map_t;
 
         stream_map_t m_streams;

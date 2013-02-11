@@ -65,7 +65,7 @@ class mongo_storage_t:
         }
 
     private:
-        boost::shared_ptr<logging::logger_t> m_log;
+        std::shared_ptr<logging::logger_t> m_log;
 
         const mongo::ConnectionString m_uri;
 };

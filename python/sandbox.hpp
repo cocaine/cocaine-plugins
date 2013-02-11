@@ -73,9 +73,9 @@ class python_t:
         ~python_t();
 
         virtual
-        boost::shared_ptr<api::stream_t>
+        std::shared_ptr<api::stream_t>
         invoke(const std::string& method,
-               const boost::shared_ptr<api::stream_t>& upstream);
+               const std::shared_ptr<api::stream_t>& upstream);
 
     public:
         logging::log_t*

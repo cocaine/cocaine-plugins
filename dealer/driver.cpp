@@ -164,8 +164,8 @@ dealer_t::process_events() {
                 tag
             );
 
-            boost::shared_ptr<dealer_stream_t> stream(
-                boost::make_shared<dealer_stream_t>(
+            std::shared_ptr<dealer_stream_t> stream(
+                std::make_shared<dealer_stream_t>(
                     *this,
                     route,
                     tag

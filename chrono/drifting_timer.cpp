@@ -22,8 +22,6 @@
 
 #include <cocaine/api/event.hpp>
 
-#include <boost/ref.hpp>
-
 using namespace cocaine;
 using namespace cocaine::driver;
 
@@ -57,7 +55,7 @@ drifting_timer_t::reschedule() {
 
     enqueue(
         api::event_t(m_event),
-        boost::make_shared<drifting_stream_t>(boost::ref(*this))
+        std::make_shared<drifting_stream_t>(std::ref(*this))
     );
 }
 

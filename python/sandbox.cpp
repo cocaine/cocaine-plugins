@@ -271,14 +271,14 @@ python_t::~python_t() {
     Py_Finalize();
 }
 
-boost::shared_ptr<api::stream_t>
+std::shared_ptr<api::stream_t>
 python_t::invoke(const std::string& event,
-                 const boost::shared_ptr<api::stream_t>& upstream)
+                 const std::shared_ptr<api::stream_t>& upstream)
 {
     thread_lock_t thread(m_thread_state);
 
-    boost::shared_ptr<api::stream_t> downstream(
-        boost::make_shared<downstream_t>(*this)
+    std::shared_ptr<api::stream_t> downstream(
+        std::make_shared<downstream_t>(*this)
     );
 
     // Pack the arguments

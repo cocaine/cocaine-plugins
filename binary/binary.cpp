@@ -102,7 +102,7 @@ namespace {
 		public api::stream_t
 	{
 		downstream_t(binary_t * parent,
-			         const boost::shared_ptr<api::stream_t>& upstream):
+			         const std::shared_ptr<api::stream_t>& upstream):
 			m_parent(parent),
 			m_upstream(upstream)
 		{ }
@@ -142,13 +142,13 @@ namespace {
 		}
 
 		binary_t * m_parent;
-		boost::shared_ptr<api::stream_t> m_upstream;
+		std::shared_ptr<api::stream_t> m_upstream;
 	};
 }
 
-boost::shared_ptr<api::stream_t> binary_t::invoke(const std::string &method, const boost::shared_ptr<api::stream_t>& upstream)
+std::shared_ptr<api::stream_t> binary_t::invoke(const std::string &method, const std::shared_ptr<api::stream_t>& upstream)
 {
-	return boost::make_shared<downstream_t>(this, upstream);
+	return std::make_shared<downstream_t>(this, upstream);
 }
 
 extern "C" {

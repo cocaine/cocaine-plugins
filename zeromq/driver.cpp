@@ -132,15 +132,15 @@ zmq_t::process_events() {
             return;
         }
 
-        boost::shared_ptr<zmq_stream_t> upstream(
-            boost::make_shared<zmq_stream_t>(
+        std::shared_ptr<zmq_stream_t> upstream(
+            std::make_shared<zmq_stream_t>(
                 *this,
                 m_log,
                 route
             )
         );
 
-        boost::shared_ptr<api::stream_t> downstream;
+        std::shared_ptr<api::stream_t> downstream;
 
         try {
             downstream = engine().enqueue(api::event_t(m_event), upstream);

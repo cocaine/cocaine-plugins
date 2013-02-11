@@ -66,7 +66,7 @@ recurring_timer_t::info() const {
 
 void
 recurring_timer_t::enqueue(const api::event_t& event,
-                           const boost::shared_ptr<api::stream_t>& stream)
+                           const std::shared_ptr<api::stream_t>& stream)
 {
     try {
         engine().enqueue(event, stream);
@@ -77,7 +77,7 @@ recurring_timer_t::enqueue(const api::event_t& event,
 
 void
 recurring_timer_t::reschedule() {
-    enqueue(api::event_t(m_event), boost::make_shared<api::null_stream_t>());
+    enqueue(api::event_t(m_event), std::make_shared<api::null_stream_t>());
 }
 
 void

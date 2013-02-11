@@ -50,7 +50,7 @@ class recurring_timer_t:
 
         void
         enqueue(const api::event_t& event,
-                const boost::shared_ptr<api::stream_t>& stream);
+                const std::shared_ptr<api::stream_t>& stream);
 
         virtual
         void

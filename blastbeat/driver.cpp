@@ -29,7 +29,7 @@
 
 #include <cocaine/api/event.hpp>
 
-#include <boost/tuple/tuple.hpp>
+#include <tuple>
 
 using namespace cocaine;
 using namespace cocaine::driver;
@@ -203,8 +203,8 @@ void
 blastbeat_t::on_uwsgi(const std::string& sid,
                       zmq::message_t& message)
 {
-    boost::shared_ptr<blastbeat_stream_t> upstream(
-        boost::make_shared<blastbeat_stream_t>(
+    std::shared_ptr<blastbeat_stream_t> upstream(
+        std::make_shared<blastbeat_stream_t>(
             *this,
             sid
         )
@@ -213,7 +213,7 @@ blastbeat_t::on_uwsgi(const std::string& sid,
     stream_map_t::iterator it;
 
     try {
-        boost::tie(it, boost::tuples::ignore) = m_streams.emplace(
+        std::tie(it, std::ignore) = m_streams.emplace(
             sid,
             engine().enqueue(api::event_t(m_event), upstream)
         );

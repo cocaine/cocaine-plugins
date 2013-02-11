@@ -178,7 +178,7 @@ private:
     }
 
 private:
-    boost::shared_ptr<logging::logger_t> m_log;
+    std::shared_ptr<logging::logger_t> m_log;
     PerlInterpreter* my_perl;
 };
 
