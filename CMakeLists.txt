@@ -27,9 +27,8 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 FIND_PACKAGE(Boost 1.40.0 REQUIRED
     COMPONENTS
-        filesystem
-        thread
-        system)
+        system
+        filesystem)
 
 INCLUDE(cmake/locate_library.cmake)
 
