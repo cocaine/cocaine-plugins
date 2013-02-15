@@ -1,14 +1,11 @@
 IF(ELLIPTICS)
     LOCATE_LIBRARY(LIBELLIPTICS "cppdef.h" "elliptics_cpp" "elliptics")
-    LOCATE_LIBRARY(LIBEBLOB "eblob.hpp" "eblob_cpp" "eblob")
 
     INCLUDE_DIRECTORIES(
-        ${LIBELLIPTICS_INCLUDE_DIRS}
-        ${LIBEBLOB_INCLUDE_DIRS})
+        ${LIBELLIPTICS_INCLUDE_DIRS})
 
     LINK_DIRECTORIES(
-        ${LIBELLIPTICS_LIBRARY_DIRS}
-        ${LIBEBLOB_LIBRARY_DIRS})
+        ${LIBELLIPTICS_LIBRARY_DIRS})
 
     ADD_LIBRARY(elliptics MODULE
         storage
