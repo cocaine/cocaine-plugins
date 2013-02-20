@@ -134,7 +134,7 @@ namespace {
 
 void
 blastbeat_t::process_events() {
-    int counter = 128;
+    int counter = 100;
 
     // RPC payload.
     std::string sid;
