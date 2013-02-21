@@ -86,7 +86,14 @@ zeromq_server_t::zeromq_server_t(engine_t& engine, const std::string& method, co
     }
 
     try {
-        m_socket.setsockopt(ZMQ_HWM, &m_backlog, sizeof(m_backlog));
+        #if ZMQ_VERSION >= 30203
+            uint32_t hwm = reinterpret_cast<uint32_t>(m_backlog);
+            m_socket.setsockopt(ZMQ_SNDHWM, &hwm, sizeof(hwm));
+            m_socket.setsockopt(ZMQ_RCVHWM, &hwm, sizeof(hwm));
+        #else
+            m_socket.setsockopt(ZMQ_HWM, &m_backlog, sizeof(m_backlog));
+        #endif
+        
         m_socket.setsockopt(ZMQ_LINGER, &m_linger, sizeof(m_linger));
         m_socket.bind(endpoint);
     } catch(const zmq::error_t& e) {
