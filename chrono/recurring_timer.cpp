@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "recurring_timer.hpp"
@@ -40,7 +40,7 @@ recurring_timer_t::recurring_timer_t(context_t& context,
     m_log(new log_t(context, cocaine::format("app/%s", name))),
     m_event(args["emit"].asString()),
     m_interval(args.get("interval", 0.0f).asInt() / 1000.0f),
-    m_watcher(engine.loop())
+    m_watcher(engine.service().loop())
 {
     if(m_interval <= 0.0f) {
         throw configuration_error_t("no interval has been specified");
@@ -66,7 +66,7 @@ recurring_timer_t::info() const {
 
 void
 recurring_timer_t::enqueue(const api::event_t& event,
-                           const boost::shared_ptr<api::stream_t>& stream)
+                           const std::shared_ptr<api::stream_t>& stream)
 {
     try {
         engine().enqueue(event, stream);
@@ -77,7 +77,7 @@ recurring_timer_t::enqueue(const api::event_t& event,
 
 void
 recurring_timer_t::reschedule() {
-    enqueue(api::event_t(m_event), boost::make_shared<api::null_stream_t>());
+    enqueue(api::event_t(m_event), std::make_shared<api::null_stream_t>());
 }
 
 void

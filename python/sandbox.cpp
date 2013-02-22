@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "sandbox.hpp"
@@ -56,7 +56,7 @@ cocaine::sandbox::wrap(const Json::Value& value) {
 
             for(Json::Value::Members::iterator it = names.begin();
                 it != names.end();
-                ++it) 
+                ++it)
             {
                 PyDict_SetItemString(object, it->c_str(), wrap(value[*it]));
             }
@@ -66,9 +66,9 @@ cocaine::sandbox::wrap(const Json::Value& value) {
             object = PyTuple_New(value.size());
             Py_ssize_t position = 0;
 
-            for(Json::Value::const_iterator it = value.begin(); 
+            for(Json::Value::const_iterator it = value.begin();
                 it != value.end();
-                ++it) 
+                ++it)
             {
                 PyTuple_SetItem(object, position++, wrap(*it));
             }
@@ -84,12 +84,12 @@ cocaine::sandbox::wrap(const Json::Value& value) {
 std::string
 cocaine::sandbox::exception() {
     tracked_object_t type(NULL), value(NULL), traceback(NULL);
-    
+
     PyErr_Fetch(&type, &value, &traceback);
 
     tracked_object_t name(PyObject_Str(type));
     tracked_object_t message(PyObject_Str(value));
-    
+
     return cocaine::format(
         "uncaught exception %s: %s",
         PyString_AsString(name),
@@ -119,16 +119,16 @@ python_t::python_t(context_t& context,
     PyType_Ready(&dispatch_object_type);
 
     boost::filesystem::path source(spool);
-   
+
     // NOTE: Means it's a module.
     if(boost::filesystem::is_directory(source)) {
         source /= "__init__.py";
     }
 
     COCAINE_LOG_DEBUG(m_log, "loading the app code from %s", source.string());
-    
+
     boost::filesystem::ifstream input(source);
-    
+
     if(!input) {
         throw cocaine::error_t("unable to open '%s'", source.string());
     }
@@ -140,7 +140,7 @@ python_t::python_t(context_t& context,
     // NOTE: Prepend the current app location to the sys.path,
     // so that it could import various local stuff from there.
     PyObject * syspaths = PySys_GetObject(key.get());
-    
+
     tracked_object_t path(
         PyString_FromString(
 #if BOOST_FILESYSTEM_VERSION == 3
@@ -183,7 +183,7 @@ python_t::python_t(context_t& context,
         "WritableStream",
         reinterpret_cast<PyObject*>(&writable_stream_object_type)
     );
-    
+
     Py_INCREF(&dispatch_object_type);
 
     PyModule_AddObject(
@@ -191,7 +191,7 @@ python_t::python_t(context_t& context,
         "Dispatch",
         reinterpret_cast<PyObject*>(&dispatch_object_type)
     );
-    
+
     PyModule_AddObject(
         context_module,
         "args",
@@ -214,13 +214,13 @@ python_t::python_t(context_t& context,
     );
 
     Py_INCREF(builtins);
-    
+
     PyModule_AddObject(
-        m_module, 
+        m_module,
         "__builtins__",
         builtins
     );
-    
+
     PyModule_AddStringConstant(
         m_module,
         "__file__",
@@ -245,17 +245,17 @@ python_t::python_t(context_t& context,
     }
 
     PyObject * globals = PyModule_GetDict(m_module);
-    
+
     // NOTE: This will return None or NULL due to the Py_file_input flag above,
     // so we can safely drop it without even checking.
     tracked_object_t result(
         PyEval_EvalCode(
-            reinterpret_cast<PyCodeObject*>(*bytecode), 
+            reinterpret_cast<PyCodeObject*>(*bytecode),
             globals,
             NULL
         )
     );
-    
+
     if(PyErr_Occurred()) {
         throw cocaine::error_t("%s", exception());
     }
@@ -265,20 +265,20 @@ python_t::python_t(context_t& context,
 
 python_t::~python_t() {
     if(m_thread_state) {
-        PyEval_RestoreThread(m_thread_state); 
+        PyEval_RestoreThread(m_thread_state);
     }
-        
+
     Py_Finalize();
 }
 
-boost::shared_ptr<api::stream_t>
+std::shared_ptr<api::stream_t>
 python_t::invoke(const std::string& event,
-                 const boost::shared_ptr<api::stream_t>& upstream)
+                 const std::shared_ptr<api::stream_t>& upstream)
 {
     thread_lock_t thread(m_thread_state);
 
-    boost::shared_ptr<api::stream_t> downstream(
-        boost::make_shared<downstream_t>(*this)
+    std::shared_ptr<api::stream_t> downstream(
+        std::make_shared<downstream_t>(*this)
     );
 
     // Pack the arguments
@@ -293,7 +293,7 @@ python_t::invoke(const std::string& event,
 
     tracked_object_t downstream_object(
         PyObject_Call(
-            reinterpret_cast<PyObject*>(&readable_stream_object_type), 
+            reinterpret_cast<PyObject*>(&readable_stream_object_type),
             args,
             NULL
         )
@@ -302,17 +302,17 @@ python_t::invoke(const std::string& event,
     tracked_object_t upstream_ptr_object(
         PyCObject_FromVoidPtr(upstream.get(), NULL)
     );
-    
+
     args = PyTuple_Pack(1, *upstream_ptr_object);
 
     tracked_object_t upstream_object(
         PyObject_Call(
-            reinterpret_cast<PyObject*>(&writable_stream_object_type), 
+            reinterpret_cast<PyObject*>(&writable_stream_object_type),
             args,
             NULL
         )
     );
-    
+
     args = PyTuple_Pack(2, *downstream_object, *upstream_object);
 
     // Call the event handler
@@ -323,8 +323,8 @@ python_t::invoke(const std::string& event,
 
     if(PyErr_Occurred()) {
         throw cocaine::error_t("%s", exception());
-    } 
-   
+    }
+
     return downstream;
 }
 

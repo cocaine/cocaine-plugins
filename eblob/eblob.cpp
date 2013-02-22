@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "eblob.hpp"
@@ -44,11 +44,11 @@ bool eblob_collector_t::callback(const zbr::eblob_disk_control * dco, const void
     if(!m_reader.parse(value, object)) {
         // TODO: Have to find out the storage name somehow.
         throw storage_error_t("corrupted data");
-    } 
-   
+    }
+
     // TODO: Have to find out the key somehow.
     m_root[unique_id_t().id()] = object;
-    
+
     return true;
 }
 
@@ -86,12 +86,12 @@ eblob_storage_t::~eblob_storage_t() {
 
 void eblob_storage_t::put(const std::string& ns, const std::string& key, const Json::Value& value) {
     eblob_map_t::iterator it(m_eblobs.find(ns));
-    
+
     if(it == m_eblobs.end()) {
         zbr::eblob_config cfg;
 
         memset(&cfg, 0, sizeof(cfg));
-        
+
         cfg.file = const_cast<char*>((m_storage_path / ns).string().c_str());
         cfg.iterate_threads = 1;
         cfg.sync = 5;
@@ -104,7 +104,7 @@ void eblob_storage_t::put(const std::string& ns, const std::string& key, const J
             throw storage_error_t(e.what());
         }
     }
-        
+
     Json::FastWriter writer;
     std::string object(writer.write(value));
 
@@ -118,7 +118,7 @@ void eblob_storage_t::put(const std::string& ns, const std::string& key, const J
 
 bool eblob_storage_t::exists(const std::string& ns, const std::string& key) {
     eblob_map_t::iterator it(m_eblobs.find(ns));
-    
+
     if(it != m_eblobs.end()) {
         std::string object;
 
@@ -138,7 +138,7 @@ bool eblob_storage_t::exists(const std::string& ns, const std::string& key) {
 Json::Value eblob_storage_t::get(const std::string& ns, const std::string& key) {
     Json::Value result(Json::objectValue);
     eblob_map_t::iterator it(m_eblobs.find(ns));
-    
+
     if(it != m_eblobs.end()) {
         Json::Reader reader(Json::Features::strictMode());
         std::string object;
@@ -160,7 +160,7 @@ Json::Value eblob_storage_t::get(const std::string& ns, const std::string& key) 
 
 Json::Value eblob_storage_t::all(const std::string& ns) {
     eblob_collector_t collector;
-    
+
     try {
         zbr::eblob_iterator iterator((m_storage_path / ns).string(), true);
         iterator.iterate(collector, 1);
@@ -174,7 +174,7 @@ Json::Value eblob_storage_t::all(const std::string& ns) {
 
 void eblob_storage_t::remove(const std::string& ns, const std::string& key) {
     eblob_map_t::iterator it(m_eblobs.find(ns));
-    
+
     if(it != m_eblobs.end()) {
         try {
             it->second->remove_hashed(key);
@@ -189,7 +189,7 @@ void eblob_storage_t::purge(const std::string& ns) {
 
     if(it != m_eblobs.end()) {
         eblob_purger_t purger(it->second);
-        
+
         try {
             zbr::eblob_iterator iterator((m_storage_path / ns).string(), true);
             iterator.iterate(purger, 1);

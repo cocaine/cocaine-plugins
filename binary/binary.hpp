@@ -43,7 +43,7 @@ class binary_t: public api::sandbox_t {
 		binary_t(context_t& context, const std::string& name, const Json::Value& args, const std::string& spool);
 		virtual ~binary_t();
 
-		virtual boost::shared_ptr<api::stream_t> invoke(const std::string& method, const boost::shared_ptr<api::stream_t>& upstream);
+		virtual std::shared_ptr<api::stream_t> invoke(const std::string& method, const std::shared_ptr<api::stream_t>& upstream);
 
 		const logging::log_t& log() const {
 			return *m_log;

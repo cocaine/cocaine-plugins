@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef COCAINE_DEALER_STREAM_HPP
@@ -44,19 +44,19 @@ struct dealer_stream_t:
     void
     push(const char * chunk,
          size_t size);
-    
+
     virtual
     void
     error(error_code code,
           const std::string& message);
-    
+
     virtual
     void
     close();
 
 private:
-    dealer_t& m_driver;        
-    
+    dealer_t& m_driver;
+
     const route_t m_route;
     const std::string m_tag;
 };

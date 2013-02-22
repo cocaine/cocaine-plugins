@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "driver.hpp"
@@ -42,12 +42,12 @@ fs_t::fs_t(context_t& context,
     m_log(new log_t(context, cocaine::format("app/%s", name))),
     m_event(args.get("emit", "").asString()),
     m_path(args.get("path", "").asString()),
-    m_watcher(engine.loop())
+    m_watcher(engine.service().loop())
 {
     if(m_path.empty()) {
         throw configuration_error_t("no path has been specified");
     }
-    
+
     m_watcher.set<fs_t, &fs_t::on_event>(this);
     m_watcher.start(m_path.c_str());
 }
@@ -85,7 +85,7 @@ fs_t::on_event(ev::stat& w, int) {
            << w.attr.st_ctime;
 
     try {
-        engine().enqueue(api::event_t(m_event), boost::make_shared<api::null_stream_t>())->push(
+        engine().enqueue(api::event_t(m_event), std::make_shared<api::null_stream_t>())->push(
             buffer.data(),
             buffer.size()
         );
