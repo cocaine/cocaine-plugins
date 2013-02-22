@@ -58,10 +58,10 @@ SET(PLUGINS
         binary
         chrono
         fs
-        dealer
+        #dealer
         blastbeat
-        cgroups
-        zeromq)
+        cgroups)
+        #zeromq)
 
 # IF(NOT APPLE)
 #     SET(PLUGINS ${PLUGINS} perl)
