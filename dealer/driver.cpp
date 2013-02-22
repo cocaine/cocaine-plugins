@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "driver.hpp"
@@ -44,8 +44,8 @@ dealer_t::dealer_t(context_t& context,
         cocaine::format("%s/%s", m_context.config.network.hostname, name)
     ),
     m_channel(context, ZMQ_ROUTER, m_identity),
-    m_watcher(engine.loop()),
-    m_checker(engine.loop())
+    m_watcher(engine.service().loop()),
+    m_checker(engine.service().loop())
 {
     std::string endpoint(args["endpoint"].asString());
 
@@ -93,7 +93,7 @@ dealer_t::on_event(ev::io&, int) {
 
 void
 dealer_t::on_check(ev::prepare&, int) {
-    engine().loop().feed_fd_event(m_channel.fd(), ev::READ);
+    engine().service().loop().feed_fd_event(m_channel.fd(), ev::READ);
 }
 
 void
@@ -164,8 +164,8 @@ dealer_t::process_events() {
                 tag
             );
 
-            boost::shared_ptr<dealer_stream_t> stream(
-                boost::make_shared<dealer_stream_t>(
+            std::shared_ptr<dealer_stream_t> stream(
+                std::make_shared<dealer_stream_t>(
                     *this,
                     route,
                     tag
@@ -174,7 +174,7 @@ dealer_t::process_events() {
 
             try {
                 engine().enqueue(api::event_t(m_event, policy), stream)->push(
-                    static_cast<const char*>(message.data()), 
+                    static_cast<const char*>(message.data()),
                     message.size()
                 );
             } catch(const cocaine::error_t& e) {

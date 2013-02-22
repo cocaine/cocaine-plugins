@@ -15,16 +15,17 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef COCAINE_RECURRING_TIMER_DRIVER_HPP
 #define COCAINE_RECURRING_TIMER_DRIVER_HPP
 
 #include <cocaine/common.hpp>
-#include <cocaine/asio.hpp>
 
 #include <cocaine/api/driver.hpp>
+
+#include <cocaine/asio/service.hpp>
 
 namespace cocaine { namespace driver {
 
@@ -49,7 +50,7 @@ class recurring_timer_t:
 
         void
         enqueue(const api::event_t& event,
-                const boost::shared_ptr<api::stream_t>& stream);
+                const std::shared_ptr<api::stream_t>& stream);
 
         virtual
         void
@@ -62,7 +63,7 @@ class recurring_timer_t:
     protected:
         context_t& m_context;
         std::unique_ptr<logging::log_t> m_log;
-        
+
         const std::string m_event;
         const double m_interval;
 

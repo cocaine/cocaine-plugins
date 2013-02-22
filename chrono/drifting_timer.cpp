@@ -15,14 +15,12 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "drifting_timer.hpp"
 
 #include <cocaine/api/event.hpp>
-
-#include <boost/ref.hpp>
 
 using namespace cocaine;
 using namespace cocaine::driver;
@@ -57,7 +55,7 @@ drifting_timer_t::reschedule() {
 
     enqueue(
         api::event_t(m_event),
-        boost::make_shared<drifting_stream_t>(boost::ref(*this))
+        std::make_shared<drifting_stream_t>(std::ref(*this))
     );
 }
 

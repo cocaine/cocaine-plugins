@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "dispatch.hpp"
@@ -31,12 +31,12 @@ dispatch_t::ctor(dispatch_t * self,
 {
     PyObject * builtins = PyEval_GetBuiltins();
     PyObject * sandbox = PyDict_GetItemString(builtins, "__sandbox__");
-    
+
     if(!sandbox || !PyCObject_Check(sandbox)) {
         PyErr_SetString(PyExc_RuntimeError, "The context is corrupted");
         return -1;
     }
-    
+
     self->base = static_cast<python_t*>(
         PyCObject_AsVoidPtr(sandbox)
     )->emitter();
@@ -56,7 +56,7 @@ dispatch_t::on(dispatch_t * self,
 {
     static char event_keyword[] = "event";
     static char callback_keyword[] = "callback";
-    
+
     static char * keywords[] = {
         event_keyword,
         callback_keyword,
@@ -65,7 +65,7 @@ dispatch_t::on(dispatch_t * self,
 
     const char * event = NULL;
     PyObject * callback = NULL;
-    
+
     if(!PyArg_ParseTupleAndKeywords(args, kwargs, "sO:on", keywords, &event, &callback)) {
         return NULL;
     }

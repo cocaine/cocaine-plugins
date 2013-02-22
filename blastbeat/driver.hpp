@@ -15,17 +15,17 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef COCAINE_BLASTBEAT_DRIVER_HPP
 #define COCAINE_BLASTBEAT_DRIVER_HPP
 
 #include <cocaine/common.hpp>
-#include <cocaine/asio.hpp>
-#include <cocaine/io.hpp>
-
 #include <cocaine/api/driver.hpp>
+#include <cocaine/asio/service.hpp>
+
+#include <zmq.hpp>
 
 namespace cocaine { namespace driver {
 
@@ -48,48 +48,57 @@ class blastbeat_t:
         Json::Value
         info() const;
 
-        template<class T>
         bool
         send(const std::string& sid,
              const std::string& type,
-             T&& message)
+             const std::string& body)
         {
+            zmq::message_t message;
+
+            message.rebuild(sid.size());
+            std::memcpy(message.data(), sid.data(), sid.size());
+            m_socket.send(message, ZMQ_SNDMORE);
+
+            message.rebuild(type.size());
+            std::memcpy(message.data(), type.data(), type.size());
+            m_socket.send(message, ZMQ_SNDMORE);
+
+            message.rebuild(body.size());
+            std::memcpy(message.data(), body.data(), body.size());
+            m_socket.send(message);
+
             on_check(m_checker, ev::PREPARE);
 
-            return m_socket.send_multipart(
-                sid,
-                type,
-                message
-            );
+            return true;
         }
 
     private:
         void
         on_event(ev::io&, int);
-        
+
         void
         on_check(ev::prepare&, int);
 
         void
         process_events();
-        
+
         void
         on_ping();
-        
+
         void
         on_spawn();
-        
+
         void
         on_uwsgi(const std::string& sid,
                  zmq::message_t& message);
-        
+
         void
-        on_body(const std::string& sid, 
+        on_body(const std::string& sid,
                 zmq::message_t& message);
 
         void
-        on_end(const std::string& sid); 
-    
+        on_end(const std::string& sid);
+
     protected:
         context_t& m_context;
         std::unique_ptr<logging::log_t> m_log;
@@ -101,18 +110,19 @@ class blastbeat_t:
 
         // I/O
 
-        io::socket_t m_socket;
+        zmq::context_t m_zmq;
+        zmq::socket_t m_socket;
 
         // Event loop
 
-        ev::io m_watcher; 
+        ev::io m_watcher;
         ev::prepare m_checker;
-        
+
         // Session tracking
 
         typedef boost::unordered_map<
             std::string,
-            boost::shared_ptr<api::stream_t>
+            std::shared_ptr<api::stream_t>
         > stream_map_t;
 
         stream_map_t m_streams;

@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "driver.hpp"
@@ -25,10 +25,11 @@
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
+#include <cocaine/traits.hpp>
 
 #include <cocaine/api/event.hpp>
 
-#include <boost/tuple/tuple.hpp>
+#include <tuple>
 
 using namespace cocaine;
 using namespace cocaine::driver;
@@ -43,9 +44,10 @@ blastbeat_t::blastbeat_t(context_t& context,
     m_log(new log_t(context, cocaine::format("app/%s", name))),
     m_event(args.get("emit", "").asString()),
     m_endpoint(args.get("endpoint", "").asString()),
-    m_socket(context, ZMQ_DEALER),
-    m_watcher(engine.loop()),
-    m_checker(engine.loop())
+    m_zmq(1),
+    m_socket(m_zmq, ZMQ_DEALER),
+    m_watcher(engine.service().loop()),
+    m_checker(engine.service().loop())
 {
     try {
         m_socket.setsockopt(
@@ -57,14 +59,25 @@ blastbeat_t::blastbeat_t(context_t& context,
         throw configuration_error_t("invalid driver identity - %s", e.what());
     }
 
+    int timeout = 0;
+    size_t timeout_size = sizeof(timeout);
+
+    m_socket.setsockopt(ZMQ_RCVTIMEO, &timeout, timeout_size);
+
     try {
-        m_socket.connect(m_endpoint);
+        m_socket.connect(m_endpoint.c_str());
     } catch(const zmq::error_t& e) {
         throw configuration_error_t("invalid driver endpoint - %s", e.what());
     }
 
+    int fd = 0;
+    size_t fd_size = sizeof(fd);
+
+    // Get the socket's file descriptor.
+    m_socket.getsockopt(ZMQ_FD, &fd, &fd_size);
+
     m_watcher.set<blastbeat_t, &blastbeat_t::on_event>(this);
-    m_watcher.start(m_socket.fd(), ev::READ);
+    m_watcher.start(fd, ev::READ);
     m_checker.set<blastbeat_t, &blastbeat_t::on_check>(this);
     m_checker.start();
 }
@@ -90,7 +103,12 @@ void
 blastbeat_t::on_event(ev::io&, int) {
     m_checker.stop();
 
-    if(m_socket.pending()) {
+    unsigned long events = 0;
+    size_t size = sizeof(events);
+
+    m_socket.getsockopt(ZMQ_EVENTS, &events, &size);
+
+    if(events & ZMQ_POLLIN) {
         m_checker.start();
         process_events();
     }
@@ -98,7 +116,12 @@ blastbeat_t::on_event(ev::io&, int) {
 
 void
 blastbeat_t::on_check(ev::prepare&, int) {
-    engine().loop().feed_fd_event(m_socket.fd(), ev::READ);
+    int fd = 0;
+    size_t size = sizeof(fd);
+
+    m_socket.getsockopt(ZMQ_FD, &fd, &size);
+
+    engine().service().loop().feed_fd_event(fd, ev::READ);
 }
 
 namespace {
@@ -111,28 +134,32 @@ namespace {
 
 void
 blastbeat_t::process_events() {
-    int counter = defaults::io_bulk_size;
+    int counter = 100;
 
-    // RPC payload. 
+    // RPC payload.
     std::string sid;
     std::string type;
 
     // Temporary message buffer.
     zmq::message_t message;
-   
+
     while(counter--) {
-        {
-            io::scoped_option<
-                io::options::receive_timeout
-            > option(m_socket, 0);
-            
-            // Try to read the next RPC command from the bus in a
-            // non-blocking fashion. If it fails, break the loop.
-            if(!m_socket.recv_multipart(sid, type, message)) {
-                return;
-            }
+        if(!m_socket.recv(&message)) {
+            return;
         }
-     
+
+        sid.assign(static_cast<const char*>(message.data()), message.size());
+
+        if(!m_socket.recv(&message)) {
+            return;
+        }
+
+        type.assign(static_cast<const char*>(message.data()), message.size());
+
+        if(!m_socket.recv(&message)) {
+            return;
+        }
+
         COCAINE_LOG_DEBUG(
             m_log,
             "received a blastbeat request, type: '%s', body size: %d bytes",
@@ -176,8 +203,8 @@ void
 blastbeat_t::on_uwsgi(const std::string& sid,
                       zmq::message_t& message)
 {
-    boost::shared_ptr<blastbeat_stream_t> upstream(
-        boost::make_shared<blastbeat_stream_t>(
+    std::shared_ptr<blastbeat_stream_t> upstream(
+        std::make_shared<blastbeat_stream_t>(
             *this,
             sid
         )
@@ -186,7 +213,7 @@ blastbeat_t::on_uwsgi(const std::string& sid,
     stream_map_t::iterator it;
 
     try {
-        boost::tie(it, boost::tuples::ignore) = m_streams.emplace(
+        std::tie(it, std::ignore) = m_streams.emplace(
             sid,
             engine().enqueue(api::event_t(m_event), upstream)
         );
@@ -244,7 +271,7 @@ blastbeat_t::on_uwsgi(const std::string& sid,
 }
 
 void
-blastbeat_t::on_body(const std::string& sid, 
+blastbeat_t::on_body(const std::string& sid,
                      zmq::message_t& body)
 {
     stream_map_t::iterator it(

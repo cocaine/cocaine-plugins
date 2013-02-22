@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "driver.hpp"
@@ -41,8 +41,8 @@ zmq_t::zmq_t(context_t& context,
     m_log(new log_t(context, cocaine::format("app/%s", name))),
     m_event(args["emit"].asString()),
     m_socket(context, ZMQ_ROUTER),
-    m_watcher(engine.loop()),
-    m_checker(engine.loop())
+    m_watcher(engine.service().loop()),
+    m_checker(engine.service().loop())
 {
     std::string endpoint(args["endpoint"].asString());
 
@@ -87,9 +87,9 @@ zmq_t::on_event(ev::io&, int) {
     }
 }
 
-void 
+void
 zmq_t::on_check(ev::prepare&, int) {
-    engine().loop().feed_fd_event(m_socket.fd(), ev::READ);
+    engine().service().loop().feed_fd_event(m_socket.fd(), ev::READ);
 }
 
 void
@@ -110,7 +110,7 @@ zmq_t::process_events() {
                 io::scoped_option<
                     io::options::receive_timeout
                 > option(m_socket, 0);
-                
+
                 if(!m_socket.recv(message)) {
                     return;
                 }
@@ -132,22 +132,22 @@ zmq_t::process_events() {
             return;
         }
 
-        boost::shared_ptr<zmq_stream_t> upstream(
-            boost::make_shared<zmq_stream_t>(
+        std::shared_ptr<zmq_stream_t> upstream(
+            std::make_shared<zmq_stream_t>(
                 *this,
                 m_log,
                 route
             )
         );
 
-        boost::shared_ptr<api::stream_t> downstream;
+        std::shared_ptr<api::stream_t> downstream;
 
         try {
             downstream = engine().enqueue(api::event_t(m_event), upstream);
         } catch(const cocaine::error_t& e) {
             upstream->error(resource_error, e.what());
         }
-        
+
         do {
             m_socket.recv(message);
 

@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef COCAINE_ZEROMQ_SERVER_DRIVER_HPP
@@ -67,7 +67,7 @@ class zmq_t:
     private:
         void
         on_event(ev::io&, int);
-        
+
         void
         on_check(ev::prepare&, int);
 

@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "readable_stream.hpp"
@@ -32,7 +32,7 @@ void
 downstream_t::push(const char * chunk,
                    size_t size)
 {
-    thread_lock_t lock(m_sandbox.thread_state()); 
+    thread_lock_t lock(m_sandbox.thread_state());
 
     tracked_object_t buffer(
         PyString_FromStringAndSize(chunk, size)
@@ -49,8 +49,8 @@ void
 downstream_t::error(error_code code,
                     const std::string& message)
 {
-    thread_lock_t lock(m_sandbox.thread_state()); 
-    
+    thread_lock_t lock(m_sandbox.thread_state());
+
     tracked_object_t code_object(PyLong_FromLong(code));
 
     tracked_object_t message_object(
@@ -59,7 +59,7 @@ downstream_t::error(error_code code,
             message.size()
         )
     );
-    
+
     tracked_object_t args(
         PyTuple_Pack(2, *code_object, *message_object)
     );
@@ -71,10 +71,10 @@ downstream_t::error(error_code code,
 
 void
 downstream_t::close() {
-    thread_lock_t lock(m_sandbox.thread_state()); 
-    
+    thread_lock_t lock(m_sandbox.thread_state());
+
     tracked_object_t args(PyTuple_New(0));
-    
+
     invoke("close", args, NULL);
 }
 
@@ -114,7 +114,7 @@ readable_stream_t::on(readable_stream_t * self,
 {
     static char event_keyword[] = "event";
     static char callback_keyword[] = "callback";
-    
+
     static char * keywords[] = {
         event_keyword,
         callback_keyword,
@@ -123,7 +123,7 @@ readable_stream_t::on(readable_stream_t * self,
 
     const char * event = NULL;
     PyObject * callback = NULL;
-    
+
     if(!PyArg_ParseTupleAndKeywords(args, kwargs, "sO:on", keywords, &event, &callback)) {
         return NULL;
     }

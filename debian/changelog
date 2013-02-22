@@ -1,3 +1,18 @@
+cocaine-plugins (0.10.0-rc2) lucid; urgency=low
+
+  * Release candidate 2.
+  * Got rid of most of the Boost code.
+  * Whitespace nazi mode on.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 22 Feb 2013 23:42:28 +0400
+
+cocaine-plugins (0.10.0-rc1) lucid; urgency=low
+
+  * Release candidate 1.
+  * Use the new I/O system.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 15 Feb 2013 01:52:01 +0400
+
 cocaine-plugins (0.10.0-rc0) lucid; urgency=low
 
   * Release candidate 0.

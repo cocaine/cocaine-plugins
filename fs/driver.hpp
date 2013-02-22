@@ -15,16 +15,17 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef COCAINE_FILESYSTEM_MONITOR_DRIVER_HPP
 #define COCAINE_FILESYSTEM_MONITOR_DRIVER_HPP
 
 #include <cocaine/common.hpp>
-#include <cocaine/asio.hpp>
 
 #include <cocaine/api/driver.hpp>
+
+#include <cocaine/asio/service.hpp>
 
 namespace cocaine { namespace driver {
 
@@ -54,7 +55,7 @@ class fs_t:
     private:
         context_t& m_context;
         std::unique_ptr<logging::log_t> m_log;
-        
+
         const std::string m_event;
         const std::string m_path;
 

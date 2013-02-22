@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef COCAINE_ZEROMQ_SERVER_STREAM_HPP
@@ -42,12 +42,12 @@ struct zmq_stream_t:
     void
     push(const char * chunk,
          size_t size);
-    
+
     virtual
     void
     error(error_code code,
           const std::string& message);
-    
+
     virtual
     void
     close();

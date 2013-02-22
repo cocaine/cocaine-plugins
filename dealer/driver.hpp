@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #ifndef COCAINE_DEALER_DRIVER_HPP
@@ -48,14 +48,14 @@ class dealer_t:
         virtual
         Json::Value
         info() const;
-        
+
         template<class Event, typename... Args>
         bool
         send(const std::string& route,
              Args&&... args)
         {
             on_check(m_checker, ev::PREPARE);
-           
+
             return m_channel.send(route, ZMQ_SNDMORE) &&
                    m_channel.send(io::codec::pack<Event>(std::forward<Args>(args)...));
         }
@@ -63,7 +63,7 @@ class dealer_t:
     private:
         void
         on_event(ev::io&, int);
-        
+
         void
         on_check(ev::prepare&, int);
 
@@ -80,9 +80,9 @@ class dealer_t:
         const std::string m_identity;
 
         // Dealer RPC
-        
+
         io::socket_t m_channel;
-        
+
         // Event loop
 
         ev::io m_watcher;

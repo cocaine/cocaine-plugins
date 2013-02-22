@@ -73,7 +73,7 @@ public:
         source/=script_file.asString();
 
         if(boost::filesystem::is_directory(source)) {
-            throw configuration_error_t("malformed manifest, expected path to perl script, got a directory.");   
+            throw configuration_error_t("malformed manifest, expected path to perl script, got a directory.");
         }
 
         std::string source_dir;
@@ -95,7 +95,7 @@ public:
         COCAINE_LOG_INFO(m_log, "%s", "running interpreter...");
         perl_run(my_perl);
     }
-        
+
     ~perl_t() {
         perl_destruct(my_perl);
         perl_free(my_perl);
@@ -105,7 +105,7 @@ public:
     virtual void invoke(const std::string& event, api::io_t& io) {
         COCAINE_LOG_INFO(m_log, "%s", std::string("invoking event ") + event + "...");
         std::string input;
-        
+
         // Try to pull in the request w/o blocking.
         std::string request = io.read(0);
 
@@ -175,10 +175,10 @@ public:
 private:
     const logging::logger_t& log() const {
         return *m_log;
-    }    
+    }
 
 private:
-    boost::shared_ptr<logging::logger_t> m_log;
+    std::shared_ptr<logging::logger_t> m_log;
     PerlInterpreter* my_perl;
 };
 

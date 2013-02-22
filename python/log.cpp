@@ -15,7 +15,7 @@
     GNU Lesser General Public License for more details.
 
     You should have received a copy of the GNU Lesser General Public License
-    along with this program. If not, see <http://www.gnu.org/licenses/>. 
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "log.hpp"
@@ -34,12 +34,12 @@ log_t::ctor(log_t * self,
 {
     PyObject * builtins = PyEval_GetBuiltins();
     PyObject * sandbox = PyDict_GetItemString(builtins, "__sandbox__");
-    
+
     if(!sandbox || !PyCObject_Check(sandbox)) {
         PyErr_SetString(PyExc_RuntimeError, "The context is corrupted");
         return -1;
     }
-    
+
     self->base = static_cast<python_t*>(
         PyCObject_AsVoidPtr(sandbox)
     )->logger();
