@@ -91,6 +91,8 @@ elliptics_storage_t::elliptics_storage_t(context_t& context,
 
     Json::Value::Members node_names(nodes.getMemberNames());
 
+    bool have_remotes = false;
+
     for(Json::Value::Members::const_iterator it = node_names.begin();
         it != node_names.end();
         ++it)
@@ -100,9 +102,14 @@ elliptics_storage_t::elliptics_storage_t(context_t& context,
                 it->c_str(),
                 nodes[*it].asInt()
             );
+            have_remotes = true;
         } catch(const ioremap::elliptics::error& e) {
             // Do nothing. Yes. Really. We only care if no remote nodes were added at all.
         }
+    }
+
+    if (!have_remotes) {
+    throw configuration_error_t("can not connect to any remote node");
     }
 
     Json::Value groups(args["groups"]);
