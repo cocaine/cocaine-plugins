@@ -60,7 +60,6 @@ class mongo_storage_t:
 
     private:
         std::shared_ptr<logging::log_t> m_log;
-
         const mongo::ConnectionString m_uri;
 };
 
