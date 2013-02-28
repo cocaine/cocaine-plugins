@@ -31,7 +31,10 @@ using namespace cocaine::storage;
 using namespace cocaine::logging;
 using namespace mongo;
 
-mongo_storage_t::mongo_storage_t(context_t& context, const std::string& name, const Json::Value& args) try:
+mongo_storage_t::mongo_storage_t(context_t& context, 
+                                 const std::string& name, 
+                                 const Json::Value& args) 
+try:
     category_type(context, name, args),
     m_log(new log_t(context, name)),
     m_uri(args["uri"].asString(), ConnectionString::SET)
@@ -43,7 +46,9 @@ mongo_storage_t::mongo_storage_t(context_t& context, const std::string& name, co
     throw storage_error_t(e.what());
 }
 
-std::string mongo_storage_t::read(const std::string& ns, const std::string& key)
+std::string
+mongo_storage_t::read(const std::string& ns, 
+                      const std::string& key)
 {
     std::string result;
 
@@ -70,9 +75,10 @@ std::string mongo_storage_t::read(const std::string& ns, const std::string& key)
     return result;
 }
 
-void mongo_storage_t::write(const std::string& ns,
-                            const std::string& key,
-                            const std::string& blob)
+void
+mongo_storage_t::write(const std::string& ns,
+                       const std::string& key,
+                       const std::string& blob)
 {
     try {
         ScopedDbConnection connection(m_uri);
@@ -91,7 +97,8 @@ void mongo_storage_t::write(const std::string& ns,
     }
 }
 
-std::vector<std::string> mongo_storage_t::list(const std::string& ns) {
+std::vector<std::string>
+mongo_storage_t::list(const std::string& ns) {
     std::vector<std::string> result;
 
     try {
@@ -113,8 +120,9 @@ std::vector<std::string> mongo_storage_t::list(const std::string& ns) {
     return result;
 }
 
-void mongo_storage_t::remove(const std::string& ns,
-                             const std::string& key)
+void
+mongo_storage_t::remove(const std::string& ns,
+                        const std::string& key)
 {
     try {
         ScopedDbConnection connection(m_uri);
@@ -131,7 +139,8 @@ void mongo_storage_t::remove(const std::string& ns,
 }
 
 extern "C" {
-    void initialize(api::repository_t& repository) {
+    void 
+    initialize(api::repository_t& repository) {
         repository.insert<mongo_storage_t>("mongodb");
     }
 }
