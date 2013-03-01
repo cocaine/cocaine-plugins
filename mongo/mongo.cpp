@@ -31,9 +31,9 @@ using namespace cocaine::storage;
 using namespace cocaine::logging;
 using namespace mongo;
 
-mongo_storage_t::mongo_storage_t(context_t& context, 
-                                 const std::string& name, 
-                                 const Json::Value& args) 
+mongo_storage_t::mongo_storage_t(context_t& context,
+                                 const std::string& name,
+                                 const Json::Value& args)
 try:
     category_type(context, name, args),
     m_log(new log_t(context, name)),
@@ -47,7 +47,7 @@ try:
 }
 
 std::string
-mongo_storage_t::read(const std::string& ns, 
+mongo_storage_t::read(const std::string& ns,
                       const std::string& key)
 {
     std::string result;
@@ -139,7 +139,7 @@ mongo_storage_t::remove(const std::string& ns,
 }
 
 extern "C" {
-    void 
+    void
     initialize(api::repository_t& repository) {
         repository.insert<mongo_storage_t>("mongodb");
     }
