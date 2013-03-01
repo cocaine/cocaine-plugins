@@ -28,13 +28,15 @@
 
 using namespace cocaine;
 using namespace cocaine::storage;
+using namespace cocaine::logging;
 using namespace mongo;
 
-mongo_storage_t::mongo_storage_t(context_t& context, const std::string& name, const Json::Value& args) try:
+mongo_storage_t::mongo_storage_t(context_t& context, 
+                                 const std::string& name, 
+                                 const Json::Value& args) 
+try:
     category_type(context, name, args),
-    m_log(context.log(
-        cocaine::format("storage/%1%", name)
-    )),
+    m_log(new log_t(context, name)),
     m_uri(args["uri"].asString(), ConnectionString::SET)
 {
     if(!m_uri.isValid()) {
@@ -44,17 +46,11 @@ mongo_storage_t::mongo_storage_t(context_t& context, const std::string& name, co
     throw storage_error_t(e.what());
 }
 
-objects::value_type mongo_storage_t::get(const std::string& ns,
-                                         const std::string& key)
+std::string
+mongo_storage_t::read(const std::string& ns, 
+                      const std::string& key)
 {
-    objects::value_type result;
-
-    try {
-        // Fetch the metadata.
-        result.meta = exists(ns, key);
-    } catch(const DBException& e) {
-        throw storage_error_t(e.what());
-    }
+    std::string result;
 
     try {
         ScopedDbConnection connection(m_uri);
@@ -69,15 +65,9 @@ objects::value_type mongo_storage_t::get(const std::string& ns,
         connection.done();
 
         std::stringstream buffer;
-        std::string blob;
 
         file.write(buffer);
-        blob = buffer.str();
-
-        result.blob = objects::data_type(
-            blob.data(),
-            blob.size()
-        );
+        result = buffer.str();
     } catch(const DBException& e) {
         throw storage_error_t(e.what());
     }
@@ -85,35 +75,19 @@ objects::value_type mongo_storage_t::get(const std::string& ns,
     return result;
 }
 
-void mongo_storage_t::put(const std::string& ns,
-                          const std::string& key,
-                          const objects::value_type& value)
+void
+mongo_storage_t::write(const std::string& ns,
+                       const std::string& key,
+                       const std::string& blob)
 {
-    Json::FastWriter writer;
-    Json::Value container(Json::objectValue);
-
-    container["key"] = key;
-    container["object"] = value.meta;
-
-    // NOTE: Stupid double-conversion magic.
-    // For some reason, fromjson fails to parse strings with double null-terminator
-    // which is exactly the kind of strings JSONCPP generates, hence the chopping.
-    std::string json(writer.write(container));
-    BSONObj object(fromjson(json.substr(0, json.size() - 1)));
-
     try {
         ScopedDbConnection connection(m_uri);
-
-        // Store the metadata.
-        connection->ensureIndex(resolve(ns), BSON("key" << 1), true); // Unique index
-        connection->update(resolve(ns), BSON("key" << key), object, true); // Upsert
-
         GridFS gridfs(connection.conn(), "cocaine", ns);
 
         // Store the blob.
         BSONObj result = gridfs.storeFile(
-            static_cast<const char*>(value.blob.data()),
-            value.blob.size(),
+            static_cast<const char*>(blob.data()),
+            blob.size(),
             key
         );
 
@@ -123,45 +97,19 @@ void mongo_storage_t::put(const std::string& ns,
     }
 }
 
-objects::meta_type mongo_storage_t::exists(const std::string& ns,
-                                           const std::string& key)
-{
-    BSONObj object;
-
-    try {
-        // Fetch the metadata.
-        ScopedDbConnection connection(m_uri);
-        object = connection->findOne(resolve(ns), BSON("key" << key));
-        connection.done();
-    } catch(const DBException& e) {
-        throw storage_error_t(e.what());
-    }
-
-    if(!object.isEmpty()) {
-        objects::meta_type meta;
-        Json::Reader reader;
-
-        if(reader.parse(object.jsonString(), meta)) {
-            return meta["object"];
-        } else {
-            throw storage_error_t("the specified object is corrupted");
-        }
-    } else {
-        throw storage_error_t("the specified object has not been found");
-    }
-}
-
-std::vector<std::string> mongo_storage_t::list(const std::string& ns) {
+std::vector<std::string>
+mongo_storage_t::list(const std::string& ns) {
     std::vector<std::string> result;
-    BSONObj object;
 
     try {
         ScopedDbConnection connection(m_uri);
-        std::auto_ptr<DBClientCursor> cursor(connection->query(resolve(ns), BSONObj()));
+        GridFS gridfs(connection.conn(), "cocaine", ns);
+        std::shared_ptr<DBClientCursor> cursor(gridfs.list());
+        BSONObj object;
 
         while(cursor->more()) {
             object = cursor->nextSafe();
-            result.push_back(object["key"]);
+            result.push_back(object["filename"].String()); // WARNING: is key always a string?
         }
 
         connection.done();
@@ -172,14 +120,12 @@ std::vector<std::string> mongo_storage_t::list(const std::string& ns) {
     return result;
 }
 
-void mongo_storage_t::remove(const std::string& ns,
-                             const std::string& key)
+void
+mongo_storage_t::remove(const std::string& ns,
+                        const std::string& key)
 {
     try {
         ScopedDbConnection connection(m_uri);
-
-        // Remove the metadata.
-        connection->remove(resolve(ns), BSON("key" << key));
 
         GridFS gridfs(connection.conn(), "cocaine", ns);
 
@@ -193,7 +139,8 @@ void mongo_storage_t::remove(const std::string& ns,
 }
 
 extern "C" {
-    void initialize(repository_t& repository) {
+    void 
+    initialize(api::repository_t& repository) {
         repository.insert<mongo_storage_t>("mongodb");
     }
 }

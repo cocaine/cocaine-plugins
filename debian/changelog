@@ -1,3 +1,10 @@
+cocaine-plugins (0.10.0-rc3) lucid; urgency=low
+
+  * Release candidate 3.
+  * MongoDB plugin is working once again.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 01 Mar 2013 23:34:16 +0400
+
 cocaine-plugins (0.10.0-rc2) lucid; urgency=low
 
   * Release candidate 2.

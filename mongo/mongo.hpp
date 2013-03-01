@@ -59,14 +59,7 @@ class mongo_storage_t:
                const std::string& key);
 
     private:
-        std::string
-        resolve(const std::string& collection) const {
-            return "cocaine." + collection;
-        }
-
-    private:
-        std::shared_ptr<logging::logger_t> m_log;
-
+        std::shared_ptr<logging::log_t> m_log;
         const mongo::ConnectionString m_uri;
 };
 
