@@ -4,17 +4,24 @@ IF(MONGO)
     IF(MongoDB_FOUND)
         LOCATE_LIBRARY(LIBMONGOCLIENT "dbclient.h" "mongoclient" "mongo" "mongo/client")
 
+        INCLUDE_DIRECTORIES(
+            ${LIBMONGOCLIENT_INCLUDE_DIRS})
+
+        LINK_DIRECTORIES(
+            ${LIBMONGOCLIENT_LIBRARY_DIRS})
+        
         ADD_LIBRARY(mongodb MODULE
             mongo)
 
         TARGET_LINK_LIBRARIES(mongodb
-            cocaine-common
+            cocaine-core
             boost_thread-mt
             mongoclient)
 
         SET_TARGET_PROPERTIES(mongodb PROPERTIES
             PREFIX ""
-            SUFFIX ".cocaine-plugin")
+            SUFFIX ".cocaine-plugin"
+            COMPILE_FLAGS "-std=c++0x")
 
         INSTALL(TARGETS mongodb
             LIBRARY DESTINATION lib/cocaine

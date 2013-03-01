@@ -53,7 +53,7 @@ LINK_DIRECTORIES(
 
 SET(PLUGINS
         python
-        #mongo
+        mongo
         elliptics
         binary
         chrono
