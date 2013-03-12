@@ -32,7 +32,7 @@ extern "C" {
 
 namespace cocaine { namespace sandbox {
 
-typedef void *(* init_fn_t)(const char *cfg, const size_t size);
+typedef void *(* init_fn_t)(logging::log_t *logger, const char *cfg, const size_t size);
 typedef void (* cleanup_fn_t)(void *);
 typedef int (* process_fn_t)(void *, struct binary_io *);
 

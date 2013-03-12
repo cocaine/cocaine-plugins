@@ -75,7 +75,7 @@ binary_t::binary_t(context_t &context, const std::string &name, const Json::Valu
 	Json::Value config(args["config"]);
 	std::string cfg = config.toStyledString();
 
-	m_handle = (*init)(cfg.c_str(), cfg.size() + 1);
+	m_handle = (*init)(m_log.get(), cfg.c_str(), cfg.size() + 1);
 	if (!m_handle) {
 		COCAINE_LOG_ERROR(m_log, "binary initialization failed");
 		lt_dladvise_destroy(&m_advice);
