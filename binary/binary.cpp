@@ -34,12 +34,12 @@ binary_t::binary_t(context_t &context, const std::string &name, const Json::Valu
     m_log(new logging::log_t(context, cocaine::format("app/%1%", name))),
     m_process(NULL), m_cleanup(NULL)
 {
-	boost::filesystem::path source(spool);
+	fs::path source(spool);
 
 	if (lt_dlinit() != 0)
 		throw configuration_error_t("unable to initialize binary loader");
 
-	if (!boost::filesystem::is_directory(source))
+	if (!fs::is_directory(source))
 		throw configuration_error_t("binary loaded object must be unpacked into directory");
 
 	Json::Value filename(args["name"]);
@@ -47,8 +47,6 @@ binary_t::binary_t(context_t &context, const std::string &name, const Json::Valu
 		throw configuration_error_t("malformed manifest: args/name must be a string");
 
 	source /= filename.asString();
-
-	fs::path path(source);
 
 	lt_dladvise_init(&m_advice);
 	lt_dladvise_global(&m_advice);
