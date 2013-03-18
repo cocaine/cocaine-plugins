@@ -36,6 +36,8 @@ typedef void *(* init_fn_t)(logging::log_t *logger, const char *cfg, const size_
 typedef void (* cleanup_fn_t)(void *);
 typedef int (* process_fn_t)(void *, struct binary_io *);
 
+typedef api::sandbox_t *(* init_ng_fn_t)(context_t&, const std::string&, const Json::Value&, const std::string&);
+
 class binary_t: public api::sandbox_t {
 	public:
 		typedef api::sandbox_t category_type;
@@ -57,6 +59,7 @@ class binary_t: public api::sandbox_t {
 		lt_dladvise m_advice;
 		cleanup_fn_t m_cleanup;
 		lt_dlhandle m_bin;
+		std::unique_ptr<api::sandbox_t> m_impl;
 };
 
 }}

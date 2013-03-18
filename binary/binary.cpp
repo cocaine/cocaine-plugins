@@ -30,9 +30,9 @@ using namespace cocaine::sandbox;
 namespace fs = boost::filesystem;
 
 binary_t::binary_t(context_t &context, const std::string &name, const Json::Value &args, const std::string &spool) :
-    category_type(context, name, args, spool),
-    m_log(new logging::log_t(context, cocaine::format("app/%1%", name))),
-    m_process(NULL), m_cleanup(NULL)
+	category_type(context, name, args, spool),
+	m_log(new logging::log_t(context, cocaine::format("app/%1%", name))),
+	m_process(NULL), m_handle(NULL), m_cleanup(NULL)
 {
 	fs::path source(spool);
 
@@ -58,26 +58,34 @@ binary_t::binary_t(context_t &context, const std::string &name, const Json::Valu
 		throw configuration_error_t("unable to load binary object");
 	}
 
-	init_fn_t init = NULL;
-	init = reinterpret_cast<init_fn_t>(lt_dlsym(m_bin, "initialize"));
-	m_process = reinterpret_cast<process_fn_t>(lt_dlsym(m_bin, "process"));
-	m_cleanup = reinterpret_cast<cleanup_fn_t>(lt_dlsym(m_bin, "cleanup"));
+	init_ng_fn_t init_ng = reinterpret_cast<init_ng_fn_t>(lt_dlsym(m_bin, "initialize_ng"));
+	if (init_ng) {
+		m_impl.reset((*init_ng)(context, name, args["config"], spool));
+		if (!m_impl) {
+			throw configuration_error_t("invalid binary loaded: initialize_ng returnes null object");
+		}
+	} else {
+		init_fn_t init = NULL;
+		init = reinterpret_cast<init_fn_t>(lt_dlsym(m_bin, "initialize"));
+		m_process = reinterpret_cast<process_fn_t>(lt_dlsym(m_bin, "process"));
+		m_cleanup = reinterpret_cast<cleanup_fn_t>(lt_dlsym(m_bin, "cleanup"));
 
-	if (!m_process || !m_cleanup || !init) {
-		COCAINE_LOG_ERROR(m_log, "invalid binary loaded: init: %p, process: %p, cleanup: %p",
-				init, m_process, m_cleanup);
-		lt_dladvise_destroy(&m_advice);
-		throw configuration_error_t("invalid binary loaded: not all callbacks are present");
-	}
+		if (!m_process || !m_cleanup || !init) {
+			COCAINE_LOG_ERROR(m_log, "invalid binary loaded: init: %p, process: %p, cleanup: %p",
+					init, m_process, m_cleanup);
+			lt_dladvise_destroy(&m_advice);
+			throw configuration_error_t("invalid binary loaded: not all callbacks are present");
+		}
 
-	Json::Value config(args["config"]);
-	std::string cfg = config.toStyledString();
+		Json::Value config(args["config"]);
+		std::string cfg = config.toStyledString();
 
 	m_handle = (*init)(m_log.get(), cfg.c_str(), cfg.size() + 1);
-	if (!m_handle) {
-		COCAINE_LOG_ERROR(m_log, "binary initialization failed");
-		lt_dladvise_destroy(&m_advice);
-		throw configuration_error_t("binary initialization failed");
+		if (!m_handle) {
+			COCAINE_LOG_ERROR(m_log, "binary initialization failed");
+			lt_dladvise_destroy(&m_advice);
+			throw configuration_error_t("binary initialization failed");
+		}
 	}
 
 	COCAINE_LOG_INFO(m_log, "successfully initialized binary module from %s", source.string());
@@ -85,7 +93,8 @@ binary_t::binary_t(context_t &context, const std::string &name, const Json::Valu
 
 binary_t::~binary_t()
 {
-	m_cleanup(m_handle);
+	if (m_cleanup)
+		m_cleanup(m_handle);
 	lt_dladvise_destroy(&m_advice);
 }
 
@@ -100,7 +109,7 @@ namespace {
 		public api::stream_t
 	{
 		downstream_t(binary_t * parent,
-			         const std::shared_ptr<api::stream_t>& upstream):
+					 const std::shared_ptr<api::stream_t>& upstream):
 			m_parent(parent),
 			m_upstream(upstream)
 		{ }
@@ -146,11 +155,13 @@ namespace {
 
 std::shared_ptr<api::stream_t> binary_t::invoke(const std::string &method, const std::shared_ptr<api::stream_t>& upstream)
 {
+	if (m_impl)
+		return m_impl->invoke(method, upstream);
 	return std::make_shared<downstream_t>(this, upstream);
 }
 
 extern "C" {
-    void initialize(api::repository_t& repository) {
-        repository.insert<binary_t>("binary");
-    }
+	void initialize(api::repository_t& repository) {
+		repository.insert<binary_t>("binary");
+	}
 }
