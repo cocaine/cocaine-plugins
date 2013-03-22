@@ -71,7 +71,7 @@ writable_stream_t::write(writable_stream_t * self,
 
     Py_BEGIN_ALLOW_THREADS
         try {
-            self->base->push(message, size);
+            self->base->write(message, size);
         } catch(cocaine::error_t& e) {
             // Do nothing.
         }

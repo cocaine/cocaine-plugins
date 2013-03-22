@@ -83,8 +83,8 @@ blastbeat_stream_t::blastbeat_stream_t(blastbeat_t& driver,
 { }
 
 void
-blastbeat_stream_t::push(const char * chunk,
-                         size_t size)
+blastbeat_stream_t::write(const char * chunk,
+                          size_t size)
 {
     if(!m_body) {
         msgpack::unpacked unpacked;

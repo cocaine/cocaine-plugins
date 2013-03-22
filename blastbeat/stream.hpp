@@ -35,8 +35,8 @@ struct blastbeat_stream_t:
 
     virtual
     void
-    push(const char * chunk,
-         size_t size);
+    write(const char * chunk,
+          size_t size);
 
     virtual
     void

@@ -93,7 +93,7 @@ namespace {
 	void binary_write(struct binary_io *__io, const void *data, size_t size)
 	{
 		api::stream_t * stream = static_cast<api::stream_t*>(__io->priv_io);
-		stream->push(static_cast<const char*>(data), size);
+		stream->write(static_cast<const char*>(data), size);
 	}
 	
 	struct downstream_t:
@@ -105,7 +105,7 @@ namespace {
 			m_upstream(upstream)
 		{ }
 
-		virtual void push(const char * data, size_t size)
+		virtual void write(const char * data, size_t size)
 		{
 			struct binary_io bio;
 			int err;
