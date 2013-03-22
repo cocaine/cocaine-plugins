@@ -55,12 +55,18 @@ namespace io {
     {
         static inline
         void
-        unpack(const msgpack::object& unpacked,
+        unpack(const msgpack::object& object,
                service::network_request_t& target)
         {
-            unpacked >> target.url;
-            unpacked >> target.headers;
-            unpacked >> target.follow_location;
+            if(object.type != msgpack::type::ARRAY ||
+               object.via.array.size != 3)
+            {
+                throw msgpack::type_error();
+            }
+
+            object.via.array.ptr[0] >> target.url;
+            object.via.array.ptr[1] >> target.headers;
+            object.via.array.ptr[2] >> target.follow_location;
         }
     };
 
@@ -73,6 +79,8 @@ namespace io {
         pack(msgpack::packer<Stream>& packer,
              const service::network_reply_t& source)
         {
+            packer.pack_array(5);
+
             packer << source.url;
             packer << source.headers;
             packer << source.code;
