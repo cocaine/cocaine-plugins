@@ -41,8 +41,10 @@ class zmq_single{
         static zmq_single* instance(){
             static std::mutex m_mutex;
             static zmq_single* volatile inst;
+
             if (inst == NULL){
                 std::unique_lock<std::mutex> guard(m_mutex);
+
                 if (inst == NULL){
                     zmq_single* temp = new zmq_single(); 
                     inst = temp;
@@ -50,19 +52,16 @@ class zmq_single{
             }
             return inst;
         };
-    private:
-        zmq_single() : 
-            zctx(new zmq::context_t(1))
-            {}
-        ~zmq_single() {
-            //Empty    
-        }
-    private:
-        zmq::context_t* zctx;
-    public:
+
         zmq::context_t& get_context(){
             return *zctx;
         }
+    private:
+        zmq_single() : 
+            zctx(new zmq::context_t(1))
+            { }
+    private:
+        std::unique_ptr<zmq::context_t> zctx;
 };
 
 // ZeroMQ socket
