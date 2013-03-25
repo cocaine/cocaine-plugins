@@ -1,3 +1,18 @@
+cocaine-plugins (0.10.0-rc5) lucid; urgency=low
+
+  * Release candidate 5.
+  * Rebuilt with the new core.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 15 Mar 2013 22:14:21 +0400
+
+cocaine-plugins (0.10.0-rc4) lucid; urgency=low
+
+  * Release candidate 4.
+  * Logger is now being provided in the binary sandbox via the first argument
+    to user's code initialize().
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 12 Mar 2013 23:27:44 +0400
+
 cocaine-plugins (0.10.0-rc3) lucid; urgency=low
 
   * Release candidate 3.

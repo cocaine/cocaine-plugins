@@ -18,45 +18,13 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef COCAINE_BLASTBEAT_STREAM_HPP
-#define COCAINE_BLASTBEAT_STREAM_HPP
+#include "urlfetch.hpp"
 
-#include <cocaine/api/stream.hpp>
+using namespace cocaine;
 
-namespace cocaine { namespace driver {
-
-class blastbeat_t;
-
-struct blastbeat_stream_t:
-    public api::stream_t
-{
-    blastbeat_stream_t(blastbeat_t& driver,
-                       const std::string& sid);
-
-    virtual
+extern "C" {
     void
-    write(const char * chunk,
-          size_t size);
-
-    virtual
-    void
-    error(error_code code,
-          const std::string& message);
-
-    virtual
-    void
-    close();
-
-private:
-    blastbeat_t& m_driver;
-
-    // Blastbeat session ID for this stream.
-    const std::string m_sid;
-
-    // Indicates that headers are already away.
-    bool m_body;
-};
-
-}}
-
-#endif
+    initialize(api::repository_t& repository) {
+        repository.insert<service::urlfetch_t>("url-fetch");
+    }
+}

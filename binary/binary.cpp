@@ -34,12 +34,12 @@ binary_t::binary_t(context_t &context, const std::string &name, const Json::Valu
     m_log(new logging::log_t(context, cocaine::format("app/%1%", name))),
     m_process(NULL), m_cleanup(NULL)
 {
-	boost::filesystem::path source(spool);
+	fs::path source(spool);
 
 	if (lt_dlinit() != 0)
 		throw configuration_error_t("unable to initialize binary loader");
 
-	if (!boost::filesystem::is_directory(source))
+	if (!fs::is_directory(source))
 		throw configuration_error_t("binary loaded object must be unpacked into directory");
 
 	Json::Value filename(args["name"]);
@@ -47,8 +47,6 @@ binary_t::binary_t(context_t &context, const std::string &name, const Json::Valu
 		throw configuration_error_t("malformed manifest: args/name must be a string");
 
 	source /= filename.asString();
-
-	fs::path path(source);
 
 	lt_dladvise_init(&m_advice);
 	lt_dladvise_global(&m_advice);
@@ -75,7 +73,7 @@ binary_t::binary_t(context_t &context, const std::string &name, const Json::Valu
 	Json::Value config(args["config"]);
 	std::string cfg = config.toStyledString();
 
-	m_handle = (*init)(cfg.c_str(), cfg.size() + 1);
+	m_handle = (*init)(m_log.get(), cfg.c_str(), cfg.size() + 1);
 	if (!m_handle) {
 		COCAINE_LOG_ERROR(m_log, "binary initialization failed");
 		lt_dladvise_destroy(&m_advice);
@@ -95,7 +93,7 @@ namespace {
 	void binary_write(struct binary_io *__io, const void *data, size_t size)
 	{
 		api::stream_t * stream = static_cast<api::stream_t*>(__io->priv_io);
-		stream->push(static_cast<const char*>(data), size);
+		stream->write(static_cast<const char*>(data), size);
 	}
 	
 	struct downstream_t:
@@ -107,7 +105,7 @@ namespace {
 			m_upstream(upstream)
 		{ }
 
-		virtual void push(const char * data, size_t size)
+		virtual void write(const char * data, size_t size)
 		{
 			struct binary_io bio;
 			int err;

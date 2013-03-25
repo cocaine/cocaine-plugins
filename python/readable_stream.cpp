@@ -29,8 +29,8 @@ downstream_t::downstream_t(python_t& sandbox):
 { }
 
 void
-downstream_t::push(const char * chunk,
-                   size_t size)
+downstream_t::write(const char * chunk,
+                    size_t size)
 {
     thread_lock_t lock(m_sandbox.thread_state());
 

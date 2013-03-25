@@ -85,7 +85,7 @@ fs_t::on_event(ev::stat& w, int) {
            << w.attr.st_ctime;
 
     try {
-        engine().enqueue(api::event_t(m_event), std::make_shared<api::null_stream_t>())->push(
+        engine().enqueue(api::event_t(m_event), std::make_shared<api::null_stream_t>())->write(
             buffer.data(),
             buffer.size()
         );

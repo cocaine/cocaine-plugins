@@ -261,12 +261,12 @@ blastbeat_t::on_uwsgi(const std::string& sid,
     packer << env;
 
     try {
-        it->second->push(
+        it->second->write(
             buffer.data(),
             buffer.size()
         );
     } catch(const cocaine::error_t& e) {
-        COCAINE_LOG_ERROR(m_log, "unable to push data to a session - %s", e.what());
+        COCAINE_LOG_ERROR(m_log, "unable to push headers to a session - %s", e.what());
     }
 }
 
@@ -284,12 +284,12 @@ blastbeat_t::on_body(const std::string& sid,
     }
 
     try {
-        it->second->push(
+        it->second->write(
             static_cast<const char*>(body.data()),
             body.size()
         );
     } catch(const cocaine::error_t& e) {
-        COCAINE_LOG_ERROR(m_log, "unable to push a chunk to a session - %s", e.what());
+        COCAINE_LOG_ERROR(m_log, "unable to push a body chunk to a session - %s", e.what());
     }
 }
 
