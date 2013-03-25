@@ -22,11 +22,18 @@
 #define COCAINE_DEALER_DRIVER_HPP
 
 #include <cocaine/common.hpp>
-#include <cocaine/asio.hpp>
-#include <cocaine/io.hpp>
-#include <cocaine/messaging.hpp>
+#include "messaging.hpp"
 
 #include <cocaine/api/driver.hpp>
+
+#define EV_MINIMAL       0
+#define EV_USE_MONOTONIC 1
+#define EV_USE_REALTIME  1
+#define EV_USE_NANOSLEEP 1
+#define EV_USE_EVENTFD   1
+#include <ev++.h>
+
+#include "io.hpp"
 
 namespace cocaine { namespace driver {
 
