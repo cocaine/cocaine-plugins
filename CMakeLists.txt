@@ -59,8 +59,8 @@ SET(PLUGINS
         binary
         chrono
         fs
+        dealer
         urlfetch
-        #dealer
         blastbeat
         cgroups)
         #zeromq)

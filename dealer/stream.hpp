@@ -21,7 +21,7 @@
 #ifndef COCAINE_DEALER_STREAM_HPP
 #define COCAINE_DEALER_STREAM_HPP
 
-#include <cocaine/io.hpp>
+#include "io.hpp"
 
 #include <cocaine/api/stream.hpp>
 
@@ -42,7 +42,7 @@ struct dealer_stream_t:
 
     virtual
     void
-    push(const char * chunk,
+    write(const char * chunk,
          size_t size);
 
     virtual
