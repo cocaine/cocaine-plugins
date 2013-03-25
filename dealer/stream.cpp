@@ -92,7 +92,7 @@ dealer_stream_t::dealer_stream_t(dealer_t& driver,
 }
 
 void
-dealer_stream_t::push(const char * chunk,
+dealer_stream_t::write(const char * chunk,
                       size_t size)
 {
     m_driver.send<io::dealer::chunk>(

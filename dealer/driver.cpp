@@ -47,6 +47,7 @@ dealer_t::dealer_t(context_t& context,
     m_watcher(engine.service().loop()),
     m_checker(engine.service().loop())
 {
+    
     std::string endpoint(args["endpoint"].asString());
 
     try {
@@ -63,6 +64,7 @@ dealer_t::dealer_t(context_t& context,
     m_watcher.start(m_channel.fd(), ev::READ);
     m_checker.set<dealer_t, &dealer_t::on_check>(this);
     m_checker.start();
+    
 }
 
 dealer_t::~dealer_t() {
@@ -98,7 +100,7 @@ dealer_t::on_check(ev::prepare&, int) {
 
 void
 dealer_t::process_events() {
-    int counter = defaults::io_bulk_size;
+    int counter = 2; // size of route 
 
     // Message origin.
     route_t route;
@@ -173,7 +175,7 @@ dealer_t::process_events() {
             );
 
             try {
-                engine().enqueue(api::event_t(m_event, policy), stream)->push(
+                engine().enqueue(api::event_t(m_event, policy), stream)->write(
                     static_cast<const char*>(message.data()),
                     message.size()
                 );
