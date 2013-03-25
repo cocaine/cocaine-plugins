@@ -38,16 +38,18 @@ namespace cocaine { namespace io {
 
 class zmq_single{
     public:
-        static zmq_single* instance(){
+        static 
+        std::shared_ptr<zmq_single> 
+        instance(){
             static std::mutex m_mutex;
-            static zmq_single* volatile inst;
+            static std::shared_ptr<zmq_single> inst;
 
-            if (inst == NULL){
+            if (inst.get() == NULL){
                 std::unique_lock<std::mutex> guard(m_mutex);
 
-                if (inst == NULL){
+                if (inst.get() == NULL){
                     zmq_single* temp = new zmq_single(); 
-                    inst = temp;
+                    inst.reset(temp);
                 }
             }
             return inst;
@@ -60,8 +62,9 @@ class zmq_single{
         zmq_single() : 
             zctx(new zmq::context_t(1))
             { }
+
     private:
-        std::unique_ptr<zmq::context_t> zctx;
+        std::shared_ptr<zmq::context_t> zctx;
 };
 
 // ZeroMQ socket
