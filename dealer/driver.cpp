@@ -100,7 +100,7 @@ dealer_t::on_check(ev::prepare&, int) {
 
 void
 dealer_t::process_events() {
-    int counter = 2; // size of route 
+    int counter = 100; 
 
     // Message origin.
     route_t route;
