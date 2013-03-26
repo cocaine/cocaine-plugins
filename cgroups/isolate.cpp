@@ -159,28 +159,14 @@ cgroups_t::spawn(const std::string& path,
                  const std::map<std::string, std::string>& args,
                  const std::map<std::string, std::string>& environment)
 {
-    typedef std::map<
-        std::string,
-        std::string
-    > arg_map_t;
-
     pid_t pid = ::fork();
 
     if(pid < 0) {
-        char buffer[1024],
-             * message;
-
-#ifdef _GNU_SOURCE
-        message = ::strerror_r(errno, buffer, 1024);
-#else
-        ::strerror_r(errno, buffer, 1024);
-
-        // NOTE: XSI-compliant strerror_r() returns int instead of the
-        // string buffer, so complete the job manually.
-        message = buffer;
-#endif
-
-        throw cocaine::error_t("unable to fork - %s", message);
+        throw std::system_error(
+            errno,
+            std::system_category(),
+            "unable to fork"
+        );
     }
 
     if(pid == 0) {
@@ -190,23 +176,26 @@ cgroups_t::spawn(const std::string& path,
         if((rv = cgroup_attach_task(m_cgroup)) != 0) {
             COCAINE_LOG_ERROR(
                 m_log,
-                "unable to attach the process to the cgroup - %s",
+                "unable to attach the process to a cgroup - %s",
                 cgroup_strerror(rv)
             );
 
             std::exit(EXIT_FAILURE);
         }
 
-        char * argv[args.size() * 2 + 2];
-        // char * envp[environment.size() + 1];
+        size_t argc = args.size() * 2 + 2;
+        // size_t envc = environment.size() + 1;
+
+        char ** argv = new char * [argc];
+        // char ** envp[] = new char * [envc];
 
         // NOTE: The first element is the executable path,
         // the last one should be null pointer.
         argv[0] = ::strdup(path.c_str());
-        argv[sizeof(argv) / sizeof(argv[0]) - 1] = NULL;
+        argv[argc - 1] = nullptr;
 
         // NOTE: The last element of the environment must be a null pointer.
-        // envp[sizeof(envp) / sizeof(envp[0]) - 1] = NULL;
+        // envp[envc - 1] = nullptr;
 
         std::map<std::string, std::string>::const_iterator it;
         int n;
@@ -241,36 +230,19 @@ cgroups_t::spawn(const std::string& path,
         }
         */
 
-        // TODO: Merge the current environment and the passed one.
-        // It's disabled for now, as will only be needed in forking slave.
-        rv = ::execv(argv[0], argv);
-
-        if(rv != 0) {
-            char buffer[1024],
-                 * message;
-
-#ifdef _GNU_SOURCE
-            message = ::strerror_r(errno, buffer, 1024);
-#else
-            ::strerror_r(errno, buffer, 1024);
-
-            // NOTE: XSI-compliant strerror_r() returns int instead of the
-            // string buffer, so complete the job manually.
-            message = buffer;
-#endif
+        if(::execv(argv[0], argv) != 0) {
+            std::error_code ec(errno, std::system_category());
 
             COCAINE_LOG_ERROR(
                 m_log,
                 "unable to execute '%s' - %s",
                 path,
-                message
+                ec.message()
             );
 
             std::exit(EXIT_FAILURE);
         }
     }
 
-    return std::unique_ptr<api::handle_t>(
-        new process_handle_t(pid)
-    );
+    return std::unique_ptr<api::handle_t>(new process_handle_t(pid));
 }
