@@ -22,7 +22,6 @@
 #define COCAINE_IO_HPP
 
 #include "cocaine/common.hpp"
-#include "cocaine/birth_control.hpp"
 #include "cocaine/traits.hpp"
 
 #include <zmq.hpp>
@@ -70,8 +69,7 @@ class zmq_single{
 // ZeroMQ socket
 
 class socket_base_t: 
-    public boost::noncopyable,
-    public birth_control<socket_base_t>
+    boost::noncopyable
 {
     public:
         socket_base_t(context_t& context,

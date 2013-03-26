@@ -22,20 +22,16 @@
 #define COCAINE_DEALER_DRIVER_HPP
 
 #include <cocaine/common.hpp>
-#include "messaging.hpp"
 
 #include <cocaine/api/driver.hpp>
-
-#define EV_MINIMAL       0
-#define EV_USE_MONOTONIC 1
-#define EV_USE_REALTIME  1
-#define EV_USE_NANOSLEEP 1
-#define EV_USE_EVENTFD   1
-#include <ev++.h>
+#include <cocaine/asio/reactor.hpp>
 
 #include "io.hpp"
+#include "messaging.hpp"
 
 namespace cocaine { namespace driver {
+
+using io::reactor_t;
 
 class dealer_t:
     public api::driver_t
@@ -45,9 +41,10 @@ class dealer_t:
 
     public:
         dealer_t(context_t& context,
+                 reactor_t& reactor,
+                 app_t& app,
                  const std::string& name,
-                 const Json::Value& args,
-                 engine::engine_t& engine);
+                 const Json::Value& args);
 
         virtual
         ~dealer_t();
@@ -80,6 +77,10 @@ class dealer_t:
     private:
         context_t& m_context;
         std::unique_ptr<logging::log_t> m_log;
+
+        reactor_t& m_reactor;
+
+        app_t& m_app;
 
         // Configuration
 

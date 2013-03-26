@@ -22,7 +22,7 @@
 #define COCAINE_LOGGING_SERVICE_HPP
 
 #include <cocaine/api/service.hpp>
-#include <cocaine/asio/service.hpp>
+#include <cocaine/asio/reactor.hpp>
 #include <swarm/networkmanager.h>
 
 namespace cocaine {
@@ -104,7 +104,7 @@ class urlfetch_t:
 {
     public:
         urlfetch_t(context_t& context,
-                   cocaine::io::service_t &service,
+                   cocaine::io::reactor_t &reactor,
                    const std::string& name,
                    const Json::Value& args);
 

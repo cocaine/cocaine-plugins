@@ -31,12 +31,12 @@ using namespace std::placeholders;
 using namespace ioremap;
 
 urlfetch_t::urlfetch_t(context_t& context,
-                       cocaine::io::service_t &service,
+                       cocaine::io::reactor_t &reactor,
                        const std::string& name,
                        const Json::Value& args):
-    service_t(context, service, name, args),
+    service_t(context, reactor, name, args),
     m_context(context),
-    m_manager(service.loop())
+    m_manager(reactor.native())
 {
     on<io::urlfetch::get>("get", std::bind(&urlfetch_t::get, this, _1));
 }
