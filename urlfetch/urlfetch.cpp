@@ -38,7 +38,7 @@ namespace {
         deferred<network_reply_t> promise;
 
         void
-        operator()(const network_reply& reply) {
+        operator()(const network_reply_t& reply) {
             promise.write(reply);
         }
     };
