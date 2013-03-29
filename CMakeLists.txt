@@ -8,6 +8,7 @@ SET(CMAKE_MODULE_PATH
 
 OPTION(CHRONO "Build Chrono Driver plugin" ON)
 OPTION(FS "Build Filesystem Driver plugin" ON)
+OPTION(URLFETCH "Build URL Fetcher Service plugin" OFF)
 OPTION(DEALER "Build Dealer Driver plugin" ON)
 OPTION(PYTHON "Build Python Sandbox plugin" ON)
 OPTION(PERL "Build Perl Sandbox plugin" ON)
@@ -58,7 +59,8 @@ SET(PLUGINS
         binary
         chrono
         fs
-        #dealer
+        dealer
+        urlfetch
         blastbeat
         cgroups)
         #zeromq)

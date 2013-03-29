@@ -34,10 +34,11 @@ drifting_stream_t::~drifting_stream_t() {
 }
 
 drifting_timer_t::drifting_timer_t(context_t& context,
+                                   reactor_t& reactor,
+                                   app_t& app,
                                    const std::string& name,
-                                   const Json::Value& args,
-                                   engine::engine_t& engine):
-    recurring_timer_t(context, name, args, engine)
+                                   const Json::Value& args):
+    recurring_timer_t(context, reactor, app, name, args)
 { }
 
 Json::Value

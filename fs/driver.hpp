@@ -21,13 +21,13 @@
 #ifndef COCAINE_FILESYSTEM_MONITOR_DRIVER_HPP
 #define COCAINE_FILESYSTEM_MONITOR_DRIVER_HPP
 
-#include <cocaine/common.hpp>
-
 #include <cocaine/api/driver.hpp>
 
-#include <cocaine/asio/service.hpp>
+#include <cocaine/asio/reactor.hpp>
 
 namespace cocaine { namespace driver {
+
+using io::reactor_t;
 
 class fs_t:
     public api::driver_t
@@ -37,9 +37,10 @@ class fs_t:
 
     public:
         fs_t(context_t& context,
+             reactor_t& reactor,
+             app_t& app,
              const std::string& name,
-             const Json::Value& args,
-             engine::engine_t& engine);
+             const Json::Value& args);
 
         virtual
         ~fs_t();
@@ -55,6 +56,8 @@ class fs_t:
     private:
         context_t& m_context;
         std::unique_ptr<logging::log_t> m_log;
+
+        app_t& m_app;
 
         const std::string m_event;
         const std::string m_path;

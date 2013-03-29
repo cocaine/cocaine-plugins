@@ -1,7 +1,9 @@
 IF(DEALER)
+
     ADD_LIBRARY(dealer MODULE
         stream
         driver
+        io
         module)
 
     TARGET_LINK_LIBRARIES(dealer

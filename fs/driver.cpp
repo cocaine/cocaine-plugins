@@ -20,8 +20,8 @@
 
 #include "driver.hpp"
 
+#include <cocaine/app.hpp>
 #include <cocaine/context.hpp>
-#include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
 
 #include <cocaine/api/event.hpp>
@@ -34,15 +34,17 @@ using namespace cocaine::driver;
 using namespace cocaine::logging;
 
 fs_t::fs_t(context_t& context,
+           reactor_t& reactor,
+           app_t& app,
            const std::string& name,
-           const Json::Value& args,
-           engine::engine_t& engine):
-    category_type(context, name, args, engine),
+           const Json::Value& args):
+    category_type(context, reactor, app, name, args),
     m_context(context),
     m_log(new log_t(context, cocaine::format("app/%s", name))),
+    m_app(app),
     m_event(args.get("emit", "").asString()),
     m_path(args.get("path", "").asString()),
-    m_watcher(engine.service().loop())
+    m_watcher(reactor.native())
 {
     if(m_path.empty()) {
         throw configuration_error_t("no path has been specified");
@@ -85,7 +87,7 @@ fs_t::on_event(ev::stat& w, int) {
            << w.attr.st_ctime;
 
     try {
-        engine().enqueue(api::event_t(m_event), std::make_shared<api::null_stream_t>())->push(
+        m_app.enqueue(api::event_t(m_event), std::make_shared<api::null_stream_t>())->write(
             buffer.data(),
             buffer.size()
         );

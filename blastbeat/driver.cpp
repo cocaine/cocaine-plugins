@@ -22,8 +22,8 @@
 
 #include "stream.hpp"
 
+#include <cocaine/app.hpp>
 #include <cocaine/context.hpp>
-#include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/traits.hpp>
 
@@ -36,18 +36,21 @@ using namespace cocaine::driver;
 using namespace cocaine::logging;
 
 blastbeat_t::blastbeat_t(context_t& context,
+                         reactor_t& reactor,
+                         app_t& app,
                          const std::string& name,
-                         const Json::Value& args,
-                         engine::engine_t& engine):
-    category_type(context, name, args, engine),
+                         const Json::Value& args):
+    category_type(context, reactor, app, name, args),
     m_context(context),
     m_log(new log_t(context, cocaine::format("app/%s", name))),
+    m_reactor(reactor),
+    m_app(app),
     m_event(args.get("emit", "").asString()),
     m_endpoint(args.get("endpoint", "").asString()),
     m_zmq(1),
     m_socket(m_zmq, ZMQ_DEALER),
-    m_watcher(engine.service().loop()),
-    m_checker(engine.service().loop())
+    m_watcher(reactor.native()),
+    m_checker(reactor.native())
 {
     try {
         m_socket.setsockopt(
@@ -121,7 +124,7 @@ blastbeat_t::on_check(ev::prepare&, int) {
 
     m_socket.getsockopt(ZMQ_FD, &fd, &size);
 
-    engine().service().loop().feed_fd_event(fd, ev::READ);
+    m_reactor.native().feed_fd_event(fd, ev::READ);
 }
 
 namespace {
@@ -215,7 +218,7 @@ blastbeat_t::on_uwsgi(const std::string& sid,
     try {
         std::tie(it, std::ignore) = m_streams.emplace(
             sid,
-            engine().enqueue(api::event_t(m_event), upstream)
+            m_app.enqueue(api::event_t(m_event), upstream)
         );
     } catch(const cocaine::error_t& e) {
         COCAINE_LOG_ERROR(m_log, "unable to enqueue an event - %s", e.what());
@@ -261,12 +264,12 @@ blastbeat_t::on_uwsgi(const std::string& sid,
     packer << env;
 
     try {
-        it->second->push(
+        it->second->write(
             buffer.data(),
             buffer.size()
         );
     } catch(const cocaine::error_t& e) {
-        COCAINE_LOG_ERROR(m_log, "unable to push data to a session - %s", e.what());
+        COCAINE_LOG_ERROR(m_log, "unable to push headers to a session - %s", e.what());
     }
 }
 
@@ -284,12 +287,12 @@ blastbeat_t::on_body(const std::string& sid,
     }
 
     try {
-        it->second->push(
+        it->second->write(
             static_cast<const char*>(body.data()),
             body.size()
         );
     } catch(const cocaine::error_t& e) {
-        COCAINE_LOG_ERROR(m_log, "unable to push a chunk to a session - %s", e.what());
+        COCAINE_LOG_ERROR(m_log, "unable to push a body chunk to a session - %s", e.what());
     }
 }
 

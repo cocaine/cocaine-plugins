@@ -20,8 +20,8 @@
 
 #include "recurring_timer.hpp"
 
+#include <cocaine/app.hpp>
 #include <cocaine/context.hpp>
-#include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
 
 #include <cocaine/api/event.hpp>
@@ -32,15 +32,17 @@ using namespace cocaine::driver;
 using namespace cocaine::logging;
 
 recurring_timer_t::recurring_timer_t(context_t& context,
+                                     reactor_t& reactor,
+                                     app_t& app,
                                      const std::string& name,
-                                     const Json::Value& args,
-                                     engine::engine_t& engine):
-    category_type(context, name, args, engine),
+                                     const Json::Value& args):
+    category_type(context, reactor, app, name, args),
     m_context(context),
     m_log(new log_t(context, cocaine::format("app/%s", name))),
+    m_app(app),
     m_event(args["emit"].asString()),
     m_interval(args.get("interval", 0.0f).asInt() / 1000.0f),
-    m_watcher(engine.service().loop())
+    m_watcher(reactor.native())
 {
     if(m_interval <= 0.0f) {
         throw configuration_error_t("no interval has been specified");
@@ -69,7 +71,7 @@ recurring_timer_t::enqueue(const api::event_t& event,
                            const std::shared_ptr<api::stream_t>& stream)
 {
     try {
-        engine().enqueue(event, stream);
+        m_app.enqueue(event, stream);
     } catch(const cocaine::error_t& e) {
         COCAINE_LOG_ERROR(m_log, "unable to enqueue an event - %s", e.what());
     }

@@ -46,9 +46,10 @@ class drifting_timer_t:
 {
     public:
         drifting_timer_t(context_t& context,
+                         reactor_t& reactor,
+                         app_t& app,
                          const std::string& name,
-                         const Json::Value& args,
-                         engine::engine_t& engine);
+                         const Json::Value& args);
 
         virtual
         Json::Value

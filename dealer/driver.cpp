@@ -22,31 +22,35 @@
 
 #include "stream.hpp"
 
+#include <cocaine/app.hpp>
 #include <cocaine/context.hpp>
-#include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
 
-#include <cocaine/traits/policy.hpp>
+#include "policy.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
 using namespace cocaine::logging;
 
 dealer_t::dealer_t(context_t& context,
+                   reactor_t& reactor,
+                   app_t& app,
                    const std::string& name,
-                   const Json::Value& args,
-                   engine::engine_t& engine):
-    category_type(context, name, args, engine),
+                   const Json::Value& args):
+    category_type(context, reactor, app, name, args),
     m_context(context),
     m_log(new log_t(context, cocaine::format("app/%s", name))),
+    m_reactor(reactor),
+    m_app(app),
     m_event(args["emit"].asString()),
     m_identity(
         cocaine::format("%s/%s", m_context.config.network.hostname, name)
     ),
     m_channel(context, ZMQ_ROUTER, m_identity),
-    m_watcher(engine.service().loop()),
-    m_checker(engine.service().loop())
+    m_watcher(reactor.native()),
+    m_checker(reactor.native())
 {
+    
     std::string endpoint(args["endpoint"].asString());
 
     try {
@@ -63,6 +67,7 @@ dealer_t::dealer_t(context_t& context,
     m_watcher.start(m_channel.fd(), ev::READ);
     m_checker.set<dealer_t, &dealer_t::on_check>(this);
     m_checker.start();
+    
 }
 
 dealer_t::~dealer_t() {
@@ -93,12 +98,12 @@ dealer_t::on_event(ev::io&, int) {
 
 void
 dealer_t::on_check(ev::prepare&, int) {
-    engine().service().loop().feed_fd_event(m_channel.fd(), ev::READ);
+    m_reactor.native().feed_fd_event(m_channel.fd(), ev::READ);
 }
 
 void
 dealer_t::process_events() {
-    int counter = defaults::io_bulk_size;
+    int counter = 100; 
 
     // Message origin.
     route_t route;
@@ -173,7 +178,7 @@ dealer_t::process_events() {
             );
 
             try {
-                engine().enqueue(api::event_t(m_event, policy), stream)->push(
+                m_app.enqueue(api::event_t(m_event, policy), stream)->write(
                     static_cast<const char*>(message.data()),
                     message.size()
                 );

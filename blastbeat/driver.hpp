@@ -21,13 +21,15 @@
 #ifndef COCAINE_BLASTBEAT_DRIVER_HPP
 #define COCAINE_BLASTBEAT_DRIVER_HPP
 
-#include <cocaine/common.hpp>
 #include <cocaine/api/driver.hpp>
-#include <cocaine/asio/service.hpp>
+
+#include <cocaine/asio/reactor.hpp>
 
 #include <zmq.hpp>
 
 namespace cocaine { namespace driver {
+
+using io::reactor_t;
 
 class blastbeat_t:
     public api::driver_t
@@ -37,9 +39,10 @@ class blastbeat_t:
 
     public:
         blastbeat_t(context_t& context,
+                    reactor_t& reactor,
+                    app_t& app,
                     const std::string& name,
-                    const Json::Value& args,
-                    engine::engine_t& engine);
+                    const Json::Value& args);
 
         virtual
         ~blastbeat_t();
@@ -102,6 +105,10 @@ class blastbeat_t:
     protected:
         context_t& m_context;
         std::unique_ptr<logging::log_t> m_log;
+
+        reactor_t& m_reactor;
+
+        app_t& m_app;
 
         // Configuration
 
