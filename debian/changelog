@@ -1,3 +1,10 @@
+cocaine-plugins (0.10.0-rc6) lucid; urgency=low
+
+  * Release candidate 6.
+  * Dealer works again.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Sat, 30 Mar 2013 00:53:26 +0400
+
 cocaine-plugins (0.10.0-rc5) lucid; urgency=low
 
   * Release candidate 5.

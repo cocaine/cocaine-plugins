@@ -4,7 +4,8 @@ Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
 Build-Depends: cmake, cdbs, debhelper (>= 7.0.13), libzmq-dev (>= 2.2.0), libev-dev, libmsgpack-dev,
  libboost-dev, libboost-filesystem-dev, libboost-thread-dev, libltdl-dev, python-dev, libperl-dev,
- elliptics-dev (>= 2.21), libcgroup-dev, libcocaine-dev (>= 0.10.0), libmongoclient-dev | mongodb-dev
+ elliptics-dev (>= 2.22), libcgroup-dev, libcocaine-dev (>= 0.10.0), libmongoclient-dev | mongodb-dev,
+ libswarm-dev
 Standards-Version: 3.9.1
 Vcs-Git: git://github.com/cocaine/cocaine-plugins.git
 Vcs-Browser: https://github.com/cocaine/cocaine-plugins
@@ -21,11 +22,11 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
 Description: Cocaine - Filesystem-based Drivers
  Filesystem driver for Cocaine.
 
-# Package: libcocaine-plugin-dealer
-# Architecture: any
-# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
-# Description: Cocaine - Dealer Driver
-#  Dealer driver for Cocaine.
+Package: libcocaine-plugin-dealer
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
+Description: Cocaine - Dealer Driver
+ Dealer driver for Cocaine.
 
 Package: libcocaine-plugin-blastbeat
 Architecture: any
@@ -71,7 +72,7 @@ Description: Cocaine - MongoDB Storage
 Package: libcocaine-plugin-elliptics
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10),
- elliptics-client (>= 2.21)
+ elliptics-client (>= 2.22)
 Provides: cocaine-plugin-elliptics
 Replaces: cocaine-plugin-elliptics
 Description: Cocaine - Elliptics Storage
@@ -89,3 +90,10 @@ Description: Cocaine - CGroups Isolate
 # Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
 # Description: Cocaine - ZeroMQ Driver
 #  Raw ZeroMQ driver for Cocaine.
+
+# Package: libcocaine-plugin-urlfetch
+# Architecture: any
+# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10),
+#  libswarm
+# Description: Cocaine - URLFetch Service
+#  URLFetch service for Cocaine.
