@@ -11,7 +11,8 @@ IF(MONGO)
             ${LIBMONGOCLIENT_LIBRARY_DIRS})
         
         ADD_LIBRARY(mongodb MODULE
-            mongo)
+            storage
+            module)
 
         TARGET_LINK_LIBRARIES(mongodb
             cocaine-core
