@@ -34,16 +34,15 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
 Description: Cocaine - Blastbeat Driver
  Blastbeat driver for Cocaine.
 
-Package: libcocaine-plugin-python
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10),
- python
-Provides: cocaine-plugin-python
-Replaces: cocaine-plugin-python
-Description: Cocaine - Python Sandbox
- Python scripting support for Cocaine.
+# Package: libcocaine-plugin-python
+# Architecture: any
+# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10),
+#  python
+# Provides: cocaine-plugin-python
+# Replaces: cocaine-plugin-python
+# Description: Cocaine - Python Sandbox
+#  Python scripting support for Cocaine.
 
-# NOTE: Doesn't support the new API yet.
 # 
 # Package: libcocaine-plugin-perl
 # Architecture: any
@@ -54,11 +53,11 @@ Description: Cocaine - Python Sandbox
 # Description: Cocaine - Perl Sandbox
 #  Perl scripting support for Cocaine.
 
-Package: libcocaine-plugin-binary
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
-Description: Cocaine - Binary Sandbox
- Binary C/C++ support for Cocaine.
+# Package: libcocaine-plugin-binary
+# Architecture: any
+# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10)
+# Description: Cocaine - Binary Sandbox
+#  Binary C/C++ support for Cocaine.
 
 Package: libcocaine-plugin-mongodb
 Architecture: any

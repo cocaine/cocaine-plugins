@@ -6,15 +6,15 @@ SET(COCAINE_VERSION 0.10)
 SET(CMAKE_MODULE_PATH 
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
-OPTION(BINARY "Build Binary Sandbox plugin" ON)
+OPTION(BINARY "Build Binary Sandbox plugin" OFF)
 OPTION(BLASTBEAT "Build Blastbeat Driver plugin" ON)
 OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
 OPTION(CHRONO "Build Chrono Driver plugin" ON)
 OPTION(DEALER "Build Dealer Driver plugin" ON)
 OPTION(FS "Build Filesystem Driver plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" ON)
-OPTION(PERL "Build Perl Sandbox plugin" ON)
-OPTION(PYTHON "Build Python Sandbox plugin" ON)
+OPTION(PERL "Build Perl Sandbox plugin" OFF)
+OPTION(PYTHON "Build Python Sandbox plugin" OFF)
 OPTION(URLFETCH "Build URLFetch Service plugin" OFF)
 OPTION(ZEROMQ "Build ZeroMQ Driver plugin" ON)
 
