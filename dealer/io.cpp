@@ -23,7 +23,6 @@
 #include "cocaine/context.hpp"
 
 
-#include<iostream>
 
 #define COCAINE_EINTR_GUARD(command)        \
     do {                                    \
@@ -67,11 +66,11 @@ socket_base_t::bind() {
         "tcp://*:*"
     );
 
-    size_t size = 255;
-    char endpt[size];
+    char endpt[255];
+    size_t size = sizeof(endpt);
+
     m_socket.getsockopt(ZMQ_LAST_ENDPOINT, &endpt, &size);
     m_endpoint = endpt;
-    std::cerr << "Endpoint" << m_endpoint << std::endl;
 }
 
 void
