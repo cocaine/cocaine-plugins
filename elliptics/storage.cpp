@@ -142,7 +142,7 @@ elliptics_storage_t::read(const std::string& collection,
     );
 
     try {
-        blob = m_session.read_data(id(collection, key), 0, 0)->file().to_string();
+        blob = m_session.read_data(id(collection, key), 0, 0).get_one().file().to_string();
     } catch(const ioremap::elliptics::error& e) {
         throw storage_error_t(e.what());
     }
@@ -176,7 +176,7 @@ elliptics_storage_t::write(const std::string& collection,
         );
 
         // Write the blob.
-        m_session.write_data(dnet_id, blob, 0);
+        m_session.write_data(dnet_id, blob, 0).wait();
 
         // Write the blob metadata.
         m_session.write_metadata(
@@ -210,7 +210,7 @@ elliptics_storage_t::write(const std::string& collection,
             );
 
             // Update the collection object.
-            m_session.write_data(dnet_id, object, 0);
+            m_session.write_data(dnet_id, object, 0).wait();
 
             // Update the collection object metadata.
             m_session.write_metadata(
@@ -231,7 +231,7 @@ elliptics_storage_t::list(const std::string& collection) {
     std::string blob;
 
     try {
-        blob = m_session.read_data(id("system", "list:" + collection), 0, 0)->file().to_string();
+        blob = m_session.read_data(id("system", "list:" + collection), 0, 0).get_one().file().to_string();
     } catch(const ioremap::elliptics::error& e) {
         return result;
     }
@@ -291,7 +291,7 @@ elliptics_storage_t::remove(const std::string& collection,
         );
 
         // Update the collection object.
-        m_session.write_data(dnet_id, object, 0);
+        m_session.write_data(dnet_id, object, 0).wait();
 
         // Update the collection object metadata.
         m_session.write_metadata(
