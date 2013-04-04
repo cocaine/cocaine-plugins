@@ -18,12 +18,6 @@ OPTION(PYTHON "Build Python Sandbox plugin" OFF)
 OPTION(URLFETCH "Build URLFetch Service plugin" OFF)
 OPTION(ZEROMQ "Build ZeroMQ Driver plugin" ON)
 
-IF(UNIX AND NOT APPLE AND NOT CYGWIN)
-    OPTION(ELLIPTICS "Build Elliptics Storage plugin" ON)
-ELSE()
-    OPTION(ELLIPTICS "Build Elliptics Storage plugin" OFF)
-ENDIF()
-
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
@@ -56,7 +50,6 @@ LINK_DIRECTORIES(
 SET(PLUGINS
         python
         mongo
-        elliptics
         binary
         chrono
         fs
