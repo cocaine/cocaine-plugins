@@ -68,9 +68,9 @@ class zmq_single{
 
 // ZeroMQ socket
 
-class socket_base_t: 
-    boost::noncopyable
-{
+class socket_base_t {
+    COCAINE_DECLARE_NONCOPYABLE(socket_base_t)
+
     public:
         socket_base_t(context_t& context,
                       int type);

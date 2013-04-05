@@ -91,9 +91,9 @@ struct event_traits {
     };
 };
 
-struct message_t:
-    boost::noncopyable
-{
+struct message_t {
+    COCAINE_DECLARE_NONCOPYABLE(message_t)
+
     message_t() {
         // Empty.
     }
