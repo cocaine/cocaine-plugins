@@ -30,8 +30,12 @@ INCLUDE(cmake/locate_library.cmake)
 
 LOCATE_LIBRARY(LIBEV "ev++.h" "ev" "libev")
 LOCATE_LIBRARY(LIBMSGPACK "msgpack.hpp" "msgpack")
-LOCATE_LIBRARY(LIBZMQ "zmq.hpp" "zmq")
+LOCATE_LIBRARY(LIBZMQ "zmq.h" "zmq")
 LOCATE_LIBRARY(LIBCOCAINE "cocaine/context.hpp" "cocaine-core")
+
+INCLUDE_DIRECTORIES(BEFORE
+    ${PROJECT_SOURCE_DIR}/foreign/cppzmq
+)
 
 INCLUDE_DIRECTORIES(
     ${Boost_INCLUDE_DIRS}
