@@ -55,7 +55,7 @@ mongo_storage_t::read(const std::string& ns,
     std::string result;
 
     try {
-        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri));
+        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
         GridFS gridfs(connection->conn(), "cocaine", ns);
         GridFile file(gridfs.findFile(key));
 
@@ -83,7 +83,7 @@ mongo_storage_t::write(const std::string& ns,
                        const std::string& blob)
 {
     try {
-        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri));
+        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
         GridFS gridfs(connection->conn(), "cocaine", ns);
 
         // Store the blob.
@@ -104,7 +104,7 @@ mongo_storage_t::list(const std::string& ns) {
     std::vector<std::string> result;
 
     try {
-        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri));
+        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
         GridFS gridfs(connection->conn(), "cocaine", ns);
         std::shared_ptr<DBClientCursor> cursor(gridfs.list());
         BSONObj object;
@@ -127,7 +127,7 @@ mongo_storage_t::remove(const std::string& ns,
                         const std::string& key)
 {
     try {
-        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri));
+        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
 
         GridFS gridfs(connection->conn(), "cocaine", ns);
 
