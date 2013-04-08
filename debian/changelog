@@ -3,6 +3,7 @@ cocaine-plugins (0.10.1) lucid; urgency=low
   * Release 10.1.
   * MongoDB plugin works with MongoDB 2.2 and newer.
   * Elliptics plugin moved to Elliptics source tree.
+  * Disabled all the Sandbox plugins.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 08 Apr 2013 21:45:01 +0400
 
