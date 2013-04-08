@@ -2,10 +2,9 @@ Source: cocaine-plugins
 Section: utils
 Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
-Build-Depends: cmake, cdbs, debhelper (>= 7.0.13), libzmq-dev (>= 2.2.0), libev-dev, libmsgpack-dev,
- libboost-dev, libboost-filesystem-dev, libboost-thread-dev, libltdl-dev, python-dev, libperl-dev,
- libcgroup-dev, libcocaine-dev (>= 0.10.1), libmongoclient-dev | mongodb-dev
-# libswarm-dev
+Build-Depends: cmake, cdbs, debhelper (>= 7.0.13), libcocaine-dev (>= 0.10.1),
+ libboost-filesystem-dev, libboost-thread-dev, libcgroup-dev, libzmq-dev (>= 3.2)
+#python-dev, libperl-dev, libmongoclient-dev | mongodb-dev, libswarm-dev
 Standards-Version: 3.9.1
 Vcs-Git: git://github.com/cocaine/cocaine-plugins.git
 Vcs-Browser: https://github.com/cocaine/cocaine-plugins
@@ -59,14 +58,14 @@ Description: Cocaine - Blastbeat Driver
 # Description: Cocaine - Binary Sandbox
 #  Binary C/C++ support for Cocaine.
 
-Package: libcocaine-plugin-mongodb
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.1),
- libmongoclient | mongodb-clients
-Provides: cocaine-plugin-mongodb
-Replaces: cocaine-plugin-mongodb
-Description: Cocaine - MongoDB Storage
- MongoDB storage support for Cocaine.
+# Package: libcocaine-plugin-mongodb
+# Architecture: any
+# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.1),
+#  libmongoclient | mongodb-clients
+# Provides: cocaine-plugin-mongodb
+# Replaces: cocaine-plugin-mongodb
+# Description: Cocaine - MongoDB Storage
+#  MongoDB storage support for Cocaine.
 
 Package: libcocaine-plugin-cgroups
 Architecture: any
