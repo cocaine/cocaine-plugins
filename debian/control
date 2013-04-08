@@ -52,12 +52,6 @@ Description: Cocaine - Blastbeat Driver
 # Description: Cocaine - Perl Sandbox
 #  Perl scripting support for Cocaine.
 
-# Package: libcocaine-plugin-binary
-# Architecture: any
-# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.1)
-# Description: Cocaine - Binary Sandbox
-#  Binary C/C++ support for Cocaine.
-
 # Package: libcocaine-plugin-mongodb
 # Architecture: any
 # Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.1),

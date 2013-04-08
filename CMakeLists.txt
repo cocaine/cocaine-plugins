@@ -6,7 +6,6 @@ SET(COCAINE_VERSION 0.10)
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-OPTION(BINARY "Build Binary Sandbox plugin" OFF)
 OPTION(BLASTBEAT "Build Blastbeat Driver plugin" ON)
 OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
 OPTION(CHRONO "Build Chrono Driver plugin" ON)
@@ -50,7 +49,6 @@ LINK_DIRECTORIES(
 SET(PLUGINS
         python
         mongo
-        binary
         chrono
         fs
         dealer
