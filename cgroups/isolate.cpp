@@ -24,17 +24,19 @@
 #include <cocaine/logging.hpp>
 
 #include <cerrno>
+#include <csignal>
 #include <cstring>
+#include <system_error>
 
 #include <boost/lexical_cast.hpp>
 
-#include <libcgroup.h>
+#include <sys/types.h>
 #include <sys/wait.h>
-#include <unistd.h>
+
+#include <libcgroup.h>
 
 using namespace cocaine;
 using namespace cocaine::isolate;
-using namespace cocaine::logging;
 
 namespace {
     struct process_handle_t:
@@ -45,7 +47,7 @@ namespace {
         { }
 
         virtual
-        ~process_handle_t() {
+       ~process_handle_t() {
             terminate();
         }
 
@@ -60,7 +62,7 @@ namespace {
         }
 
     private:
-        pid_t m_pid;
+        const pid_t m_pid;
     };
 }
 
@@ -69,7 +71,7 @@ cgroups_t::cgroups_t(context_t& context,
                      const Json::Value& args):
     category_type(context, name, args),
     m_context(context),
-    m_log(new log_t(context, name))
+    m_log(new logging::log_t(context, name))
 {
     int rv = 0;
 
@@ -186,8 +188,8 @@ cgroups_t::spawn(const std::string& path,
         size_t argc = args.size() * 2 + 2;
         // size_t envc = environment.size() + 1;
 
-        char ** argv = new char * [argc];
-        // char ** envp[] = new char * [envc];
+        char** argv = new char* [argc];
+        // char** envp[] = new char* [envc];
 
         // NOTE: The first element is the executable path,
         // the last one should be null pointer.
