@@ -8,14 +8,11 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 OPTION(BLASTBEAT "Build Blastbeat Driver plugin" ON)
 OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
-OPTION(CHRONO "Build Chrono Driver plugin" ON)
 OPTION(DEALER "Build Dealer Driver plugin" ON)
-OPTION(FS "Build Filesystem Driver plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" ON)
-OPTION(PERL "Build Perl Sandbox plugin" OFF)
-OPTION(PYTHON "Build Python Sandbox plugin" OFF)
+OPTION(PYTHON "Build Python Sandbox plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" OFF)
-OPTION(ZEROMQ "Build ZeroMQ Driver plugin" ON)
+OPTION(ZEROMQ "Build ZeroMQ Driver plugin" OFF)
 
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
@@ -47,19 +44,13 @@ LINK_DIRECTORIES(
     ${LIBCOCAINE_LIBRARY_DIRS})
 
 SET(PLUGINS
-        python
-        mongo
-        chrono
-        fs
-        dealer
-        urlfetch
         blastbeat
-        cgroups)
+        cgroups
+        dealer
+        mongo
+        python
+        urlfetch)
         #zeromq)
-
-# IF(NOT APPLE)
-#     SET(PLUGINS ${PLUGINS} perl)
-# ENDIF()
 
 FOREACH(PLUGIN ${PLUGINS})
     ADD_SUBDIRECTORY(${PLUGIN})
