@@ -1,5 +1,5 @@
 /*
-* 2013+ Copyright (c) Ruslan Nigatullin <euroelessar@yandex.ru>
+* 2013+ Copyright (c) Ruslan Nigmatullin <euroelessar@yandex.ru>
 * All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify

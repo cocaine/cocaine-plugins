@@ -1,6 +1,6 @@
 /*
-    Copyright (C) 2011-2012 Alexander Eliseev <admin@inkvi.com>
-    Copyright (c) 2011-2012 Other contributors as noted in the AUTHORS file.
+    Copyright (C) 2011-2013 Alexander Eliseev <admin@inkvi.com>
+    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
 
     This file is part of Cocaine.
 
