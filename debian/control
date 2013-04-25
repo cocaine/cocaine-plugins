@@ -47,12 +47,12 @@ Description: Cocaine - Dealer Driver
 # Description: Cocaine - Python Sandbox
 #  Python scripting support for Cocaine.
 
-# Package: libcocaine-plugin-urlfetch
-# Architecture: any
-# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.1),
-#  libswarm
-# Description: Cocaine - URLFetch Service
-#  URLFetch service for Cocaine.
+Package: libcocaine-plugin-urlfetch
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.1),
+ libswarm
+Description: Cocaine - URLFetch Service
+ URLFetch service for Cocaine.
 
 # Package: libcocaine-plugin-zeromq
 # Architecture: any
