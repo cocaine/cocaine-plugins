@@ -1,6 +1,6 @@
 /*
-    Copyright (c) 2011-2012 Andrey Sibiryov <me@kobology.ru>
-    Copyright (c) 2011-2012 Other contributors as noted in the AUTHORS file.
+    Copyright (c) 2011-2013 Andrey Sibiryov <me@kobology.ru>
+    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
 
     This file is part of Cocaine.
 
@@ -25,9 +25,12 @@
 
 #include <cerrno>
 #include <csignal>
+#include <cstdlib>
 #include <cstring>
 #include <system_error>
 
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include <sys/types.h>
@@ -37,6 +40,8 @@
 
 using namespace cocaine;
 using namespace cocaine::isolate;
+
+namespace fs = boost::filesystem;
 
 namespace {
     struct process_handle_t:
@@ -70,8 +75,12 @@ cgroups_t::cgroups_t(context_t& context,
                      const std::string& name,
                      const Json::Value& args):
     category_type(context, name, args),
-    m_context(context),
-    m_log(new logging::log_t(context, name))
+    m_log(new logging::log_t(context, name)),
+#if BOOST_VERSION >= 104600
+    m_working_directory((fs::path(context.config.path.spool) / name).native())
+#else
+    m_working_directory((fs::path(context.config.path.spool) / name).string())
+#endif
 {
     int rv = 0;
 
@@ -182,7 +191,7 @@ cgroups_t::spawn(const std::string& path,
                 cgroup_strerror(rv)
             );
 
-            std::exit(EXIT_FAILURE);
+            std::_Exit(EXIT_FAILURE);
         }
 
         size_t argc = args.size() * 2 + 2;
@@ -232,6 +241,19 @@ cgroups_t::spawn(const std::string& path,
         }
         */
 
+        try {
+            fs::current_path(m_working_directory);
+        } catch(const fs::filesystem_error& e) {
+            COCAINE_LOG_ERROR(
+                m_log,
+                "unable to change working directory to '%s' - %s",
+                path,
+                e.what()
+            );
+
+            std::_Exit(EXIT_FAILURE);
+        }
+
         if(::execv(argv[0], argv) != 0) {
             std::error_code ec(errno, std::system_category());
 
@@ -242,7 +264,7 @@ cgroups_t::spawn(const std::string& path,
                 ec.message()
             );
 
-            std::exit(EXIT_FAILURE);
+            std::_Exit(EXIT_FAILURE);
         }
     }
 

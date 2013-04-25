@@ -1,6 +1,6 @@
 /*
-    Copyright (c) 2011-2012 Andrey Sibiryov <me@kobology.ru>
-    Copyright (c) 2011-2012 Other contributors as noted in the AUTHORS file.
+    Copyright (c) 2011-2013 Andrey Sibiryov <me@kobology.ru>
+    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
 
     This file is part of Cocaine.
 
@@ -48,8 +48,8 @@ class cgroups_t:
               const std::map<std::string, std::string>& environment);
 
     private:
-        context_t& m_context;
         std::unique_ptr<logging::log_t> m_log;
+        const std::string m_working_directory;
 
         cgroup * m_cgroup;
 };
