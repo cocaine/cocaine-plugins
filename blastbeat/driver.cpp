@@ -36,7 +36,7 @@ using namespace cocaine::driver;
 using namespace cocaine::logging;
 
 blastbeat_t::blastbeat_t(context_t& context,
-                         reactor_t& reactor,
+                         io::reactor_t& reactor,
                          app_t& app,
                          const std::string& name,
                          const Json::Value& args):
@@ -44,13 +44,13 @@ blastbeat_t::blastbeat_t(context_t& context,
     m_context(context),
     m_log(new log_t(context, cocaine::format("app/%s", name))),
     m_reactor(reactor),
+    m_watcher(reactor.native()),
+    m_checker(reactor.native()),
     m_app(app),
     m_event(args.get("emit", "").asString()),
     m_endpoint(args.get("endpoint", "").asString()),
     m_zmq(1),
-    m_socket(m_zmq, ZMQ_DEALER),
-    m_watcher(reactor.native()),
-    m_checker(reactor.native())
+    m_socket(m_zmq, ZMQ_DEALER)
 {
     try {
         m_socket.setsockopt(

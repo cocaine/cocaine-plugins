@@ -29,8 +29,6 @@
 
 namespace cocaine { namespace driver {
 
-using io::reactor_t;
-
 class blastbeat_t:
     public api::driver_t
 {
@@ -39,7 +37,7 @@ class blastbeat_t:
 
     public:
         blastbeat_t(context_t& context,
-                    reactor_t& reactor,
+                    io::reactor_t& reactor,
                     app_t& app,
                     const std::string& name,
                     const Json::Value& args);
@@ -106,7 +104,14 @@ class blastbeat_t:
         context_t& m_context;
         std::unique_ptr<logging::log_t> m_log;
 
-        reactor_t& m_reactor;
+        // Event loop
+
+        io::reactor_t& m_reactor;
+
+        ev::io m_watcher;
+        ev::prepare m_checker;
+
+        // Scheduler
 
         app_t& m_app;
 
@@ -119,11 +124,6 @@ class blastbeat_t:
 
         zmq::context_t m_zmq;
         zmq::socket_t m_socket;
-
-        // Event loop
-
-        ev::io m_watcher;
-        ev::prepare m_checker;
 
         // Session tracking
 

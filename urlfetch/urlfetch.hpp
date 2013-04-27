@@ -25,8 +25,6 @@ namespace cocaine {
 
 namespace service {
 
-using io::reactor_t;
-
 typedef ioremap::swarm::network_request network_request_t;
 typedef ioremap::swarm::network_reply network_reply_t;
 
@@ -35,7 +33,7 @@ class urlfetch_t:
 {
     public:
         urlfetch_t(context_t& context,
-                   reactor_t& reactor,
+                   io::reactor_t& reactor,
                    const std::string& name,
                    const Json::Value& args);
 
