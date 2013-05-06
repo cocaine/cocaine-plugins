@@ -1,3 +1,11 @@
+cocaine-plugins (0.10.2) lucid; urgency=low
+
+  * Release 10.2.
+  * URLFetch service.
+  * CGroups isolate is now up-to-date with its Process twin.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 25 Apr 2013 22:54:47 +0400
+
 cocaine-plugins (0.10.1) lucid; urgency=low
 
   * Release 10.1.
