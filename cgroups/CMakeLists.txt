@@ -1,6 +1,12 @@
 IF(CGROUPS)
     LOCATE_LIBRARY(LIBCGROUP "libcgroup.h" "cgroup")
 
+    INCLUDE_DIRECTORIES(
+        ${LIBCGROUP_INCLUDE_DIRS})
+
+    LINK_DIRECTORIES(
+        ${LIBCGROUP_LIBRARY_DIRS})
+
     ADD_LIBRARY(cgroups MODULE
         module
         isolate)

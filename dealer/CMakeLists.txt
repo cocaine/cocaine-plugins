@@ -7,6 +7,9 @@ IF(DEALER)
         module)
 
     TARGET_LINK_LIBRARIES(dealer
+        ev
+        msgpack
+        zmq
         cocaine-core)
 
     SET_TARGET_PROPERTIES(dealer PROPERTIES

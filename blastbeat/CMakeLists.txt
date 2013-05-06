@@ -5,7 +5,10 @@ IF(BLASTBEAT)
         module)
 
     TARGET_LINK_LIBRARIES(blastbeat
-        cocaine-core)
+        cocaine-core
+        ev
+        msgpack
+        zmq)
 
     SET_TARGET_PROPERTIES(blastbeat PROPERTIES
         PREFIX ""
