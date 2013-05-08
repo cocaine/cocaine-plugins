@@ -13,7 +13,7 @@
 * GNU General Public License for more details.
 */
 
-#include "urlfetch.hpp"
+#include "cocaine/services/urlfetch.hpp"
 
 using namespace cocaine;
 using namespace cocaine::service;

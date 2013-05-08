@@ -18,37 +18,17 @@
 
 #include <cocaine/api/service.hpp>
 #include <cocaine/asio/reactor.hpp>
+#include <cocaine/rpc/optional.hpp>
 
 #include <swarm/networkmanager.h>
 
 namespace cocaine {
 
 namespace service {
-
 typedef ioremap::swarm::network_request network_request_t;
 typedef ioremap::swarm::network_reply network_reply_t;
-
-class urlfetch_t:
-    public api::service_t
-{
-    public:
-        urlfetch_t(context_t& context,
-                   io::reactor_t& reactor,
-                   const std::string& name,
-                   const Json::Value& args);
-
-    private:
-        deferred<network_reply_t>
-        get(const std::string& url,
-            const std::map<std::string, std::string>& headers,
-            bool recurse);
-
-    private:
-        ioremap::swarm::network_manager m_manager;
-};
-
-} // namespace service
-
+}
+	
 namespace io {
 
 struct urlfetch_tag;
@@ -59,9 +39,19 @@ namespace urlfetch {
 
         typedef boost::mpl::list<
             /* url */     std::string,
-            /* headers */ std::map<std::string, std::string>,
-            /* recurse */ bool
+            /* timeout */ optional_with_default<int, 5000>,
+            /* cookies */ optional<std::map<std::string, std::string>>,
+            /* headers */ optional<std::map<std::string, std::string>>,
+            /* follow_location */ optional_with_default<bool, true>
         > tuple_type;
+		
+		typedef boost::mpl::list<
+			/* success */	bool,
+			/* data */		std::string,
+			/* code */		int,
+			/* headers */	std::map<std::string, std::string>
+		> result_type;
+		
     };
 }
 
@@ -89,9 +79,43 @@ struct protocol<urlfetch_tag> {
     typedef mpl::list<
         urlfetch::get
     > type;
+	
+	typedef boost::mpl::int_<
+        1
+    >::type version;
 };
 
 } // namespace io
+	
+namespace service {
+
+typedef tuple::fold<io::urlfetch::get::result_type>::type get_tuple;
+
+class urlfetch_t:
+    public api::service_t
+{
+    public:
+        urlfetch_t(context_t& context,
+                   io::reactor_t& reactor,
+                   const std::string& name,
+                   const Json::Value& args);
+		
+		void initialize() {}
+
+    private:
+        deferred<get_tuple>
+        get(const std::string& url,
+            int timeout,
+            const std::map<std::string, std::string>& cookies,
+            const std::map<std::string, std::string>& headers,
+            bool follow_location);
+
+    private:
+        ioremap::swarm::network_manager m_manager;
+		std::shared_ptr<logging::log_t> log_;
+};
+
+} // namespace service
 
 } // namespace cocaine
 
