@@ -15,7 +15,8 @@ IF(DEALER)
     SET_TARGET_PROPERTIES(dealer PROPERTIES
         PREFIX ""
         SUFFIX ".cocaine-plugin"
-        COMPILE_FLAGS "-std=c++0x")
+        COMPILE_FLAGS "-std=c++0x"
+        VERSION 2)
 
     INSTALL(
         TARGETS dealer

@@ -1,6 +1,6 @@
 IF(URLFETCH)
     LOCATE_LIBRARY(LIBSWARM "swarm/networkmanager.h" "swarm")
-    
+
     INCLUDE_DIRECTORIES(
         ${LIBSWARM_INCLUDE_DIRS}
         ${PROJECT_SOURCE_DIR}/urlfetch/include)
@@ -19,12 +19,13 @@ IF(URLFETCH)
     SET_TARGET_PROPERTIES(urlfetch PROPERTIES
         PREFIX ""
         SUFFIX ".cocaine-plugin"
-        COMPILE_FLAGS "-std=c++0x")
+        COMPILE_FLAGS "-std=c++0x"
+        VERSION 2)
 
     INSTALL(TARGETS urlfetch
         LIBRARY DESTINATION lib/cocaine
         COMPONENT runtime)
-        
+
     INSTALL(
         DIRECTORY
             include/

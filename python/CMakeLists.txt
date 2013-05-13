@@ -30,7 +30,8 @@ IF(PYTHON)
     SET_TARGET_PROPERTIES(python PROPERTIES
         COMPILE_FLAGS "${PYTHON_CFLAGS} -fno-strict-aliasing -std=c++0x"
         PREFIX ""
-        SUFFIX ".cocaine-plugin")
+        SUFFIX ".cocaine-plugin"
+        VERSION 2)
 
     INSTALL(TARGETS python
         LIBRARY DESTINATION lib/cocaine

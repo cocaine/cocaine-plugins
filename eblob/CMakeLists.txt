@@ -9,7 +9,8 @@ TARGET_LINK_LIBRARIES(eblob
 
 SET_TARGET_PROPERTIES(eblob PROPERTIES
     PREFIX ""
-    SUFFIX ".cocaine-plugin")
+    SUFFIX ".cocaine-plugin"
+    VERSION 1)
 
 INSTALL(TARGETS eblob
     LIBRARY DESTINATION lib/cocaine

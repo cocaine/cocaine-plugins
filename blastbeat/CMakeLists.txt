@@ -13,7 +13,8 @@ IF(BLASTBEAT)
     SET_TARGET_PROPERTIES(blastbeat PROPERTIES
         PREFIX ""
         SUFFIX ".cocaine-plugin"
-        COMPILE_FLAGS "-std=c++0x")
+        COMPILE_FLAGS "-std=c++0x"
+        VERSION 2)
 
     INSTALL(
         TARGETS blastbeat

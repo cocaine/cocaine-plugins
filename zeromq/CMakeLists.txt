@@ -10,7 +10,8 @@ IF(ZEROMQ)
     SET_TARGET_PROPERTIES(zeromq PROPERTIES
         PREFIX ""
         SUFFIX ".cocaine-plugin"
-        COMPILE_FLAGS "-std=c++0x")
+        COMPILE_FLAGS "-std=c++0x"
+        VERSION 1)
 
     INSTALL(
         TARGETS zeromq

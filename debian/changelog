@@ -1,3 +1,13 @@
+cocaine-plugins (0.10.3) lucid; urgency=low
+
+  * Release 10.3.
+  * URLFetch almost completely rewritten by noname@, so now its much more
+    usable, with optinal parameters and such.
+  * Added SOVERSION to every plugin to differentiate the target Cocaine
+    ABI version. 0.10 series ABI version is 2.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 13 May 2013 17:12:35 +0400
+
 cocaine-plugins (0.10.2) lucid; urgency=low
 
   * Release 10.2.

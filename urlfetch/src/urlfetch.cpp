@@ -40,30 +40,30 @@ urlfetch_t::urlfetch_t(context_t& context,
 namespace {
     struct urlfetch_get_handler {
         deferred<get_tuple> promise;
-		std::shared_ptr<logging::log_t> log_;
-		
+        std::shared_ptr<logging::log_t> log_;
+
         void
-        operator()(const network_reply_t& reply) {
-			std::string data = reply.data;
-			int code = reply.code;
-			bool success = (reply.error == 0 && (code < 400 || code >= 600) );
-			
-			if (success) {
-				COCAINE_LOG_DEBUG(log_, "Downloaded successfully %s, http code %d", reply.url, reply.code );
-			} else {
-				COCAINE_LOG_INFO(log_, "Unable to download %s , network error code %d , http code %d", reply.url, reply.error, reply.code );
-			}
-			
-			std::map<std::string, std::string> headers;
-			
-			BOOST_FOREACH(const auto& it, reply.headers) {
-				const auto& header_name = it.first;
-				const auto& header_value = it.second;
-				headers[header_name] = header_value;
-			}
-			
-			get_tuple tuple = std::make_tuple(success, data, code, headers);
-			promise.write(tuple);
+        operator()(const swarm::network_reply& reply) {
+            std::string data = reply.data;
+            int code = reply.code;
+            bool success = (reply.error == 0 && (code < 400 || code >= 600) );
+
+            if(success) {
+                COCAINE_LOG_DEBUG(log_, "Downloaded successfully %s, http code %d", reply.url, reply.code );
+            } else {
+                COCAINE_LOG_DEBUG(log_, "Unable to download %s , network error code %d , http code %d", reply.url, reply.error, reply.code );
+            }
+
+            std::map<std::string, std::string> headers;
+
+            BOOST_FOREACH(const auto& it, reply.headers) {
+                const auto& header_name = it.first;
+                const auto& header_value = it.second;
+                headers[header_name] = header_value;
+            }
+
+            get_tuple tuple = std::make_tuple(success, data, code, headers);
+            promise.write(tuple);
         }
     };
 }
@@ -75,31 +75,31 @@ urlfetch_t::get(const std::string& url,
                 const std::map<std::string, std::string>& headers,
                 bool follow_location)
 {
-    network_request_t request;
+    swarm::network_request request;
 
     request.url = url;
     request.follow_location = follow_location;
 
-	COCAINE_LOG_DEBUG(log_, "Downloading %s", url);
-	
+    COCAINE_LOG_DEBUG(log_, "Downloading %s", url);
+
     std::copy(
         headers.begin(),
         headers.end(),
         std::back_inserter(request.headers)
     );
-	
-	BOOST_FOREACH(const auto& it, cookies) {
-		const auto& cookie_name = it.first;
-		const auto& cookie_value = it.second;
-		
-		std::string cookie_header = boost::str(boost::format("%1%=%2%") % cookie_name % cookie_value);
-		
-		request.headers.push_back(
-			std::pair<std::string, std::string>("Cookie", cookie_header));
-	}
+
+    BOOST_FOREACH(const auto& it, cookies) {
+        const auto& cookie_name = it.first;
+        const auto& cookie_value = it.second;
+
+        std::string cookie_header = boost::str(boost::format("%1%=%2%") % cookie_name % cookie_value);
+
+        request.headers.push_back(
+            std::pair<std::string, std::string>("Cookie", cookie_header));
+    }
 
     urlfetch_get_handler handler;
-	handler.log_ = log_;
+    handler.log_ = log_;
 
     m_manager.get(handler, request);
 
