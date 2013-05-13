@@ -18,8 +18,7 @@ Description: Cocaine - Blastbeat Driver
 
 Package: libcocaine-plugin-cgroups2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3),
- libcgroups
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3), libcgroups
 Description: Cocaine - CGroups Isolate
  CGroups isolation support for Cocaine.
 
@@ -40,8 +39,7 @@ Description: Cocaine - Dealer Driver
 
 # Package: libcocaine-plugin-python2
 # Architecture: any
-# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3),
-#  python
+# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3), python
 # Provides: cocaine-plugin-python
 # Replaces: cocaine-plugin-python
 # Description: Cocaine - Python Sandbox
@@ -49,8 +47,7 @@ Description: Cocaine - Dealer Driver
 
 Package: libcocaine-plugin-urlfetch2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3),
- libswarm
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3), libswarm1
 Description: Cocaine - URLFetch Service
  URLFetch service for Cocaine.
 
