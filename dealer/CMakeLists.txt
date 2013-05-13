@@ -1,5 +1,4 @@
 IF(DEALER)
-
     ADD_LIBRARY(dealer MODULE
         stream
         driver
@@ -15,8 +14,7 @@ IF(DEALER)
     SET_TARGET_PROPERTIES(dealer PROPERTIES
         PREFIX ""
         SUFFIX ".cocaine-plugin"
-        COMPILE_FLAGS "-std=c++0x"
-        VERSION 2)
+        COMPILE_FLAGS "-std=c++0x")
 
     INSTALL(
         TARGETS dealer
