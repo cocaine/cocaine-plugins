@@ -1,10 +1,16 @@
 IF(URLFETCH)
-    ADD_LIBRARY(urlfetch MODULE
-        urlfetch
-        module)
+    LOCATE_LIBRARY(LIBSWARM "swarm/networkmanager.h" "swarm")
 
     INCLUDE_DIRECTORIES(
-    "/usr/include/swarm")
+        ${LIBSWARM_INCLUDE_DIRS}
+        ${PROJECT_SOURCE_DIR}/urlfetch/include)
+
+    LINK_DIRECTORIES(
+        ${LIBSWARM_LIBRARY_DIRS})
+
+    ADD_LIBRARY(urlfetch MODULE
+        src/urlfetch
+        src/module)
 
     TARGET_LINK_LIBRARIES(urlfetch
         cocaine-core
@@ -18,4 +24,10 @@ IF(URLFETCH)
     INSTALL(TARGETS urlfetch
         LIBRARY DESTINATION lib/cocaine
         COMPONENT runtime)
+
+    INSTALL(
+        DIRECTORY
+            include/
+        DESTINATION include
+        COMPONENT development)
 ENDIF(URLFETCH)

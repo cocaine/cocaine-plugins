@@ -33,7 +33,7 @@ using namespace cocaine::driver;
 using namespace cocaine::logging;
 
 dealer_t::dealer_t(context_t& context,
-                   reactor_t& reactor,
+                   io::reactor_t& reactor,
                    app_t& app,
                    const std::string& name,
                    const Json::Value& args):
@@ -41,16 +41,13 @@ dealer_t::dealer_t(context_t& context,
     m_context(context),
     m_log(new log_t(context, cocaine::format("app/%s", name))),
     m_reactor(reactor),
+    m_watcher(reactor.native()),
+    m_checker(reactor.native()),
     m_app(app),
     m_event(args["emit"].asString()),
-    m_identity(
-        cocaine::format("%s/%s", m_context.config.network.hostname, name)
-    ),
-    m_channel(context, ZMQ_ROUTER, m_identity),
-    m_watcher(reactor.native()),
-    m_checker(reactor.native())
+    m_identity(cocaine::format("%s/%s", m_context.config.network.hostname, name)),
+    m_channel(context, ZMQ_ROUTER, m_identity)
 {
-    
     std::string endpoint(args["endpoint"].asString());
 
     try {
