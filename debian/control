@@ -51,6 +51,13 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3), libsw
 Description: Cocaine - URLFetch Service
  URLFetch service for Cocaine.
 
+Package: libcocaine-plugin-urlfetch-dev
+Architecture: any
+Section: libdevel
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-urlfetch2 (= ${binary:Version})
+Description: Cocaine - URLFetch Service Development Headers
+ Cocaine development headers for the URLFetch Service package.
+
 # Package: libcocaine-plugin-zeromq1
 # Architecture: any
 # Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3)
