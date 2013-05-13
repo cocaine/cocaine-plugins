@@ -20,11 +20,12 @@
 
 #include "service.hpp"
 
-#include <cocaine/asio/socket.hpp>
-#include <cocaine/asio/udp.hpp>
-
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
+
+extern "C" {
+    #include "libipvs-1.25/libipvs.h"
+}
 
 using namespace cocaine::io;
 using namespace cocaine::service;
@@ -45,37 +46,6 @@ gateway_t::gateway_t(context_t& context,
     }
 
     COCAINE_LOG_INFO(m_log, "using IP virtual server version %d", ::ipvs_version());
-
-    m_sink.reset(new io::socket<udp>());
-
-    const int loop = IP_DEFAULT_MULTICAST_LOOP;
-    const int ttl  = args.get("ttl", IP_DEFAULT_MULTICAST_TTL).asInt();
-
-    group_req request;
-
-    std::memset(&request, 0, sizeof(request));
-
-    request.gr_interface = 0;
-
-    try {
-        // Port number doesn't have any meaning here.
-        udp::endpoint group(args["group"].asString(), 0);
-
-        COCAINE_LOG_INFO(m_log, "joining multicast group '%s'", group.address());
-
-        std::memcpy(&request.gr_group, group.data(), group.size());
-
-        // NOTE: I don't think these calls might fail at all.
-        ::setsockopt(m_sink->fd(), IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop));
-        ::setsockopt(m_sink->fd(), IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl));
-
-        if(::setsockopt(m_sink->fd(), IPPROTO_IP, MCAST_JOIN_GROUP, &request, sizeof(request)) != 0) {
-            throw std::system_error(errno, std::system_category(), "unable to join a multicast group");
-        }
-    } catch(...) {
-        ::ipvs_close();
-        throw;
-    }
 }
 
 gateway_t::~gateway_t() {

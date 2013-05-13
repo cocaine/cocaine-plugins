@@ -23,20 +23,14 @@
 
 #include "cocaine/api/service.hpp"
 
-extern "C" {
-    #include "libipvs-1.25/libipvs.h"
-}
-
 namespace cocaine { namespace service {
-
-using io::reactor_t;
 
 class gateway_t:
     public api::service_t
 {
     public:
         gateway_t(context_t& context,
-                  reactor_t& reactor,
+                  io::reactor_t& reactor,
                   const std::string& name,
                   const Json::Value& args);
 
@@ -44,24 +38,7 @@ class gateway_t:
        ~gateway_t();
 
     private:
-        void
-        add_backend(const std::string& name, const std::string& endpoint);
-
-        void
-        pop_backend(const std::string& name, const std::string& endpoint);
-
-    private:
         std::unique_ptr<logging::log_t> m_log;
-
-        // Multicast sink.
-        std::unique_ptr<io::socket<io::udp>> m_sink;
-
-        typedef std::map<
-            std::string,
-            ipvs_service_t
-        > service_map_t;
-
-        service_map_t m_services;
 };
 
 }} // namespace cocaine::service
