@@ -35,6 +35,7 @@
 
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 #include <libcgroup.h>
 
@@ -168,7 +169,8 @@ cgroups_t::~cgroups_t() {
 std::unique_ptr<api::handle_t>
 cgroups_t::spawn(const std::string& path,
                  const std::map<std::string, std::string>& args,
-                 const std::map<std::string, std::string>& environment)
+                 const std::map<std::string, std::string>& environment,
+                 int pipe)
 {
     pid_t pid = ::fork();
 
@@ -181,6 +183,9 @@ cgroups_t::spawn(const std::string& path,
     }
 
     if(pid == 0) {
+        ::dup2(pipe, STDOUT_FILENO);
+        ::dup2(pipe, STDERR_FILENO);
+
         int rv = 0;
 
         // Attach to the control group.
