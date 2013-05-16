@@ -1,3 +1,10 @@
+cocaine-plugins (0.10.4) precise; urgency=low
+
+  * Release 10.4.
+  * CGroups Isolate now supports slave output capturing.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 17 May 2013 02:00:43 +0400
+
 cocaine-plugins (0.10.3) lucid; urgency=low
 
   * Release 10.3.

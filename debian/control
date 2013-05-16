@@ -18,7 +18,7 @@ Description: Cocaine - Blastbeat Driver
 
 Package: libcocaine-plugin-cgroups2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3), libcgroups
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.4), libcgroups
 Description: Cocaine - CGroups Isolate
  CGroups isolation support for Cocaine.
 
