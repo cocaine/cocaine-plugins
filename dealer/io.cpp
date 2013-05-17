@@ -70,15 +70,19 @@ socket_base_t::bind() {
     size_t size = sizeof(endpt);
 
     m_socket.getsockopt(ZMQ_LAST_ENDPOINT, &endpt, &size);
-    m_endpoint = endpt;
+
+    make_endpoint(endpt);
 }
 
 void
 socket_base_t::bind(const std::string& endpoint) {
     m_socket.bind(endpoint.c_str());
 
-    // Try to determine the connection string for clients.
-    // FIXME: Fix it when migrating to ZeroMQ 3.1+
+    make_endpoint(endpoint);
+}
+
+void
+socket_base_t::make_endpoint(const std::string& endpoint) {
     size_t position = endpoint.find_last_of(":");
 
     if(position != std::string::npos) {
