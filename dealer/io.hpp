@@ -105,6 +105,9 @@ class socket_base_t {
                    const void * value,
                    size_t size);
 
+        void
+        make_endpoint(const std::string& endpoint);
+
     public:
         int
         fd() const {

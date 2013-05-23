@@ -2,7 +2,7 @@ Source: cocaine-plugins
 Section: utils
 Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
-Build-Depends: cmake, cdbs, debhelper (>= 7.0.13), libcocaine-dev (>= 0.10.3),
+Build-Depends: cmake, cdbs, debhelper (>= 7.0.13), libcocaine-dev (>= 0.10.4),
  libboost-filesystem-dev, libboost-thread-dev, libcgroup-dev, libzmq-dev (>= 3.2),
  libswarm-dev
 #python-dev, libmongoclient-dev | mongodb-dev
@@ -18,7 +18,7 @@ Description: Cocaine - Blastbeat Driver
 
 Package: libcocaine-plugin-cgroups2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3), libcgroups
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.4), libcgroup1
 Description: Cocaine - CGroups Isolate
  CGroups isolation support for Cocaine.
 
