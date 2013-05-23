@@ -186,9 +186,10 @@ cgroups_t::spawn(const std::string& path,
         ::dup2(pipe, STDOUT_FILENO);
         ::dup2(pipe, STDERR_FILENO);
 
+        // Attach to the control group
+
         int rv = 0;
 
-        // Attach to the control group.
         if((rv = cgroup_attach_task(m_cgroup)) != 0) {
             COCAINE_LOG_ERROR(
                 m_log,
@@ -198,6 +199,8 @@ cgroups_t::spawn(const std::string& path,
 
             std::_Exit(EXIT_FAILURE);
         }
+
+        // Prepare the arguments and environment
 
         size_t argc = args.size() * 2 + 2;
         // size_t envc = environment.size() + 1;
@@ -258,6 +261,14 @@ cgroups_t::spawn(const std::string& path,
 
             std::_Exit(EXIT_FAILURE);
         }
+
+        // Unblock all the signals.
+
+        sigset_t signals;
+
+        sigfillset(&signals);
+
+        ::sigprocmask(SIG_UNBLOCK, &signals, nullptr);
 
         if(::execv(argv[0], argv) != 0) {
             std::error_code ec(errno, std::system_category());
