@@ -175,11 +175,7 @@ cgroups_t::spawn(const std::string& path,
     pid_t pid = ::fork();
 
     if(pid < 0) {
-        throw std::system_error(
-            errno,
-            std::system_category(),
-            "unable to fork"
-        );
+        throw std::system_error(errno, std::system_category(), "unable to fork");
     }
 
     if(pid == 0) {
@@ -208,8 +204,7 @@ cgroups_t::spawn(const std::string& path,
         char** argv = new char* [argc];
         // char** envp[] = new char* [envc];
 
-        // NOTE: The first element is the executable path,
-        // the last one should be null pointer.
+        // NOTE: The first element is the executable path, the last one should be null pointer.
         argv[0] = ::strdup(path.c_str());
         argv[argc - 1] = nullptr;
 
@@ -262,13 +257,15 @@ cgroups_t::spawn(const std::string& path,
             std::_Exit(EXIT_FAILURE);
         }
 
-        // Unblock all the signals.
+        // Unblock all the signals
 
         sigset_t signals;
 
         sigfillset(&signals);
 
         ::sigprocmask(SIG_UNBLOCK, &signals, nullptr);
+
+        // Spawn the slave
 
         if(::execv(argv[0], argv) != 0) {
             std::error_code ec(errno, std::system_category());
