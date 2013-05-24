@@ -45,12 +45,28 @@ namespace urlfetch {
             /* headers */ std::map<std::string, std::string>
         > result_type;
     };
+
+    struct post {
+        typedef urlfetch_tag tag;
+
+        typedef boost::mpl::list<
+            /* url */ std::string,
+            /* body */ std::string,
+            /* timeout */ optional_with_default<int, 5000>,
+            /* cookies */ optional<std::map<std::string, std::string>>,
+            /* headers */ optional<std::map<std::string, std::string>>,
+            /* follow_location */ optional_with_default<bool, true>
+        > tuple_type;
+
+        typedef get::result_type result_type;
+    };
 }
 
 template<>
 struct protocol<urlfetch_tag> {
     typedef mpl::list<
-        urlfetch::get
+        urlfetch::get,
+        urlfetch::post
     > type;
 
     typedef boost::mpl::int_<
@@ -82,6 +98,20 @@ class urlfetch_t:
             const std::map<std::string, std::string>& cookies,
             const std::map<std::string, std::string>& headers,
             bool follow_location);
+        deferred<get_tuple>
+        post(const std::string& url,
+             const std::string& body,
+             int timeout,
+             const std::map<std::string, std::string>& cookies,
+             const std::map<std::string, std::string>& headers,
+             bool follow_location);
+
+        ioremap::swarm::network_request
+        prepare_request(const std::string& url,
+                        int timeout,
+                        const std::map<std::string, std::string>& cookies,
+                        const std::map<std::string, std::string>& headers,
+                        bool follow_location);
 
     private:
         ioremap::swarm::network_manager m_manager;

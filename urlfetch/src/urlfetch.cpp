@@ -35,6 +35,7 @@ urlfetch_t::urlfetch_t(context_t& context,
     log_(new logging::log_t(context, name))
 {
     on<io::urlfetch::get>("get", std::bind(&urlfetch_t::get, this, _1, _2, _3, _4, _5));
+    on<io::urlfetch::post>("post", std::bind(&urlfetch_t::post, this, _1, _2, _3, _4, _5, _6));
 }
 
 namespace {
@@ -48,10 +49,10 @@ namespace {
             int code = reply.code;
             bool success = (reply.error == 0 && (code < 400 || code >= 600) );
 
-            if(success) {
+            if (success) {
                 COCAINE_LOG_DEBUG(log_, "Downloaded successfully %s, http code %d", reply.url, reply.code );
             } else {
-                COCAINE_LOG_DEBUG(log_, "Unable to download %s , network error code %d , http code %d", reply.url, reply.error, reply.code );
+                COCAINE_LOG_DEBUG(log_, "Unable to download %s, network error code %d, http code %d", reply.url, reply.error, reply.code );
             }
 
             std::map<std::string, std::string> headers;
@@ -75,10 +76,53 @@ urlfetch_t::get(const std::string& url,
                 const std::map<std::string, std::string>& headers,
                 bool follow_location)
 {
+    urlfetch_get_handler handler;
+    handler.log_ = log_;
+
+    m_manager.get(handler,
+                  prepare_request(url,
+                                  timeout,
+                                  cookies,
+                                  headers,
+                                  follow_location));
+
+    return handler.promise;
+}
+
+deferred<get_tuple>
+urlfetch_t::post(const std::string& url,
+                 const std::string& body,
+                 int timeout,
+                 const std::map<std::string, std::string>& cookies,
+                 const std::map<std::string, std::string>& headers,
+                 bool follow_location)
+{
+    urlfetch_get_handler handler;
+    handler.log_ = log_;
+
+    m_manager.post(handler,
+                   prepare_request(url,
+                                   timeout,
+                                   cookies,
+                                   headers,
+                                   follow_location),
+                   body);
+
+    return handler.promise;
+}
+
+swarm::network_request
+urlfetch_t::prepare_request(const std::string& url,
+                            int timeout,
+                            const std::map<std::string, std::string>& cookies,
+                            const std::map<std::string, std::string>& headers,
+                            bool follow_location)
+{
     swarm::network_request request;
 
     request.url = url;
     request.follow_location = follow_location;
+    request.timeout = timeout;
 
     COCAINE_LOG_DEBUG(log_, "Downloading %s", url);
 
@@ -98,10 +142,5 @@ urlfetch_t::get(const std::string& url,
             std::pair<std::string, std::string>("Cookie", cookie_header));
     }
 
-    urlfetch_get_handler handler;
-    handler.log_ = log_;
-
-    m_manager.get(handler, request);
-
-    return handler.promise;
+    return request;
 }
