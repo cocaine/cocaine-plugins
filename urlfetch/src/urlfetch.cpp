@@ -53,6 +53,15 @@ namespace {
                 COCAINE_LOG_DEBUG(log_, "Downloaded successfully %s, http code %d", reply.url, reply.code );
             } else {
                 COCAINE_LOG_DEBUG(log_, "Unable to download %s, network error code %d, http code %d", reply.url, reply.error, reply.code );
+
+                if (reply.code == 0) {
+                    // Socket-only error, no valid http response
+                    promise.abort(-reply.error,
+                                  cocaine::format("Unable to download %s, network error code %d",
+                                                  reply.request.url,
+                                                  reply.error));
+                    return;
+                }
             }
 
             std::map<std::string, std::string> headers;
