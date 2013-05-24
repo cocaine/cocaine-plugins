@@ -71,6 +71,46 @@ class urlfetcher_service_t:
         {
             return call<io::urlfetch::get>(url, timeout, cookies, headers, follow_location);
         }
+
+        service_t::handler<io::urlfetch::post>::future
+        post(const std::string& url, const std::string& body) {
+            return call<io::urlfetch::post>(url, body);
+        }
+
+        service_t::handler<io::urlfetch::get>::future
+        post(const std::string& url, const std::string& body, int timeout) {
+            return call<io::urlfetch::post>(url, body, timeout);
+        }
+
+        service_t::handler<io::urlfetch::post>::future
+        post(const std::string& url,
+             const std::string& body,
+             int timeout,
+             const std::map<std::string, std::string>& cookies)
+        {
+            return call<io::urlfetch::post>(url, body, timeout, cookies);
+        }
+
+        service_t::handler<io::urlfetch::post>::future
+        post(const std::string& url,
+             const std::string& body,
+             int timeout,
+             const std::map<std::string, std::string>& cookies,
+             const std::map<std::string, std::string>& headers)
+        {
+            return call<io::urlfetch::post>(url, body, timeout, cookies, headers);
+        }
+
+        service_t::handler<io::urlfetch::post>::future
+        post(const std::string& url,
+             const std::string& body,
+             int timeout,
+             const std::map<std::string, std::string>& cookies,
+             const std::map<std::string, std::string>& headers,
+             bool follow_location)
+        {
+            return call<io::urlfetch::post>(url, body, timeout, cookies, headers, follow_location);
+        }
 };
 
 }} // namespace cocaine::framework
