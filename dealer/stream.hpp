@@ -47,7 +47,7 @@ struct dealer_stream_t:
 
     virtual
     void
-    error(error_code code,
+    error(int code,
           const std::string& message);
 
     virtual

@@ -103,13 +103,13 @@ dealer_stream_t::write(const char * chunk,
 }
 
 void
-dealer_stream_t::error(error_code code,
+dealer_stream_t::error(int code,
                        const std::string& message)
 {
     m_driver.send<io::dealer::error>(
         m_route.front(),
         m_tag,
-        static_cast<int>(code),
+        code,
         message
     );
 
