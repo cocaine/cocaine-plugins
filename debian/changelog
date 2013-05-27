@@ -6,6 +6,18 @@ cocaine-plugins (0.10.5) lucid; urgency=low
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 23 May 2013 20:12:12 +0400
 
+cocaine-plugins (0.10.4-2) unstable; urgency=low
+
+  * URLFetch POST method.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 24 May 2013 20:46:10 +0400
+
+cocaine-plugins (0.10.4-1) unstable; urgency=low
+
+  * Dependency fixup.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 22 May 2013 15:20:08 +0400
+
 cocaine-plugins (0.10.4) unstable; urgency=low
 
   * Release 10.4.

@@ -129,7 +129,7 @@ blastbeat_stream_t::write(const char * chunk,
 }
 
 void
-blastbeat_stream_t::error(error_code,
+blastbeat_stream_t::error(int,
                           const std::string&)
 {
     std::string empty;
