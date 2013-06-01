@@ -21,8 +21,9 @@
 #ifndef COCAINE_BLASTBEAT_DRIVER_HPP
 #define COCAINE_BLASTBEAT_DRIVER_HPP
 
-#include <cocaine/api/driver.hpp>
+#include <boost/unordered_map.hpp>
 
+#include <cocaine/api/driver.hpp>
 #include <cocaine/asio/reactor.hpp>
 
 #include <zmq.hpp>
