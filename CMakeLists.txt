@@ -10,9 +10,8 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 OPTION(BLASTBEAT "Build Blastbeat Driver plugin" ON)
 OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
-OPTION(DEALER "Build Dealer Driver plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
-OPTION(MONGO "Build MongoDB Storage plugin" ON)
+OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(PYTHON "Build Python Sandbox plugin" OFF)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(ZEROMQ "Build ZeroMQ Driver plugin" OFF)
@@ -52,7 +51,6 @@ LINK_DIRECTORIES(
 SET(PLUGINS
         blastbeat
         cgroups
-        dealer
         ipvs
         mongo
         python

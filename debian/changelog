@@ -1,8 +1,9 @@
-cocaine-plugins (0.10.5) lucid; urgency=low
+cocaine-plugins (0.10.5-0) lucid; urgency=low
 
   * Release 10.5.
   * IPVS Gateway plugin.
   * CGroups Isolate now properly unblocks all signals on fork().
+  * Dealer Driver is gone.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 23 May 2013 20:12:12 +0400
 

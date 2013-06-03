@@ -22,12 +22,6 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.4), libcg
 Description: Cocaine - CGroups Isolate
  CGroups isolation support for Cocaine.
 
-Package: libcocaine-plugin-dealer2
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3)
-Description: Cocaine - Dealer Driver
- Dealer driver for Cocaine.
-
 # Package: libcocaine-plugin-mongodb2
 # Architecture: any
 # Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3),
