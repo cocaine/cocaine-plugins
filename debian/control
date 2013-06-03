@@ -2,7 +2,7 @@ Source: cocaine-plugins
 Section: utils
 Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
-Build-Depends: cmake, cdbs, debhelper (>= 7.0.13), libcocaine-dev (>= 0.10.4),
+Build-Depends: cmake, cdbs, debhelper (>= 7.0.13), libcocaine-dev (>= 0.10.5),
  libboost-filesystem-dev, libboost-thread-dev, libcgroup-dev, libzmq-dev (>= 3.2),
  libswarm-dev (>= 0.3.0.1)
 #python-dev, libmongoclient-dev | mongodb-dev
@@ -12,19 +12,19 @@ Vcs-Browser: https://github.com/cocaine/cocaine-plugins
 
 Package: libcocaine-plugin-blastbeat2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5)
 Description: Cocaine - Blastbeat Driver
  Blastbeat driver for Cocaine.
 
 Package: libcocaine-plugin-cgroups2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.4), libcgroup1
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5), libcgroup1
 Description: Cocaine - CGroups Isolate
  CGroups isolation support for Cocaine.
 
 # Package: libcocaine-plugin-mongodb2
 # Architecture: any
-# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3),
+# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5),
 #  libmongoclient | mongodb-clients
 # Provides: cocaine-plugin-mongodb
 # Replaces: cocaine-plugin-mongodb
@@ -33,7 +33,7 @@ Description: Cocaine - CGroups Isolate
 
 # Package: libcocaine-plugin-python2
 # Architecture: any
-# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3), python
+# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5), python
 # Provides: cocaine-plugin-python
 # Replaces: cocaine-plugin-python
 # Description: Cocaine - Python Sandbox
@@ -41,7 +41,7 @@ Description: Cocaine - CGroups Isolate
 
 Package: libcocaine-plugin-urlfetch2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3), libswarm1 (>= 0.3.0.1)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5), libswarm1 (>= 0.3.0.1)
 Description: Cocaine - URLFetch Service
  URLFetch service for Cocaine.
 
@@ -54,7 +54,7 @@ Description: Cocaine - URLFetch Service Development Headers
 
 # Package: libcocaine-plugin-zeromq1
 # Architecture: any
-# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.3)
+# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5)
 # Description: Cocaine - ZeroMQ Driver
 #  Raw ZeroMQ driver for Cocaine.
 
