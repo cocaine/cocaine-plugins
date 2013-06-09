@@ -45,28 +45,28 @@ namespace {
 
         void
         operator()(const swarm::network_reply& reply) {
-            std::string data = reply.data;
-            int code = reply.code;
-            bool success = (reply.error == 0 && (code < 400 || code >= 600) );
+            const std::string data = reply.get_data();
+            const int code = reply.get_code();
+            bool success = (reply.get_error() == 0 && (code < 400 || code >= 600) );
 
             if (success) {
-                COCAINE_LOG_DEBUG(log_, "Downloaded successfully %s, http code %d", reply.url, reply.code );
+                COCAINE_LOG_DEBUG(log_, "Downloaded successfully %s, http code %d", reply.get_url(), reply.get_code() );
             } else {
-                COCAINE_LOG_DEBUG(log_, "Unable to download %s, network error code %d, http code %d", reply.url, reply.error, reply.code );
+                COCAINE_LOG_DEBUG(log_, "Unable to download %s, network error code %d, http code %d", reply.get_url(), reply.get_error(), reply.get_code() );
 
-                if (reply.code == 0) {
+                if (reply.get_code() == 0) {
                     // Socket-only error, no valid http response
-                    promise.abort(-reply.error,
+                    promise.abort(-reply.get_error(),
                                   cocaine::format("Unable to download %s, network error code %d",
-                                                  reply.request.url,
-                                                  reply.error));
+                                                  reply.get_request().get_url(),
+                                                  reply.get_error()));
                     return;
                 }
             }
 
             std::map<std::string, std::string> headers;
 
-            BOOST_FOREACH(const auto& it, reply.headers) {
+            BOOST_FOREACH(const auto& it, reply.get_headers()) {
                 const auto& header_name = it.first;
                 const auto& header_value = it.second;
                 headers[header_name] = header_value;
@@ -129,17 +129,18 @@ urlfetch_t::prepare_request(const std::string& url,
 {
     swarm::network_request request;
 
-    request.url = url;
-    request.follow_location = follow_location;
-    request.timeout = timeout;
+    request.set_url(url);
+    request.set_follow_location(follow_location);
+    request.set_timeout(timeout);
 
     COCAINE_LOG_DEBUG(log_, "Downloading %s", url);
 
-    std::copy(
-        headers.begin(),
-        headers.end(),
-        std::back_inserter(request.headers)
-    );
+    BOOST_FOREACH(const auto& it, headers) {
+        const auto& header_name = it.first;
+        const auto& header_value = it.second;
+
+        request.add_header(header_name, header_value);
+    }
 
     BOOST_FOREACH(const auto& it, cookies) {
         const auto& cookie_name = it.first;
@@ -147,8 +148,7 @@ urlfetch_t::prepare_request(const std::string& url,
 
         std::string cookie_header = boost::str(boost::format("%1%=%2%") % cookie_name % cookie_value);
 
-        request.headers.push_back(
-            std::pair<std::string, std::string>("Cookie", cookie_header));
+        request.add_header("Cookie", cookie_header);
     }
 
     return request;
