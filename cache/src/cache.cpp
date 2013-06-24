@@ -15,6 +15,7 @@
 
 #include <cocaine/services/cache.hpp>
 #include <cocaine/logging.hpp>
+#include <cocaine/traits/tuple.hpp>
 
 using namespace cocaine;
 using namespace cocaine::io;

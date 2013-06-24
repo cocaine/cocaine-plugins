@@ -18,7 +18,7 @@
 
 #include <cocaine/api/service.hpp>
 #include <cocaine/asio/reactor.hpp>
-#include <cocaine/rpc/optional.hpp>
+#include <cocaine/rpc/tags.hpp>
 
 #include <swarm/networkmanager.h>
 
@@ -78,7 +78,7 @@ struct protocol<urlfetch_tag> {
 
 namespace service {
 
-typedef tuple::fold<io::urlfetch::get::result_type>::type get_tuple;
+typedef io::event_traits<io::urlfetch::get>::result_type get_tuple;
 
 class urlfetch_t:
     public api::service_t

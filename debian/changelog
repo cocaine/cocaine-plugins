@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.5-1) unstable; urgency=low
+
+  * Compatibility with Core 0.10.5-5.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 24 Jun 2013 18:55:01 +0400
+
 cocaine-plugins (0.10.5-0) unstable; urgency=low
 
   * Release 10.5.

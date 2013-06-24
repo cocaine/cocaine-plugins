@@ -15,6 +15,7 @@
 
 #include "cocaine/services/urlfetch.hpp"
 #include <cocaine/logging.hpp>
+#include <cocaine/traits/tuple.hpp>
 #include <boost/foreach.hpp>
 #include <boost/format.hpp>
 
