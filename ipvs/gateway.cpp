@@ -55,7 +55,7 @@ ipvs_t::ipvs_t(context_t& context,
 }
 
 ipvs_t::~ipvs_t() {
-    COCAINE_LOG_INFO(m_log, "cleanup up the virtual services");
+    COCAINE_LOG_INFO(m_log, "cleaning up the virtual services");
 
     for(auto it = m_remote_services.begin(); it != m_remote_services.end(); ++it) {
         ::ipvs_del_service(&it->second.handle);
