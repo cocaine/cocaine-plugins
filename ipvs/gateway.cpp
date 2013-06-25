@@ -158,9 +158,8 @@ namespace {
     template<size_t N>
     struct tuple_element_getter {
         template<class T>
-        static
         typename std::tuple_element<N, T>::type
-        operator()(const T& value) {
+        operator()(const T& value) const {
             return std::get<N>(value);
         }
     };
