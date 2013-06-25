@@ -52,24 +52,49 @@ class ipvs_t:
 
     private:
         void
-        merge(remote_service_map_t update);
+        add_backend(const std::string& name, const std::string& uuid, ipvs_dest_t backend);
+
+        void
+        pop_backend(const std::string& name, const std::string& uuid);
 
     private:
+        context_t& m_context;
         std::unique_ptr<logging::log_t> m_log;
 
-        struct remove_service_t {
-            ipvs_service_t handle;
-            
-            // Backend UUID -> Destination mapping.
-            std::map<std::string, ipvs_dest_t> backends;
+        const std::string m_default_scheduler;
+        const unsigned    m_default_weight;
 
-            // Service info.
-            resolve_result_type info;
+        struct service_info_t {
+            unsigned int version;
+
+            // NOTE: I hope it will be same across all the nodes in a group.
+            std::tuple_element<2, api::resolve_result_type>::type map;
         };
 
-        typedef std::map<std::string, remove_service_t> remote_service_map_t;
+        typedef std::map<std::string, service_info_t> service_info_map_t;
 
+        // Keeps track of service versions and mappings.
+        service_info_map_t m_service_info;
+
+        struct remote_service_t {
+            ipvs_service_t handle;
+
+            // Virtual service description.
+            std::tuple<std::string, uint16_t> endpoint;
+
+            // Backend UUID -> Destination mapping.
+            std::map<std::string, ipvs_dest_t> backends;
+        };
+
+        typedef std::map<std::string, remote_service_t> remote_service_map_t;
+
+        // Keeps track of IPVS configuration.
         remote_service_map_t m_remote_services;
+
+        typedef std::map<std::string, api::synchronize_result_type> history_map_t;
+
+        // Keeps track of last update from every node to effectively drop stale backends.
+        history_map_t m_history;
 };
 
 }} // namespace cocaine::gateway

@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.5-2) lucid; urgency=low
+
+  * IPVS Gateway plugin.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 25 Jun 2013 16:58:57 +0400
+
 cocaine-plugins (0.10.5-1) unstable; urgency=low
 
   * Compatibility with Core 0.10.5-5.
@@ -7,7 +13,6 @@ cocaine-plugins (0.10.5-1) unstable; urgency=low
 cocaine-plugins (0.10.5-0) unstable; urgency=low
 
   * Release 10.5.
-  * IPVS Gateway plugin.
   * CGroups Isolate now properly unblocks all signals on fork().
   * Dealer Driver is gone.
 
