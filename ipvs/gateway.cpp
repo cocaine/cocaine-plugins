@@ -158,7 +158,7 @@ void
 ipvs_t::prune(const std::string& uuid) {
     COCAINE_LOG_DEBUG(m_log, "pruning node '%s'", uuid);
 
-    for(auto it = m_remote_services.begin(); it != m_remote_services.end(); ++it) {
+    for(auto it = m_service_info.begin(); it != m_service_info.end(); ++it) {
         pop_backend(it->first, uuid);
     }
 
