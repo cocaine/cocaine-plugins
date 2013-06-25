@@ -75,7 +75,7 @@ class ipvs_t:
 
         typedef std::map<std::string, service_info_t> service_info_map_t;
 
-	// Ports available for allocation to virtual services.
+        // Ports available for allocation to virtual services.
         std::priority_queue<uint16_t, std::vector<uint16_t>, std::greater<uint16_t>> m_ports;
 
         // Keeps track of service versions and mappings.
