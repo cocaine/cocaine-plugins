@@ -2,7 +2,7 @@ IF(IPVS)
     ADD_SUBDIRECTORY(libipvs-1.25)
 
     ADD_LIBRARY(ipvs-gateway MODULE
-        service
+        gateway
         module)
 
     TARGET_LINK_LIBRARIES(ipvs-gateway

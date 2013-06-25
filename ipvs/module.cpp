@@ -18,14 +18,14 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "service.hpp"
+#include "gateway.hpp"
 
 using namespace cocaine;
-using namespace cocaine::service;
+using namespace cocaine::gateway;
 
 extern "C" {
     void
     initialize(api::repository_t& repository) {
-        repository.insert<gateway_t>("ipvs");
+        repository.insert<ipvs_t>("ipvs");
     }
 }
