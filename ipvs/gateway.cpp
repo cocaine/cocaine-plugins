@@ -176,15 +176,24 @@ ipvs_t::add_backend(const std::string& name, const std::string& uuid, ipvs_dest_
 
         std::memset(&service, 0, sizeof(service));
 
-        uint16_t port = m_ports.top();
+        io::tcp::endpoint endpoint = io::resolver<io::tcp>::query(
+            m_context.config.network.hostname,
+            m_ports.top()
+        );
+
+        std::memcpy(
+            &service.addr.in,
+            &reinterpret_cast<sockaddr_in*>(endpoint.data())->sin_addr,
+            sizeof(in_addr_t)
+        );
 
         service.af         = AF_INET;
-        service.port       = htons(port);
+        service.port       = htons(endpoint.port());
         service.protocol   = IPPROTO_TCP;
 
         std::strncpy(service.sched_name, m_default_scheduler.c_str(), IP_VS_SCHEDNAME_MAXLEN);
 
-        COCAINE_LOG_INFO(m_log, "adding virtual service '%s' on port %d", name, port);
+        COCAINE_LOG_INFO(m_log, "adding virtual service '%s' on port %d", name, endpoint.port());
 
         if(::ipvs_add_service(&service) != 0) {
             COCAINE_LOG_ERROR(m_log, "unable to add a virtual service - [%d] %s", errno, ::ipvs_strerror(errno));
@@ -193,9 +202,10 @@ ipvs_t::add_backend(const std::string& name, const std::string& uuid, ipvs_dest_
 
         m_ports.pop();
 
-        auto endpoint = std::make_tuple(m_context.config.network.hostname, port);
-
-        remote_service_t remote = { service, endpoint };
+        remote_service_t remote = { service, std::make_tuple(
+            endpoint.address(),
+            endpoint.port()
+        )};
 
         std::tie(it, std::ignore) = m_remote_services.insert(std::make_pair(
             name,
