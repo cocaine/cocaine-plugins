@@ -15,6 +15,7 @@ OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(PYTHON "Build Python Sandbox plugin" OFF)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(ZEROMQ "Build ZeroMQ Driver plugin" OFF)
+OPTION(CACHE "Build LRU Cache plugin" ON)
 
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
@@ -55,7 +56,8 @@ SET(PLUGINS
         mongo
         python
         urlfetch
-        zeromq)
+        zeromq
+        cache)
 
 FOREACH(PLUGIN ${PLUGINS})
     ADD_SUBDIRECTORY(${PLUGIN})

@@ -77,7 +77,7 @@ class urlfetcher_service_t:
             return call<io::urlfetch::post>(url, body);
         }
 
-        service_t::handler<io::urlfetch::get>::future
+        service_t::handler<io::urlfetch::post>::future
         post(const std::string& url, const std::string& body, int timeout) {
             return call<io::urlfetch::post>(url, body, timeout);
         }
