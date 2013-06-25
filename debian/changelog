@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.5-4) lucid; urgency=low
+
+  * IPVS: properly prune dead services.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 25 Jun 2013 22:11:38 +0400
+
 cocaine-plugins (0.10.5-3) unstable; urgency=low
 
   * IPVS: missing files.

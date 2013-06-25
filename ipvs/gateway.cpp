@@ -154,12 +154,34 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
     m_history[uuid] = dump;
 }
 
+namespace {
+    template<size_t N>
+    struct tuple_element_getter {
+        template<class T>
+        auto
+        operator()(const T& value)
+            -> typename std::tuple_element<N, T>::type
+        {
+            return std::get<N>(value);
+        }
+    };
+}
+
 void
 ipvs_t::prune(const std::string& uuid) {
     COCAINE_LOG_DEBUG(m_log, "pruning node '%s'", uuid);
 
-    for(auto it = m_service_info.begin(); it != m_service_info.end(); ++it) {
-        pop_backend(it->first, uuid);
+    std::vector<std::string> names;
+
+    std::transform(
+        m_remote_services.begin(),
+        m_remote_services.end(),
+        std::back_inserter(names),
+        tuple_element_getter<0>()
+    );
+
+    for(auto it = names.begin(); it != names.end(); ++it) {
+        pop_backend(*it, uuid);
     }
 
     m_history.erase(uuid);
@@ -259,6 +281,7 @@ ipvs_t::pop_backend(const std::string& name, const std::string& uuid) {
 
         m_ports.push(ntohs(service.handle.port));
 
+        // Drop the IPVS state.
         m_remote_services.erase(it);
 
         // Drop the service info, so that it won't lay around stale.
