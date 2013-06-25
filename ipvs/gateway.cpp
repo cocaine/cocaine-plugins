@@ -28,6 +28,8 @@
 
 #include <cstring>
 
+#include <netinet/in.h>
+
 using namespace cocaine::api;
 using namespace cocaine::io;
 using namespace cocaine::gateway;
@@ -46,9 +48,19 @@ ipvs_t::ipvs_t(context_t& context,
     }
 
     COCAINE_LOG_INFO(m_log, "using IPVS version %d", ::ipvs_version());
+
+    for(int i = 32768; i < 61000; ++i) {
+        m_ports.push(i);
+    }
 }
 
 ipvs_t::~ipvs_t() {
+    COCAINE_LOG_INFO("cleanup up the virtual services");
+
+    for(auto it = m_remote_services.begin(); it != m_remote_services.end(); ++it) {
+        ::ipvs_del_service(&it->second.handle);
+    }
+
     ::ipvs_close();
 }
 
@@ -116,7 +128,7 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
 
         backend.af         = AF_INET;
         backend.conn_flags = IP_VS_CONN_F_MASQ;
-        backend.port       = endpoint.port();
+        backend.port       = htons(endpoint.port());
         backend.weight     = m_default_weight;
 
         add_backend(it->first, uuid, backend);
@@ -164,20 +176,24 @@ ipvs_t::add_backend(const std::string& name, const std::string& uuid, ipvs_dest_
 
         std::memset(&service, 0, sizeof(service));
 
+        uint16_t port = m_ports.top();
+
         service.af         = AF_INET;
-        service.port       = 16000;
+        service.port       = htons(port);
         service.protocol   = IPPROTO_TCP;
 
         std::strncpy(service.sched_name, m_default_scheduler.c_str(), IP_VS_SCHEDNAME_MAXLEN);
 
-        COCAINE_LOG_INFO(m_log, "adding virtual service '%s' on port %d", name, 16000);
+        COCAINE_LOG_INFO(m_log, "adding virtual service '%s' on port %d", name, port);
 
         if(::ipvs_add_service(&service) != 0) {
             COCAINE_LOG_ERROR(m_log, "unable to add a virtual service - [%d] %s", errno, ::ipvs_strerror(errno));
             return;
         }
 
-        auto endpoint = std::make_tuple(m_context.config.network.hostname, 16000);
+        m_ports.pop();
+
+        auto endpoint = std::make_tuple(m_context.config.network.hostname, port);
 
         remote_service_t remote = { service, endpoint };
 
@@ -230,6 +246,8 @@ ipvs_t::pop_backend(const std::string& name, const std::string& uuid) {
             COCAINE_LOG_ERROR(m_log, "unable to remove a virtual service - [%d] %s", errno, ::ipvs_strerror(errno));
             return;
         }
+
+        m_ports.push(ntohs(service.handle.port));
 
         m_remote_services.erase(it);
 
