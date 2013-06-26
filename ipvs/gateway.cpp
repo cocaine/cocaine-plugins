@@ -44,7 +44,7 @@ ipvs_t::ipvs_t(context_t& context,
     m_default_weight(args.get("weight", 1).asUInt())
 {
     if(::ipvs_init() != 0) {
-        throw configuration_error_t("unable to initialize IPVS - [%d] %s", errno, ::ipvs_strerror(errno));
+        throw cocaine::error_t("unable to initialize IPVS - [%d] %s", errno, ::ipvs_strerror(errno));
     }
 
     COCAINE_LOG_INFO(m_log, "using IPVS version %d", ::ipvs_version());

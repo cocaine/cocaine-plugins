@@ -86,10 +86,7 @@ cgroups_t::cgroups_t(context_t& context,
     int rv = 0;
 
     if((rv = cgroup_init()) != 0) {
-        throw configuration_error_t(
-            "unable to initialize the cgroups isolate - %s",
-            cgroup_strerror(rv)
-        );
+        throw cocaine::error_t("unable to initialize the cgroups isolate - %s", cgroup_strerror(rv));
     }
 
     m_cgroup = cgroup_new_cgroup(name.c_str());
@@ -148,7 +145,7 @@ cgroups_t::cgroups_t(context_t& context,
 
     if((rv = cgroup_create_cgroup(m_cgroup, false)) != 0) {
         cgroup_free(&m_cgroup);
-        throw configuration_error_t("unable to create the cgroup - %s", cgroup_strerror(rv));
+        throw cocaine::error_t("unable to create the cgroup - %s", cgroup_strerror(rv));
     }
 }
 

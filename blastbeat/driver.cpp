@@ -59,7 +59,7 @@ blastbeat_t::blastbeat_t(context_t& context,
             m_context.config.network.hostname.size()
         );
     } catch(const zmq::error_t& e) {
-        throw configuration_error_t("invalid driver identity - %s", e.what());
+        throw cocaine::error_t("invalid driver identity - %s", e.what());
     }
 
     int timeout = 0;
@@ -70,7 +70,7 @@ blastbeat_t::blastbeat_t(context_t& context,
     try {
         m_socket.connect(m_endpoint.c_str());
     } catch(const zmq::error_t& e) {
-        throw configuration_error_t("invalid driver endpoint - %s", e.what());
+        throw cocaine::error_t("invalid driver endpoint - %s", e.what());
     }
 
     int fd = 0;

@@ -53,7 +53,7 @@ zmq_t::zmq_t(context_t& context,
             m_socket.bind(endpoint);
         }
     } catch(const zmq::error_t& e) {
-        throw configuration_error_t("invalid driver endpoint - %s", e.what());
+        throw cocaine::error_t("invalid driver endpoint - %s", e.what());
     }
 
     m_watcher.set<zmq_t, &zmq_t::on_event>(this);
