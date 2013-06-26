@@ -9,11 +9,11 @@ Standards-Version: 3.9.1
 Vcs-Git: git://github.com/cocaine/cocaine-plugins.git
 Vcs-Browser: https://github.com/cocaine/cocaine-plugins
 
-# Package: libcocaine-plugin-blastbeat2
-# Architecture: any
-# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5-12)
-# Description: Cocaine - Blastbeat Driver
-#  Blastbeat driver for Cocaine.
+Package: libcocaine-plugin-blastbeat2
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5-12)
+Description: Cocaine - Blastbeat Driver
+ Blastbeat driver for Cocaine.
 
 Package: libcocaine-plugin-cgroups2
 Architecture: any

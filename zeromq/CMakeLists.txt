@@ -1,13 +1,4 @@
 IF(ZEROMQ)
-    LOCATE_LIBRARY(LIBZMQ "zmq.h" "zmq")
-
-    INCLUDE_DIRECTORIES(${LIBZMQ_INCLUDE_DIRS})
-
-    INCLUDE_DIRECTORIES(BEFORE
-        ${PROJECT_SOURCE_DIR}/foreign/cppzmq)
-
-    LINK_DIRECTORIES(${LIBZMQ_LIBRARY_DIRS})
-
     ADD_LIBRARY(zeromq MODULE
         stream
         driver

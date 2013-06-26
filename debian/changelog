@@ -1,10 +1,10 @@
-cocaine-plugins (0.10.5-5) lucid; urgency=low
+cocaine-plugins (0.10.5-5) unstable; urgency=low
 
   * Rebuild.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 26 Jun 2013 19:30:03 +0400
 
-cocaine-plugins (0.10.5-4) lucid; urgency=low
+cocaine-plugins (0.10.5-4) unstable; urgency=low
 
   * IPVS: properly prune dead services.
 
@@ -16,7 +16,7 @@ cocaine-plugins (0.10.5-3) unstable; urgency=low
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 25 Jun 2013 20:23:39 +0400
 
-cocaine-plugins (0.10.5-2) lucid; urgency=low
+cocaine-plugins (0.10.5-2) unstable; urgency=low
 
   * IPVS Gateway plugin.
 

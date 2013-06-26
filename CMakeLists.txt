@@ -8,7 +8,7 @@ SET(COCAINE_VERSION_RELEASE 5)
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-OPTION(BLASTBEAT "Build Blastbeat Driver plugin" OFF)
+OPTION(BLASTBEAT "Build Blastbeat Driver plugin" ON)
 OPTION(CACHE "Build LRU Cache plugin" ON)
 OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
@@ -30,18 +30,24 @@ INCLUDE(cmake/locate_library.cmake)
 LOCATE_LIBRARY(LIBCOCAINE "cocaine/context.hpp" "cocaine-core")
 LOCATE_LIBRARY(LIBEV "ev++.h" "ev" "libev")
 LOCATE_LIBRARY(LIBMSGPACK "msgpack.hpp" "msgpack")
+LOCATE_LIBRARY(LIBZMQ "zmq.h" "zmq")
+
+INCLUDE_DIRECTORIES(BEFORE
+    ${PROJECT_SOURCE_DIR}/foreign/cppzmq)
 
 INCLUDE_DIRECTORIES(
     ${Boost_INCLUDE_DIRS}
     ${LIBCOCAINE_INCLUDE_DIRS}
     ${LIBEV_INCLUDE_DIRS}
-    ${LIBMSGPACK_INCLUDE_DIRS})
+    ${LIBMSGPACK_INCLUDE_DIRS}
+    ${LIBZMQ_INCLUDE_DIRS})
 
 LINK_DIRECTORIES(
     ${Boost_LIBRARY_DIRS}
     ${LIBCOCAINE_LIBRARY_DIRS}
     ${LIBEV_LIBRARY_DIRS}
-    ${LIBMSGPACK_LIBRARY_DIRS})
+    ${LIBMSGPACK_LIBRARY_DIRS}
+    ${LIBZMQ_LIBRARY_DIRS})
 
 SET(PLUGINS
         blastbeat
