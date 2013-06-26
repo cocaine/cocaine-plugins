@@ -154,17 +154,6 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
     m_history[uuid] = dump;
 }
 
-namespace {
-    template<size_t N>
-    struct tuple_element_getter {
-        template<class T>
-        typename std::tuple_element<N, T>::type
-        operator()(const T& value) const {
-            return std::get<N>(value);
-        }
-    };
-}
-
 void
 ipvs_t::prune(const std::string& uuid) {
     COCAINE_LOG_DEBUG(m_log, "pruning node '%s'", uuid);
@@ -175,7 +164,7 @@ ipvs_t::prune(const std::string& uuid) {
         m_remote_services.begin(),
         m_remote_services.end(),
         std::back_inserter(names),
-        tuple_element_getter<0>()
+        tuple::element_getter<0>()
     );
 
     for(auto it = names.begin(); it != names.end(); ++it) {
