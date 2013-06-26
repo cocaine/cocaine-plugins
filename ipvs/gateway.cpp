@@ -49,6 +49,8 @@ ipvs_t::ipvs_t(context_t& context,
 
     COCAINE_LOG_INFO(m_log, "using IPVS version %d", ::ipvs_version());
 
+    ::ipvs_flush();
+
     for(int i = 32768; i < 61000; ++i) {
         m_ports.push(i);
     }
@@ -164,7 +166,7 @@ ipvs_t::prune(const std::string& uuid) {
         m_remote_services.begin(),
         m_remote_services.end(),
         std::back_inserter(names),
-        tuple::element_getter<0>()
+        tuple::nth_element<0>()
     );
 
     for(auto it = names.begin(); it != names.end(); ++it) {
