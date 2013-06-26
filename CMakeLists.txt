@@ -8,7 +8,7 @@ SET(COCAINE_VERSION_RELEASE 5)
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-OPTION(BLASTBEAT "Build Blastbeat Driver plugin" ON)
+OPTION(BLASTBEAT "Build Blastbeat Driver plugin" OFF)
 OPTION(CACHE "Build LRU Cache plugin" ON)
 OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
