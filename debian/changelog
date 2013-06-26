@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.5-5) lucid; urgency=low
+
+  * Rebuild.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 26 Jun 2013 19:30:03 +0400
+
 cocaine-plugins (0.10.5-4) lucid; urgency=low
 
   * IPVS: properly prune dead services.
