@@ -30,18 +30,15 @@ class blastbeat_t;
 struct blastbeat_stream_t:
     public api::stream_t
 {
-    blastbeat_stream_t(blastbeat_t& driver,
-                       const std::string& sid);
+    blastbeat_stream_t(blastbeat_t& driver, const std::string& sid);
 
     virtual
     void
-    write(const char * chunk,
-          size_t size);
+    write(const char * chunk, size_t size);
 
     virtual
     void
-    error(int code,
-          const std::string& message);
+    error(int code, const std::string& message);
 
     virtual
     void

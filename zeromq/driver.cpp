@@ -32,10 +32,7 @@ using namespace cocaine;
 using namespace cocaine::driver;
 using namespace cocaine::logging;
 
-zmq_t::zmq_t(context_t& context,
-             const std::string& name,
-             const Json::Value& args,
-             engine::engine_t& engine):
+zmq_t::zmq_t(context_t& context, const std::string& name, const Json::Value& args, engine::engine_t& engine):
     category_type(context, name, args, engine),
     m_context(context),
     m_log(new log_t(context, cocaine::format("app/%s", name))),

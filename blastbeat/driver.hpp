@@ -37,24 +37,17 @@ class blastbeat_t:
         typedef api::driver_t category_type;
 
     public:
-        blastbeat_t(context_t& context,
-                    io::reactor_t& reactor,
-                    app_t& app,
-                    const std::string& name,
-                    const Json::Value& args);
+        blastbeat_t(context_t& context, io::reactor_t& reactor, app_t& app, const std::string& name, const Json::Value& args);
 
         virtual
-        ~blastbeat_t();
+       ~blastbeat_t();
 
         virtual
         Json::Value
         info() const;
 
         bool
-        send(const std::string& sid,
-             const std::string& type,
-             const std::string& body)
-        {
+        send(const std::string& sid, const std::string& type, const std::string& body) {
             zmq::message_t message;
 
             message.rebuild(sid.size());
@@ -91,12 +84,10 @@ class blastbeat_t:
         on_spawn();
 
         void
-        on_uwsgi(const std::string& sid,
-                 zmq::message_t& message);
+        on_uwsgi(const std::string& sid, zmq::message_t& message);
 
         void
-        on_body(const std::string& sid,
-                zmq::message_t& message);
+        on_body(const std::string& sid, zmq::message_t& message);
 
         void
         on_end(const std::string& sid);

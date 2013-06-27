@@ -36,13 +36,10 @@ class zmq_t:
         typedef api::driver_t category_type;
 
     public:
-        zmq_t(context_t& context,
-              const std::string& name,
-              const Json::Value& args,
-              engine::engine_t& engine);
+        zmq_t(context_t& context, const std::string& name, const Json::Value& args, engine::engine_t& engine);
 
         virtual
-        ~zmq_t();
+       ~zmq_t();
 
         virtual
         Json::Value
@@ -50,9 +47,7 @@ class zmq_t:
 
         template<class T>
         bool
-        send(const std::string& route,
-             T&& message)
-        {
+        send(const std::string& route, T&& message) {
             const std::string empty;
 
             on_check(m_checker, ev::PREPARE);

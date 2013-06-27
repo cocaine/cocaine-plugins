@@ -72,9 +72,7 @@ namespace {
     };
 }
 
-cgroups_t::cgroups_t(context_t& context,
-                     const std::string& name,
-                     const Json::Value& args):
+cgroups_t::cgroups_t(context_t& context, const std::string& name, const Json::Value& args):
     category_type(context, name, args),
     m_log(new logging::log_t(context, name)),
 #if BOOST_VERSION >= 104600
@@ -164,11 +162,7 @@ cgroups_t::~cgroups_t() {
 }
 
 std::unique_ptr<api::handle_t>
-cgroups_t::spawn(const std::string& path,
-                 const std::map<std::string, std::string>& args,
-                 const std::map<std::string, std::string>& environment,
-                 int pipe)
-{
+cgroups_t::spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment, int pipe) {
     pid_t pid = ::fork();
 
     if(pid < 0) {

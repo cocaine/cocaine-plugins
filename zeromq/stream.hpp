@@ -34,19 +34,15 @@ class zmq_t;
 struct zmq_stream_t:
     public api::stream_t
 {
-    zmq_stream_t(zmq_t& driver,
-                 const std::shared_ptr<logging::log_t>& log,
-                 const route_t& route);
+    zmq_stream_t(zmq_t& driver, const std::shared_ptr<logging::log_t>& log, const route_t& route);
 
     virtual
     void
-    push(const char * chunk,
-         size_t size);
+    push(const char * chunk, size_t size);
 
     virtual
     void
-    error(error_code code,
-          const std::string& message);
+    error(error_code code, const std::string& message);
 
     virtual
     void

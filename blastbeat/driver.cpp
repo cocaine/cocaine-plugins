@@ -35,11 +35,7 @@ using namespace cocaine;
 using namespace cocaine::driver;
 using namespace cocaine::logging;
 
-blastbeat_t::blastbeat_t(context_t& context,
-                         io::reactor_t& reactor,
-                         app_t& app,
-                         const std::string& name,
-                         const Json::Value& args):
+blastbeat_t::blastbeat_t(context_t& context, io::reactor_t& reactor, app_t& app, const std::string& name, const Json::Value& args):
     category_type(context, reactor, app, name, args),
     m_context(context),
     m_log(new log_t(context, cocaine::format("app/%s", name))),
@@ -203,9 +199,7 @@ blastbeat_t::on_spawn() {
 }
 
 void
-blastbeat_t::on_uwsgi(const std::string& sid,
-                      zmq::message_t& message)
-{
+blastbeat_t::on_uwsgi(const std::string& sid, zmq::message_t& message) {
     std::shared_ptr<blastbeat_stream_t> upstream(
         std::make_shared<blastbeat_stream_t>(
             *this,
@@ -274,9 +268,7 @@ blastbeat_t::on_uwsgi(const std::string& sid,
 }
 
 void
-blastbeat_t::on_body(const std::string& sid,
-                     zmq::message_t& body)
-{
+blastbeat_t::on_body(const std::string& sid, zmq::message_t& body) {
     stream_map_t::iterator it(
         m_streams.find(sid)
     );

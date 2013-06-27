@@ -49,9 +49,7 @@ namespace cocaine { namespace io {
     struct type_traits<cocaine_response_t> {
         static
         void
-        unpack(const msgpack::object& packed,
-               cocaine_response_t& object)
-        {
+        unpack(const msgpack::object& packed, cocaine_response_t& object) {
             if (packed.type != msgpack::type::MAP) {
                 throw msgpack::type_error();
             }
@@ -75,17 +73,14 @@ namespace cocaine { namespace io {
     };
 }}
 
-blastbeat_stream_t::blastbeat_stream_t(blastbeat_t& driver,
-                                       const std::string& sid):
+blastbeat_stream_t::blastbeat_stream_t(blastbeat_t& driver, const std::string& sid):
     m_driver(driver),
     m_sid(sid),
     m_body(false)
 { }
 
 void
-blastbeat_stream_t::write(const char * chunk,
-                          size_t size)
-{
+blastbeat_stream_t::write(const char * chunk, size_t size) {
     if(!m_body) {
         msgpack::unpacked unpacked;
         cocaine_response_t response;
@@ -129,9 +124,7 @@ blastbeat_stream_t::write(const char * chunk,
 }
 
 void
-blastbeat_stream_t::error(int,
-                          const std::string&)
-{
+blastbeat_stream_t::error(int, const std::string&) {
     std::string empty;
 
     // TODO: Proper error reporting.

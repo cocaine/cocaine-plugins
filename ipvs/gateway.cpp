@@ -27,6 +27,7 @@
 #include <cocaine/logging.hpp>
 
 #include <cstring>
+#include <system_error>
 
 #include <netinet/in.h>
 
@@ -34,9 +35,32 @@ using namespace cocaine::api;
 using namespace cocaine::io;
 using namespace cocaine::gateway;
 
-ipvs_t::ipvs_t(context_t& context,
-               const std::string& name,
-               const Json::Value& args):
+namespace {
+    class ipvs_category_t:
+        public std::error_category
+    {
+        virtual
+        const char*
+        name() const throw() {
+            return "ipvs";
+        }
+
+        virtual
+        std::string
+        message(int code) const {
+            return ::ipvs_strerror(code);
+        }
+    };
+
+    ipvs_category_t category_instance;
+
+    const std::error_category&
+    ipvs_category() {
+        return category_instance;
+    }
+}
+
+ipvs_t::ipvs_t(context_t& context, const std::string& name, const Json::Value& args):
     category_type(context, name, args),
     m_context(context),
     m_log(new logging::log_t(context, name)),
@@ -44,7 +68,7 @@ ipvs_t::ipvs_t(context_t& context,
     m_default_weight(args.get("weight", 1).asUInt())
 {
     if(::ipvs_init() != 0) {
-        throw cocaine::error_t("unable to initialize IPVS - [%d] %s", errno, ::ipvs_strerror(errno));
+        throw std::system_error(errno, ipvs_category(), "unable to initialize IPVS");
     }
 
     COCAINE_LOG_INFO(m_log, "using IPVS version %d", ::ipvs_version());

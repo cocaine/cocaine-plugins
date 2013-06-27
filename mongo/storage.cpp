@@ -33,10 +33,7 @@ using namespace mongo;
 
 typedef std::unique_ptr<ScopedDbConnection> connection_ptr_t;
 
-mongo_storage_t::mongo_storage_t(context_t& context,
-                                 const std::string& name,
-                                 const Json::Value& args)
-try:
+mongo_storage_t::mongo_storage_t(context_t& context, const std::string& name, const Json::Value& args) try:
     category_type(context, name, args),
     m_log(new log_t(context, name)),
     m_uri(args["uri"].asString(), ConnectionString::SET)
@@ -49,9 +46,7 @@ try:
 }
 
 std::string
-mongo_storage_t::read(const std::string& ns,
-                      const std::string& key)
-{
+mongo_storage_t::read(const std::string& ns, const std::string& key) {
     std::string result;
 
     try {
@@ -78,10 +73,7 @@ mongo_storage_t::read(const std::string& ns,
 }
 
 void
-mongo_storage_t::write(const std::string& ns,
-                       const std::string& key,
-                       const std::string& blob)
-{
+mongo_storage_t::write(const std::string& ns, const std::string& key, const std::string& blob) {
     try {
         connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
         GridFS gridfs(connection->conn(), "cocaine", ns);
@@ -123,9 +115,7 @@ mongo_storage_t::list(const std::string& ns) {
 }
 
 void
-mongo_storage_t::remove(const std::string& ns,
-                        const std::string& key)
-{
+mongo_storage_t::remove(const std::string& ns, const std::string& key) {
     try {
         connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
 

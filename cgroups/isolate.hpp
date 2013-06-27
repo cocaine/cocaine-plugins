@@ -34,19 +34,14 @@ class cgroups_t:
         typedef api::isolate_t category_type;
 
     public:
-        cgroups_t(context_t& context,
-                  const std::string& name,
-                  const Json::Value& args);
+        cgroups_t(context_t& context, const std::string& name, const Json::Value& args);
 
         virtual
-        ~cgroups_t();
+       ~cgroups_t();
 
         virtual
         std::unique_ptr<api::handle_t>
-        spawn(const std::string& path,
-              const std::map<std::string, std::string>& args,
-              const std::map<std::string, std::string>& environment,
-              int pipe);
+        spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment, int pipe);
 
     private:
         std::unique_ptr<logging::log_t> m_log;
