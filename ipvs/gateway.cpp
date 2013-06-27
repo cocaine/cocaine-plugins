@@ -49,11 +49,20 @@ ipvs_t::ipvs_t(context_t& context,
 
     COCAINE_LOG_INFO(m_log, "using IPVS version %d", ::ipvs_version());
 
-    ::ipvs_flush();
-
-    for(int i = 32768; i < 61000; ++i) {
-        m_ports.push(i);
+    if(args["port-range"].empty()) {
+        throw cocaine::error_t("no port ranges have been specified");
     }
+
+    uint16_t min = args["port-range"][0].asUInt(),
+             max = args["port-range"][1].asUInt();
+
+    COCAINE_LOG_INFO(m_log, "%u gateway ports available, %u through %u", max - min, min, max);
+
+    while(min != max) {
+        m_ports.push(--max);
+    }
+
+    ::ipvs_flush();
 }
 
 ipvs_t::~ipvs_t() {

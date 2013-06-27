@@ -66,6 +66,9 @@ class ipvs_t:
         const std::string m_default_scheduler;
         const unsigned    m_default_weight;
 
+        // Ports available for allocation to virtual services.
+        std::priority_queue<uint16_t, std::vector<uint16_t>, std::greater<uint16_t>> m_ports;
+
         struct service_info_t {
             unsigned int version;
 
@@ -75,16 +78,13 @@ class ipvs_t:
 
         typedef std::map<std::string, service_info_t> service_info_map_t;
 
-        // Ports available for allocation to virtual services.
-        std::priority_queue<uint16_t, std::vector<uint16_t>, std::greater<uint16_t>> m_ports;
-
         // Keeps track of service versions and mappings.
         service_info_map_t m_service_info;
 
         struct remote_service_t {
             ipvs_service_t handle;
 
-            // Virtual service description.
+            // Virtual service endpoint.
             std::tuple<std::string, uint16_t> endpoint;
 
             // Backend UUID -> Destination mapping.
