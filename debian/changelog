@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.5-6) lucid; urgency=low
+
+  * IPVS: port range support.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 28 Jun 2013 17:05:35 +0400
+
 cocaine-plugins (0.10.5-5) unstable; urgency=low
 
   * Rebuild.
