@@ -124,11 +124,13 @@ blastbeat_t::on_check(ev::prepare&, int) {
 }
 
 namespace {
-    struct uwsgi_header_t {
-        uint8_t  modifier1;
-        uint16_t datasize;
-        uint8_t  modifier2;
-    } __attribute__((__packed__));
+
+struct uwsgi_header_t {
+    uint8_t  modifier1;
+    uint16_t datasize;
+    uint8_t  modifier2;
+} __attribute__((__packed__));
+
 }
 
 void

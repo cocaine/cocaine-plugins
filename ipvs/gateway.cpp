@@ -36,28 +36,30 @@ using namespace cocaine::io;
 using namespace cocaine::gateway;
 
 namespace {
-    class ipvs_category_t:
-        public std::error_category
-    {
-        virtual
-        const char*
-        name() const throw() {
-            return "ipvs";
-        }
 
-        virtual
-        std::string
-        message(int code) const {
-            return ::ipvs_strerror(code);
-        }
-    };
-
-    ipvs_category_t category_instance;
-
-    const std::error_category&
-    ipvs_category() {
-        return category_instance;
+class ipvs_category_t:
+    public std::error_category
+{
+    virtual
+    const char*
+    name() const throw() {
+        return "ipvs";
     }
+
+    virtual
+    std::string
+    message(int code) const {
+        return ::ipvs_strerror(code);
+    }
+};
+
+ipvs_category_t category_instance;
+
+const std::error_category&
+ipvs_category() {
+    return category_instance;
+}
+
 }
 
 ipvs_t::ipvs_t(context_t& context, const std::string& name, const Json::Value& args):

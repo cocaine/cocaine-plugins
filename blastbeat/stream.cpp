@@ -30,18 +30,20 @@ using namespace cocaine;
 using namespace cocaine::driver;
 
 namespace {
-    struct cocaine_response_t {
-        int code;
 
-        typedef std::vector<
-            std::pair<
-                std::string,
-                std::string
-            >
-        > header_vector_t;
+struct cocaine_response_t {
+    int code;
 
-        header_vector_t headers;
-    };
+    typedef std::vector<
+        std::pair<
+            std::string,
+            std::string
+        >
+    > header_vector_t;
+
+    header_vector_t headers;
+};
+
 }
 
 namespace cocaine { namespace io {

@@ -40,43 +40,45 @@ urlfetch_t::urlfetch_t(context_t& context,
 }
 
 namespace {
-    struct urlfetch_get_handler {
-        deferred<get_tuple> promise;
-        std::shared_ptr<logging::log_t> log_;
 
-        void
-        operator()(const swarm::network_reply& reply) {
-            const std::string data = reply.get_data();
-            const int code = reply.get_code();
-            bool success = (reply.get_error() == 0 && (code < 400 || code >= 600) );
+struct urlfetch_get_handler {
+    deferred<get_tuple> promise;
+    std::shared_ptr<logging::log_t> log_;
 
-            if (success) {
-                COCAINE_LOG_DEBUG(log_, "Downloaded successfully %s, http code %d", reply.get_url(), reply.get_code() );
-            } else {
-                COCAINE_LOG_DEBUG(log_, "Unable to download %s, network error code %d, http code %d", reply.get_url(), reply.get_error(), reply.get_code() );
+    void
+    operator()(const swarm::network_reply& reply) {
+        const std::string data = reply.get_data();
+        const int code = reply.get_code();
+        bool success = (reply.get_error() == 0 && (code < 400 || code >= 600) );
 
-                if (reply.get_code() == 0) {
-                    // Socket-only error, no valid http response
-                    promise.abort(-reply.get_error(),
-                                  cocaine::format("Unable to download %s, network error code %d",
-                                                  reply.get_request().get_url(),
-                                                  reply.get_error()));
-                    return;
-                }
+        if (success) {
+            COCAINE_LOG_DEBUG(log_, "Downloaded successfully %s, http code %d", reply.get_url(), reply.get_code() );
+        } else {
+            COCAINE_LOG_DEBUG(log_, "Unable to download %s, network error code %d, http code %d", reply.get_url(), reply.get_error(), reply.get_code() );
+
+            if (reply.get_code() == 0) {
+                // Socket-only error, no valid http response
+                promise.abort(-reply.get_error(),
+                              cocaine::format("Unable to download %s, network error code %d",
+                                              reply.get_request().get_url(),
+                                              reply.get_error()));
+                return;
             }
-
-            std::map<std::string, std::string> headers;
-
-            BOOST_FOREACH(const auto& it, reply.get_headers()) {
-                const auto& header_name = it.first;
-                const auto& header_value = it.second;
-                headers[header_name] = header_value;
-            }
-
-            get_tuple tuple = std::make_tuple(success, data, code, headers);
-            promise.write(tuple);
         }
-    };
+
+        std::map<std::string, std::string> headers;
+
+        BOOST_FOREACH(const auto& it, reply.get_headers()) {
+            const auto& header_name = it.first;
+            const auto& header_value = it.second;
+            headers[header_name] = header_value;
+        }
+
+        get_tuple tuple = std::make_tuple(success, data, code, headers);
+        promise.write(tuple);
+    }
+};
+
 }
 
 deferred<get_tuple>

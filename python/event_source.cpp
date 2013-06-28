@@ -25,19 +25,21 @@
 using namespace cocaine::sandbox;
 
 namespace {
-    struct decrement_reference_t {
-        void operator()(PyObject * object) {
-            Py_DECREF(object);
-        }
-    };
 
-    struct dispose_t {
-        template<class T>
-        void
-        operator()(T& slot) {
-            std::for_each(slot.second.begin(), slot.second.end(), decrement_reference_t());
-        }
-    };
+struct decrement_reference_t {
+    void operator()(PyObject * object) {
+        Py_DECREF(object);
+    }
+};
+
+struct dispose_t {
+    template<class T>
+    void
+    operator()(T& slot) {
+        std::for_each(slot.second.begin(), slot.second.end(), decrement_reference_t());
+    }
+};
+
 }
 
 event_source_t::~event_source_t() {
