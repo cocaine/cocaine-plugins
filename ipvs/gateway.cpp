@@ -179,7 +179,7 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
             m_history[uuid].end(),
             dump.begin(),
             dump.end(),
-            stale.begin(),
+            std::back_inserter(stale),
             dump.value_comp()
         );
 
