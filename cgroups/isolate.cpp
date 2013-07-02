@@ -158,6 +158,8 @@ cgroups_t::~cgroups_t() {
     cgroup_free(&m_cgroup);
 }
 
+extern char** environ;
+
 std::unique_ptr<api::handle_t>
 cgroups_t::spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment, int pipe) {
     const pid_t pid = ::fork();
