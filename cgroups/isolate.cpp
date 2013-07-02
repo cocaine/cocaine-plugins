@@ -275,5 +275,5 @@ cgroups_t::spawn(const std::string& path, const api::string_map_t& args, const a
         }
     }
 
-    return std::make_unique<api::handle_t>(pid);
+    return std::make_unique<process_handle_t>(pid);
 }
