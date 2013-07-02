@@ -103,7 +103,7 @@ ipvs_t::~ipvs_t() {
 
 resolve_result_type
 ipvs_t::resolve(const std::string& name) const {
-    auto ipvs = m_remote_services.find(name);
+    const auto ipvs = m_remote_services.find(name);
 
     if(ipvs == m_remote_services.end()) {
         throw cocaine::error_t("the specified service is not available in the group");
@@ -117,7 +117,7 @@ ipvs_t::resolve(const std::string& name) const {
         std::get<1>(ipvs->second.endpoint)
     );
 
-    auto info = m_service_info.find(name);
+    const auto info = m_service_info.find(name);
 
     BOOST_VERIFY(info != m_service_info.end());
 
@@ -132,7 +132,7 @@ void
 ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
     COCAINE_LOG_DEBUG(m_log, "updating node '%s'", uuid);
 
-    for(auto it = dump.begin(); it != dump.end(); ++it) {
+    for(auto it = dump.cbegin(); it != dump.cend(); ++it) {
         ipvs_dest_t backend;
 
         // Store the service info
@@ -183,7 +183,7 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
             dump.value_comp()
         );
 
-        for(auto it = stale.begin(); it != stale.end(); ++it) {
+        for(auto it = stale.cbegin(); it != stale.cend(); ++it) {
             pop_backend(it->first, uuid);
         }
     }
@@ -204,7 +204,7 @@ ipvs_t::prune(const std::string& uuid) {
         tuple::nth_element<0>()
     );
 
-    for(auto it = names.begin(); it != names.end(); ++it) {
+    for(auto it = names.cbegin(); it != names.cend(); ++it) {
         pop_backend(*it, uuid);
     }
 
