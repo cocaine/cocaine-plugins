@@ -14,6 +14,7 @@ OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(PYTHON "Build Python Sandbox plugin" OFF)
+OPTION(TIMER "Build Timer plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(ZEROMQ "Build ZeroMQ Driver plugin" OFF)
 
@@ -57,7 +58,8 @@ SET(PLUGINS
         python
         urlfetch
         zeromq
-        cache)
+        cache
+        timer)
 
 FOREACH(PLUGIN ${PLUGINS})
     ADD_SUBDIRECTORY(${PLUGIN})

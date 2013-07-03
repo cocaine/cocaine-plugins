@@ -55,3 +55,28 @@ Description: Cocaine - IPVS Gateway
 # Description: Cocaine - ZeroMQ Driver
 #  Raw ZeroMQ driver for Cocaine.
 
+Package: libcocaine-plugin-timer2
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5-14)
+Description: Cocaine - Timer service
+ Timer service for Cocaine.
+ 
+Package: libcocaine-plugin-timer-dev
+Architecture: any
+Section: libdevel
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-timer2 (= ${binary:Version})
+Description: Cocaine - Timer service Development Headers
+ Cocaine development headers for the Timer Service package.
+ 
+Package: libcocaine-plugin-cache2
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5-14)
+Description: Cocaine - Cache service
+ LRU Cache service for Cocaine.
+ 
+Package: libcocaine-plugin-cache-dev
+Architecture: any
+Section: libdevel
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-cache2 (= ${binary:Version})
+Description: Cocaine - Cache service Development Headers
+ Cocaine development headers for the Cache Service package.
