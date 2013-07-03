@@ -13,8 +13,8 @@
 * GNU General Public License for more details.
 */
 
-#ifndef COCAINE_TIMER_SERVICE_HPP
-#define COCAINE_TIMER_SERVICE_HPP
+#ifndef COCAINE_CHRONO_SERVICE_HPP
+#define COCAINE_CHRONO_SERVICE_HPP
 
 #include <cocaine/api/service.hpp>
 #include <cocaine/asio/reactor.hpp>
@@ -23,35 +23,35 @@
 
 namespace cocaine { namespace io {
 
-struct timer_tag;
+struct chrono_tag;
 
 typedef int64_t timer_id_t;
 
-namespace timer {
+namespace chrono {
     struct notify_after {
-        typedef timer_tag tag;
+        typedef chrono_tag tag;
 
         typedef boost::mpl::list<
             /* time difference */ double,
-			/* send id */ optional_with_default<bool, false>
+            /* send id */ optional_with_default<bool, false>
         > tuple_type;
 
         typedef timer_id_t result_type;
     };
-	
-	struct notify_every {
-        typedef timer_tag tag;
+
+    struct notify_every {
+        typedef chrono_tag tag;
 
         typedef boost::mpl::list<
             /* time difference */ double,
-			/* send id */ optional_with_default<bool, false>
+            /* send id */ optional_with_default<bool, false>
         > tuple_type;
 
         typedef timer_id_t result_type;
     };
 
     struct cancel {
-        typedef timer_tag tag;
+        typedef chrono_tag tag;
 
         typedef boost::mpl::list<
             /* timer id */ timer_id_t
@@ -59,9 +59,9 @@ namespace timer {
 
         typedef void result_type;
     };
-    
+
     struct restart {
-        typedef timer_tag tag;
+        typedef chrono_tag tag;
 
         typedef boost::mpl::list<
             /* timer id */ timer_id_t
@@ -72,12 +72,12 @@ namespace timer {
 }
 
 template<>
-struct protocol<timer_tag> {
+struct protocol<chrono_tag> {
     typedef mpl::list<
-        timer::notify_after,
-		timer::notify_every,
-        timer::cancel,
-        timer::restart
+        chrono::notify_after,
+        chrono::notify_every,
+        chrono::cancel,
+        chrono::restart
     > type;
 
     typedef boost::mpl::int_<
@@ -99,33 +99,33 @@ namespace detail {
 
 namespace service {
 
-class timer_t:
+class chrono_t:
     public api::service_t
 {
     public:
-        timer_t(context_t& context,
-                   io::reactor_t& reactor,
-                   const std::string& name,
-                   const Json::Value& args);
+        chrono_t(context_t& context,
+                 io::reactor_t& reactor,
+                 const std::string& name,
+                 const Json::Value& args);
 
     private:
         struct timer_desc_t {
             std::shared_ptr<ev::timer> timer_;
-			std::shared_ptr<streamed<io::timer_id_t>> promise_;
+            std::shared_ptr<streamed<io::timer_id_t>> promise_;
         };
-        
+
         streamed<io::timer_id_t>
         notify_after(double time, bool send_id);
-		
-		streamed<io::timer_id_t>
+
+        streamed<io::timer_id_t>
         notify_every(double time, bool send_id);
-		
+
         void
         cancel(io::timer_id_t timer_id);
-        
+
         void
         restart(io::timer_id_t timer_id);
-        
+
         void 
         on_timer(ev::timer &w, int revents);
 
@@ -133,14 +133,14 @@ class timer_t:
         remove_timer(io::timer_id_t timer_id);
         
     private:
-		streamed<io::timer_id_t>
-		set_timer_impl(double first, double repeat, bool send_id);
-		
+        streamed<io::timer_id_t>
+        set_timer_impl(double first, double repeat, bool send_id);
+
         std::shared_ptr<logging::log_t> log_;
         std::map<io::timer_id_t, timer_desc_t > timers_;
         std::map<ev::timer*, io::timer_id_t> timer_to_id_;
-		ev::timer update_timer_;
-		cocaine::io::reactor_t& reactor_;
+        ev::timer update_timer_;
+        cocaine::io::reactor_t& reactor_;
 };
 
 }} // namespace cocaine::service

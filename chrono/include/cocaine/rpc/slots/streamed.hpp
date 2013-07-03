@@ -47,11 +47,11 @@ struct streamed_slot:
 
 namespace detail {
     struct streamed_state_t {
-		streamed_state_t():
-			m_packer(m_buffer),
-			m_completed(false),
-			m_failed(false)
-		{ }
+        streamed_state_t():
+            m_packer(m_buffer),
+            m_completed(false),
+            m_failed(false)
+        { }
 
         template<class T>
         void
@@ -66,60 +66,60 @@ namespace detail {
 
             if(m_upstream) {
                 m_upstream->write(m_buffer.data(), m_buffer.size());
-				m_buffer.clear();
+                m_buffer.clear();
             }
         }
 
-		void
-		abort(int code, const std::string& reason) {
-			std::lock_guard<std::mutex> guard(m_mutex);
+        void
+        abort(int code, const std::string& reason) {
+            std::lock_guard<std::mutex> guard(m_mutex);
 
-			if(m_completed) {
-				return;
-			}
+            if(m_completed) {
+                return;
+            }
 
-			m_code = code;
-			m_reason = reason;
+            m_code = code;
+            m_reason = reason;
 
-			if(m_upstream) {
-				m_upstream->error(m_code, m_reason);
-				m_upstream->close();
-			}
+            if(m_upstream) {
+                m_upstream->error(m_code, m_reason);
+                m_upstream->close();
+            }
 
-			m_failed = true;
-		}
+            m_failed = true;
+        }
 
         void
         close() {
-			std::lock_guard<std::mutex> guard(m_mutex);
+            std::lock_guard<std::mutex> guard(m_mutex);
 
-			if(m_completed) {
-				return;
-			}
+            if(m_completed) {
+                return;
+            }
 
-			if(m_upstream) {
-				m_upstream->close();
-			}
+            if(m_upstream) {
+                m_upstream->close();
+            }
 
-			m_completed = true;
-		}
+            m_completed = true;
+        }
 
-		void
-		attach(const api::stream_ptr_t& upstream) {
-			std::lock_guard<std::mutex> guard(m_mutex);
+        void
+        attach(const api::stream_ptr_t& upstream) {
+            std::lock_guard<std::mutex> guard(m_mutex);
 
-			m_upstream = upstream;
+            m_upstream = upstream;
 
-			if (!m_failed) {
-				if (m_buffer.size() > 0) {
-					m_upstream->write(m_buffer.data(), m_buffer.size());
-					m_buffer.clear();
-				}
-			} else {
-				m_upstream->error(m_code, m_reason);
-				m_upstream->close();
-			}
-		}
+            if (!m_failed) {
+                if (m_buffer.size() > 0) {
+                    m_upstream->write(m_buffer.data(), m_buffer.size());
+                    m_buffer.clear();
+                }
+            } else {
+                m_upstream->error(m_code, m_reason);
+                m_upstream->close();
+            }
+        }
 
     private:
         msgpack::sbuffer m_buffer;
@@ -151,8 +151,8 @@ struct streamed {
     write(const T& value) {
         m_state->write(value);
     }
-	
-	void
+
+    void
     close() {
         m_state->close();
     }

@@ -13,7 +13,7 @@
 * GNU General Public License for more details.
 */
 
-#include <cocaine/services/timer.hpp>
+#include <cocaine/services/time.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/traits/tuple.hpp>
 #include <memory>
