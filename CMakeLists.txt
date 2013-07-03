@@ -14,7 +14,7 @@ OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(PYTHON "Build Python Sandbox plugin" OFF)
-OPTION(TIME "Build Time Service plugin" ON)
+OPTION(CHRONO "Build Chrono Service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(ZEROMQ "Build ZeroMQ Driver plugin" OFF)
 
@@ -54,10 +54,10 @@ SET(PLUGINS
         blastbeat
         cache
         cgroups
+        chrono
         ipvs
         mongo
         python
-        time
         urlfetch
         zeromq)
 

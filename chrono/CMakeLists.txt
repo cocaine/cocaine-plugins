@@ -1,20 +1,20 @@
-IF(TIME)
+IF(CHRONO)
     INCLUDE_DIRECTORIES(
-        ${PROJECT_SOURCE_DIR}/time/include)
+        ${PROJECT_SOURCE_DIR}/chrono/include)
 
-    ADD_LIBRARY(time MODULE
-        src/time
+    ADD_LIBRARY(chrono MODULE
+        src/chrono
         src/module)
 
-    TARGET_LINK_LIBRARIES(time
+    TARGET_LINK_LIBRARIES(chrono
         cocaine-core)
 
-    SET_TARGET_PROPERTIES(time PROPERTIES
+    SET_TARGET_PROPERTIES(chrono PROPERTIES
         PREFIX ""
         SUFFIX ".cocaine-plugin"
         COMPILE_FLAGS "-std=c++0x")
 
-    INSTALL(TARGETS time
+    INSTALL(TARGETS chrono
         LIBRARY DESTINATION lib/cocaine
         COMPONENT runtime)
 
@@ -23,4 +23,4 @@ IF(TIME)
             include/
         DESTINATION include
         COMPONENT development)
-ENDIF(TIME)
+ENDIF(CHRONO)

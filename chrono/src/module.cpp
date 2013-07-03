@@ -13,14 +13,19 @@
 * GNU General Public License for more details.
 */
 
-#include "cocaine/services/timer.hpp"
+#include "cocaine/services/chrono.hpp"
 
 using namespace cocaine;
 using namespace cocaine::service;
 
 extern "C" {
+    auto
+    validation() -> api::preconditions_t {
+        return api::preconditions_t { COCAINE_MAKE_VERSION(0, 10, 5) };
+    }
+
     void
     initialize(api::repository_t& repository) {
-        repository.insert<cocaine::service::timer_t>("timer");
+        repository.insert<cocaine::service::chrono_t>("chrono");
     }
 }
