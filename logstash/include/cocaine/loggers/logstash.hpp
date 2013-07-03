@@ -20,32 +20,30 @@
 
 #pragma once
 
-#include <cocaine/asio/udp.hpp>
-#include <cocaine/asio/socket.hpp>
 #include <cocaine/api/logger.hpp>
+
+#include <cocaine/asio/socket.hpp>
+#include <cocaine/asio/udp.hpp>
+
+#include <json/json.h>
 
 namespace cocaine { namespace logging {
 
-const std::string level_description[] = {
-    "IGNORE",
-    "ERROR",
-    "WARNING",
-    "INFO",
-    "DEBUG"
-};
-
 class logstash_t: public api::logger_t {
-    io::socket<io::udp> socket;
+    const std::string m_hostname;
+    io::socket<io::udp> m_socket;
+    Json::FastWriter m_writer;
 
 public:
-    logstash_t(const Json::Value& args);
+    logstash_t(const config_t& config, const Json::Value& args);
 
+    virtual
     void
     emit(logging::priorities level, const std::string& source, const std::string& message);
 
 private:
     std::string
-    prepare_output(logging::priorities level, const std::string& source, const std::string& message) const;
+    prepare_output(logging::priorities level, const std::string& source, const std::string& message);
 };
 
 }} // namespace cocaine::logging
