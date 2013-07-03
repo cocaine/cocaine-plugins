@@ -1,4 +1,15 @@
-cocaine-plugins (0.10.5-6) lucid; urgency=low
+cocaine-plugins (0.10.5-7) unstable; urgency=low
+
+  * Cache service: enables simple key-value operations on a shared local
+    in-memory cache for worker state exchange.
+  * Chrono service: provides time-related operations, like deadline timers or
+    wallclock timers.
+  * CGroups support for environment passing.
+  * Several plugins now have runtime version preconditions.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 03 Jul 2013 18:54:38 +0400
+
+cocaine-plugins (0.10.5-6) unstable; urgency=low
 
   * IPVS: port range support.
 
