@@ -1,23 +1,20 @@
-IF(TIMER)
+IF(TIME)
     INCLUDE_DIRECTORIES(
-        ${PROJECT_SOURCE_DIR}/timer/include)
+        ${PROJECT_SOURCE_DIR}/time/include)
 
-    LINK_DIRECTORIES(
-        )
-
-    ADD_LIBRARY(timer MODULE
-        src/timer
+    ADD_LIBRARY(time MODULE
+        src/time
         src/module)
 
-    TARGET_LINK_LIBRARIES(timer
+    TARGET_LINK_LIBRARIES(time
         cocaine-core)
 
-    SET_TARGET_PROPERTIES(timer PROPERTIES
+    SET_TARGET_PROPERTIES(time PROPERTIES
         PREFIX ""
         SUFFIX ".cocaine-plugin"
         COMPILE_FLAGS "-std=c++0x")
 
-    INSTALL(TARGETS timer
+    INSTALL(TARGETS time
         LIBRARY DESTINATION lib/cocaine
         COMPONENT runtime)
 
@@ -26,4 +23,4 @@ IF(TIMER)
             include/
         DESTINATION include
         COMPONENT development)
-ENDIF(TIMER)
+ENDIF(TIME)

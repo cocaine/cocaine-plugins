@@ -13,8 +13,8 @@
 * GNU General Public License for more details.
 */
 
-#ifndef COCAINE_TIMER_SERVICE_HPP
-#define COCAINE_TIMER_SERVICE_HPP
+#ifndef COCAINE_TIME_SERVICE_HPP
+#define COCAINE_TIME_SERVICE_HPP
 
 #include <cocaine/api/service.hpp>
 #include <cocaine/asio/reactor.hpp>

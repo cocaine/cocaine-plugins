@@ -13,11 +13,11 @@
 * GNU General Public License for more details.
 */
 
-#ifndef _TIMER_HPP_INCLUDED_
-#define _TIMER_HPP_INCLUDED_
+#ifndef _TIME_HPP_INCLUDED_
+#define _TIME_HPP_INCLUDED_
 
 #include <cocaine/framework/service.hpp>
-#include <cocaine/services/timer.hpp>
+#include <cocaine/services/time.hpp>
 #include <cocaine/logging.hpp>
 
 namespace cocaine { namespace framework {
