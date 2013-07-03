@@ -17,6 +17,7 @@ OPTION(PYTHON "Build Python Sandbox plugin" OFF)
 OPTION(TIMER "Build Timer plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(ZEROMQ "Build ZeroMQ Driver plugin" OFF)
+OPTION(LOGSTASH "Build Logstash plugin" ON)
 
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
@@ -59,7 +60,8 @@ SET(PLUGINS
         urlfetch
         zeromq
         cache
-        timer)
+        timer
+        logstash)
 
 FOREACH(PLUGIN ${PLUGINS})
     ADD_SUBDIRECTORY(${PLUGIN})
