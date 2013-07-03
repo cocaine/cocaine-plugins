@@ -21,6 +21,44 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5-14), li
 Description: Cocaine - CGroups Isolate
  CGroups isolation support for Cocaine.
 
+Package: libcocaine-plugin-cache2
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5-14)
+Description: Cocaine - Cache Service
+ LRU Cache service for Cocaine.
+
+Package: libcocaine-plugin-cache-dev
+Architecture: any
+Section: libdevel
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-cache2 (= ${binary:Version})
+Description: Cocaine - Cache Service Development Headers
+ Cocaine development headers for the Cache Service package.
+
+Package: libcocaine-plugin-chrono2
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5-14)
+Description: Cocaine - Chrono Service
+ Timer service for Cocaine.
+
+Package: libcocaine-plugin-chrono-dev
+Architecture: any
+Section: libdevel
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-chrono2 (= ${binary:Version})
+Description: Cocaine - Chrono Service Development Headers
+ Cocaine development headers for the Timer Service package.
+
+Package: libcocaine-plugin-ipvs2
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5-14)
+Description: Cocaine - IPVS Gateway
+ IP Virtual Service Gateway for Cocaine.
+
+Package: libcocaine-plugin-logstash2
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5-14)
+Description: Cocaine - Logstash Logger
+ Logstash Logger for Cocaine.
+
 # Package: libcocaine-plugin-mongodb2
 # Architecture: any
 # Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5-14),
@@ -43,40 +81,9 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-urlfetch2 (= ${bi
 Description: Cocaine - URLFetch Service Development Headers
  Cocaine development headers for the URLFetch Service package.
 
-Package: libcocaine-plugin-ipvs2
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5-14)
-Description: Cocaine - IPVS Gateway
- IP Virtual Service Gateway for Cocaine.
-
 # Package: libcocaine-plugin-zeromq1
 # Architecture: any
 # Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5-14)
 # Description: Cocaine - ZeroMQ Driver
 #  Raw ZeroMQ driver for Cocaine.
 
-Package: libcocaine-plugin-chrono2
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5-14)
-Description: Cocaine - Chrono Service
- Timer service for Cocaine.
- 
-Package: libcocaine-plugin-chrono-dev
-Architecture: any
-Section: libdevel
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-chrono2 (= ${binary:Version})
-Description: Cocaine - Chrono Service Development Headers
- Cocaine development headers for the Timer Service package.
- 
-Package: libcocaine-plugin-cache2
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.5-14)
-Description: Cocaine - Cache Service
- LRU Cache service for Cocaine.
- 
-Package: libcocaine-plugin-cache-dev
-Architecture: any
-Section: libdevel
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-cache2 (= ${binary:Version})
-Description: Cocaine - Cache Service Development Headers
- Cocaine development headers for the Cache Service package.

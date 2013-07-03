@@ -12,12 +12,12 @@ OPTION(BLASTBEAT "Build Blastbeat Driver plugin" ON)
 OPTION(CACHE "Build LRU Cache plugin" ON)
 OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
+OPTION(LOGSTASH "Build Logstash Logger plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(PYTHON "Build Python Sandbox plugin" OFF)
 OPTION(CHRONO "Build Chrono Service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(ZEROMQ "Build ZeroMQ Driver plugin" OFF)
-OPTION(LOGSTASH "Build Logstash plugin" ON)
 
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
@@ -57,12 +57,11 @@ SET(PLUGINS
         cgroups
         chrono
         ipvs
+        logstash
         mongo
         python
         urlfetch
-        zeromq
-        cache
-        logstash)
+        zeromq)
 
 FOREACH(PLUGIN ${PLUGINS})
     ADD_SUBDIRECTORY(${PLUGIN})
