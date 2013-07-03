@@ -1,6 +1,3 @@
-# Generated files
-include/cocaine/config.hpp
-
 # Build directory
 build/*
 
