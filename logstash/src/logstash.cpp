@@ -19,6 +19,9 @@
 */
 
 #include "cocaine/loggers/logstash.hpp"
+
+#include "cocaine/asio/resolver.hpp"
+
 #include "cocaine/context.hpp"
 
 #include <system_error>
@@ -33,10 +36,12 @@ logstash_t::logstash_t(const config_t& config, const Json::Value& args):
         throw cocaine::error_t("no logstash port has been specified");
     }
 
-    m_socket = io::socket<io::udp>(io::udp::endpoint(
+    const auto endpoint = io::resolver<io::udp>::query(
         args.get("host", "0.0.0.0").asString(),
         args["port"].asUInt()
-    ));
+    );
+
+    m_socket = io::socket<io::udp>(endpoint);
 }
 
 namespace {
