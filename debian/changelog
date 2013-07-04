@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.5-8) unstable; urgency=low
+
+  * Logstash Logger: enables log aggregation across the whole cluster.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 04 Jul 2013 14:38:35 +0400
+
 cocaine-plugins (0.10.5-7) unstable; urgency=low
 
   * Cache service: enables simple key-value operations on a shared local
