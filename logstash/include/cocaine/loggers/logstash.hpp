@@ -31,6 +31,8 @@ namespace cocaine { namespace logging {
 
 class logstash_t: public api::logger_t {
     const std::string m_hostname;
+    const std::string m_uuid;
+
     io::socket<io::udp> m_socket;
 
 public:

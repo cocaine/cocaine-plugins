@@ -30,7 +30,8 @@ using namespace cocaine::logging;
 
 logstash_t::logstash_t(const config_t& config, const Json::Value& args):
     category_type(config, args),
-    m_hostname(config.network.hostname)
+    m_hostname(config.network.hostname),
+    m_uuid(config.network.uuid)
 {
     if(args["port"].empty()) {
         throw cocaine::error_t("no logstash port has been specified");
@@ -61,10 +62,11 @@ logstash_t::prepare_output(logging::priorities level, const std::string& source,
     Json::Value root(Json::objectValue);
     Json::FastWriter writer;
 
-    root["level"]    = describe[level];
     root["hostname"] = m_hostname;
-    root["source"]   = source;
+    root["level"]    = describe[level];
     root["message"]  = message;
+    root["source"]   = source;
+    root["uuid"]     = m_uuid;
 
     return writer.write(root);
 }
