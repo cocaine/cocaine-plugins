@@ -32,7 +32,6 @@ namespace cocaine { namespace logging {
 class logstash_t: public api::logger_t {
     const std::string m_hostname;
     io::socket<io::udp> m_socket;
-    Json::FastWriter m_writer;
 
 public:
     logstash_t(const config_t& config, const Json::Value& args);

@@ -54,13 +54,14 @@ const char* describe[] = {
 std::string
 logstash_t::prepare_output(logging::priorities level, const std::string& source, const std::string& message) {
     Json::Value root(Json::objectValue);
+    Json::FastWriter writer;
 
     root["level"]    = describe[level];
     root["hostname"] = m_hostname;
     root["source"]   = source;
     root["message"]  = message;
 
-    return m_writer.write(root);
+    return writer.write(root);
 }
 
 void
