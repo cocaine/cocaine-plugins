@@ -25,27 +25,29 @@
 #include <cocaine/asio/socket.hpp>
 #include <cocaine/asio/udp.hpp>
 
-#include <json/json.h>
-
 namespace cocaine { namespace logging {
 
-class logstash_t: public api::logger_t {
-    const std::string m_hostname;
-    const std::string m_uuid;
-    std::string m_format;
+class logstash_t:
+    public api::logger_t
+{
+    public:
+        logstash_t(const config_t& config, const Json::Value& args);
 
-    io::socket<io::udp> m_socket;
+        virtual
+        void
+        emit(logging::priorities level, const std::string& source, const std::string& message);
 
-public:
-    logstash_t(const config_t& config, const Json::Value& args);
+    private:
+        std::string
+        prepare_output(logging::priorities level, const std::string& source, const std::string& message);
 
-    virtual
-    void
-    emit(logging::priorities level, const std::string& source, const std::string& message);
+    private:
+        const config_t& m_config;
+        const std::string m_format;
 
-private:
-    std::string
-    prepare_output(logging::priorities level, const std::string& source, const std::string& message);
+        // NOTE: Could use a TCP socket here for minimal delivery guarantees with a remote
+        // logstash server, but got to do some benchmarking first.
+        io::socket<io::udp> m_socket;
 };
 
 }} // namespace cocaine::logging

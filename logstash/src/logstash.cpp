@@ -27,14 +27,26 @@
 
 #include <system_error>
 
-using namespace cocaine::logging;
+namespace {
 
 const std::string DEFAULT_FORMAT("%FT%T%z");
 
+const char* describe[] = {
+    nullptr,
+    "ERROR",
+    "WARNING",
+    "INFO",
+    "DEBUG"
+};
+
+}
+
+using namespace cocaine::logging;
+
 logstash_t::logstash_t(const config_t& config, const Json::Value& args):
     category_type(config, args),
-    m_hostname(config.network.hostname),
-    m_uuid(config.network.uuid)
+    m_config(config),
+    m_format(args.get("format", DEFAULT_FORMAT).asString())
 {
     if(args["port"].empty()) {
         throw cocaine::error_t("no logstash port has been specified");
@@ -46,19 +58,6 @@ logstash_t::logstash_t(const config_t& config, const Json::Value& args):
     );
 
     m_socket = io::socket<io::udp>(endpoint);
-    m_format = args.get("format", DEFAULT_FORMAT).asString();
-}
-
-namespace {
-
-const char* describe[] = {
-    nullptr,
-    "ERROR",
-    "WARNING",
-    "INFO",
-    "DEBUG"
-};
-
 }
 
 std::string
@@ -71,24 +70,28 @@ logstash_t::prepare_output(logging::priorities level, const std::string& source,
     std::time(&time);
     ::localtime_r(&time, &timeinfo);
 
-    char timestamp[128];
+    char timestamp[128] = { 0 };
+
     if(std::strftime(timestamp, 128, m_format.c_str(), &timeinfo) == 0) {
-        // Do nothing
+        // Do nothing.
     }
 
     Json::Value root(Json::objectValue);
     Json::Value tags(Json::arrayValue);
     Json::Value fields(Json::objectValue);
-    Json::FastWriter writer;
-    root["@source"] = cocaine::format("udp://%s:%i", m_hostname, m_socket.local_endpoint().port());
-    root["@tags"] = tags;
+
     fields["level"] = describe[level];
-    fields["uuid"] = m_uuid;
+    fields["uuid"] = m_config.network.uuid;
+
     root["@fields"] = fields;
-    root["@timestamp"] = timestamp;
-    root["@source_host"] = m_hostname;
-    root["@source_path"] = source;
     root["@message"] = message;
+    root["@source"] = cocaine::format("udp://%s", m_socket.local_endpoint());
+    root["@source_host"] = m_config.network.hostname;
+    root["@source_path"] = source;
+    root["@tags"] = tags;
+    root["@timestamp"] = timestamp;
+
+    Json::FastWriter writer;
 
     return writer.write(root);
 }
