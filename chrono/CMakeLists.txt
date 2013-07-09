@@ -7,7 +7,8 @@ IF(CHRONO)
         src/module)
 
     TARGET_LINK_LIBRARIES(chrono
-        cocaine-core)
+        cocaine-core
+        ev)
 
     SET_TARGET_PROPERTIES(chrono PROPERTIES
         PREFIX ""
