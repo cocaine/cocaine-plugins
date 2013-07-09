@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.5-10) unstable; urgency=low
+
+  * Logstash Logger: Duplicate tags removed from 'message' string.
+
+ --   <esafronov@3hren.dev.yandex.net>  Tue, 09 Jul 2013 18:46:50 +0400
+
 cocaine-plugins (0.10.5-9) unstable; urgency=low
 
   * Logstash Logger: Logstash now communicates with logstash via prepared json_event.
