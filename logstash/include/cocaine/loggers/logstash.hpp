@@ -43,7 +43,6 @@ class logstash_t:
 
     private:
         const config_t& m_config;
-        const std::string m_format;
 
         // NOTE: Could use a TCP socket here for minimal delivery guarantees with a remote
         // logstash server, but got to do some benchmarking first.

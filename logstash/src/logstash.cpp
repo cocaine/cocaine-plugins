@@ -25,28 +25,14 @@
 
 #include "cocaine/context.hpp"
 
+#include <ctime>
 #include <system_error>
-
-namespace {
-
-const std::string DEFAULT_FORMAT("%FT%T%z");
-
-const char* describe[] = {
-    nullptr,
-    "ERROR",
-    "WARNING",
-    "INFO",
-    "DEBUG"
-};
-
-}
 
 using namespace cocaine::logging;
 
 logstash_t::logstash_t(const config_t& config, const Json::Value& args):
     category_type(config, args),
-    m_config(config),
-    m_format(args.get("format", DEFAULT_FORMAT).asString())
+    m_config(config)
 {
     if(args["port"].empty()) {
         throw cocaine::error_t("no logstash port has been specified");
@@ -60,19 +46,32 @@ logstash_t::logstash_t(const config_t& config, const Json::Value& args):
     m_socket = io::socket<io::udp>(endpoint);
 }
 
+namespace {
+
+const char* describe[] = {
+    nullptr,
+    "ERROR",
+    "WARNING",
+    "INFO",
+    "DEBUG"
+};
+
+}
+
 std::string
 logstash_t::prepare_output(logging::priorities level, const std::string& source, const std::string& message) {
-    time_t time = 0;
-    tm timeinfo;
+    struct timespec time;
+    struct tm       timeinfo;
 
+    std::memset(&time,     0, sizeof(time));
     std::memset(&timeinfo, 0, sizeof(timeinfo));
 
-    std::time(&time);
-    ::localtime_r(&time, &timeinfo);
+    ::clock_gettime(CLOCK_REALTIME, &time);
+    ::localtime_r(&time.tv_sec, &timeinfo);
 
     char timestamp[128] = { 0 };
 
-    if(std::strftime(timestamp, 128, m_format.c_str(), &timeinfo) == 0) {
+    if(std::strftime(timestamp, 128, "%FT%T.%%ld%z", &timeinfo) == 0) {
         // Do nothing.
     }
 
@@ -89,7 +88,7 @@ logstash_t::prepare_output(logging::priorities level, const std::string& source,
     root["@source_host"] = m_config.network.hostname;
     root["@source_path"] = source;
     root["@tags"] = tags;
-    root["@timestamp"] = timestamp;
+    root["@timestamp"] = cocaine::format(timestamp, time.tv_nsec / 1000);
 
     Json::FastWriter writer;
 
