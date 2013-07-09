@@ -29,7 +29,7 @@
 
 using namespace cocaine::logging;
 
-const std::string DEFAULT_FORMAT("%d/%b/%Y:%H:%M:%S %z");
+const std::string DEFAULT_FORMAT("%FT%T%z");
 
 logstash_t::logstash_t(const config_t& config, const Json::Value& args):
     category_type(config, args),
@@ -77,13 +77,18 @@ logstash_t::prepare_output(logging::priorities level, const std::string& source,
     }
 
     Json::Value root(Json::objectValue);
+    Json::Value tags(Json::arrayValue);
+    Json::Value fields(Json::objectValue);
     Json::FastWriter writer;
-    root["hostname"] = m_hostname;
-    root["level"]    = describe[level];
-    root["message"]  = message;
-    root["source"]   = source;
-    root["uuid"]     = m_uuid;
-    root["timestamp"]= timestamp;
+    root["@source"] = cocaine::format("udp://%s:%i", m_hostname, m_socket.local_endpoint().port());
+    root["@tags"] = tags;
+    fields["level"] = describe[level];
+    fields["uuid"] = m_uuid;
+    root["@fields"] = fields;
+    root["@timestamp"] = timestamp;
+    root["@source_host"] = m_hostname;
+    root["@source_path"] = source;
+    root["@message"] = cocaine::format("[%s] %s: %s", describe[level], source, message);
 
     return writer.write(root);
 }
