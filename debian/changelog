@@ -1,15 +1,21 @@
+cocaine-plugins (0.10.5-11) unstable; urgency=low
+
+  * Logstash Logger: bring back the microsecond resolution for timestamps.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 09 Jul 2013 22:58:03 +0400
+
 cocaine-plugins (0.10.5-10) unstable; urgency=low
 
-  * Logstash Logger: Duplicate tags removed from 'message' string.
+  * Logstash Logger: Duplicate tags removed from the 'message' string.
 
- --   <esafronov@3hren.dev.yandex.net>  Tue, 09 Jul 2013 18:46:50 +0400
+ -- Evgeny Safronov <esafronov@yandex-team.ru>  Tue, 09 Jul 2013 18:46:50 +0400
 
 cocaine-plugins (0.10.5-9) unstable; urgency=low
 
-  * Logstash Logger: Logstash now communicates with logstash via prepared json_event.
-  * MongoDB Storage: Storage API v2 compatibility.
+  * Logstash Logger: communicate with logstash via a complete json_event.
+  * MongoDB Storage: compatibility with Storage API v2.
 
- --   <esafronov@3hren.dev.yandex.net>  Tue, 09 Jul 2013 17:22:17 +0400
+ -- Evgeny Safronov <esafronov@yandex-team.ru>  Tue, 09 Jul 2013 17:22:17 +0400
 
 cocaine-plugins (0.10.5-8) unstable; urgency=low
 
