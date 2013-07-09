@@ -34,23 +34,31 @@ class mongo_storage_t:
         typedef api::storage_t category_type;
 
     public:
-        mongo_storage_t(context_t& context, const std::string& name, const Json::Value& args);
+        mongo_storage_t(context_t& context,
+                        const std::string& name,
+                        const Json::Value& args);
 
         virtual
         std::string
-        read(const std::string& collection, const std::string& key);
+        read(const std::string& collection,
+             const std::string& key);
 
         virtual
         void
-        write(const std::string& collection, const std::string& key, const std::string& blob);
+        write(const std::string& collection,
+              const std::string& key,
+              const std::string& blob,
+              const std::vector<std::string>& tags);
 
         virtual
         std::vector<std::string>
-        list(const std::string& collection);
+        find(const std::string& collection,
+             const std::vector<std::string>& tags);
 
         virtual
         void
-        remove(const std::string& collection, const std::string& key);
+        remove(const std::string& collection,
+               const std::string& key);
 
     private:
         std::shared_ptr<logging::log_t> m_log;
