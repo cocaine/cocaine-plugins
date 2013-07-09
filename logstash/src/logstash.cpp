@@ -88,7 +88,7 @@ logstash_t::prepare_output(logging::priorities level, const std::string& source,
     root["@timestamp"] = timestamp;
     root["@source_host"] = m_hostname;
     root["@source_path"] = source;
-    root["@message"] = cocaine::format("[%s] %s: %s", describe[level], source, message);
+    root["@message"] = message;
 
     return writer.write(root);
 }
