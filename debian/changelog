@@ -1,3 +1,10 @@
+cocaine-plugins (0.10.5-9) unstable; urgency=low
+
+  * Logstash Logger: Logstash now communicates with logstash via prepared json_event.
+  * MongoDB Storage: Storage API v2 compatibility.
+
+ --   <esafronov@3hren.dev.yandex.net>  Tue, 09 Jul 2013 17:22:17 +0400
+
 cocaine-plugins (0.10.5-8) unstable; urgency=low
 
   * Logstash Logger: enables log aggregation across the whole cluster.
