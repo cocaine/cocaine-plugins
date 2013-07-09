@@ -33,7 +33,10 @@ using namespace mongo;
 
 typedef std::unique_ptr<ScopedDbConnection> connection_ptr_t;
 
-mongo_storage_t::mongo_storage_t(context_t& context, const std::string& name, const Json::Value& args) try:
+mongo_storage_t::mongo_storage_t(context_t& context,
+                                 const std::string& name,
+                                 const Json::Value& args)
+try:
     category_type(context, name, args),
     m_log(new log_t(context, name)),
     m_uri(args["uri"].asString(), ConnectionString::SET)
@@ -46,12 +49,14 @@ mongo_storage_t::mongo_storage_t(context_t& context, const std::string& name, co
 }
 
 std::string
-mongo_storage_t::read(const std::string& ns, const std::string& key) {
+mongo_storage_t::read(const std::string& collection,
+                      const std::string& key)
+{
     std::string result;
 
     try {
         connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
-        GridFS gridfs(connection->conn(), "cocaine", ns);
+        GridFS gridfs(connection->conn(), "cocaine", "fs." + collection);
         GridFile file(gridfs.findFile(key));
 
         // Fetch the blob.
@@ -73,13 +78,27 @@ mongo_storage_t::read(const std::string& ns, const std::string& key) {
 }
 
 void
-mongo_storage_t::write(const std::string& ns, const std::string& key, const std::string& blob) {
+mongo_storage_t::write(const std::string& collection,
+                       const std::string& key,
+                       const std::string& blob,
+                       const std::vector<std::string>& tags)
+{
     try {
         connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
-        GridFS gridfs(connection->conn(), "cocaine", ns);
+        DBClientBase &db_client = connection->conn();
+        // GridFS will store file in 'fs.collection.*' collections in 'cocaine' database.
+        GridFS gridfs(db_client, "cocaine", "fs." + collection);
+
+        BSONObjBuilder meta;
+        meta.append("key", key);
+        meta.append("tags", tags);
+
+        // Store tags.
+        // Add object {"key": key, "tags": tags} to collection 'meta.collection' in 'cocaine' database.
+        db_client.insert("cocaine.meta." + collection, meta.done());
 
         // Store the blob.
-        BSONObj result = gridfs.storeFile(
+        gridfs.storeFile(
             static_cast<const char*>(blob.data()),
             blob.size(),
             key
@@ -92,18 +111,32 @@ mongo_storage_t::write(const std::string& ns, const std::string& key, const std:
 }
 
 std::vector<std::string>
-mongo_storage_t::list(const std::string& ns) {
+mongo_storage_t::find(const std::string& collection,
+                      const std::vector<std::string>& tags)
+{
     std::vector<std::string> result;
 
     try {
         connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
-        GridFS gridfs(connection->conn(), "cocaine", ns);
-        std::shared_ptr<DBClientCursor> cursor(gridfs.list());
-        BSONObj object;
+        DBClientBase &db_client = connection->conn();
 
+        // Build a query to mongodb: {"$and": [{"tags": "tag1"}, {"tags": "tag2"}, {"tags": "tag3"}]}
+        std::vector<BSONObj> tag_queries;
+        for (auto tag = tags.begin(); tag != tags.end(); ++tag) {
+            BSONObjBuilder tag_query;
+            tag_query.append("tags", *tag);
+            tag_queries.push_back(tag_query.obj());
+        }
+
+        BSONObjBuilder query;
+        query.append("$and", tag_queries);
+
+        // Fetch keys
+        std::auto_ptr<DBClientCursor> cursor = db_client.query("cocaine.meta." + collection, query.done());
+        BSONObj object;
         while(cursor->more()) {
             object = cursor->nextSafe();
-            result.push_back(object["filename"].String()); // WARNING: is key always a string?
+            result.push_back(object["key"].String());
         }
 
         connection->done();
@@ -115,11 +148,19 @@ mongo_storage_t::list(const std::string& ns) {
 }
 
 void
-mongo_storage_t::remove(const std::string& ns, const std::string& key) {
+mongo_storage_t::remove(const std::string& collection,
+                        const std::string& key)
+{
     try {
         connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
+        DBClientBase &db_client = connection->conn();
+        GridFS gridfs(db_client, "cocaine", "fs." + collection);
 
-        GridFS gridfs(connection->conn(), "cocaine", ns);
+        BSONObjBuilder meta;
+        meta.append("key", key);
+
+        // Remove the information about tags.
+        db_client.remove("cocaine.meta." + collection, Query(meta.done()));
 
         // Remove the blob.
         gridfs.removeFile(key);
