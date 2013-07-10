@@ -26,11 +26,12 @@
 #include "cocaine/context.hpp"
 
 #include <ctime>
-#ifdef __MACH__
-#include <mach/clock.h>
-#include <mach/mach.h>
-#endif
 #include <system_error>
+
+#ifdef __MACH__
+    #include <mach/clock.h>
+    #include <mach/mach.h>
+#endif
 
 using namespace cocaine::logging;
 
@@ -81,11 +82,12 @@ logstash_t::prepare_output(logging::priorities level, const std::string& source,
 #else
     ::clock_gettime(CLOCK_REALTIME, &time);
 #endif
-    ::localtime_r(&time.tv_sec, &timeinfo);
+
+    ::gmtime_r(&time.tv_sec, &timeinfo);
 
     char timestamp[128] = { 0 };
 
-    if(std::strftime(timestamp, 128, "%FT%T.%%ld%z", &timeinfo) == 0) {
+    if(std::strftime(timestamp, 128, "%FT%T", &timeinfo) == 0) {
         // Do nothing.
     }
 
@@ -102,7 +104,7 @@ logstash_t::prepare_output(logging::priorities level, const std::string& source,
     root["@source_host"] = m_config.network.hostname;
     root["@source_path"] = source;
     root["@tags"] = tags;
-    root["@timestamp"] = cocaine::format(timestamp, time.tv_nsec / 1000);
+    root["@timestamp"] = cocaine::format("%s.%06ldZ", timestamp, time.tv_nsec / 1000);
 
     Json::FastWriter writer;
 
