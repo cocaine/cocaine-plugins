@@ -26,6 +26,10 @@
 #include "cocaine/context.hpp"
 
 #include <ctime>
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
 #include <system_error>
 
 using namespace cocaine::logging;
@@ -66,7 +70,17 @@ logstash_t::prepare_output(logging::priorities level, const std::string& source,
     std::memset(&time,     0, sizeof(time));
     std::memset(&timeinfo, 0, sizeof(timeinfo));
 
+#ifdef __MACH__
+    clock_serv_t cclock;
+    mach_timespec_t mts;
+    ::host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+    ::clock_get_time(cclock, &mts);
+    ::mach_port_deallocate(mach_task_self(), cclock);
+    time.tv_sec = mts.tv_sec;
+    time.tv_nsec = mts.tv_nsec;
+#else
     ::clock_gettime(CLOCK_REALTIME, &time);
+#endif
     ::localtime_r(&time.tv_sec, &timeinfo);
 
     char timestamp[128] = { 0 };
