@@ -41,42 +41,51 @@ cocaine::sandbox::wrap(const Json::Value& value) {
     PyObject * object = NULL;
 
     switch(value.type()) {
-        case Json::booleanValue:
-            return PyBool_FromLong(value.asBool());
-        case Json::intValue:
-        case Json::uintValue:
-            return PyLong_FromLong(value.asInt());
-        case Json::realValue:
-            return PyFloat_FromDouble(value.asDouble());
-        case Json::stringValue:
-            return PyString_FromString(value.asCString());
-        case Json::objectValue: {
-            object = PyDict_New();
-            Json::Value::Members names(value.getMemberNames());
-
-            for(Json::Value::Members::iterator it = names.begin();
-                it != names.end();
-                ++it)
-            {
-                PyDict_SetItemString(object, it->c_str(), wrap(value[*it]));
-            }
-
-            break;
-        } case Json::arrayValue: {
-            object = PyTuple_New(value.size());
-            Py_ssize_t position = 0;
-
-            for(Json::Value::const_iterator it = value.begin();
-                it != value.end();
-                ++it)
-            {
-                PyTuple_SetItem(object, position++, wrap(*it));
-            }
-
-            break;
-        } case Json::nullValue:
-            Py_RETURN_NONE;
+    case Json::booleanValue: {
+        return PyBool_FromLong(value.asBool());
     }
+
+    case Json::intValue:
+    case Json::uintValue: {
+        return PyLong_FromLong(value.asInt());
+    }
+
+    case Json::realValue: {
+        return PyFloat_FromDouble(value.asDouble());
+    }
+
+    case Json::stringValue: {
+        return PyString_FromString(value.asCString());
+    }
+
+    case Json::objectValue: {
+        object = PyDict_New();
+        Json::Value::Members names(value.getMemberNames());
+
+        for(Json::Value::Members::iterator it = names.begin();
+            it != names.end();
+            ++it)
+        {
+            PyDict_SetItemString(object, it->c_str(), wrap(value[*it]));
+        }
+    } break;
+
+    case Json::arrayValue: {
+        object = PyTuple_New(value.size());
+        Py_ssize_t position = 0;
+
+        for(Json::Value::const_iterator it = value.begin();
+            it != value.end();
+            ++it)
+        {
+            PyTuple_SetItem(object, position++, wrap(*it));
+        }
+
+    } break;
+
+    case Json::nullValue: {
+        Py_RETURN_NONE;
+    }}
 
     return object;
 }
