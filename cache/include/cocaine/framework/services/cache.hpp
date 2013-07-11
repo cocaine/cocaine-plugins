@@ -18,29 +18,25 @@
 
 #include <cocaine/framework/service.hpp>
 #include <cocaine/services/cache.hpp>
-#include <cocaine/logging.hpp>
 
 namespace cocaine { namespace framework {
-
-typedef cocaine::io::protocol<cocaine::io::cache_tag>::version version_type;
 
 class cache_service_t:
     public service_t
 {
     public:
-        cache_service_t(const std::string& name,
-                             cocaine::io::reactor_t& service,
-                             const cocaine::io::tcp::endpoint& resolver,
-                             std::shared_ptr<logger_t> logger) :
-            service_t(name, service, resolver, logger, version_type())
+        static const unsigned int version = cocaine::io::protocol<cocaine::io::cache_tag>::version::value;
+
+        cache_service_t(std::shared_ptr<service_connection_t> connection) :
+            service_t(connection)
         { }
 
-		service_t::handler<io::cache::get>::future
+        service_traits<cocaine::io::cache::put>::future_type
         put(const std::string& key, const std::string& value) {
             return call<io::cache::put>(key, value);
         }
-			
-        service_t::handler<io::cache::get>::future
+
+        service_traits<cocaine::io::cache::get>::future_type
         get(const std::string& key) {
             return call<io::cache::get>(key);
         }
