@@ -1,6 +1,5 @@
 cocaine-plugins (0.10.5-12) unstable; urgency=low
 
-  * Re-enabled MongoDB Storage plugin.
   * Logstash Logger now sends log events timestamped in UTC.
   * Compatibility release for Native Framework 0.10.5.
 
