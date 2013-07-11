@@ -18,34 +18,30 @@
 
 #include <cocaine/framework/service.hpp>
 #include <cocaine/services/urlfetch.hpp>
-#include <cocaine/logging.hpp>
 
 namespace cocaine { namespace framework {
-
-typedef cocaine::io::protocol<cocaine::io::urlfetch_tag>::version version_type;
 
 class urlfetcher_service_t:
     public service_t
 {
     public:
-        urlfetcher_service_t(const std::string& name,
-                             cocaine::io::reactor_t& service,
-                             const cocaine::io::tcp::endpoint& resolver,
-                             std::shared_ptr<logger_t> logger) :
-            service_t(name, service, resolver, logger, version_type())
+        static const unsigned int version = cocaine::io::protocol<cocaine::io::urlfetch_tag>::version::value;
+
+        urlfetcher_service_t(std::shared_ptr<service_connection_t> connection) :
+            service_t(connection)
         { }
 
-        service_t::handler<io::urlfetch::get>::future
+        service_traits<cocaine::io::urlfetch::get>::future_type
         get(const std::string& url) {
             return call<io::urlfetch::get>(url);
         }
 
-        service_t::handler<io::urlfetch::get>::future
+        service_traits<cocaine::io::urlfetch::get>::future_type
         get(const std::string& url, int timeout) {
             return call<io::urlfetch::get>(url, timeout);
         }
 
-        service_t::handler<io::urlfetch::get>::future
+        service_traits<cocaine::io::urlfetch::get>::future_type
         get(const std::string& url,
             int timeout,
             const std::map<std::string, std::string>& cookies)
@@ -53,7 +49,7 @@ class urlfetcher_service_t:
             return call<io::urlfetch::get>(url, timeout, cookies);
         }
 
-        service_t::handler<io::urlfetch::get>::future
+        service_traits<cocaine::io::urlfetch::get>::future_type
         get(const std::string& url,
             int timeout,
             const std::map<std::string, std::string>& cookies,
@@ -62,7 +58,7 @@ class urlfetcher_service_t:
             return call<io::urlfetch::get>(url, timeout, cookies, headers);
         }
 
-        service_t::handler<io::urlfetch::get>::future
+        service_traits<cocaine::io::urlfetch::get>::future_type
         get(const std::string& url,
             int timeout,
             const std::map<std::string, std::string>& cookies,
@@ -72,17 +68,17 @@ class urlfetcher_service_t:
             return call<io::urlfetch::get>(url, timeout, cookies, headers, follow_location);
         }
 
-        service_t::handler<io::urlfetch::post>::future
+        service_traits<cocaine::io::urlfetch::post>::future_type
         post(const std::string& url, const std::string& body) {
             return call<io::urlfetch::post>(url, body);
         }
 
-        service_t::handler<io::urlfetch::post>::future
+        service_traits<cocaine::io::urlfetch::post>::future_type
         post(const std::string& url, const std::string& body, int timeout) {
             return call<io::urlfetch::post>(url, body, timeout);
         }
 
-        service_t::handler<io::urlfetch::post>::future
+        service_traits<cocaine::io::urlfetch::post>::future_type
         post(const std::string& url,
              const std::string& body,
              int timeout,
@@ -91,7 +87,7 @@ class urlfetcher_service_t:
             return call<io::urlfetch::post>(url, body, timeout, cookies);
         }
 
-        service_t::handler<io::urlfetch::post>::future
+        service_traits<cocaine::io::urlfetch::post>::future_type
         post(const std::string& url,
              const std::string& body,
              int timeout,
@@ -101,7 +97,7 @@ class urlfetcher_service_t:
             return call<io::urlfetch::post>(url, body, timeout, cookies, headers);
         }
 
-        service_t::handler<io::urlfetch::post>::future
+        service_traits<cocaine::io::urlfetch::post>::future_type
         post(const std::string& url,
              const std::string& body,
              int timeout,
