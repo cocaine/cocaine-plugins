@@ -1,3 +1,10 @@
+cocaine-plugins (0.10.5-13) unstable; urgency=low
+
+  * Version of libswarm that urlfetcher depends on changed to (>= 0.5.2.0)
+  * as previous versions of swarm contained bug that occured on medium loads
+
+ -- Alexander Ponomarev <noname@yandex-team.ru>  Thu, 18 Jul 2013 12:09:53 +0400
+
 cocaine-plugins (0.10.5-12) unstable; urgency=low
 
   * Logstash Logger now sends log events timestamped in UTC.
