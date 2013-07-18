@@ -1,7 +1,7 @@
 cocaine-plugins (0.10.5-13) unstable; urgency=low
 
-  * Version of libswarm that urlfetcher depends on changed to (>= 0.5.2.0)
-  * as previous versions of swarm contained bug that occured on medium loads
+  * Version of libswarm that URLFetch Service depends on changed to 0.5.2.0,
+    as previous versions of libswarm had a bug that occured on medium loads.
 
  -- Alexander Ponomarev <noname@yandex-team.ru>  Thu, 18 Jul 2013 12:09:53 +0400
 
