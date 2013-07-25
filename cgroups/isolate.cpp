@@ -110,22 +110,25 @@ cgroups_t::cgroups_t(context_t& context, const std::string& name, const Json::Va
 
         for(auto p = parameters.begin(); p != parameters.end(); ++p) {
             switch(cfg[*p].type()) {
-                case Json::stringValue: {
-                    cgroup_add_value_string(ctl, p->c_str(), cfg[*p].asCString());
-                    break;
-                } case Json::intValue: {
-                    cgroup_add_value_int64(ctl, p->c_str(), cfg[*p].asInt());
-                    break;
-                } case Json::uintValue: {
-                    cgroup_add_value_uint64(ctl, p->c_str(), cfg[*p].asUInt());
-                    break;
-                } case Json::booleanValue: {
-                    cgroup_add_value_bool(ctl, p->c_str(), cfg[*p].asBool());
-                    break;
-                } default: {
-                    COCAINE_LOG_WARNING(m_log, "cgroup controller '%s' parameter '%s' type is not supported", *c, *p);
-                    continue;
-                }
+            case Json::stringValue: {
+                cgroup_add_value_string(ctl, p->c_str(), cfg[*p].asCString());
+            } break;
+
+            case Json::intValue: {
+                cgroup_add_value_int64(ctl, p->c_str(), cfg[*p].asInt());
+            } break;
+
+            case Json::uintValue: {
+                cgroup_add_value_uint64(ctl, p->c_str(), cfg[*p].asUInt());
+            } break;
+
+            case Json::booleanValue: {
+                cgroup_add_value_bool(ctl, p->c_str(), cfg[*p].asBool());
+            } break;
+
+            default:
+                COCAINE_LOG_WARNING(m_log, "cgroup controller '%s' parameter '%s' type is not supported", *c, *p);
+                continue;
             }
 
             COCAINE_LOG_DEBUG(

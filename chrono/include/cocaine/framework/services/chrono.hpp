@@ -18,39 +18,35 @@
 
 #include <cocaine/framework/service.hpp>
 #include <cocaine/services/chrono.hpp>
-#include <cocaine/logging.hpp>
 
 namespace cocaine { namespace framework {
-
-typedef cocaine::io::protocol<cocaine::io::chrono_tag>::version version_type;
 
 class chrono_service_t:
     public service_t
 {
     public:
-        chrono_service_t(const std::string& name,
-                         cocaine::io::reactor_t& service,
-                         const cocaine::io::tcp::endpoint& resolver,
-                         std::shared_ptr<logger_t> logger) :
-            service_t(name, service, resolver, logger, version_type())
+        static const unsigned int version = cocaine::io::protocol<cocaine::io::chrono_tag>::version::value;
+
+        chrono_service_t(std::shared_ptr<service_connection_t> connection) :
+            service_t(connection)
         { }
 
-        service_t::handler<io::chrono::notify_after>::future
+        service_traits<cocaine::io::chrono::notify_after>::future_type
         notify_after(double time, bool send_id = false) {
             return call<io::chrono::notify_after>(time, send_id);
         }
 
-        service_t::handler<io::chrono::notify_every>::future
+        service_traits<cocaine::io::chrono::notify_every>::future_type
         notify_every(double time, bool send_id = false) {
             return call<io::chrono::notify_every>(time, send_id);
         }
 
-        service_t::handler<io::chrono::cancel>::future
+        service_traits<cocaine::io::chrono::cancel>::future_type
         cancel(io::timer_id_t timer_id) {
             return call<io::chrono::cancel>(timer_id);
         }
 
-        service_t::handler<io::chrono::restart>::future
+        service_traits<cocaine::io::chrono::restart>::future_type
         restart(io::timer_id_t timer_id) {
             return call<io::chrono::restart>(timer_id);
         }

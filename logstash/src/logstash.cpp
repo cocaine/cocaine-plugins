@@ -26,11 +26,9 @@
 #include "cocaine/context.hpp"
 
 #include <ctime>
-#ifdef __MACH__
-#include <mach/clock.h>
-#include <mach/mach.h>
-#endif
 #include <system_error>
+
+#include <sys/time.h>
 
 using namespace cocaine::logging;
 
@@ -64,28 +62,18 @@ const char* describe[] = {
 
 std::string
 logstash_t::prepare_output(logging::priorities level, const std::string& source, const std::string& message) {
-    struct timespec time;
-    struct tm       timeinfo;
+    struct timeval time;
+    struct tm      timeinfo;
 
     std::memset(&time,     0, sizeof(time));
     std::memset(&timeinfo, 0, sizeof(timeinfo));
 
-#ifdef __MACH__
-    clock_serv_t cclock;
-    mach_timespec_t mts;
-    ::host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
-    ::clock_get_time(cclock, &mts);
-    ::mach_port_deallocate(mach_task_self(), cclock);
-    time.tv_sec = mts.tv_sec;
-    time.tv_nsec = mts.tv_nsec;
-#else
-    ::clock_gettime(CLOCK_REALTIME, &time);
-#endif
-    ::localtime_r(&time.tv_sec, &timeinfo);
+    ::gettimeofday(&time, NULL);
+    ::gmtime_r(&time.tv_sec, &timeinfo);
 
     char timestamp[128] = { 0 };
 
-    if(std::strftime(timestamp, 128, "%FT%T.%%ld%z", &timeinfo) == 0) {
+    if(std::strftime(timestamp, 128, "%FT%T", &timeinfo) == 0) {
         // Do nothing.
     }
 
@@ -102,7 +90,7 @@ logstash_t::prepare_output(logging::priorities level, const std::string& source,
     root["@source_host"] = m_config.network.hostname;
     root["@source_path"] = source;
     root["@tags"] = tags;
-    root["@timestamp"] = cocaine::format(timestamp, time.tv_nsec / 1000);
+    root["@timestamp"] = cocaine::format("%s.%06ldZ", timestamp, time.tv_usec);
 
     Json::FastWriter writer;
 

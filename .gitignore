@@ -12,3 +12,6 @@ cmake_install.cmake
 
 # IDEs
 nbproject
+
+# Build directory
+build/*

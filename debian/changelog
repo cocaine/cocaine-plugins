@@ -1,3 +1,17 @@
+cocaine-plugins (0.10.5-13) unstable; urgency=low
+
+  * Version of libswarm that URLFetch Service depends on changed to 0.5.2.0,
+    as previous versions of libswarm had a bug that occured on medium loads.
+
+ -- Alexander Ponomarev <noname@yandex-team.ru>  Thu, 18 Jul 2013 12:09:53 +0400
+
+cocaine-plugins (0.10.5-12) unstable; urgency=low
+
+  * Logstash Logger now sends log events timestamped in UTC.
+  * Compatibility release for Native Framework 0.10.5.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 12 Jul 2013 00:44:50 +0400
+
 cocaine-plugins (0.10.5-11) unstable; urgency=low
 
   * Logstash Logger: bring back the microsecond resolution for timestamps.
