@@ -21,11 +21,16 @@
 #ifndef COCAINE_ZEROMQ_SERVER_DRIVER_HPP
 #define COCAINE_ZEROMQ_SERVER_DRIVER_HPP
 
+#include <ev++.h>
+#include <zmq.hpp>
+
 #include <cocaine/common.hpp>
-#include <cocaine/asio.hpp>
-#include <cocaine/io.hpp>
+
+#include <cocaine/asio/socket.hpp>
 
 #include <cocaine/api/driver.hpp>
+
+#include "zmqsocket.hpp"
 
 namespace cocaine { namespace driver {
 
@@ -36,7 +41,7 @@ class zmq_t:
         typedef api::driver_t category_type;
 
     public:
-        zmq_t(context_t& context, const std::string& name, const Json::Value& args, engine::engine_t& engine);
+        zmq_t(context_t& context, io::reactor_t& reactor, app_t& app, const std::string& name, const Json::Value& args);
 
         virtual
        ~zmq_t();
@@ -51,12 +56,7 @@ class zmq_t:
             const std::string empty;
 
             on_check(m_checker, ev::PREPARE);
-
-            return m_socket.send_multipart(
-                route,
-                empty,
-                message
-            );
+            return m_zmq_socket.send_multipart(route, empty, message);
         }
 
     private:
@@ -69,8 +69,11 @@ class zmq_t:
         void
         process_events();
 
+
     private:
         context_t& m_context;
+        io::reactor_t& m_reactor;
+        app_t& m_app;
         std::shared_ptr<logging::log_t> m_log;
 
         // Configuration
@@ -78,8 +81,8 @@ class zmq_t:
         const std::string m_event;
 
         // I/O
-
-        io::socket_t m_socket;
+        std::string m_endpoint;
+        zmq_socket m_zmq_socket;
 
         // Event loop
 

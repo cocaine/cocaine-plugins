@@ -38,11 +38,11 @@ struct zmq_stream_t:
 
     virtual
     void
-    push(const char * chunk, size_t size);
+    write(const char * chunk, size_t size);
 
     virtual
     void
-    error(error_code code, const std::string& message);
+    error(int code, const std::string& message);
 
     virtual
     void

@@ -1,11 +1,15 @@
 IF(ZEROMQ)
     ADD_LIBRARY(zeromq MODULE
+        zmqsocket
+        utils
         stream
         driver
         module)
 
     TARGET_LINK_LIBRARIES(zeromq
-        cocaine-core)
+        cocaine-core
+        ev
+        zmq)
 
     SET_TARGET_PROPERTIES(zeromq PROPERTIES
         PREFIX ""

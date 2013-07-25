@@ -23,38 +23,46 @@
 #include "stream.hpp"
 
 #include <cocaine/context.hpp>
-#include <cocaine/engine.hpp>
+#include <cocaine/detail/engine.hpp>
+#include <cocaine/app.hpp>
+
 #include <cocaine/logging.hpp>
 
 #include <cocaine/api/event.hpp>
+
+#include "utils.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;
 using namespace cocaine::logging;
 
-zmq_t::zmq_t(context_t& context, const std::string& name, const Json::Value& args, engine::engine_t& engine):
-    category_type(context, name, args, engine),
+zmq_t::zmq_t(context_t& context, io::reactor_t& reactor, app_t& app, const std::string& name, const Json::Value& args):
+    category_type(context, reactor, app, name, args),
     m_context(context),
+    m_reactor(reactor),
+    m_app(app),
     m_log(new log_t(context, cocaine::format("app/%s", name))),
     m_event(args["emit"].asString()),
-    m_socket(context, ZMQ_ROUTER),
-    m_watcher(engine.service().loop()),
-    m_checker(engine.service().loop())
+    m_endpoint(args["endpoint"].asString()),
+    m_watcher(reactor.native()),
+    m_checker(reactor.native())
 {
-    std::string endpoint(args["endpoint"].asString());
+    if(m_endpoint.empty()) {
+        m_endpoint = cocaine::format(
+            "tcp://%s:%d",
+            m_context.config.network.hostname,
+            std::get<0>(m_context.config.network.ports.get())
+        );
+    }
 
     try {
-        if(endpoint.empty()) {
-            m_socket.bind();
-        } else {
-            m_socket.bind(endpoint);
-        }
+        m_zmq_socket.bind(m_endpoint.c_str());
     } catch(const zmq::error_t& e) {
         throw cocaine::error_t("invalid driver endpoint - %s", e.what());
     }
 
     m_watcher.set<zmq_t, &zmq_t::on_event>(this);
-    m_watcher.start(m_socket.fd(), ev::READ);
+    m_watcher.start(m_zmq_socket.get_fd(), ev::READ);
     m_checker.set<zmq_t, &zmq_t::on_check>(this);
     m_checker.start();
 }
@@ -69,7 +77,7 @@ zmq_t::info() const {
     Json::Value result;
 
     result["type"] = "zeromq-server";
-    result["endpoint"] = m_socket.endpoint();
+    result["endpoint"] = m_endpoint;
 
     return result;
 }
@@ -78,7 +86,12 @@ void
 zmq_t::on_event(ev::io&, int) {
     m_checker.stop();
 
-    if(m_socket.pending()) {
+    //!@todo: Decompose
+    unsigned long event = ZMQ_POLLIN;
+    unsigned long events = m_zmq_socket.get_events();
+    const bool pending = event & events;
+
+    if(pending) {
         m_checker.start();
         process_events();
     }
@@ -86,12 +99,12 @@ zmq_t::on_event(ev::io&, int) {
 
 void
 zmq_t::on_check(ev::prepare&, int) {
-    engine().service().loop().feed_fd_event(m_socket.fd(), ev::READ);
+    m_reactor.native().feed_fd_event(m_zmq_socket.get_fd(), ev::READ);
 }
 
 void
 zmq_t::process_events() {
-    int counter = defaults::io_bulk_size;
+    int counter = 100;
 
     // Message origin.
     route_t route;
@@ -104,11 +117,8 @@ zmq_t::process_events() {
 
         do {
             {
-                io::scoped_option<
-                    io::options::receive_timeout
-                > option(m_socket, 0);
-
-                if(!m_socket.recv(message)) {
+                timeout_watcher<zmq_socket> watcher(m_zmq_socket);
+                if(!m_zmq_socket.recv(&message)) {
                     return;
                 }
             }
@@ -121,11 +131,11 @@ zmq_t::process_events() {
                 static_cast<const char*>(message.data()),
                 message.size()
             );
-        } while(m_socket.more());
+        } while(m_zmq_socket.has_more());
 
-        if(route.empty() || !m_socket.more()) {
+        if(route.empty() || !m_zmq_socket.has_more()) {
             COCAINE_LOG_ERROR(m_log, "received a corrupted request");
-            m_socket.drop();
+            m_zmq_socket.drop();
             return;
         }
 
@@ -140,19 +150,19 @@ zmq_t::process_events() {
         std::shared_ptr<api::stream_t> downstream;
 
         try {
-            downstream = engine().enqueue(api::event_t(m_event), upstream);
+            downstream = m_app.enqueue(api::event_t(m_event), upstream);
         } catch(const cocaine::error_t& e) {
             upstream->error(resource_error, e.what());
         }
 
         do {
-            m_socket.recv(message);
+            m_zmq_socket.recv(&message);
 
-            downstream->push(
+            downstream->write(
                 static_cast<const char*>(message.data()),
                 message.size()
             );
-        } while(m_socket.more());
+        } while(m_zmq_socket.has_more());
     }
 }
 

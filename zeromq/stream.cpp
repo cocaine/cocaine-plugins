@@ -35,7 +35,7 @@ zmq_stream_t::zmq_stream_t(zmq_t& driver, const std::shared_ptr<log_t>& log, con
 { }
 
 void
-zmq_stream_t::push(const char * chunk, size_t size) {
+zmq_stream_t::write(const char * chunk, size_t size) {
     zmq::message_t message(size);
 
     std::memcpy(
@@ -51,7 +51,7 @@ zmq_stream_t::push(const char * chunk, size_t size) {
 }
 
 void
-zmq_stream_t::error(error_code code, const std::string& message) {
+zmq_stream_t::error(int code, const std::string& message) {
     COCAINE_LOG_ERROR(
         m_log,
         "error while processing an event: [%d] %s",
