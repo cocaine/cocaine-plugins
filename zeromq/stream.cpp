@@ -18,11 +18,10 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "stream.hpp"
-
-#include "driver.hpp"
-
 #include <cocaine/logging.hpp>
+
+#include "stream.hpp"
+#include "driver.hpp"
 
 using namespace cocaine;
 using namespace cocaine::driver;

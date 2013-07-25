@@ -18,18 +18,16 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "driver.hpp"
-
-#include "stream.hpp"
-
 #include <cocaine/context.hpp>
-#include <cocaine/detail/engine.hpp>
 #include <cocaine/app.hpp>
+#include <cocaine/asio/reactor.hpp>
 
 #include <cocaine/logging.hpp>
 
 #include <cocaine/api/event.hpp>
 
+#include "driver.hpp"
+#include "stream.hpp"
 #include "utils.hpp"
 
 using namespace cocaine;

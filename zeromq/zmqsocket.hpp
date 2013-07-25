@@ -2,14 +2,8 @@
 
 #include <string>
 
-#include <zmq.hpp>
-
 #include <ev++.h>
 #include <zmq.hpp>
-
-#include <cocaine/common.hpp>
-
-#include <cocaine/asio/socket.hpp>
 
 #include <cocaine/api/driver.hpp>
 

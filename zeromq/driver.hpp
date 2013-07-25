@@ -26,10 +26,6 @@
 
 #include <cocaine/common.hpp>
 
-#include <cocaine/asio/socket.hpp>
-
-#include <cocaine/api/driver.hpp>
-
 #include "zmqsocket.hpp"
 
 namespace cocaine { namespace driver {

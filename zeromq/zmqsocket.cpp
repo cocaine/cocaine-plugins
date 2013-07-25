@@ -1,5 +1,8 @@
 #include "zmqsocket.hpp"
 
+#include <cocaine/common.hpp>
+#include <cocaine/asio/socket.hpp>
+
 using namespace cocaine::driver;
 
 zmq_socket::zmq_socket() :
