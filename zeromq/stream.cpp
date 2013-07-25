@@ -37,17 +37,9 @@ zmq_stream_t::zmq_stream_t(zmq_t& driver, const std::shared_ptr<log_t>& log, con
 void
 zmq_stream_t::write(const char * chunk, size_t size) {
     zmq::message_t message(size);
+    std::memcpy(message.data(), chunk, size);
 
-    std::memcpy(
-        message.data(),
-        chunk,
-        size
-    );
-
-    m_driver.send(
-        m_route.front(),
-        message
-    );
+    m_driver.send(m_route.front(), message);
 }
 
 void

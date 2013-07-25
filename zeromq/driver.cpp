@@ -86,9 +86,8 @@ void
 zmq_t::on_event(ev::io&, int) {
     m_checker.stop();
 
-    //!@todo: Decompose
-    unsigned long event = ZMQ_POLLIN;
-    unsigned long events = m_zmq_socket.get_events();
+    const unsigned long event = ZMQ_POLLIN;
+    const unsigned long events = m_zmq_socket.get_events();
     const bool pending = event & events;
 
     if(pending) {
