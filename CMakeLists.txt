@@ -17,7 +17,7 @@ OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(PYTHON "Build Python Sandbox plugin" OFF)
 OPTION(CHRONO "Build Chrono Service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
-OPTION(ZEROMQ "Build ZeroMQ Driver plugin" OFF)
+OPTION(ZEROMQ "Build ZeroMQ Driver plugin" ON)
 
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
