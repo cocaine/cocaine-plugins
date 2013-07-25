@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.5-14) unstable; urgency=low
+
+  * ZeroMQ driver: build has been repaired.
+
+ -- Evgeny Safronov <esafronov@yandex-team.ru>  Tue, 25 Jul 2013 15:44:05 +0400
+
 cocaine-plugins (0.10.5-13) unstable; urgency=low
 
   * Version of libswarm that URLFetch Service depends on changed to 0.5.2.0,
