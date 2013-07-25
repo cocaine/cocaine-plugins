@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.5-15) unstable; urgency=low
+
+  * ZeroMQ driver: license header added, fix broken dependencies. 
+
+ -- Evgeny Safronov <esafronov@yandex-team.ru>  Tue, 25 Jul 2013 16:01:33 +0400
+
 cocaine-plugins (0.10.5-14) unstable; urgency=low
 
   * ZeroMQ driver: build has been repaired.
