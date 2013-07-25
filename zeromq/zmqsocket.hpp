@@ -33,7 +33,8 @@ class zmq_socket {
 public:
     explicit zmq_socket();
 
-    void bind(const char *endpoint) {
+    inline void
+    bind(const char *endpoint) {
         m_socket.bind(endpoint);
     }
 
@@ -64,24 +65,16 @@ public:
     get_fd();
 
     unsigned long
-    get_events() {
-        unsigned long events = 0;
-        size_t size = sizeof(events);
-        m_socket.getsockopt(ZMQ_EVENTS, &events, &size);
-        return events;
-    }
+    get_events();
 
-    void set_receive_timeout(int timeout) {
-        m_socket.setsockopt(ZMQ_RCVTIMEO, &timeout, sizeof(timeout));
-    }
+    void
+    set_receive_timeout(int timeout);
 
     int
-    get_receive_timeout() {
-        int receive_timeout = 0;
-        size_t size = sizeof(receive_timeout);
-        m_socket.getsockopt(ZMQ_RCVTIMEO, &receive_timeout, &size);
-        return receive_timeout;
-    }
+    get_receive_timeout();
+
+    std::string
+    get_last_endpoint();
 
     bool
     has_more();
