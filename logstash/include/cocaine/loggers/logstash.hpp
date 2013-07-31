@@ -46,7 +46,7 @@ class logstash_t:
 
         // NOTE: Could use a TCP socket here for minimal delivery guarantees with a remote
         // logstash server, but got to do some benchmarking first.
-        io::socket<io::udp> m_socket;
+        std::unique_ptr<io::socket<io::udp>> m_socket;
 };
 
 }} // namespace cocaine::logging

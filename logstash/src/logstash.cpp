@@ -40,12 +40,21 @@ logstash_t::logstash_t(const config_t& config, const Json::Value& args):
         throw cocaine::error_t("no logstash port has been specified");
     }
 
-    const auto endpoint = io::resolver<io::udp>::query(
-        args.get("host", "0.0.0.0").asString(),
-        args["port"].asUInt()
-    );
+    const auto host = args.get("host", "127.0.0.1").asString();
+    const auto port = args["port"].asUInt();
+    const auto endpoints = io::resolver<io::udp>::query(host, port);
 
-    m_socket = io::socket<io::udp>(endpoint);
+    for(auto it = endpoints.begin(); !m_socket && it != endpoints.end(); ++it) {
+        try {
+            m_socket.reset(new io::socket<io::udp>(*it));
+        } catch(const std::system_error& e) {
+            continue;
+        }
+    }
+
+    if(!m_socket) {
+        throw cocaine::error_t("unable to connect to %s:%d", host, port);
+    }
 }
 
 namespace {
@@ -86,7 +95,7 @@ logstash_t::prepare_output(logging::priorities level, const std::string& source,
 
     root["@fields"] = fields;
     root["@message"] = message;
-    root["@source"] = cocaine::format("udp://%s", m_socket.local_endpoint());
+    root["@source"] = cocaine::format("udp://%s", m_socket->local_endpoint());
     root["@source_host"] = m_config.network.hostname;
     root["@source_path"] = source;
     root["@tags"] = tags;
@@ -102,7 +111,7 @@ logstash_t::emit(logging::priorities level, const std::string& source, const std
     const std::string& json = prepare_output(level, source, message);
     std::error_code code;
 
-    m_socket.write(json.c_str(), json.size(), code);
+    m_socket->write(json.c_str(), json.size(), code);
 
     if(code) {
         //!@note: Do something.
