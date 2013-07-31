@@ -10,7 +10,8 @@ IF(LOGSTASH)
         src/module)
 
     TARGET_LINK_LIBRARIES(logstash
-        cocaine-core)
+        cocaine-core
+        boost_system-mt)
 
     SET_TARGET_PROPERTIES(logstash PROPERTIES
         PREFIX ""
