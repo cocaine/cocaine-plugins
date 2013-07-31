@@ -44,12 +44,14 @@ logstash_t::logstash_t(const config_t& config, const Json::Value& args):
     const auto port = args["port"].asUInt();
     const auto endpoints = io::resolver<io::udp>::query(host, port);
 
-    for(auto it = endpoints.begin(); !m_socket && it != endpoints.end(); ++it) {
+    for(auto it = endpoints.begin(); it != endpoints.end(); ++it) {
         try {
             m_socket.reset(new io::socket<io::udp>(*it));
         } catch(const std::system_error& e) {
             continue;
         }
+
+        break;
     }
 
     if(!m_socket) {
