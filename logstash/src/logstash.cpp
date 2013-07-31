@@ -53,7 +53,7 @@ logstash_t::logstash_t(const config_t& config, const Json::Value& args):
     }
 
     if(!m_socket) {
-        throw cocaine::error_t("unable to connect to %s:%d", host, port);
+        throw cocaine::error_t("unable to connect to '%s:%d'", host, port);
     }
 }
 

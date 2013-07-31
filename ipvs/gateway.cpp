@@ -130,7 +130,7 @@ ipvs_t::resolve(const std::string& name) const {
 
 void
 ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
-    COCAINE_LOG_DEBUG(m_log, "updating node '%s'", uuid);
+    COCAINE_LOG_DEBUG(m_log, "updating services on node '%s'", uuid);
 
     for(auto it = dump.cbegin(); it != dump.cend(); ++it) {
         ipvs_dest_t backend;
@@ -148,27 +148,44 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
 
         // Setup the backend destination
 
-        std::memset(&backend, 0, sizeof(ipvs_dest_t));
-
         std::string hostname;
         uint16_t    port;
 
         std::tie(hostname, port) = std::get<0>(it->second);
+        std::vector<io::tcp::endpoint> endpoints;
 
-        io::tcp::endpoint endpoint = io::resolver<io::tcp>::query(hostname, port);
+        try {
+            endpoints = io::resolver<io::tcp>::query(hostname, port);
+        } catch(const cocaine::error_t& e) {
+            continue;
+        }
 
-        std::memcpy(
-            &backend.addr.in,
-            &reinterpret_cast<sockaddr_in*>(endpoint.data())->sin_addr,
-            sizeof(in_addr_t)
-        );
+        for(auto endpoint = endpoints.begin(); endpoint != endpoints.end(); ++endpoint) {
+            if(endpoint->protocol().family() != AF_INET) {
+                continue;
+            }
 
-        backend.af         = AF_INET;
-        backend.conn_flags = IP_VS_CONN_F_MASQ;
-        backend.port       = htons(endpoint.port());
-        backend.weight     = m_default_weight;
+            std::memset(&backend, 0, sizeof(ipvs_dest_t));
 
-        add_backend(it->first, uuid, backend);
+            std::memcpy(
+                &backend.addr.in,
+                &reinterpret_cast<sockaddr_in*>(endpoint->data())->sin_addr,
+                sizeof(in_addr_t)
+            );
+
+            backend.af         = AF_INET;
+            backend.conn_flags = IP_VS_CONN_F_MASQ;
+            backend.port       = htons(endpoint->port());
+            backend.weight     = m_default_weight;
+
+            try {
+                add_backend(it->first, uuid, backend);
+            } catch(const std::system_error& e) {
+                continue;
+            }
+
+            break;
+        }
     }
 
     if(m_history.find(uuid) != m_history.end()) {
@@ -193,7 +210,7 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
 
 void
 ipvs_t::prune(const std::string& uuid) {
-    COCAINE_LOG_DEBUG(m_log, "pruning node '%s'", uuid);
+    COCAINE_LOG_DEBUG(m_log, "pruning services on node '%s'", uuid);
 
     std::vector<std::string> names;
 
@@ -220,43 +237,61 @@ ipvs_t::add_backend(const std::string& name, const std::string& uuid, ipvs_dest_
 
         // Setup the virtual service
 
-        std::memset(&service, 0, sizeof(service));
+        std::vector<io::tcp::endpoint> endpoints;
 
-        io::tcp::endpoint endpoint = io::resolver<io::tcp>::query(
-            m_context.config.network.hostname,
-            m_ports.top()
-        );
-
-        std::memcpy(
-            &service.addr.in,
-            &reinterpret_cast<sockaddr_in*>(endpoint.data())->sin_addr,
-            sizeof(in_addr_t)
-        );
-
-        service.af         = AF_INET;
-        service.port       = htons(endpoint.port());
-        service.protocol   = IPPROTO_TCP;
-
-        std::strncpy(service.sched_name, m_default_scheduler.c_str(), IP_VS_SCHEDNAME_MAXLEN);
-
-        COCAINE_LOG_INFO(m_log, "adding virtual service '%s' on port %d", name, endpoint.port());
-
-        if(::ipvs_add_service(&service) != 0) {
-            COCAINE_LOG_ERROR(m_log, "unable to add a virtual service - [%d] %s", errno, ::ipvs_strerror(errno));
+        try {
+            endpoints = io::resolver<io::tcp>::query(
+                m_context.config.network.hostname,
+                m_ports.top()
+            );
+        } catch(const cocaine::error_t& e) {
             return;
         }
 
-        m_ports.pop();
+        for(auto endpoint = endpoints.begin(); endpoint != endpoints.end(); ++endpoint) {
+            if(endpoint->protocol().family() != AF_INET) {
+                continue;
+            }
 
-        remote_service_t remote = { service, std::make_tuple(
-            endpoint.address(),
-            endpoint.port()
-        )};
+            std::memset(&service, 0, sizeof(service));
 
-        std::tie(it, std::ignore) = m_remote_services.insert(std::make_pair(
-            name,
-            remote
-        ));
+            std::memcpy(
+                &service.addr.in,
+                &reinterpret_cast<sockaddr_in*>(endpoint->data())->sin_addr,
+                sizeof(in_addr_t)
+            );
+
+            service.af         = AF_INET;
+            service.port       = htons(endpoint->port());
+            service.protocol   = IPPROTO_TCP;
+
+            std::strncpy(service.sched_name, m_default_scheduler.c_str(), IP_VS_SCHEDNAME_MAXLEN);
+
+            COCAINE_LOG_INFO(m_log, "adding virtual service '%s' on port %d", name, endpoint->port());
+
+            if(::ipvs_add_service(&service) != 0) {
+                COCAINE_LOG_ERROR(m_log, "unable to add a virtual service - [%d] %s", errno, ::ipvs_strerror(errno));
+                continue;
+            }
+
+            m_ports.pop();
+
+            remote_service_t remote = { service, std::make_tuple(
+                endpoint->address().to_string(),
+                endpoint->port()
+            )};
+
+            std::tie(it, std::ignore) = m_remote_services.insert(std::make_pair(
+                name,
+                remote
+            ));
+
+            break;
+        }
+    }
+
+    if(it == m_remote_services.end()) {
+        return;
     }
 
     if(it->second.backends.find(uuid) != it->second.backends.end()) {
