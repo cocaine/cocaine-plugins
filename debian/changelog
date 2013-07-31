@@ -1,55 +1,62 @@
-cocaine-plugins (0.10.5-15) unstable; urgency=low
+cocaine-plugins (0.10.6.0) unstable; urgency=low
 
-  * ZeroMQ driver: license header added, fix broken dependencies. 
+  * Logstash Logger: fixed to work with the new resolver.
+  * IPVS Gateway: fixed to work with the new resolver.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 31 Jul 2013 19:30:00 +0400
+
+cocaine-plugins (0.10.5.15) unstable; urgency=low
+
+  * ZeroMQ Driver: license header added, fix broken dependencies.
 
  -- Evgeny Safronov <esafronov@yandex-team.ru>  Tue, 25 Jul 2013 16:01:33 +0400
 
-cocaine-plugins (0.10.5-14) unstable; urgency=low
+cocaine-plugins (0.10.5.14) unstable; urgency=low
 
-  * ZeroMQ driver: build has been repaired.
+  * ZeroMQ Driver: build has been repaired.
 
  -- Evgeny Safronov <esafronov@yandex-team.ru>  Tue, 25 Jul 2013 15:44:05 +0400
 
-cocaine-plugins (0.10.5-13) unstable; urgency=low
+cocaine-plugins (0.10.5.13) unstable; urgency=low
 
   * Version of libswarm that URLFetch Service depends on changed to 0.5.2.0,
     as previous versions of libswarm had a bug that occured on medium loads.
 
  -- Alexander Ponomarev <noname@yandex-team.ru>  Thu, 18 Jul 2013 12:09:53 +0400
 
-cocaine-plugins (0.10.5-12) unstable; urgency=low
+cocaine-plugins (0.10.5.12) unstable; urgency=low
 
   * Logstash Logger now sends log events timestamped in UTC.
   * Compatibility release for Native Framework 0.10.5.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 12 Jul 2013 00:44:50 +0400
 
-cocaine-plugins (0.10.5-11) unstable; urgency=low
+cocaine-plugins (0.10.5.11) unstable; urgency=low
 
   * Logstash Logger: bring back the microsecond resolution for timestamps.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 09 Jul 2013 22:58:03 +0400
 
-cocaine-plugins (0.10.5-10) unstable; urgency=low
+cocaine-plugins (0.10.5.10) unstable; urgency=low
 
   * Logstash Logger: Duplicate tags removed from the 'message' string.
 
  -- Evgeny Safronov <esafronov@yandex-team.ru>  Tue, 09 Jul 2013 18:46:50 +0400
 
-cocaine-plugins (0.10.5-9) unstable; urgency=low
+cocaine-plugins (0.10.5.9) unstable; urgency=low
 
   * Logstash Logger: communicate with logstash via a complete json_event.
   * MongoDB Storage: compatibility with Storage API v2.
 
  -- Evgeny Safronov <esafronov@yandex-team.ru>  Tue, 09 Jul 2013 17:22:17 +0400
 
-cocaine-plugins (0.10.5-8) unstable; urgency=low
+cocaine-plugins (0.10.5.8) unstable; urgency=low
 
   * Logstash Logger: enables log aggregation across the whole cluster.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 04 Jul 2013 14:38:35 +0400
 
-cocaine-plugins (0.10.5-7) unstable; urgency=low
+cocaine-plugins (0.10.5.7) unstable; urgency=low
 
   * Cache service: enables simple key-value operations on a shared local
     in-memory cache for worker state exchange.
@@ -60,43 +67,43 @@ cocaine-plugins (0.10.5-7) unstable; urgency=low
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 03 Jul 2013 18:54:38 +0400
 
-cocaine-plugins (0.10.5-6) unstable; urgency=low
+cocaine-plugins (0.10.5.6) unstable; urgency=low
 
   * IPVS: port range support.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 28 Jun 2013 17:05:35 +0400
 
-cocaine-plugins (0.10.5-5) unstable; urgency=low
+cocaine-plugins (0.10.5.5) unstable; urgency=low
 
   * Rebuild.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 26 Jun 2013 19:30:03 +0400
 
-cocaine-plugins (0.10.5-4) unstable; urgency=low
+cocaine-plugins (0.10.5.4) unstable; urgency=low
 
   * IPVS: properly prune dead services.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 25 Jun 2013 22:11:38 +0400
 
-cocaine-plugins (0.10.5-3) unstable; urgency=low
+cocaine-plugins (0.10.5.3) unstable; urgency=low
 
   * IPVS: missing files.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 25 Jun 2013 20:23:39 +0400
 
-cocaine-plugins (0.10.5-2) unstable; urgency=low
+cocaine-plugins (0.10.5.2) unstable; urgency=low
 
   * IPVS Gateway plugin.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 25 Jun 2013 16:58:57 +0400
 
-cocaine-plugins (0.10.5-1) unstable; urgency=low
+cocaine-plugins (0.10.5.1) unstable; urgency=low
 
-  * Compatibility with Core 0.10.5-5.
+  * Compatibility with Core 0.10.5.5.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 24 Jun 2013 18:55:01 +0400
 
-cocaine-plugins (0.10.5-0) unstable; urgency=low
+cocaine-plugins (0.10.5.0) unstable; urgency=low
 
   * Release 10.5.
   * CGroups Isolate now properly unblocks all signals on fork().
@@ -104,19 +111,19 @@ cocaine-plugins (0.10.5-0) unstable; urgency=low
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 23 May 2013 20:12:12 +0400
 
-cocaine-plugins (0.10.4-2) unstable; urgency=low
+cocaine-plugins (0.10.4.2) unstable; urgency=low
 
   * URLFetch POST method.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 24 May 2013 20:46:10 +0400
 
-cocaine-plugins (0.10.4-1) unstable; urgency=low
+cocaine-plugins (0.10.4.1) unstable; urgency=low
 
   * Dependency fixup.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Wed, 22 May 2013 15:20:08 +0400
 
-cocaine-plugins (0.10.4-0) unstable; urgency=low
+cocaine-plugins (0.10.4.0) unstable; urgency=low
 
   * Release 10.4.
   * CGroups Isolate now supports slave output capturing.
@@ -124,7 +131,7 @@ cocaine-plugins (0.10.4-0) unstable; urgency=low
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 17 May 2013 02:00:43 +0400
 
-cocaine-plugins (0.10.3-0) unstable; urgency=low
+cocaine-plugins (0.10.3.0) unstable; urgency=low
 
   * Release 10.3.
   * URLFetch almost completely rewritten by noname@, so now its much more
@@ -134,7 +141,7 @@ cocaine-plugins (0.10.3-0) unstable; urgency=low
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 13 May 2013 17:12:35 +0400
 
-cocaine-plugins (0.10.2-0) unstable; urgency=low
+cocaine-plugins (0.10.2.0) unstable; urgency=low
 
   * Release 10.2.
   * URLFetch service.
@@ -142,7 +149,7 @@ cocaine-plugins (0.10.2-0) unstable; urgency=low
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Thu, 25 Apr 2013 22:54:47 +0400
 
-cocaine-plugins (0.10.1-0) unstable; urgency=low
+cocaine-plugins (0.10.1.0) unstable; urgency=low
 
   * Release 10.1.
   * MongoDB plugin works with MongoDB 2.2 and newer.
@@ -151,28 +158,28 @@ cocaine-plugins (0.10.1-0) unstable; urgency=low
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 08 Apr 2013 21:45:01 +0400
 
-cocaine-plugins (0.10.0-rc7) unstable; urgency=low
+cocaine-plugins (0.10.0.7) unstable; urgency=low
 
   * Release candidate 7.
   * Minor bugfixes.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 01 Apr 2013 17:59:42 +0400
 
-cocaine-plugins (0.10.0-rc6) unstable; urgency=low
+cocaine-plugins (0.10.0.6) unstable; urgency=low
 
   * Release candidate 6.
   * Dealer works again.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Sat, 30 Mar 2013 00:53:26 +0400
 
-cocaine-plugins (0.10.0-rc5) unstable; urgency=low
+cocaine-plugins (0.10.0.5) unstable; urgency=low
 
   * Release candidate 5.
   * Rebuilt with the new core.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 15 Mar 2013 22:14:21 +0400
 
-cocaine-plugins (0.10.0-rc4) unstable; urgency=low
+cocaine-plugins (0.10.0.4) unstable; urgency=low
 
   * Release candidate 4.
   * Logger is now being provided in the binary sandbox via the first argument
@@ -180,14 +187,14 @@ cocaine-plugins (0.10.0-rc4) unstable; urgency=low
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Tue, 12 Mar 2013 23:27:44 +0400
 
-cocaine-plugins (0.10.0-rc3) unstable; urgency=low
+cocaine-plugins (0.10.0.3) unstable; urgency=low
 
   * Release candidate 3.
   * MongoDB plugin is working once again.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 01 Mar 2013 23:34:16 +0400
 
-cocaine-plugins (0.10.0-rc2) unstable; urgency=low
+cocaine-plugins (0.10.0.2) unstable; urgency=low
 
   * Release candidate 2.
   * Got rid of most of the Boost code.
@@ -195,14 +202,14 @@ cocaine-plugins (0.10.0-rc2) unstable; urgency=low
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 22 Feb 2013 23:42:28 +0400
 
-cocaine-plugins (0.10.0-rc1) unstable; urgency=low
+cocaine-plugins (0.10.0.1) unstable; urgency=low
 
   * Release candidate 1.
   * Use the new I/O system.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Fri, 15 Feb 2013 01:52:01 +0400
 
-cocaine-plugins (0.10.0-rc0) unstable; urgency=low
+cocaine-plugins (0.10.0.0) unstable; urgency=low
 
   * Release candidate 0.
   * New Python API.
