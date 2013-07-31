@@ -41,7 +41,7 @@ cache_t::put(const std::string& key,
 	cache_.put(key, value);
 }
 
-get_tuple
+cache_t::get_tuple
 cache_t::get(const std::string& key) {
     if (cache_.exists(key)) {
 		return std::make_tuple(true, cache_.get(key));
