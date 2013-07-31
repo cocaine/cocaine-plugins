@@ -130,21 +130,10 @@ ipvs_t::resolve(const std::string& name) const {
 
 void
 ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
-    COCAINE_LOG_DEBUG(m_log, "updating services on node '%s'", uuid);
+    COCAINE_LOG_DEBUG(m_log, "updating node '%s' services", uuid);
 
     for(auto it = dump.cbegin(); it != dump.cend(); ++it) {
         ipvs_dest_t backend;
-
-        // Store the service info
-
-        if(m_service_info.find(it->first) == m_service_info.end()) {
-            service_info_t info = {
-                std::get<1>(it->second),
-                std::get<2>(it->second)
-            };
-
-            m_service_info[it->first] = info;
-        }
 
         // Setup the backend destination
 
@@ -152,19 +141,27 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
         uint16_t    port;
 
         std::tie(hostname, port) = std::get<0>(it->second);
+
         std::vector<io::tcp::endpoint> endpoints;
 
         try {
-            endpoints = io::resolver<io::tcp>::query(hostname, port);
+            endpoints = io::resolver<io::tcp>::query(boost::asio::ip::tcp::v4(), hostname, port);
         } catch(const cocaine::error_t& e) {
+            COCAINE_LOG_WARNING(m_log, "skipping node '%s' service '%s' - %s", uuid, it->first, e.what());
             continue;
         }
 
-        for(auto endpoint = endpoints.begin(); endpoint != endpoints.end(); ++endpoint) {
-            if(endpoint->protocol().family() != AF_INET) {
-                continue;
-            }
+        if(m_remote_services.find(it->first) == m_remote_services.end()) {
+            service_info_t info = {
+                std::get<1>(it->second),
+                std::get<2>(it->second)
+            };
 
+            // Store the service info.
+            add_service(it->first, info);
+        }
+
+        for(auto endpoint = endpoints.begin(); endpoint != endpoints.end(); ++endpoint) {
             std::memset(&backend, 0, sizeof(ipvs_dest_t));
 
             std::memcpy(
@@ -181,12 +178,24 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
             try {
                 add_backend(it->first, uuid, backend);
             } catch(const std::system_error& e) {
+                COCAINE_LOG_WARNING(
+                    m_log,
+                    "skipping node '%s' service '%s' endpoint '%s' - [%d] %s",
+                    uuid,
+                    it->first,
+                    *endpoint,
+                    e.code().value(),
+                    e.code().message()
+                );
+
                 continue;
             }
 
             break;
         }
     }
+
+    // Cleanup stale backends
 
     if(m_history.find(uuid) != m_history.end()) {
         std::vector<std::pair<std::string, api::resolve_result_type>> stale;
@@ -202,6 +211,10 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
 
         for(auto it = stale.cbegin(); it != stale.cend(); ++it) {
             pop_backend(it->first, uuid);
+
+            if(m_remote_services[it->first].backends.empty()) {
+                pop_service(it->first);
+            }
         }
     }
 
@@ -210,7 +223,7 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
 
 void
 ipvs_t::prune(const std::string& uuid) {
-    COCAINE_LOG_DEBUG(m_log, "pruning services on node '%s'", uuid);
+    COCAINE_LOG_DEBUG(m_log, "pruning node '%s' services", uuid);
 
     std::vector<std::string> names;
 
@@ -223,127 +236,132 @@ ipvs_t::prune(const std::string& uuid) {
 
     for(auto it = names.cbegin(); it != names.cend(); ++it) {
         pop_backend(*it, uuid);
+
+        if(m_remote_services[*it].backends.empty()) {
+            pop_service(*it);
+        }
     }
 
     m_history.erase(uuid);
 }
 
 void
-ipvs_t::add_backend(const std::string& name, const std::string& uuid, ipvs_dest_t backend) {
-    auto it = m_remote_services.find(name);
+ipvs_t::add_service(const std::string& name, const service_info_t& info) {
+    ipvs_service_t service;
 
-    if(it == m_remote_services.end()) {
-        ipvs_service_t service;
+    // Setup the virtual service
 
-        // Setup the virtual service
+    io::tcp::endpoint endpoint;
 
-        std::vector<io::tcp::endpoint> endpoints;
-
-        try {
-            endpoints = io::resolver<io::tcp>::query(
-                m_context.config.network.hostname,
-                m_ports.top()
-            );
-        } catch(const cocaine::error_t& e) {
-            return;
-        }
-
-        for(auto endpoint = endpoints.begin(); endpoint != endpoints.end(); ++endpoint) {
-            if(endpoint->protocol().family() != AF_INET) {
-                continue;
-            }
-
-            std::memset(&service, 0, sizeof(service));
-
-            std::memcpy(
-                &service.addr.in,
-                &reinterpret_cast<sockaddr_in*>(endpoint->data())->sin_addr,
-                sizeof(in_addr_t)
-            );
-
-            service.af         = AF_INET;
-            service.port       = htons(endpoint->port());
-            service.protocol   = IPPROTO_TCP;
-
-            std::strncpy(service.sched_name, m_default_scheduler.c_str(), IP_VS_SCHEDNAME_MAXLEN);
-
-            COCAINE_LOG_INFO(m_log, "adding virtual service '%s' on port %d", name, endpoint->port());
-
-            if(::ipvs_add_service(&service) != 0) {
-                COCAINE_LOG_ERROR(m_log, "unable to add a virtual service - [%d] %s", errno, ::ipvs_strerror(errno));
-                continue;
-            }
-
-            m_ports.pop();
-
-            remote_service_t remote = { service, std::make_tuple(
-                endpoint->address().to_string(),
-                endpoint->port()
-            )};
-
-            std::tie(it, std::ignore) = m_remote_services.insert(std::make_pair(
-                name,
-                remote
-            ));
-
-            break;
-        }
-    }
-
-    if(it == m_remote_services.end()) {
+    try {
+        endpoint = io::resolver<io::tcp>::query(
+            boost::asio::ip::tcp::v4(),
+            m_context.config.network.hostname,
+            m_ports.top()
+        ).front();
+    } catch(const cocaine::error_t& e) {
         return;
     }
 
-    if(it->second.backends.find(uuid) != it->second.backends.end()) {
+    std::memset(&service, 0, sizeof(service));
+
+    std::memcpy(
+        &service.addr.in,
+        &reinterpret_cast<sockaddr_in*>(endpoint.data())->sin_addr,
+        sizeof(in_addr_t)
+    );
+
+    service.af         = AF_INET;
+    service.port       = htons(endpoint.port());
+    service.protocol   = IPPROTO_TCP;
+
+    std::strncpy(service.sched_name, m_default_scheduler.c_str(), IP_VS_SCHEDNAME_MAXLEN);
+
+    COCAINE_LOG_INFO(m_log, "adding virtual service '%s' on port %d", name, endpoint.port());
+
+    if(::ipvs_add_service(&service) != 0) {
+        COCAINE_LOG_ERROR(m_log, "unable to add a virtual service - [%d] %s", errno, ::ipvs_strerror(errno));
+        return;
+    }
+
+    m_ports.pop();
+
+    m_service_info[name] = info;
+
+    remote_service_t remote = { service, std::make_tuple(
+        endpoint.address().to_string(),
+        endpoint.port()
+    )};
+
+    m_remote_services[name] = remote;
+}
+
+void
+ipvs_t::add_backend(const std::string& name, const std::string& uuid, ipvs_dest_t backend) {
+    auto it = m_remote_services.find(name);
+
+    BOOST_ASSERT(it != m_remote_services.end());
+
+    auto& service = it->second;
+
+    if(service.backends.find(uuid) != service.backends.end()) {
         return;
     }
 
     COCAINE_LOG_INFO(m_log, "adding node '%s' to virtual service '%s'", uuid, name);
 
-    if(::ipvs_add_dest(&it->second.handle, &backend) != 0) {
-        COCAINE_LOG_ERROR(m_log, "unable to add a node - [%d] %s", errno, ::ipvs_strerror(errno));
+    if(::ipvs_add_dest(&service.handle, &backend) != 0) {
+        throw std::system_error(errno, ipvs_category());
+    }
+
+    service.backends[uuid] = backend;
+}
+
+void
+ipvs_t::pop_service(const std::string& name) {
+    auto it = m_remote_services.find(name);
+
+    BOOST_ASSERT(it != m_remote_services.end());
+
+    auto& service = it->second;
+
+    BOOST_ASSERT(service.backends.empty());
+
+    COCAINE_LOG_INFO(m_log, "removing virtual service '%s'", name);
+
+    if(::ipvs_del_service(&service.handle) != 0) {
+        COCAINE_LOG_ERROR(m_log, "unable to remove a virtual service - [%d] %s", errno, ::ipvs_strerror(errno));
         return;
     }
 
-    it->second.backends[uuid] = backend;
+    m_ports.push(ntohs(service.handle.port));
+
+    // Drop the IPVS state.
+    m_remote_services.erase(it);
+
+    // Drop the service info, so that it won't lay around stale.
+    m_service_info.erase(name);
 }
 
 void
 ipvs_t::pop_backend(const std::string& name, const std::string& uuid) {
     auto it = m_remote_services.find(name);
 
-    if(it == m_remote_services.end()) {
-        return;
-    }
+    BOOST_ASSERT(it != m_remote_services.end());
 
     auto& service = it->second;
     auto  backend = service.backends.find(uuid);
 
-    if(backend != service.backends.end()) {
-        COCAINE_LOG_INFO(m_log, "removing node '%s' from virtual service '%s'", uuid, name);
-
-        if(::ipvs_del_dest(&service.handle, &backend->second) != 0) {
-            COCAINE_LOG_ERROR(m_log, "unable to remove a node - [%d] %s", errno, ::ipvs_strerror(errno));
-            return;
-        }
-
-        service.backends.erase(uuid);
+    if(backend == service.backends.end()) {
+        return;
     }
 
-    if(service.backends.empty()) {
-        COCAINE_LOG_INFO(m_log, "removing virtual service '%s'", name);
+    COCAINE_LOG_INFO(m_log, "removing node '%s' from virtual service '%s'", uuid, name);
 
-        if(::ipvs_del_service(&service.handle) != 0) {
-            COCAINE_LOG_ERROR(m_log, "unable to remove a virtual service - [%d] %s", errno, ::ipvs_strerror(errno));
-            return;
-        }
-
-        m_ports.push(ntohs(service.handle.port));
-
-        // Drop the IPVS state.
-        m_remote_services.erase(it);
-
-        // Drop the service info, so that it won't lay around stale.
-        m_service_info.erase(name);
+    if(::ipvs_del_dest(&service.handle, &backend->second) != 0) {
+        COCAINE_LOG_ERROR(m_log, "unable to remove a node - [%d] %s", errno, ::ipvs_strerror(errno));
+        return;
     }
+
+    service.backends.erase(backend);
 }

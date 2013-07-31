@@ -53,8 +53,21 @@ class ipvs_t:
         prune(const std::string& uuid);
 
     private:
+        struct service_info_t {
+            unsigned int version;
+
+            // NOTE: I hope it will be same across all the nodes in a group.
+            std::tuple_element<2, api::resolve_result_type>::type map;
+        };
+
+        void
+        add_service(const std::string& name, const service_info_t& info);
+
         void
         add_backend(const std::string& name, const std::string& uuid, ipvs_dest_t backend);
+
+        void
+        pop_service(const std::string& name);
 
         void
         pop_backend(const std::string& name, const std::string& uuid);
@@ -68,13 +81,6 @@ class ipvs_t:
 
         // Ports available for allocation to virtual services.
         std::priority_queue<uint16_t, std::vector<uint16_t>, std::greater<uint16_t>> m_ports;
-
-        struct service_info_t {
-            unsigned int version;
-
-            // NOTE: I hope it will be same across all the nodes in a group.
-            std::tuple_element<2, api::resolve_result_type>::type map;
-        };
 
         typedef std::map<std::string, service_info_t> service_info_map_t;
 
