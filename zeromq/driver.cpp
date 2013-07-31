@@ -34,6 +34,8 @@ using namespace cocaine;
 using namespace cocaine::driver;
 using namespace cocaine::logging;
 
+const std::string DEFAULT_ENDPOINT = "tcp://*:*";
+
 zmq_t::zmq_t(context_t& context, io::reactor_t& reactor, app_t& app, const std::string& name, const Json::Value& args):
     category_type(context, reactor, app, name, args),
     m_context(context),
@@ -46,15 +48,12 @@ zmq_t::zmq_t(context_t& context, io::reactor_t& reactor, app_t& app, const std::
     m_checker(reactor.native())
 {
     if(m_endpoint.empty()) {
-        m_endpoint = cocaine::format(
-            "tcp://%s:%d",
-            m_context.config.network.hostname,
-            std::get<0>(m_context.config.network.ports.get())
-        );
+        m_endpoint = DEFAULT_ENDPOINT;
     }
 
     try {
         m_zmq_socket.bind(m_endpoint.c_str());
+        m_endpoint = m_zmq_socket.get_last_endpoint();
     } catch(const zmq::error_t& e) {
         throw cocaine::error_t("invalid driver endpoint - %s", e.what());
     }

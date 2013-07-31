@@ -80,7 +80,8 @@ Package: libcocaine-plugin-urlfetch-dev
 Architecture: any
 Section: libdevel
 Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-urlfetch2 (= ${binary:Version}),
- cocaine-framework-native (>= 0.10.5)
+ cocaine-framework-native (>= 0.10.5), 
+ libswarm-dev (>= 0.5.2.0)
 Description: Cocaine - URLFetch Service Development Headers
  Cocaine development headers for the URLFetch Service package.
 

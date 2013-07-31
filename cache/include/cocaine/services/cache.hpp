@@ -66,12 +66,12 @@ struct protocol<cache_tag> {
 
 namespace service {
 
-typedef tuple::fold<io::cache::get::result_type>::type get_tuple;
-
 class cache_t:
     public api::service_t
 {
     public:
+		typedef tuple::fold<io::cache::get::result_type>::type get_tuple;
+		
         cache_t(context_t& context,
                    io::reactor_t& reactor,
                    const std::string& name,
