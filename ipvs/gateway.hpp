@@ -21,7 +21,9 @@
 #ifndef COCAINE_IPVS_GATEWAY_HPP
 #define COCAINE_IPVS_GATEWAY_HPP
 
-#include "cocaine/api/gateway.hpp"
+#include <cocaine/api/gateway.hpp>
+
+#include <cocaine/asio/tcp.hpp>
 
 #include <queue>
 
@@ -56,7 +58,9 @@ class ipvs_t:
         struct service_info_t {
             unsigned int version;
 
-            // NOTE: I hope it will be same across all the nodes in a group.
+            // NOTE: There's only one service info for all the services in the cluster, which
+            // means that all the services should expose the same protocol, otherwise bad things
+            // gonna happen.
             std::tuple_element<2, api::resolve_result_type>::type map;
         };
 
@@ -90,8 +94,11 @@ class ipvs_t:
         struct remote_service_t {
             ipvs_service_t handle;
 
-            // Virtual service endpoint.
-            std::tuple<std::string, uint16_t> endpoint;
+            // Service endpoint.
+            io::tcp::endpoint endpoint;
+
+            // Precooked endpoint tuple.
+            std::tuple<std::string, uint16_t> cooked;
 
             // Backend UUID -> Destination mapping.
             std::map<std::string, ipvs_dest_t> backends;
