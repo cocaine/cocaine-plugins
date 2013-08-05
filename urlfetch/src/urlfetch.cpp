@@ -18,6 +18,7 @@
 #include <cocaine/traits/tuple.hpp>
 #include <boost/foreach.hpp>
 #include <boost/format.hpp>
+#include <swarm/logger.h>
 
 using namespace cocaine;
 using namespace cocaine::io;
@@ -27,12 +28,45 @@ using namespace ioremap;
 
 using namespace std::placeholders;
 
+class urlfetch_logger_interface : public swarm::logger_interface
+{
+public:
+    urlfetch_logger_interface(const std::shared_ptr<logging::log_t> &log) : log_(log)
+    {
+    }
+
+    virtual void log(int level, const char *msg)
+    {
+        logging::priorities verbosity = logging::priorities::debug;
+        switch (level) {
+        case swarm::LOG_DATA:
+            verbosity = logging::priorities::ignore;
+        case swarm::LOG_ERROR:
+            verbosity = logging::priorities::error;
+        case swarm::LOG_INFO:
+            verbosity = logging::priorities::info;
+        case swarm::LOG_NOTICE:
+            verbosity = logging::priorities::info;
+        case swarm::LOG_DEBUG:
+        default:
+            verbosity = logging::priorities::debug;
+        }
+
+        if (log_->verbosity() >= verbosity)
+            log_->emit(verbosity, msg);
+    }
+
+private:
+    std::shared_ptr<logging::log_t> log_;
+};
+
 urlfetch_t::urlfetch_t(context_t& context,
                        reactor_t& reactor,
                        const std::string& name,
                        const Json::Value& args):
     service_t(context, reactor, name, args),
-    m_manager(reactor.native()),
+    m_logger(new urlfetch_logger_interface(log_), swarm::LOG_DATA),
+    m_manager(reactor.native(), m_logger),
     log_(new logging::log_t(context, name))
 {
     on<io::urlfetch::get>("get", std::bind(&urlfetch_t::get, this, _1, _2, _3, _4, _5));
