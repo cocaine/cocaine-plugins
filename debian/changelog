@@ -1,6 +1,10 @@
 cocaine-plugins (0.10.6.1) unstable; urgency=low
 
-  * IPVS Gateway: IPv6 support.
+  * IPVS Gateway: IPv6 support. If CONFIG_IP_VS_IPV6 option is set in your
+    kernel, then the Gateway will try to bind the virtual services on IPv6
+    endpoints and add IPv6 addresses of the real servers.
+  * URLFetch: logs from the Swarm library are now routed through the Cocaine
+    logging subsystem.
 
  -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 05 Aug 2013 19:01:15 +0400
 
