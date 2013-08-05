@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.6.1) unstable; urgency=low
+
+  * IPVS Gateway: IPv6 support.
+
+ -- Andrey Sibiryov <kobolog@yandex-team.ru>  Mon, 05 Aug 2013 19:01:15 +0400
+
 cocaine-plugins (0.10.6.0) unstable; urgency=low
 
   * Logstash Logger: fixed to work with the new resolver.

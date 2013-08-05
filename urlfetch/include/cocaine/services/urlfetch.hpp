@@ -82,8 +82,8 @@ class urlfetch_t:
     public api::service_t
 {
     public:
-		typedef io::event_traits<io::urlfetch::get>::result_type get_tuple;
-		
+        typedef io::event_traits<io::urlfetch::get>::result_type get_tuple;
+
         urlfetch_t(context_t& context,
                    io::reactor_t& reactor,
                    const std::string& name,

@@ -30,7 +30,7 @@ namespace cache {
 
         typedef boost::mpl::list<
             /* key */ std::string,
-			/* value */ std::string
+            /* value */ std::string
         > tuple_type;
 
         typedef void result_type;
@@ -70,24 +70,24 @@ class cache_t:
     public api::service_t
 {
     public:
-		typedef tuple::fold<io::cache::get::result_type>::type get_tuple;
-		
+        typedef tuple::fold<io::cache::get::result_type>::type get_tuple;
+
         cache_t(context_t& context,
-                   io::reactor_t& reactor,
-                   const std::string& name,
-                   const Json::Value& args);
+                io::reactor_t& reactor,
+                const std::string& name,
+                const Json::Value& args);
 
     private:
         void
         put(const std::string& key,
             const std::string& value);
-		
+
         get_tuple
         get(const std::string& key);
 
     private:
         std::shared_ptr<logging::log_t> log_;
-		cache::lru_cache<std::string, std::string> cache_;
+        cache::lru_cache<std::string, std::string> cache_;
 };
 
 }} // namespace cocaine::service

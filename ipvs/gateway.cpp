@@ -60,6 +60,32 @@ ipvs_category() {
     return category_instance;
 }
 
+void
+copy_address(union nf_inet_addr& address, const tcp::endpoint& endpoint) {
+    switch(endpoint.protocol().family()) {
+    case PF_INET:
+        std::memcpy(
+            &address.in,
+            &reinterpret_cast<const sockaddr_in*>(endpoint.data())->sin_addr,
+            sizeof(in_addr)
+        );
+
+        break;
+
+    case PF_INET6:
+        std::memcpy(
+            &address.in6,
+            &reinterpret_cast<const sockaddr_in6*>(endpoint.data())->sin6_addr,
+            sizeof(in6_addr)
+        );
+
+        break;
+
+    default:
+        throw cocaine::error_t("unsupported protocol family");
+    }
+}
+
 }
 
 ipvs_t::ipvs_t(context_t& context, const std::string& name, const Json::Value& args):
@@ -145,7 +171,7 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
         std::vector<io::tcp::endpoint> endpoints;
 
         try {
-            endpoints = io::resolver<io::tcp>::query(boost::asio::ip::tcp::v4(), hostname, port);
+            endpoints = io::resolver<io::tcp>::query(hostname, port);
         } catch(const cocaine::error_t& e) {
             COCAINE_LOG_WARNING(m_log, "skipping node '%s' service '%s' - %s", uuid, it->first, e.what());
             continue;
@@ -164,13 +190,9 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
         for(auto endpoint = endpoints.begin(); endpoint != endpoints.end(); ++endpoint) {
             std::memset(&backend, 0, sizeof(ipvs_dest_t));
 
-            std::memcpy(
-                &backend.addr.in,
-                &reinterpret_cast<sockaddr_in*>(endpoint->data())->sin_addr,
-                sizeof(in_addr_t)
-            );
+            copy_address(backend.addr, *endpoint);
 
-            backend.af         = AF_INET;
+            backend.af         = endpoint->protocol().family();
             backend.conn_flags = IP_VS_CONN_F_MASQ;
             backend.port       = htons(endpoint->port());
             backend.weight     = m_default_weight;
@@ -255,7 +277,6 @@ ipvs_t::add_service(const std::string& name, const service_info_t& info) {
 
     try {
         endpoint = io::resolver<io::tcp>::query(
-            boost::asio::ip::tcp::v4(),
             m_context.config.network.hostname,
             m_ports.top()
         ).front();
@@ -265,13 +286,9 @@ ipvs_t::add_service(const std::string& name, const service_info_t& info) {
 
     std::memset(&service, 0, sizeof(service));
 
-    std::memcpy(
-        &service.addr.in,
-        &reinterpret_cast<sockaddr_in*>(endpoint.data())->sin_addr,
-        sizeof(in_addr_t)
-    );
+    copy_address(service.addr, endpoint);
 
-    service.af         = AF_INET;
+    service.af         = endpoint.protocol().family();
     service.port       = htons(endpoint.port());
     service.protocol   = IPPROTO_TCP;
 
