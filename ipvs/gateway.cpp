@@ -91,7 +91,7 @@ ipvs_t::ipvs_t(context_t& context, const std::string& name, const Json::Value& a
 }
 
 ipvs_t::~ipvs_t() {
-    COCAINE_LOG_INFO(m_log, "cleaning up the virtual services");
+    COCAINE_LOG_INFO(m_log, "cleaning up");
 
     for(auto it = m_remote_services.begin(); it != m_remote_services.end(); ++it) {
         ::ipvs_del_service(&it->second.handle);
@@ -124,23 +124,16 @@ ipvs_t::resolve(const std::string& name) const {
 namespace {
 
 void
-copy_address(union nf_inet_addr& address, const tcp::endpoint& endpoint) {
+copy_address(union nf_inet_addr& target, const tcp::endpoint& endpoint) {
     switch(endpoint.protocol().family()) {
     case PF_INET: {
-        std::memcpy(
-            &address.in,
-            &reinterpret_cast<const sockaddr_in*>(endpoint.data())->sin_addr,
-            sizeof(in_addr)
-        );
-
+        auto source = reinterpret_cast<const sockaddr_in*>(endpoint.data());
+        std::memcpy(&target.in, &source->sin_addr, sizeof(in_addr));
     } break;
 
     case PF_INET6: {
-        std::memcpy(
-            &address.in6,
-            &reinterpret_cast<const sockaddr_in6*>(endpoint.data())->sin6_addr,
-            sizeof(in6_addr)
-        );
+        auto source = reinterpret_cast<const sockaddr_in6*>(endpoint.data());
+        std::memcpy(&target.in6, &source->sin6_addr, sizeof(in6_addr));
     }}
 }
 
@@ -184,9 +177,9 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
                 hostname,
                 port
             );
-        } catch(const cocaine::error_t& e) {
-            COCAINE_LOG_WARNING(m_log, "unable to add node '%s' to virtual service '%s' - %s", uuid,
-                it->first, e.what());
+        } catch(const std::system_error& e) {
+            COCAINE_LOG_WARNING(m_log, "unable to resolve any endpoints for service '%s' on '%s' - [%d] %s",
+                it->first, hostname, e.code().value(), e.code().message());
 
             continue;
         }
@@ -204,8 +197,8 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
             try {
                 add_backend(it->first, uuid, backend);
             } catch(const std::system_error& e) {
-                COCAINE_LOG_WARNING(m_log, "unable to add node '%s' to virtual service '%s' via '%s' - [%d] %s",
-                    uuid, it->first, *endpoint, e.code().value(), e.code().message());
+                COCAINE_LOG_WARNING(m_log, "unable to add endpoint '%s' to virtual service '%s' - [%d] %s",
+                    *endpoint, it->first, e.code().value(), e.code().message());
 
                 continue;
             }
@@ -237,7 +230,7 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
                 }
             }
         } catch(const std::system_error& e) {
-            COCAINE_LOG_ERROR(m_log, "unable to prune services - [%d] %s", e.code().value(), e.code().message());
+            COCAINE_LOG_ERROR(m_log, "unable to cleanup services - [%d] %s", e.code().value(), e.code().message());
         }
     }
 
@@ -299,7 +292,7 @@ ipvs_t::add_service(const std::string& name, const service_info_t& info) {
         if((rv = ::ipvs_add_service(&service)) != 0) {
             std::error_code ec(errno, ipvs_category());
 
-            COCAINE_LOG_ERROR(m_log, "unable to add virtual service '%s' on '%s' - [%d] %s", name,
+            COCAINE_LOG_ERROR(m_log, "unable to create virtual service '%s' on '%s' - [%d] %s", name,
                 *endpoint, ec.value(), ec.message());
 
             continue;
@@ -358,7 +351,7 @@ ipvs_t::pop_service(const std::string& name) {
 
     BOOST_ASSERT(service.backends.empty());
 
-    COCAINE_LOG_INFO(m_log, "removing virtual service '%s'", name);
+    COCAINE_LOG_INFO(m_log, "destroying virtual service '%s'", name);
 
     if(::ipvs_del_service(&service.handle) != 0) {
         throw std::system_error(errno, ipvs_category());
