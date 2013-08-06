@@ -78,7 +78,7 @@ class ipvs_t:
 
     private:
         context_t& m_context;
-        const std::unique_ptr<logging::log_t> m_log;
+        std::unique_ptr<logging::log_t> m_log;
 
         const std::string m_default_scheduler;
         const unsigned    m_default_weight;
