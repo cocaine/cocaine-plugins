@@ -43,8 +43,10 @@ logstash_t::logstash_t(const config_t& config, const Json::Value& args):
     const auto host = args.get("host", "127.0.0.1").asString();
     const auto port = args["port"].asUInt();
 
+    std::vector<io::udp::endpoint> endpoints;
+
     try {
-        const auto endpoints = io::resolver<io::udp>::query(host, port);
+        endpoints = io::resolver<io::udp>::query(host, port);
     } catch(const std::system_error& e) {
         throw cocaine::error_t(
             "unable to resolve any logstash server endpoints - [%d] %s",
