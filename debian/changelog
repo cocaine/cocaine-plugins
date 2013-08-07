@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.6.2) unstable; urgency=low
+
+  * URLFetch: fixed invalid initialization of urlfetch.
+
+ -- Ruslan Nigmatullin <euroelessar@yandex.ru>  Wed, 07 Aug 2013 16:41:08 +0400
+
 cocaine-plugins (0.10.6.1) unstable; urgency=low
 
   * IPVS Gateway: IPv6 support. If CONFIG_IP_VS_IPV6 option is set in your
