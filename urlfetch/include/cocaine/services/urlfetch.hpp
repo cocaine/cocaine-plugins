@@ -114,9 +114,9 @@ class urlfetch_t:
                         bool follow_location);
 
     private:
+        std::shared_ptr<logging::log_t> log_;
         ioremap::swarm::logger m_logger;
         ioremap::swarm::network_manager m_manager;
-        std::shared_ptr<logging::log_t> log_;
 };
 
 }} // namespace cocaine::service
