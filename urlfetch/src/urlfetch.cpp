@@ -66,7 +66,7 @@ urlfetch_t::urlfetch_t(context_t& context,
                        const Json::Value& args):
     service_t(context, reactor, name, args),
     log_(new logging::log_t(context, name)),
-    m_logger(new urlfetch_logger_interface(log_), swarm::LOG_DATA),
+    m_logger(new urlfetch_logger_interface(log_), swarm::LOG_DEBUG),
     m_manager(reactor.native(), m_logger)
 {
     on<io::urlfetch::get>("get", std::bind(&urlfetch_t::get, this, _1, _2, _3, _4, _5));
