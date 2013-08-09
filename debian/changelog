@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.6.4) unstable; urgency=low
+
+  * URLFetch: fixed by Ruslan Nigmatullin.
+
+ -- Alexander Ponomarev <noname@yandex-team.ru>  Wed, 09 Aug 2013 18:40:10 +0400
+
 cocaine-plugins (0.10.6.3) unstable; urgency=low
 
   * URLFetch: fixed log level in swarm_logger.
