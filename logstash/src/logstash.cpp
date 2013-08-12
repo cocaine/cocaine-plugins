@@ -22,7 +22,6 @@
 #include "cocaine/loggers/logstash.hpp"
 
 #include "cocaine/asio/resolver.hpp"
-
 #include "cocaine/context.hpp"
 
 #include <ctime>
@@ -96,23 +95,21 @@ logstash_t::prepare_output(logging::priorities level, const std::string& source,
     char timestamp[128] = { 0 };
 
     if(std::strftime(timestamp, 128, "%FT%T", &timeinfo) == 0) {
-        // Do nothing.
+        // TODO: Do something.
     }
 
-    Json::Value root(Json::objectValue);
-    Json::Value tags(Json::arrayValue);
-    Json::Value fields(Json::objectValue);
+    Json::Value root, fields;
 
-    fields["level"] = describe[level];
-    fields["uuid"] = m_config.network.uuid;
+    fields["level"]      = describe[level];
+    fields["uuid"]       = m_config.network.uuid;
 
-    root["@fields"] = fields;
-    root["@message"] = message;
-    root["@source"] = cocaine::format("udp://%s", m_socket->local_endpoint());
+    root["@fields"]      = fields;
+    root["@message"]     = message;
+    root["@source"]      = cocaine::format("udp://%s", m_socket->local_endpoint());
     root["@source_host"] = m_config.network.hostname;
     root["@source_path"] = source;
-    root["@tags"] = tags;
-    root["@timestamp"] = cocaine::format("%s.%06ldZ", timestamp, time.tv_usec);
+    root["@tags"]        = Json::Value(Json::objectValue);
+    root["@timestamp"]   = cocaine::format("%s.%06ldZ", timestamp, time.tv_usec);
 
     Json::FastWriter writer;
 
@@ -121,12 +118,13 @@ logstash_t::prepare_output(logging::priorities level, const std::string& source,
 
 void
 logstash_t::emit(logging::priorities level, const std::string& source, const std::string& message) {
-    const std::string& json = prepare_output(level, source, message);
     std::error_code code;
 
-    m_socket->write(json.c_str(), json.size(), code);
-
-    if(code) {
-        //!@note: Do something.
+    if(level == logging::ignore) {
+        return;
     }
+
+    const std::string& json = prepare_output(level, source, message);
+
+    m_socket->write(json.c_str(), json.size(), code);
 }
