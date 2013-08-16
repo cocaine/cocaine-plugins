@@ -26,8 +26,8 @@
 
 using namespace cocaine::service;
 
-void get_handler_t::operator ()(cocaine::deferred<response::get> deferred, int code, const std::string &data) const
-{
+void
+get_handler_t::operator ()(cocaine::deferred<response::get> deferred, int code, const std::string &data) const {
     if (code == 200) {
         deferred.write(std::make_tuple(true, data));
     } else {

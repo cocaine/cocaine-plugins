@@ -36,7 +36,8 @@ struct request_handler_t {
         callback(callback)
     {}
 
-    void operator()(const ioremap::swarm::network_reply& reply) {
+    void
+    operator()(const ioremap::swarm::network_reply& reply) {
         const std::string data = reply.get_data();
         const int code = reply.get_code();
         const bool success = (reply.get_error() == 0 && (code < 400 || code >= 600));
@@ -59,7 +60,8 @@ template<typename T>
 struct Get {
     const ioremap::swarm::network_manager &manager;
 
-    void operator()(const ioremap::swarm::network_request &request, request_handler_t<T> handler) {
+    void
+    operator()(const ioremap::swarm::network_request &request, request_handler_t<T> handler) {
         manager.get(handler, request);
     }
 };
@@ -69,7 +71,8 @@ struct Post {
     const ioremap::swarm::network_manager &manager;
     std::string body;
 
-    void operator()(ioremap::swarm::network_request request, request_handler_t<T> handler) {
+    void
+    operator()(ioremap::swarm::network_request request, request_handler_t<T> handler) {
         manager.post(handler, request, body);
     }
 };
@@ -78,7 +81,8 @@ template<typename T>
 struct Delete {
     const ioremap::swarm::network_manager &manager;
 
-    void operator()(ioremap::swarm::network_request request, request_handler_t<T> handler) {
+    void
+    operator()(ioremap::swarm::network_request request, request_handler_t<T> handler) {
         manager.do_delete(handler, request);
     }
 };

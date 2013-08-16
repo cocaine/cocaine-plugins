@@ -26,8 +26,8 @@
 
 using namespace cocaine::service;
 
-void search_handler_t::operator ()(cocaine::deferred<response::search> deferred, int code, const std::string &data) const
-{
+void
+search_handler_t::operator ()(cocaine::deferred<response::search> deferred, int code, const std::string &data) const {
     COCAINE_LOG_DEBUG(log, "Search request completed [%d]", code);
 
     Json::Value root;

@@ -26,8 +26,8 @@
 
 using namespace cocaine::service;
 
-void index_handler_t::operator ()(cocaine::deferred<response::index> deferred, int code, const std::string &data) const
-{
+void
+index_handler_t::operator ()(cocaine::deferred<response::index> deferred, int code, const std::string &data) const {
     COCAINE_LOG_DEBUG(log, "Index request completed [%d]", code);
 
     Json::Value root;

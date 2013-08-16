@@ -45,10 +45,17 @@ public:
     elasticsearch_t(context_t &context, io::reactor_t &reactor, const std::string& name, const Json::Value& args);
     ~elasticsearch_t();
 
-    cocaine::deferred<response::get> get(const std::string &index, const std::string &type, const std::string &id) const;
-    cocaine::deferred<response::index> index(const std::string &data, const std::string &index, const std::string &type, const std::string &id) const;
-    cocaine::deferred<response::search> search(const std::string &index, const std::string &type, const std::string &query, int size = 10) const;
-    cocaine::deferred<response::delete_index> delete_index(const std::string &index, const std::string &type, const std::string &id) const;
+    cocaine::deferred<response::get>
+    get(const std::string &index, const std::string &type, const std::string &id) const;
+
+    cocaine::deferred<response::index>
+    index(const std::string &data, const std::string &index, const std::string &type, const std::string &id) const;
+
+    cocaine::deferred<response::search>
+    search(const std::string &index, const std::string &type, const std::string &query, int size = 10) const;
+
+    cocaine::deferred<response::delete_index>
+    delete_index(const std::string &index, const std::string &type, const std::string &id) const;
 };
 
 } }
