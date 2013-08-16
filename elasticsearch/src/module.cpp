@@ -18,7 +18,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "cocaine/io/service/elasticsearch.hpp"
+#include "cocaine/service/elasticsearch.hpp"
 
 using namespace cocaine;
 using namespace cocaine::service;
