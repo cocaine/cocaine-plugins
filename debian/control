@@ -51,6 +51,12 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
 Description: Cocaine - Chrono Service Development Headers
  Cocaine development headers for the Timer Service package.
 
+Package: libcocaine-plugin-elasticsearch2
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6), libswarm1 (>= 0.5.2.0)
+Description: Cocaine - Elasticsearch Client Service
+ Elasticsearch Client Service for Cocaine.
+
 Package: libcocaine-plugin-ipvs2
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6), libnl1
