@@ -23,7 +23,7 @@
 template<typename Socket>
 class timeout_watcher {
     Socket &socket;
-    int receive_timeout;
+    const int receive_timeout;
 public:
    timeout_watcher(Socket &socket) :
        socket(socket),
