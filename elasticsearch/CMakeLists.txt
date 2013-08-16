@@ -1,5 +1,5 @@
 IF(ELASTICSEARCH)
-    OPTION(ELASTICSEARCH_DELETE_SUPPORT "Enable 'delete' method support" ON)
+    OPTION(ELASTICSEARCH_DELETE_SUPPORT "Enable 'delete' method support" OFF)
 
     CONFIGURE_FILE(
         "${PROJECT_SOURCE_DIR}/elasticsearch/config.hpp.in"
