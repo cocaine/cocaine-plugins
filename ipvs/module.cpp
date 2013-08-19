@@ -26,7 +26,7 @@ using namespace cocaine::gateway;
 extern "C" {
     auto
     validation() -> api::preconditions_t {
-        return api::preconditions_t { COCAINE_MAKE_VERSION(0, 10, 5) };
+        return api::preconditions_t { COCAINE_MAKE_VERSION(0, 10, 7) };
     }
 
     void
