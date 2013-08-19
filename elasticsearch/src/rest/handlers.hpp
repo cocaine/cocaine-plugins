@@ -57,8 +57,13 @@ struct request_handler_t {
 };
 
 template<typename T>
-struct Get {
+class Get {
     const ioremap::swarm::network_manager &manager;
+
+public:
+    Get(const ioremap::swarm::network_manager &manager) :
+        manager(manager)
+    {}
 
     void
     operator()(const ioremap::swarm::network_request &request, request_handler_t<T> handler) {
@@ -67,9 +72,15 @@ struct Get {
 };
 
 template<typename T>
-struct Post {
+class Post {
     const ioremap::swarm::network_manager &manager;
     std::string body;
+
+public:
+    Post(const ioremap::swarm::network_manager &manager, std::string body) :
+        manager(manager),
+        body(body)
+    {}
 
     void
     operator()(ioremap::swarm::network_request request, request_handler_t<T> handler) {
@@ -78,8 +89,13 @@ struct Post {
 };
 
 template<typename T>
-struct Delete {
+class Delete {
     const ioremap::swarm::network_manager &manager;
+
+public:
+    Delete(const ioremap::swarm::network_manager &manager) :
+        manager(manager)
+    {}
 
     void
     operator()(ioremap::swarm::network_request request, request_handler_t<T> handler) {
