@@ -25,7 +25,6 @@
 #include "cocaine/service/elasticsearch/config.hpp"
 #include "cocaine/service/elasticsearch.hpp"
 
-
 namespace cocaine { namespace service {
 
 struct get_handler_t {

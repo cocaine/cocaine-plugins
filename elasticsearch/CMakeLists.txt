@@ -18,7 +18,6 @@ IF(ELASTICSEARCH)
         src/rest/handlers.hpp
         src/rest/get.hpp
         src/rest/index.hpp
-        src/rest/index.cpp
         src/rest/search.hpp
         src/rest/search.cpp
         src/rest/delete.hpp

@@ -20,6 +20,10 @@
 
 #pragma once
 
+#include <rapidjson/document.h>
+
+#include <cocaine/logging.hpp>
+
 #include "cocaine/service/elasticsearch.hpp"
 
 namespace cocaine { namespace service {
@@ -27,8 +31,25 @@ namespace cocaine { namespace service {
 struct index_handler_t {
     std::shared_ptr<cocaine::logging::log_t> log;
 
+    template<typename Deferred = cocaine::deferred<response::index>>
     void
-    operator()(cocaine::deferred<response::index> deferred, int code, const std::string &data) const;
+    operator()(Deferred &deferred, int code, const std::string &data) const {
+        if (log)
+            COCAINE_LOG_DEBUG(log, "Index request completed [%d]", code);
+
+        rapidjson::Document root;
+        root.Parse<0>(data.c_str());
+        if (root.HasParseError())
+            return deferred.abort(-1, cocaine::format("parsing failed - %s", root.GetParseError()));
+
+        if (!root.HasMember("_id"))
+            return deferred.write(std::make_tuple(false, "error - response has no field '_id'"));
+
+        if (log)
+            COCAINE_LOG_DEBUG(log, "Received data: %s", data);
+
+        deferred.write(std::make_tuple(true, root["_id"].GetString()));
+    }
 };
 
 } }
