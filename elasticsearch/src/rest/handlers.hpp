@@ -26,7 +26,7 @@ namespace cocaine { namespace service { namespace rest {
 
 template<typename T>
 struct request_handler_t {
-    typedef std::function<void(cocaine::deferred<T>, int code, const std::string&)> Callback;
+    typedef std::function<void(cocaine::deferred<T>&, int code, const std::string&)> Callback;
 
     cocaine::deferred<T> deferred;
     Callback callback;

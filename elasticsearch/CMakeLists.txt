@@ -1,5 +1,6 @@
 IF(ELASTICSEARCH)
     OPTION(ELASTICSEARCH_DELETE_SUPPORT "Enable 'delete' method support" OFF)
+    OPTION(ELASTICSEARCH_PLUGIN_TESTING "Enable plugin testing" ON)
 
     CONFIGURE_FILE(
         "${PROJECT_SOURCE_DIR}/elasticsearch/config.hpp.in"
@@ -16,7 +17,6 @@ IF(ELASTICSEARCH)
         src/elasticsearch
         src/rest/handlers.hpp
         src/rest/get.hpp
-        src/rest/get.cpp
         src/rest/index.hpp
         src/rest/index.cpp
         src/rest/search.hpp
@@ -43,4 +43,6 @@ IF(ELASTICSEARCH)
             include/
         DESTINATION include
         COMPONENT development)
+
+    ADD_SUBDIRECTORY(tests)
 ENDIF(ELASTICSEARCH)

@@ -20,15 +20,34 @@
 
 #pragma once
 
+#include <rapidjson/document.h>
+
+#include "cocaine/service/elasticsearch/config.hpp"
 #include "cocaine/service/elasticsearch.hpp"
+
 
 namespace cocaine { namespace service {
 
 struct get_handler_t {
     std::shared_ptr<cocaine::logging::log_t> log;
 
+    template<typename Deferred = cocaine::deferred<response::get>>
     void
-    operator()(cocaine::deferred<response::get> deferred, int code, const std::string &data) const;
+    operator()(Deferred &deferred, int code, const std::string& data) const {
+        if (code == 200) {
+            deferred.write(std::make_tuple(true, data));
+        } else {
+            rapidjson::Document root;
+            root.Parse<0>(data.c_str());
+            if (root.HasParseError()) {
+                return deferred.abort(-1, cocaine::format("parsing failed - %s", root.GetParseError()));
+            }
+
+            const std::string &error = root.HasMember("error") ? root["error"].GetString() : "";
+            const std::string &reason = cocaine::format("%s[%d]", error, code);
+            deferred.write(std::make_tuple(false, reason));
+        }
+    }
 };
 
 } }
