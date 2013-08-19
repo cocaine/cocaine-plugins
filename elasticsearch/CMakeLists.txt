@@ -1,6 +1,6 @@
 IF(ELASTICSEARCH)
-    OPTION(ELASTICSEARCH_DELETE_SUPPORT "Enable 'delete' method support" ON)
-    OPTION(ELASTICSEARCH_PLUGIN_TESTING "Enable plugin testing" ON)
+    OPTION(ELASTICSEARCH_DELETE_SUPPORT "Enable 'delete' method support" OFF)
+    OPTION(ELASTICSEARCH_PLUGIN_TESTING "Enable plugin testing" OFF)
 
     CONFIGURE_FILE(
         "${PROJECT_SOURCE_DIR}/elasticsearch/config.hpp.in"
