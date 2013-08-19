@@ -22,6 +22,7 @@
 
 #include <rapidjson/document.h>
 
+#include "cocaine/service/elasticsearch/global.hpp"
 #include "cocaine/service/elasticsearch/config.hpp"
 #include "cocaine/service/elasticsearch.hpp"
 
@@ -33,7 +34,7 @@ struct get_handler_t {
     template<typename Deferred = cocaine::deferred<response::get>>
     void
     operator()(Deferred &deferred, int code, const std::string& data) const {
-        if (code == 200) {
+        if (code == HTTP_OK) {
             deferred.write(std::make_tuple(true, data));
         } else {
             rapidjson::Document root;

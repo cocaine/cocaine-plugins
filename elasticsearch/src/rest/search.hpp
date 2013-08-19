@@ -20,6 +20,14 @@
 
 #pragma once
 
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
+
+#include <cocaine/logging.hpp>
+#include <cocaine/traits/tuple.hpp>
+
+#include "cocaine/service/elasticsearch/global.hpp"
 #include "cocaine/service/elasticsearch.hpp"
 
 namespace cocaine { namespace service {
@@ -27,8 +35,33 @@ namespace cocaine { namespace service {
 struct search_handler_t {
     std::shared_ptr<cocaine::logging::log_t> log;
 
+    template<typename Deferred = cocaine::deferred<response::search>>
     void
-    operator()(cocaine::deferred<response::search> deferred, int code, const std::string &data) const;
+    operator()(Deferred &deferred, int code, const std::string &data) const {
+        if (log)
+            COCAINE_LOG_DEBUG(log, "Search request completed [%d]", code);
+
+        rapidjson::Document root;
+        root.Parse<0>(data.c_str());
+        if (root.HasParseError())
+            return deferred.abort(-1, cocaine::format("parsing failed - %s", root.GetParseError()));
+
+        if (code == HTTP_OK) {
+            if (root.HasMember("hits")) {
+                const rapidjson::Value &hits = root["hits"];
+                rapidjson::GenericStringBuffer<rapidjson::UTF8<>> buffer;
+                rapidjson::Writer<rapidjson::GenericStringBuffer<rapidjson::UTF8<>>> writer(buffer);
+                hits["hits"].Accept(writer);
+                const int total = hits["total"].GetInt();
+                deferred.write(std::make_tuple(true, total, buffer.GetString()));
+            } else {
+                deferred.write(std::make_tuple(false, 0, ""));
+            }
+        } else {
+            std::string reason = cocaine::format("%s[%d]", root["error"].GetString(), code);
+            deferred.write(std::make_tuple(false, 0, reason));
+        }
+    }
 };
 
 } }
