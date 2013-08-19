@@ -18,21 +18,19 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include "cocaine/service/elasticsearch.hpp"
 
-template<typename Socket>
-class timeout_watcher {
-    Socket &socket;
-    const int receive_timeout;
-public:
-   timeout_watcher(Socket &socket) :
-       socket(socket),
-       receive_timeout(socket.get_receive_timeout())
-   {
-       socket.set_receive_timeout(0);
-   }
+using namespace cocaine;
+using namespace cocaine::service;
 
-   ~timeout_watcher() {
-       socket.set_receive_timeout(receive_timeout);
-   }
-};
+extern "C" {
+    auto
+    validation() -> api::preconditions_t {
+        return api::preconditions_t { COCAINE_MAKE_VERSION(0, 10, 5) };
+    }
+
+    void
+    initialize(api::repository_t& repository) {
+        repository.insert<elasticsearch_t>("elasticsearch");
+    }
+}

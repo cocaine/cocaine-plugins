@@ -18,21 +18,22 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#pragma once
+#include <cocaine/logging.hpp>
 
-template<typename Socket>
-class timeout_watcher {
-    Socket &socket;
-    const int receive_timeout;
-public:
-   timeout_watcher(Socket &socket) :
-       socket(socket),
-       receive_timeout(socket.get_receive_timeout())
-   {
-       socket.set_receive_timeout(0);
-   }
+#include "delete.hpp"
 
-   ~timeout_watcher() {
-       socket.set_receive_timeout(receive_timeout);
-   }
-};
+#define UNUSED(o) \
+    (void)o;
+
+const uint16_t HTTP_OK = 200;
+const uint16_t HTTP_ACCEPTED = 202;
+
+using namespace cocaine::service;
+
+void
+delete_handler_t::operator ()(cocaine::deferred<response::delete_index> deferred, int code, const std::string &data) const {
+    UNUSED(data);
+    COCAINE_LOG_DEBUG(log, "Delete request completed [%d]", code);
+
+    deferred.write(code == HTTP_OK || code == HTTP_ACCEPTED);
+}

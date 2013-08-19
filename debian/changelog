@@ -1,3 +1,9 @@
+cocaine-plugins (0.10.6.5) unstable; urgency=low
+
+  * Elasticsearch Service: initial release.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 16 Aug 2013 17:47:30 +0400
+
 cocaine-plugins (0.10.6.4) unstable; urgency=low
 
   * URLFetch: fixed by Ruslan Nigmatullin.

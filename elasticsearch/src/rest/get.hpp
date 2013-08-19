@@ -20,19 +20,15 @@
 
 #pragma once
 
-template<typename Socket>
-class timeout_watcher {
-    Socket &socket;
-    const int receive_timeout;
-public:
-   timeout_watcher(Socket &socket) :
-       socket(socket),
-       receive_timeout(socket.get_receive_timeout())
-   {
-       socket.set_receive_timeout(0);
-   }
+#include "cocaine/service/elasticsearch.hpp"
 
-   ~timeout_watcher() {
-       socket.set_receive_timeout(receive_timeout);
-   }
+namespace cocaine { namespace service {
+
+struct get_handler_t {
+    std::shared_ptr<cocaine::logging::log_t> log;
+
+    void
+    operator()(cocaine::deferred<response::get> deferred, int code, const std::string &data) const;
 };
+
+} }
