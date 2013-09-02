@@ -41,7 +41,7 @@ class cgroups_t:
 
         virtual
         std::unique_ptr<api::handle_t>
-        spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment, int pipe);
+        spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment);
 
     private:
         std::unique_ptr<logging::log_t> m_log;

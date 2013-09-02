@@ -29,6 +29,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <system_error>
+#include <array>
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
@@ -37,6 +38,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <libcgroup.h>
 
@@ -50,8 +52,9 @@ namespace {
 struct process_handle_t:
     public api::handle_t
 {
-    process_handle_t(pid_t pid):
-        m_pid(pid)
+    process_handle_t(pid_t pid, int stdout):
+        m_pid(pid),
+        m_stdout(stdout)
     { }
 
     virtual
@@ -69,8 +72,15 @@ struct process_handle_t:
         }
     }
 
+    virtual
+    int
+    stdout() const {
+        return m_stdout;
+    }
+
 private:
     const pid_t m_pid;
+    const int m_stdout;
 };
 
 }
@@ -169,75 +179,93 @@ cgroups_t::~cgroups_t() {
 #endif
 
 std::unique_ptr<api::handle_t>
-cgroups_t::spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment, int pipe) {
-    const pid_t pid = ::fork();
+cgroups_t::spawn(const std::string& path,
+                 const api::string_map_t& args,
+                 const api::string_map_t& environment)
+{
+    std::array<int, 2> pipes;
 
-    if(pid < 0) {
-        throw std::system_error(errno, std::system_category(), "unable to fork");
+    if(::pipe(pipes.data()) != 0) {
+        throw std::system_error(errno, std::system_category(), "unable to create an output pipe");
     }
 
-    if(pid > 0) {
-        return std::make_unique<process_handle_t>(pid);
+    for(auto it = pipes.begin(); it != pipes.end(); ++it) {
+        ::fcntl(*it, F_SETFD, FD_CLOEXEC);
     }
-
-    ::dup2(pipe, STDOUT_FILENO);
-    ::dup2(pipe, STDERR_FILENO);
-
-    // Attach to the control group
-
-    int rv = 0;
-
-    if((rv = cgroup_attach_task(m_cgroup)) != 0) {
-        std::cerr << cocaine::format("unable to attach the process to a cgroup - %s", cgroup_strerror(rv));
-        std::_Exit(EXIT_FAILURE);
-    }
-
-    // Set the correct working directory
 
     try {
-        fs::current_path(m_working_directory);
-    } catch(const fs::filesystem_error& e) {
-        std::cerr << cocaine::format("unable to change the working directory to '%s' - %s", path, e.what());
+        const pid_t pid = ::fork();
+
+        if(pid < 0) {
+            throw std::system_error(errno, std::system_category(), "unable to fork");
+        }
+
+        if(pid > 0) {
+            return std::make_unique<process_handle_t>(pid, pipes[0]);
+        }
+
+        ::dup2(pipes[1], STDOUT_FILENO);
+        ::dup2(pipes[1], STDERR_FILENO);
+
+        // Attach to the control group
+
+        int rv = 0;
+
+        if((rv = cgroup_attach_task(m_cgroup)) != 0) {
+            std::cerr << cocaine::format("unable to attach the process to a cgroup - %s", cgroup_strerror(rv));
+            std::_Exit(EXIT_FAILURE);
+        }
+
+        // Set the correct working directory
+
+        try {
+            fs::current_path(m_working_directory);
+        } catch(const fs::filesystem_error& e) {
+            std::cerr << cocaine::format("unable to change the working directory to '%s' - %s", path, e.what());
+            std::_Exit(EXIT_FAILURE);
+        }
+
+        // Prepare the command line and the environment
+
+        std::vector<char*> argv = { ::strdup(path.c_str()) }, envp;
+
+        for(auto it = args.begin(); it != args.end(); ++it) {
+            argv.push_back(::strdup(it->first.c_str()));
+            argv.push_back(::strdup(it->second.c_str()));
+        }
+
+        argv.push_back(nullptr);
+
+        for(char** ptr = environ; *ptr != nullptr; ++ptr) {
+            envp.push_back(::strdup(*ptr));
+        }
+
+        boost::format format("%s=%s");
+
+        for(auto it = environment.begin(); it != environment.end(); ++it, format.clear()) {
+            envp.push_back(::strdup((format % it->first % it->second).str().c_str()));
+        }
+
+        envp.push_back(nullptr);
+
+        // Unblock all the signals
+
+        sigset_t signals;
+
+        sigfillset(&signals);
+
+        ::sigprocmask(SIG_UNBLOCK, &signals, nullptr);
+
+        // Spawn the slave
+
+        if(::execve(argv[0], argv.data(), envp.data()) != 0) {
+            std::error_code ec(errno, std::system_category());
+            std::cerr << cocaine::format("unable to execute '%s' - [%d] %s", path, ec.value(), ec.message());
+        }
+
         std::_Exit(EXIT_FAILURE);
+    } catch (...) {
+        std::for_each(pipes.begin(), pipes.end(), ::close);
+        throw;
     }
-
-    // Prepare the command line and the environment
-
-    std::vector<char*> argv = { ::strdup(path.c_str()) }, envp;
-
-    for(auto it = args.begin(); it != args.end(); ++it) {
-        argv.push_back(::strdup(it->first.c_str()));
-        argv.push_back(::strdup(it->second.c_str()));
-    }
-
-    argv.push_back(nullptr);
-
-    for(char** ptr = environ; *ptr != nullptr; ++ptr) {
-        envp.push_back(::strdup(*ptr));
-    }
-
-    boost::format format("%s=%s");
-
-    for(auto it = environment.begin(); it != environment.end(); ++it, format.clear()) {
-        envp.push_back(::strdup((format % it->first % it->second).str().c_str()));
-    }
-
-    envp.push_back(nullptr);
-
-    // Unblock all the signals
-
-    sigset_t signals;
-
-    sigfillset(&signals);
-
-    ::sigprocmask(SIG_UNBLOCK, &signals, nullptr);
-
-    // Spawn the slave
-
-    if(::execve(argv[0], argv.data(), envp.data()) != 0) {
-        std::error_code ec(errno, std::system_category());
-        std::cerr << cocaine::format("unable to execute '%s' - [%d] %s", path, ec.value(), ec.message());
-    }
-
-    std::_Exit(EXIT_FAILURE);
 }
