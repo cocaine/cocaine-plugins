@@ -88,20 +88,15 @@ docker_t::docker_t(context_t& context,
                    const Json::Value& args):
     category_type(context, name, args),
     m_log(new logging::log_t(context, name)),
+    m_name(name),
     m_docker_client(
         docker::endpoint_t::from_string(args.get("endpoint", "unix:///var/run/docker.sock").asString()),
         m_log
     )
 {
     m_rundir = args.get("rundir", "/root/run").asString();
-
-    rapidjson::Document info;
-    m_docker_client.inspect_image(info, name);
-    if (info.IsNull()) {
-        m_docker_client.pull_image(args.get("registry", "").asString(),
-                                   name,
-                                   args.get("tag", "").asString());
-    }
+    m_registry = args.get("registry", "").asString();
+    m_tag = args.get("tag", "").asString();
 
     m_run_config.SetObject();
 
@@ -135,6 +130,11 @@ docker_t::docker_t(context_t& context,
 
 docker_t::~docker_t() {
     // pass
+}
+
+void
+docker_t::spool() {
+    m_docker_client.pull_image(m_registry, m_name, m_tag);
 }
 
 std::unique_ptr<api::handle_t>

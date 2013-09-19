@@ -24,6 +24,10 @@ public:
    ~docker_t();
 
     virtual
+    void
+    spool();
+
+    virtual
     std::unique_ptr<api::handle_t>
     spawn(const std::string& path,
           const api::string_map_t& args,
@@ -33,6 +37,9 @@ private:
     std::shared_ptr<cocaine::logging::log_t> m_log;
 
     std::string m_rundir;
+    std::string m_registry;
+    std::string m_name;
+    std::string m_tag;
 
     docker::client_t m_docker_client;
     rapidjson::Value m_run_config;
