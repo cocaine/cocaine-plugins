@@ -6,7 +6,6 @@ SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 OPTION(BLASTBEAT "Build Blastbeat Driver plugin" ON)
 OPTION(CACHE "Build LRU Cache plugin" ON)
-OPTION(CGROUPS "Build CGroups Isolation plugin" ON)
 OPTION(DOCKER "Build Docker Isolation plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
 OPTION(LOGSTASH "Build Logstash Logger plugin" ON)
@@ -52,7 +51,6 @@ LINK_DIRECTORIES(
 SET(PLUGINS
         blastbeat
         cache
-        cgroups
         docker
         chrono
         ipvs
