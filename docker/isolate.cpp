@@ -88,7 +88,6 @@ docker_t::docker_t(context_t& context,
                    const Json::Value& args):
     category_type(context, name, args),
     m_log(new logging::log_t(context, name)),
-    m_name(name),
     m_docker_client(
         docker::endpoint_t::from_string(args.get("endpoint", "unix:///var/run/docker.sock").asString()),
         m_log
@@ -96,7 +95,12 @@ docker_t::docker_t(context_t& context,
 {
     m_rundir = args.get("rundir", "/root/run").asString();
     m_registry = args.get("registry", "").asString();
-    m_tag = args.get("tag", "").asString();
+    if (args.isMember("repository")) {
+        m_image = args.get("repository", "").asString() + "/" + name;
+    } else {
+        m_image = name;
+    }
+    m_tag = ""; // empty for now
 
     m_run_config.SetObject();
 
@@ -119,7 +123,7 @@ docker_t::docker_t(context_t& context,
     m_run_config.AddMember("Cmd", v3, m_json_allocator);
     rapidjson::Value v4;
     m_run_config.AddMember("Dns", v4, m_json_allocator);
-    m_run_config.AddMember("Image", name.data(), m_json_allocator);
+    m_run_config.AddMember("Image", m_image.data(), m_json_allocator);
     rapidjson::Value v5(rapidjson::kObjectType);
     m_run_config.AddMember("Volumes", v5, m_json_allocator);
     rapidjson::Value empty_object(rapidjson::kObjectType);
@@ -134,7 +138,7 @@ docker_t::~docker_t() {
 
 void
 docker_t::spool() {
-    m_docker_client.pull_image(m_registry, m_name, m_tag);
+    m_docker_client.pull_image(m_registry, m_image, m_tag);
 }
 
 std::unique_ptr<api::handle_t>

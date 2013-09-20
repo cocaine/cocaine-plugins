@@ -38,7 +38,7 @@ private:
 
     std::string m_rundir;
     std::string m_registry;
-    std::string m_name;
+    std::string m_image;
     std::string m_tag;
 
     docker::client_t m_docker_client;
