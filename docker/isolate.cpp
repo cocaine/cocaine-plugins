@@ -81,6 +81,8 @@ private:
     bool m_terminated;
 };
 
+char run_dir[] = "/var/cocaine/run";
+
 }
 
 docker_t::docker_t(context_t& context,
@@ -93,7 +95,6 @@ docker_t::docker_t(context_t& context,
         m_log
     )
 {
-    m_rundir = args.get("rundir", "/root/run").asString();
     m_registry = args.get("registry", "").asString();
     if (args.isMember("repository")) {
         m_image = args.get("repository", "").asString() + "/" + name;
@@ -127,9 +128,9 @@ docker_t::docker_t(context_t& context,
     rapidjson::Value v5(rapidjson::kObjectType);
     m_run_config.AddMember("Volumes", v5, m_json_allocator);
     rapidjson::Value empty_object(rapidjson::kObjectType);
-    m_run_config["Volumes"].AddMember(m_rundir.data(), empty_object, m_json_allocator);
+    m_run_config["Volumes"].AddMember(run_dir, empty_object, m_json_allocator);
     m_run_config.AddMember("VolumesFrom", "", m_json_allocator);
-    m_run_config.AddMember("WorkingDir", "", m_json_allocator);
+    m_run_config.AddMember("WorkingDir", "/", m_json_allocator);
 }
 
 docker_t::~docker_t() {
@@ -158,7 +159,7 @@ docker_t::spawn(const std::string& path,
     cmd.SetArray();
     cmd.PushBack(path.c_str(), m_json_allocator);
 
-    fs::path endpoint = fs::path(m_rundir);
+    fs::path endpoint = fs::path(run_dir);
     for (auto it = args.begin(); it != args.end(); ++it) {
         cmd.PushBack(it->first.c_str(), m_json_allocator);
         if (it->first == "--endpoint") {
@@ -169,13 +170,9 @@ docker_t::spawn(const std::string& path,
         }
     }
 
-    fs::path working_dir(path);
-    working_dir.remove_filename();
-    m_run_config["WorkingDir"].SetString(working_dir.c_str());
-
     std::vector<std::string> binds;
     std::string socket_dir(fs::path(args.at("--endpoint")).remove_filename().c_str());
-    binds.emplace_back((socket_dir + ":" + m_rundir).c_str());
+    binds.emplace_back(((socket_dir + ":") + run_dir).c_str());
 
     // create container
     std::unique_ptr<container_handle_t> handle(
