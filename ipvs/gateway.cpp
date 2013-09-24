@@ -322,7 +322,7 @@ ipvs_t::add_service(const std::string& name, const service_info_t& info) {
 
 void
 ipvs_t::add_backend(const std::string& name, const std::string& uuid, ipvs_dest_t backend) {
-    auto it = m_remote_services.find(name);
+    auto  it = m_remote_services.find(name);
 
     BOOST_ASSERT(it != m_remote_services.end());
 
@@ -343,7 +343,7 @@ ipvs_t::add_backend(const std::string& name, const std::string& uuid, ipvs_dest_
 
 void
 ipvs_t::pop_service(const std::string& name) {
-    auto it = m_remote_services.find(name);
+    auto  it = m_remote_services.find(name);
 
     BOOST_ASSERT(it != m_remote_services.end());
 
@@ -368,7 +368,7 @@ ipvs_t::pop_service(const std::string& name) {
 
 void
 ipvs_t::pop_backend(const std::string& name, const std::string& uuid) {
-    auto it = m_remote_services.find(name);
+    auto  it = m_remote_services.find(name);
 
     BOOST_ASSERT(it != m_remote_services.end());
 
