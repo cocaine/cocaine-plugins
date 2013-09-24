@@ -1,3 +1,23 @@
+/*
+    Copyright (c) 2011-2013 Andrey Goryachev <andrey.goryachev@gmail.com>
+    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
+
+    This file is part of Cocaine.
+
+    Cocaine is free software; you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation; either version 3 of the License, or
+    (at your option) any later version.
+
+    Cocaine is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "isolate.hpp"
 
 #include <cocaine/context.hpp>
@@ -53,10 +73,10 @@ struct container_handle_t:
     virtual
     void
     terminate() {
-        if (!m_terminated) {
+        if(!m_terminated) {
             try {
                 m_container.kill();
-            } catch (...) {
+            } catch(...) {
                 // pass
             }
 
@@ -65,6 +85,7 @@ struct container_handle_t:
             } catch (...) {
                 // pass
             }
+
             m_terminated = true;
         }
     }
@@ -85,9 +106,7 @@ char run_dir[] = "/var/cocaine/run";
 
 }
 
-docker_t::docker_t(context_t& context,
-                   const std::string& name,
-                   const Json::Value& args):
+docker_t::docker_t(context_t& context, const std::string& name, const Json::Value& args):
     category_type(context, name, args),
     m_log(new logging::log_t(context, name)),
     m_docker_client(
@@ -96,7 +115,7 @@ docker_t::docker_t(context_t& context,
     )
 {
     m_registry = args.get("registry", "").asString();
-    if (args.isMember("repository")) {
+    if(args.isMember("repository")) {
         m_image = args.get("repository", "").asString() + "/" + name;
     } else {
         m_image = name;
@@ -143,14 +162,11 @@ docker_t::spool() {
 }
 
 std::unique_ptr<api::handle_t>
-docker_t::spawn(const std::string& path,
-                const api::string_map_t& args,
-                const api::string_map_t& environment)
-{
+docker_t::spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment) {
     // prepare request to docker
     auto& env = m_run_config["Env"];
     env.SetArray();
-    for (auto it = environment.begin(); it != environment.end(); ++it) {
+    for(auto it = environment.begin(); it != environment.end(); ++it) {
         env.PushBack((it->first + "=" + it->second).c_str(), m_json_allocator);
     }
 
@@ -160,9 +176,9 @@ docker_t::spawn(const std::string& path,
     cmd.PushBack(path.c_str(), m_json_allocator);
 
     fs::path endpoint = fs::path(run_dir);
-    for (auto it = args.begin(); it != args.end(); ++it) {
+    for(auto it = args.begin(); it != args.end(); ++it) {
         cmd.PushBack(it->first.c_str(), m_json_allocator);
-        if (it->first == "--endpoint") {
+        if(it->first == "--endpoint") {
             endpoint /= fs::path(it->second).filename();
             cmd.PushBack(endpoint.c_str(), m_json_allocator);
         } else {

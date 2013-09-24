@@ -1,3 +1,23 @@
+/*
+    Copyright (c) 2011-2013 Andrey Goryachev <andrey.goryachev@gmail.com>
+    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
+
+    This file is part of Cocaine.
+
+    Cocaine is free software; you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation; either version 3 of the License, or
+    (at your option) any later version.
+
+    Cocaine is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #ifndef COCAINE_DOCKER_ISOLATE_HPP
 #define COCAINE_DOCKER_ISOLATE_HPP
 
@@ -16,9 +36,7 @@ public:
     typedef api::isolate_t category_type;
 
 public:
-    docker_t(context_t& context,
-             const std::string& name,
-             const Json::Value& args);
+    docker_t(context_t& context, const std::string& name, const Json::Value& args);
 
     virtual
    ~docker_t();
@@ -29,9 +47,7 @@ public:
 
     virtual
     std::unique_ptr<api::handle_t>
-    spawn(const std::string& path,
-          const api::string_map_t& args,
-          const api::string_map_t& environment);
+    spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment);
 
 private:
     std::shared_ptr<cocaine::logging::log_t> m_log;

@@ -1,3 +1,23 @@
+/*
+    Copyright (c) 2011-2013 Andrey Goryachev <andrey.goryachev@gmail.com>
+    Copyright (c) 2011-2013 Other contributors as noted in the AUTHORS file.
+
+    This file is part of Cocaine.
+
+    Cocaine is free software; you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation; either version 3 of the License, or
+    (at your option) any later version.
+
+    Cocaine is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with this program. If not, see <http://www.gnu.org/licenses/>.
+*/
+
 #include "docker_client.hpp"
 
 #include <boost/lexical_cast.hpp>
@@ -27,10 +47,10 @@ endpoint_t::endpoint_t(const unix_endpoint_t& e) :
 
 endpoint_t
 endpoint_t::from_string(const std::string& endpoint) {
-    if (endpoint.compare(0, 6, "tcp://") == 0) {
+    if(endpoint.compare(0, 6, "tcp://") == 0) {
         size_t delim = endpoint.find(':', 6);
 
-        if (delim != std::string::npos) {
+        if(delim != std::string::npos) {
             try {
                 return endpoint_t(tcp_endpoint_t(
                     endpoint.substr(6, delim - 6),
@@ -43,7 +63,7 @@ endpoint_t::from_string(const std::string& endpoint) {
         } else {
             throw std::runtime_error("Bad format of tcp endpoint.");
         }
-    } else if (endpoint.compare(0, 7, "unix://") == 0) {
+    } else if(endpoint.compare(0, 7, "unix://") == 0) {
         return endpoint_t(endpoint.substr(7));
     } else {
         throw std::runtime_error("Bad format of tcp endpoint.");
@@ -111,7 +131,7 @@ void
 connection_t::connect(boost::asio::io_service& ioservice,
                       const endpoint_t& endpoint)
 {
-    if (endpoint.is_unix()) {
+    if(endpoint.is_unix()) {
         auto s = std::make_shared<boost::asio::local::stream_protocol::socket>(ioservice);
         s->connect(boost::asio::local::stream_protocol::endpoint(endpoint.get_path()));
         m_socket = s;
@@ -126,7 +146,7 @@ connection_t::connect(boost::asio::io_service& ioservice,
 
         std::exception_ptr error;
 
-        for (; it != end; ++it) {
+        for(; it != end; ++it) {
             auto s = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
             try {
                 s->connect(*it);
@@ -167,7 +187,7 @@ namespace {
     {
         int
         operator()(const std::shared_ptr<connection_t::unix_socket_t>& s) const {
-            if (!s) {
+            if(!s) {
                 throw std::runtime_error("Not connected.");
             }
             return s->native();
@@ -175,7 +195,7 @@ namespace {
 
         int
         operator()(const std::shared_ptr<connection_t::tcp_socket_t>& s) const {
-            if (!s) {
+            if(!s) {
                 throw std::runtime_error("Not connected.");
             }
             return s->native();
@@ -219,15 +239,15 @@ namespace {
     strip(const char *begin,
           const char *end)
     {
-        while (begin < end && isspace(*begin)) {
+        while(begin < end && isspace(*begin)) {
             ++begin;
         }
 
-        while (begin < end && isspace(*(end - 1))) {
+        while(begin < end && isspace(*(end - 1))) {
             --end;
         }
 
-        if (begin < end) {
+        if(begin < end) {
             return std::string(begin, end - begin);
         } else {
             return std::string();
@@ -243,7 +263,7 @@ namespace {
         const char *end = header + size * nmemb;
         const char *delim = std::find(header, end, ':');
 
-        if (delim != end) {
+        if(delim != end) {
             const char *last_char = std::find(delim, end, '\n');
 
             std::string field = strip(header, delim);
@@ -272,7 +292,7 @@ client_impl_t::client_impl_t(const endpoint_t& endpoint) :
     m_endpoint(endpoint),
     m_curl(curl_easy_init())
 {
-    if (m_curl) {
+    if(m_curl) {
         curl_easy_setopt(m_curl, CURLOPT_NOSIGNAL, 1L);
         curl_easy_setopt(m_curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
 
@@ -294,7 +314,7 @@ client_impl_t::client_impl_t(boost::asio::io_service& ioservice,
     m_endpoint(endpoint),
     m_curl(curl_easy_init())
 {
-    if (m_curl) {
+    if(m_curl) {
         curl_easy_setopt(m_curl, CURLOPT_NOSIGNAL, 1L);
         curl_easy_setopt(m_curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
 
@@ -311,7 +331,7 @@ client_impl_t::client_impl_t(boost::asio::io_service& ioservice,
 }
 
 client_impl_t::~client_impl_t() {
-    if (m_curl) {
+    if(m_curl) {
         curl_easy_cleanup(m_curl);
     }
 }
@@ -323,7 +343,7 @@ client_impl_t::get(http_response_t& response,
     connection_t socket(m_ioservice_ref, m_endpoint);
 
     std::string url;
-    if (m_endpoint.is_tcp()) {
+    if(m_endpoint.is_tcp()) {
         url = "http://"
             + m_endpoint.get_host() + ":" + boost::lexical_cast<std::string>(m_endpoint.get_port())
             + request.uri();
@@ -342,13 +362,13 @@ client_impl_t::get(http_response_t& response,
 
     curl_easy_setopt(m_curl, CURLOPT_HTTPGET, 1L);
 
-    if (!request.method().empty()) {
+    if(!request.method().empty()) {
         curl_easy_setopt(m_curl, CURLOPT_CUSTOMREQUEST, request.method().c_str());
     }
 
     std::vector<std::string> headers;
     curl_slist *p_headers = NULL;
-    for (size_t i = 0; i < request.headers().data().size(); ++i) {
+    for(size_t i = 0; i < request.headers().data().size(); ++i) {
         headers.push_back(
             request.headers().data()[i].first + ": " + request.headers().data()[i].second
         );
@@ -365,7 +385,7 @@ client_impl_t::get(http_response_t& response,
 
     curl_slist_free_all(p_headers);
 
-    if (errc != 0) {
+    if(errc != 0) {
         throw std::system_error(errc, std::system_category(), curl_easy_strerror(errc));
     }
 
@@ -379,7 +399,7 @@ client_impl_t::post(http_response_t& response,
     connection_t socket(m_ioservice_ref, m_endpoint);
 
     std::string url;
-    if (m_endpoint.is_tcp()) {
+    if(m_endpoint.is_tcp()) {
         url = "http://"
             + m_endpoint.get_host() + ":" + boost::lexical_cast<std::string>(m_endpoint.get_port())
             + request.uri();
@@ -400,13 +420,13 @@ client_impl_t::post(http_response_t& response,
     curl_easy_setopt(m_curl, CURLOPT_POSTFIELDS, request.body().data());
     curl_easy_setopt(m_curl, CURLOPT_POSTFIELDSIZE, request.body().size());
 
-    if (!request.method().empty()) {
+    if(!request.method().empty()) {
         curl_easy_setopt(m_curl, CURLOPT_CUSTOMREQUEST, request.method().c_str());
     }
 
     std::vector<std::string> headers;
     curl_slist *p_headers = NULL;
-    for (size_t i = 0; i < request.headers().data().size(); ++i) {
+    for(size_t i = 0; i < request.headers().data().size(); ++i) {
         headers.push_back(
             request.headers().data()[i].first + ": " + request.headers().data()[i].second
         );
@@ -423,7 +443,7 @@ client_impl_t::post(http_response_t& response,
 
     curl_slist_free_all(p_headers);
 
-    if (errc != 0) {
+    if(errc != 0) {
         throw std::system_error(errc, std::system_category(), curl_easy_strerror(errc));
     }
 
@@ -437,7 +457,7 @@ client_impl_t::head(http_response_t& response,
     connection_t socket(m_ioservice_ref, m_endpoint);
 
     std::string url;
-    if (m_endpoint.is_tcp()) {
+    if(m_endpoint.is_tcp()) {
         url = "http://"
             + m_endpoint.get_host() + ":" + boost::lexical_cast<std::string>(m_endpoint.get_port())
             + request.uri();
@@ -456,13 +476,13 @@ client_impl_t::head(http_response_t& response,
 
     curl_easy_setopt(m_curl, CURLOPT_NOBODY, 1L);
 
-    if (!request.method().empty()) {
+    if(!request.method().empty()) {
         curl_easy_setopt(m_curl, CURLOPT_CUSTOMREQUEST, request.method().c_str());
     }
 
     std::vector<std::string> headers;
     curl_slist *p_headers = NULL;
-    for (size_t i = 0; i < request.headers().data().size(); ++i) {
+    for(size_t i = 0; i < request.headers().data().size(); ++i) {
         headers.push_back(
             request.headers().data()[i].first + ": " + request.headers().data()[i].second
         );
@@ -479,7 +499,7 @@ client_impl_t::head(http_response_t& response,
 
     curl_slist_free_all(p_headers);
 
-    if (errc != 0) {
+    if(errc != 0) {
         throw std::system_error(errc, std::system_category(), curl_easy_strerror(errc));
     }
 
@@ -493,7 +513,7 @@ namespace {
     {
         http_request_t request("POST", url, "1.0", http_headers_t(), "");
 
-        if (!value.IsNull()) {
+        if(!value.IsNull()) {
             rapidjson::GenericStringBuffer<rapidjson::UTF8<>> buffer;
             rapidjson::Writer<rapidjson::GenericStringBuffer<rapidjson::UTF8<>>> writer(buffer);
 
@@ -527,7 +547,7 @@ container_t::start(const std::vector<std::string>& binds) {
     rapidjson::Value::AllocatorType allocator;
 
     b.SetArray();
-    for (auto it = binds.begin(); it != binds.end(); ++it) {
+    for(auto it = binds.begin(); it != binds.end(); ++it) {
         b.PushBack(it->data(), allocator);
     }
 
@@ -537,7 +557,7 @@ container_t::start(const std::vector<std::string>& binds) {
     http_response_t resp;
     m_client->post(resp, make_post(cocaine::format("/containers/%s/start", id()), args));
 
-    if (!(resp.code() >= 200 && resp.code() < 300)) {
+    if(!(resp.code() >= 200 && resp.code() < 300)) {
         COCAINE_LOG_WARNING(m_logger,
                             "Unable to start container %s. Docker replied with code %d and body '%s'.",
                             id(),
@@ -552,7 +572,7 @@ container_t::kill() {
     http_response_t resp;
     m_client->post(resp, make_post(cocaine::format("/containers/%s/kill", id())));
 
-    if (!(resp.code() >= 200 && resp.code() < 300)) {
+    if(!(resp.code() >= 200 && resp.code() < 300)) {
         COCAINE_LOG_WARNING(m_logger,
                             "Unable to kill container %s. Docker replied with code %d and body '%s'.",
                             id(),
@@ -567,7 +587,7 @@ container_t::stop(unsigned int timeout) {
     http_response_t resp;
     m_client->post(resp, make_post(cocaine::format("/containers/%s/stop?t=%d", id(), timeout)));
 
-    if (!(resp.code() >= 200 && resp.code() < 300)) {
+    if(!(resp.code() >= 200 && resp.code() < 300)) {
         COCAINE_LOG_WARNING(m_logger,
                             "Unable to stop container %s. Docker replied with code %d and body '%s'.",
                             id(),
@@ -582,7 +602,7 @@ container_t::remove(bool volumes) {
     http_response_t resp;
     m_client->get(resp, make_del(cocaine::format("/containers/%s?v=%d", id(), volumes?1:0)));
 
-    if (!(resp.code() >= 200 && resp.code() < 300)) {
+    if(!(resp.code() >= 200 && resp.code() < 300)) {
         COCAINE_LOG_WARNING(m_logger,
                             "Unable to remove container %s. Docker replied with code %d and body '%s'.",
                             id(),
@@ -606,7 +626,7 @@ container_t::attach() {
         make_post(cocaine::format("/containers/%s/attach?logs=1&stream=1&stdout=1&stderr=1", id()))
     );
 
-    if (!(resp.code() >= 200 && resp.code() < 300)) {
+    if(!(resp.code() >= 200 && resp.code() < 300)) {
         COCAINE_LOG_WARNING(m_logger,
                             "Unable to attach container %s. Docker replied with code %d and body '%s'.",
                             id(),
@@ -625,10 +645,10 @@ client_t::inspect_image(rapidjson::Document& result,
     http_response_t resp;
     m_client->get(resp, make_get(cocaine::format("/images/%s/json", image)));
 
-    if (resp.code() >= 200 && resp.code() < 300) {
+    if(resp.code() >= 200 && resp.code() < 300) {
         result.SetNull();
         result.Parse<0>(resp.body().data());
-    } else if (resp.code() >= 400 && resp.code() < 500) {
+    } else if(resp.code() >= 400 && resp.code() < 500) {
         result.SetNull();
     } else {
         COCAINE_LOG_WARNING(m_logger,
@@ -650,17 +670,17 @@ client_t::pull_image(const std::string& registry,
     size_t args_count = 1;
 
     args[0] = std::pair<std::string, std::string>("fromImage", image);
-    if (!registry.empty()) {
+    if(!registry.empty()) {
         args[args_count] = std::pair<std::string, std::string>("registry", registry);
         ++args_count;
     }
-    if (!tag.empty()) {
+    if(!tag.empty()) {
         args[args_count] = std::pair<std::string, std::string>("tag", tag);
         ++args_count;
     }
 
-    for (size_t i = 0; i < args_count; ++i) {
-        if (i == 0) {
+    for(size_t i = 0; i < args_count; ++i) {
+        if(i == 0) {
             request += args[0].first + "=" + args[0].second;
         } else {
             request += "&" + args[0].first + "=" + args[0].second;
@@ -670,16 +690,16 @@ client_t::pull_image(const std::string& registry,
     http_response_t resp;
     m_client->post(resp, make_post(request));
 
-    if (resp.code() >= 200 && resp.code() < 300) {
+    if(resp.code() >= 200 && resp.code() < 300) {
         std::string body = resp.body();
         size_t next_object = 0;
         std::vector<std::string> messages;
 
         // kostyl-way 7 ultimate
-        while (true) {
+        while(true) {
             size_t end = body.find("}{", next_object);
 
-            if (end == std::string::npos) {
+            if(end == std::string::npos) {
                 messages.push_back(body.substr(next_object));
                 break;
             } else {
@@ -688,11 +708,11 @@ client_t::pull_image(const std::string& registry,
             }
         }
 
-        for (auto it = messages.begin(); it != messages.end(); ++it) {
+        for(auto it = messages.begin(); it != messages.end(); ++it) {
             rapidjson::Document answer;
             answer.Parse<0>(it->data());
 
-            if (answer.HasMember("error")) {
+            if(answer.HasMember("error")) {
                 COCAINE_LOG_ERROR(m_logger,
                                   "Unable to create an image. Docker replied with body: '%s'.",
                                   resp.body());
@@ -714,21 +734,21 @@ client_t::create_container(const rapidjson::Value& args) {
     http_response_t resp;
     m_client->post(resp, make_post("/containers/create", args));
 
-    if (resp.code() >= 200 && resp.code() < 300) {
+    if(resp.code() >= 200 && resp.code() < 300) {
         rapidjson::Document answer;
         answer.Parse<0>(resp.body().data());
 
-        if (!answer.HasMember("Id")) {
+        if(!answer.HasMember("Id")) {
             COCAINE_LOG_WARNING(m_logger,
                                 "Unable to create a container. Id not found in reply from the docker: '%s'.",
                                 resp.body());
             throw std::runtime_error("Unable to create a container.");
         }
 
-        if (answer.HasMember("Warnings")) {
+        if(answer.HasMember("Warnings")) {
             auto& warnings = answer["Warnings"];
 
-            for (auto it = warnings.Begin(); it != warnings.End(); ++it) {
+            for(auto it = warnings.Begin(); it != warnings.End(); ++it) {
                 COCAINE_LOG_WARNING(m_logger,
                                     "Warning from docker: '%s'.",
                                     it->GetString());
