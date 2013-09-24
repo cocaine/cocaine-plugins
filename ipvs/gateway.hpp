@@ -48,11 +48,11 @@ class ipvs_t:
 
         virtual
         void
-        consume(const std::string& uuid, api::synchronize_result_type dump);
+        consume(const std::string& uuid, const api::synchronize_result_type& dump);
 
         virtual
         void
-        prune(const std::string& uuid);
+        cleanup(const std::string& uuid);
 
     private:
         struct service_info_t {
@@ -86,10 +86,8 @@ class ipvs_t:
         // Ports available for allocation to virtual services.
         std::priority_queue<uint16_t, std::vector<uint16_t>, std::greater<uint16_t>> m_ports;
 
-        typedef std::map<std::string, service_info_t> service_info_map_t;
-
         // Keeps track of service versions and mappings.
-        service_info_map_t m_service_info;
+        std::map<std::string, service_info_t> m_service_info;
 
         struct remote_service_t {
             ipvs_service_t handle;
@@ -98,21 +96,17 @@ class ipvs_t:
             io::tcp::endpoint endpoint;
 
             // Precooked endpoint tuple.
-            std::tuple<std::string, uint16_t> cooked;
+            io::locator::endpoint_tuple_type cooked;
 
             // Backend UUID -> Destination mapping.
             std::map<std::string, ipvs_dest_t> backends;
         };
 
-        typedef std::map<std::string, remote_service_t> remote_service_map_t;
-
         // Keeps track of IPVS configuration.
-        remote_service_map_t m_remote_services;
-
-        typedef std::map<std::string, api::synchronize_result_type> history_map_t;
+        std::map<std::string, remote_service_t> m_remote_services;
 
         // Keeps track of last update from every node to effectively drop stale backends.
-        history_map_t m_history;
+        std::map<std::string, api::synchronize_result_type> m_history;
 };
 
 }} // namespace cocaine::gateway

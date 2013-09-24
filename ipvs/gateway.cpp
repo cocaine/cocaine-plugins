@@ -114,7 +114,7 @@ ipvs_t::resolve(const std::string& name) const {
 
     COCAINE_LOG_DEBUG(m_log, "providing '%s' using virtual service on '%s'", name, ipvs->second.endpoint);
 
-    return std::make_tuple(
+    return resolve_result_type(
         ipvs->second.cooked,
         info->second.version,
         info->second.map
@@ -140,7 +140,7 @@ copy_address(union nf_inet_addr& target, const tcp::endpoint& endpoint) {
 }
 
 void
-ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
+ipvs_t::consume(const std::string& uuid, const synchronize_result_type& dump) {
     COCAINE_LOG_DEBUG(m_log, "updating node '%s' services", uuid);
 
     for(auto it = dump.cbegin(); it != dump.cend(); ++it) {
@@ -238,8 +238,8 @@ ipvs_t::consume(const std::string& uuid, synchronize_result_type dump) {
 }
 
 void
-ipvs_t::prune(const std::string& uuid) {
-    COCAINE_LOG_DEBUG(m_log, "pruning node '%s' services", uuid);
+ipvs_t::cleanup(const std::string& uuid) {
+    COCAINE_LOG_DEBUG(m_log, "cleaning up node '%s' services", uuid);
 
     std::vector<std::string> names;
 
@@ -259,7 +259,7 @@ ipvs_t::prune(const std::string& uuid) {
             }
         }
     } catch(const std::system_error& e) {
-        COCAINE_LOG_ERROR(m_log, "unable to prune services - [%d] %s", e.code().value(), e.code().message());
+        COCAINE_LOG_ERROR(m_log, "unable to cleanup services - [%d] %s", e.code().value(), e.code().message());
     }
 
     m_history.erase(uuid);
@@ -302,7 +302,7 @@ ipvs_t::add_service(const std::string& name, const service_info_t& info) {
 
         // Store the virtual service information
 
-        m_remote_services[name] = remote_service_t { service, *endpoint, std::make_tuple(
+        m_remote_services[name] = remote_service_t { service, *endpoint, locator::endpoint_tuple_type(
             endpoint->address().to_string(),
             endpoint->port()
         )};
