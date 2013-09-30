@@ -43,16 +43,16 @@ class ipvs_t:
        ~ipvs_t();
 
         virtual
-        api::resolve_result_type
+        metadata_t
         resolve(const std::string& name) const;
 
         virtual
         void
-        consume(const std::string& uuid, const api::synchronize_result_type& dump);
+        consume(const std::string& uuid, const std::string& name, const metadata_t& meta);
 
         virtual
         void
-        cleanup(const std::string& uuid);
+        cleanup(const std::string& uuid, const std::string& name);
 
     private:
         struct service_info_t {
@@ -61,7 +61,7 @@ class ipvs_t:
             // NOTE: There's only one service info for all the services in the cluster, which
             // means that all the services should expose the same protocol, otherwise bad things
             // gonna happen.
-            std::tuple_element<2, api::resolve_result_type>::type map;
+            std::tuple_element<2, metadata_t>::type map;
         };
 
         void
@@ -78,7 +78,8 @@ class ipvs_t:
 
     private:
         context_t& m_context;
-        std::unique_ptr<logging::log_t> m_log;
+
+        const std::unique_ptr<logging::log_t> m_log;
 
         const std::string m_default_scheduler;
         const unsigned    m_default_weight;
@@ -104,9 +105,6 @@ class ipvs_t:
 
         // Keeps track of IPVS configuration.
         std::map<std::string, remote_service_t> m_remote_services;
-
-        // Keeps track of last update from every node to effectively drop stale backends.
-        std::map<std::string, api::synchronize_result_type> m_history;
 };
 
 }} // namespace cocaine::gateway

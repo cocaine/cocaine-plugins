@@ -100,7 +100,7 @@ ipvs_t::~ipvs_t() {
     ::ipvs_close();
 }
 
-resolve_result_type
+ipvs_t::metadata_t
 ipvs_t::resolve(const std::string& name) const {
     const auto ipvs = m_remote_services.find(name);
 
@@ -114,7 +114,7 @@ ipvs_t::resolve(const std::string& name) const {
 
     COCAINE_LOG_DEBUG(m_log, "providing '%s' using virtual service on '%s'", name, ipvs->second.endpoint);
 
-    return resolve_result_type(
+    return metadata_t(
         ipvs->second.cooked,
         info->second.version,
         info->second.map
@@ -140,129 +140,85 @@ copy_address(union nf_inet_addr& target, const tcp::endpoint& endpoint) {
 }
 
 void
-ipvs_t::consume(const std::string& uuid, const synchronize_result_type& dump) {
-    COCAINE_LOG_DEBUG(m_log, "updating node '%s' services", uuid);
+ipvs_t::consume(const std::string& uuid, const std::string& name, const metadata_t& meta) {
+    COCAINE_LOG_DEBUG(m_log, "updating node '%s' service '%s'", uuid, name);
 
-    for(auto it = dump.cbegin(); it != dump.cend(); ++it) {
-        ipvs_dest_t backend;
+    ipvs_dest_t backend;
 
-        if(m_remote_services.find(it->first) == m_remote_services.end()) {
-            service_info_t info = {
-                std::get<1>(it->second), /* protocol version */
-                std::get<2>(it->second)  /* dispatch map */
-            };
-
-            try {
-                add_service(it->first, info);
-            } catch(const std::system_error& e) {
-                COCAINE_LOG_ERROR(m_log, "unable to create virtual service '%s' - [%d] %s", it->first,
-                    e.code().value(), e.code().message());
-
-                continue;
-            }
-        }
-
-        // Setup the backend destination
-
-        std::string hostname;
-        uint16_t    port;
-
-        std::tie(hostname, port) = std::get<0>(it->second);
-
-        std::vector<io::tcp::endpoint> endpoints;
+    if(m_remote_services.find(name) == m_remote_services.end()) {
+        service_info_t info = {
+            std::get<1>(meta), /* protocol version */
+            std::get<2>(meta)  /* dispatch map */
+        };
 
         try {
-            endpoints = io::resolver<io::tcp>::query(
-                m_remote_services[it->first].endpoint.protocol(),
-                hostname,
-                port
-            );
+            add_service(name, info);
         } catch(const std::system_error& e) {
-            COCAINE_LOG_WARNING(m_log, "unable to resolve any endpoints for service '%s' on '%s' - [%d] %s",
-                it->first, hostname, e.code().value(), e.code().message());
+            COCAINE_LOG_ERROR(m_log, "unable to create virtual service '%s' - [%d] %s", name,
+                e.code().value(), e.code().message());
+
+            return;
+        }
+    }
+
+    // Setup the backend destination
+
+    std::string hostname;
+    uint16_t    port;
+
+    std::tie(hostname, port) = std::get<0>(meta);
+
+    std::vector<io::tcp::endpoint> endpoints;
+
+    try {
+        endpoints = io::resolver<io::tcp>::query(
+            m_remote_services[name].endpoint.protocol(),
+            hostname,
+            port
+        );
+    } catch(const std::system_error& e) {
+        COCAINE_LOG_WARNING(m_log, "unable to resolve any endpoints for service '%s' on '%s' - [%d] %s",
+            name, hostname, e.code().value(), e.code().message());
+
+        return;
+    }
+
+    for(auto endpoint = endpoints.begin(); endpoint != endpoints.end(); ++endpoint) {
+        std::memset(&backend, 0, sizeof(ipvs_dest_t));
+
+        copy_address(backend.addr, *endpoint);
+
+        backend.af         = endpoint->protocol().family();
+        backend.conn_flags = IP_VS_CONN_F_MASQ;
+        backend.port       = htons(endpoint->port());
+        backend.weight     = m_default_weight;
+
+        try {
+            add_backend(name, uuid, backend);
+        } catch(const std::system_error& e) {
+            COCAINE_LOG_WARNING(m_log, "unable to add endpoint '%s' to virtual service '%s' - [%d] %s",
+                *endpoint, name, e.code().value(), e.code().message());
 
             continue;
         }
 
-        for(auto endpoint = endpoints.begin(); endpoint != endpoints.end(); ++endpoint) {
-            std::memset(&backend, 0, sizeof(ipvs_dest_t));
-
-            copy_address(backend.addr, *endpoint);
-
-            backend.af         = endpoint->protocol().family();
-            backend.conn_flags = IP_VS_CONN_F_MASQ;
-            backend.port       = htons(endpoint->port());
-            backend.weight     = m_default_weight;
-
-            try {
-                add_backend(it->first, uuid, backend);
-            } catch(const std::system_error& e) {
-                COCAINE_LOG_WARNING(m_log, "unable to add endpoint '%s' to virtual service '%s' - [%d] %s",
-                    *endpoint, it->first, e.code().value(), e.code().message());
-
-                continue;
-            }
-
-            break;
-        }
+        break;
     }
-
-    // Cleanup stale backends
-
-    if(m_history.find(uuid) != m_history.end()) {
-        std::vector<std::pair<std::string, api::resolve_result_type>> stale;
-
-        std::set_difference(
-            m_history[uuid].begin(),
-            m_history[uuid].end(),
-            dump.begin(),
-            dump.end(),
-            std::back_inserter(stale),
-            dump.value_comp()
-        );
-
-        try {
-            for(auto it = stale.cbegin(); it != stale.cend(); ++it) {
-                pop_backend(it->first, uuid);
-
-                if(m_remote_services[it->first].backends.empty()) {
-                    pop_service(it->first);
-                }
-            }
-        } catch(const std::system_error& e) {
-            COCAINE_LOG_ERROR(m_log, "unable to cleanup services - [%d] %s", e.code().value(), e.code().message());
-        }
-    }
-
-    m_history[uuid] = dump;
 }
 
 void
-ipvs_t::cleanup(const std::string& uuid) {
-    COCAINE_LOG_DEBUG(m_log, "cleaning up node '%s' services", uuid);
-
-    std::vector<std::string> names;
-
-    std::transform(
-        m_remote_services.begin(),
-        m_remote_services.end(),
-        std::back_inserter(names),
-        tuple::nth_element<0>()
-    );
+ipvs_t::cleanup(const std::string& uuid, const std::string& name) {
+    COCAINE_LOG_DEBUG(m_log, "cleaning up node '%s' service '%s'", uuid, name);
 
     try {
-        for(auto it = names.cbegin(); it != names.cend(); ++it) {
-            pop_backend(*it, uuid);
+        pop_backend(name, uuid);
 
-            if(m_remote_services[*it].backends.empty()) {
-                pop_service(*it);
-            }
+        if(m_remote_services[name].backends.empty()) {
+            pop_service(name);
         }
     } catch(const std::system_error& e) {
         COCAINE_LOG_ERROR(m_log, "unable to cleanup services - [%d] %s", e.code().value(), e.code().message());
     }
-
-    m_history.erase(uuid);
 }
 
 void
