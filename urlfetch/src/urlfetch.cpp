@@ -72,8 +72,8 @@ urlfetch_t::urlfetch_t(context_t& context,
     int connections_limits = args.get("connections-limit", 10).asInt();
     m_manager.set_limit(connections_limits);
 
-    on<io::urlfetch::get>("get", std::bind(&urlfetch_t::get, this, _1, _2, _3, _4, _5));
-    on<io::urlfetch::post>("post", std::bind(&urlfetch_t::post, this, _1, _2, _3, _4, _5, _6));
+    on<io::urlfetch::get>(std::bind(&urlfetch_t::get, this, _1, _2, _3, _4, _5));
+    on<io::urlfetch::post>(std::bind(&urlfetch_t::post, this, _1, _2, _3, _4, _5, _6));
 }
 
 namespace {

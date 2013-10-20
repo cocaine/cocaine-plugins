@@ -30,6 +30,10 @@ namespace urlfetch {
     struct get {
         typedef urlfetch_tag tag;
 
+        static const char* alias() {
+            return "get";
+        }
+
         typedef boost::mpl::list<
             /* url */ std::string,
             /* timeout */ optional_with_default<int, 5000>,
@@ -48,6 +52,10 @@ namespace urlfetch {
 
     struct post {
         typedef urlfetch_tag tag;
+
+        static const char* alias() {
+            return "post";
+        }
 
         typedef boost::mpl::list<
             /* url */ std::string,

@@ -30,10 +30,10 @@ chrono_t::chrono_t(context_t& context, reactor_t& reactor, const std::string& na
     log_(new logging::log_t(context, name)),
     reactor_(reactor)
 {
-    on<io::chrono::notify_after>("notify_after", std::bind(&chrono_t::notify_after, this, _1, _2));
-    on<io::chrono::notify_every>("notify_every", std::bind(&chrono_t::notify_every, this, _1, _2));
-    on<io::chrono::cancel>("cancel", std::bind(&chrono_t::cancel, this, _1));
-    on<io::chrono::restart>("restart", std::bind(&chrono_t::restart, this, _1));
+    on<io::chrono::notify_after>(std::bind(&chrono_t::notify_after, this, _1, _2));
+    on<io::chrono::notify_every>(std::bind(&chrono_t::notify_every, this, _1, _2));
+    on<io::chrono::cancel>(std::bind(&chrono_t::cancel, this, _1));
+    on<io::chrono::restart>(std::bind(&chrono_t::restart, this, _1));
 }
 
 cocaine::streamed<io::timer_id_t>

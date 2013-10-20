@@ -31,8 +31,8 @@ cache_t::cache_t(context_t& context,
     log_(new logging::log_t(context, name)),
 	cache_(args.get("max-size", 1000000).asInt())
 {
-    on<io::cache::get>("get", std::bind(&cache_t::get, this, _1));
-    on<io::cache::put>("put", std::bind(&cache_t::put, this, _1, _2));
+    on<io::cache::get>(std::bind(&cache_t::get, this, _1));
+    on<io::cache::put>(std::bind(&cache_t::put, this, _1, _2));
 }
 
 void

@@ -31,6 +31,10 @@ namespace chrono {
     struct notify_after {
         typedef chrono_tag tag;
 
+        static const char* alias() {
+            return "notify_after";
+        }
+
         typedef boost::mpl::list<
             /* time difference */ double,
             /* send id */ optional_with_default<bool, false>
@@ -41,6 +45,10 @@ namespace chrono {
 
     struct notify_every {
         typedef chrono_tag tag;
+
+        static const char* alias() {
+            return "notify_every";
+        }
 
         typedef boost::mpl::list<
             /* time difference */ double,
@@ -53,6 +61,10 @@ namespace chrono {
     struct cancel {
         typedef chrono_tag tag;
 
+        static const char* alias() {
+            return "cancel";
+        }
+
         typedef boost::mpl::list<
             /* timer id */ timer_id_t
         > tuple_type;
@@ -62,6 +74,10 @@ namespace chrono {
 
     struct restart {
         typedef chrono_tag tag;
+
+        static const char* alias() {
+            return "restart";
+        }
 
         typedef boost::mpl::list<
             /* timer id */ timer_id_t
@@ -90,9 +106,9 @@ struct protocol<chrono_tag> {
 namespace detail {
     template<class R>
     struct select<streamed<R>> {
-        template<class Sequence>
+        template<class Event>
         struct apply {
-            typedef io::streamed_slot<streamed<R>, Sequence> type;
+            typedef io::streamed_slot<streamed<R>, Event> type;
         };
     };
 }

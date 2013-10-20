@@ -16,7 +16,7 @@
 #ifndef COCAINE_CACHE_SERVICE_HPP
 #define COCAINE_CACHE_SERVICE_HPP
 
-#include "lrucache.hpp"
+#include "lru_cache.hpp"
 #include <cocaine/api/service.hpp>
 #include <cocaine/asio/reactor.hpp>
 
@@ -28,6 +28,10 @@ namespace cache {
     struct put {
         typedef cache_tag tag;
 
+        static const char* alias() {
+            return "put";
+        }
+
         typedef boost::mpl::list<
             /* key */ std::string,
             /* value */ std::string
@@ -38,6 +42,10 @@ namespace cache {
 
     struct get {
         typedef cache_tag tag;
+
+        static const char* alias() {
+            return "get";
+        }
 
         typedef boost::mpl::list<
             /* key */ std::string
