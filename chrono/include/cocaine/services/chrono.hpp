@@ -103,7 +103,7 @@ struct protocol<chrono_tag> {
 
 } // namespace io
 
-namespace detail {
+namespace aux {
     template<class R>
     struct select<streamed<R>> {
         template<class Event>
