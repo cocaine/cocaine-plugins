@@ -18,6 +18,7 @@
 
 #include <cocaine/api/service.hpp>
 #include <cocaine/asio/reactor.hpp>
+#include <cocaine/dispatch.hpp>
 #include <cocaine/rpc/tags.hpp>
 
 #include <swarm/networkmanager.h>
@@ -87,7 +88,8 @@ struct protocol<urlfetch_tag> {
 namespace service {
 
 class urlfetch_t:
-    public api::service_t
+    public api::service_t,
+    public implementation<io::urlfetch_tag>
 {
     public:
         typedef io::event_traits<io::urlfetch::get>::result_type get_tuple;
@@ -97,7 +99,14 @@ class urlfetch_t:
                    const std::string& name,
                    const Json::Value& args);
 
-        void initialize() {}
+        virtual
+        dispatch_t&
+        prototype() {
+            return *this;
+        }
+
+        void
+        initialize() {}
 
     private:
         deferred<get_tuple>

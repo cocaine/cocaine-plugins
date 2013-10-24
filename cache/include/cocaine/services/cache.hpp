@@ -19,6 +19,7 @@
 #include "lru_cache.hpp"
 #include <cocaine/api/service.hpp>
 #include <cocaine/asio/reactor.hpp>
+#include <cocaine/dispatch.hpp>
 
 namespace cocaine { namespace io {
 
@@ -75,7 +76,8 @@ struct protocol<cache_tag> {
 namespace service {
 
 class cache_t:
-    public api::service_t
+    public api::service_t,
+    public implementation<io::cache_tag>
 {
     public:
         typedef tuple::fold<io::cache::get::result_type>::type get_tuple;
@@ -84,6 +86,12 @@ class cache_t:
                 io::reactor_t& reactor,
                 const std::string& name,
                 const Json::Value& args);
+
+        virtual
+        dispatch_t&
+        prototype() {
+            return *this;
+        }
 
     private:
         void

@@ -18,8 +18,9 @@
 
 #include <cocaine/api/service.hpp>
 #include <cocaine/asio/reactor.hpp>
-#include <cocaine/rpc/tags.hpp>
+#include <cocaine/dispatch.hpp>
 #include <cocaine/rpc/slots/streamed.hpp>
+#include <cocaine/rpc/tags.hpp>
 
 namespace cocaine { namespace io {
 
@@ -101,8 +102,6 @@ struct protocol<chrono_tag> {
     >::type version;
 };
 
-} // namespace io
-
 namespace aux {
     template<class R>
     struct select<streamed<R>> {
@@ -113,16 +112,25 @@ namespace aux {
     };
 }
 
+} // namespace io
+
 namespace service {
 
 class chrono_t:
-    public api::service_t
+    public api::service_t,
+    public implementation<io::chrono_tag>
 {
     public:
         chrono_t(context_t& context,
                  io::reactor_t& reactor,
                  const std::string& name,
                  const Json::Value& args);
+
+        virtual
+        dispatch_t&
+        prototype() {
+            return *this;
+        }
 
     private:
         struct timer_desc_t {

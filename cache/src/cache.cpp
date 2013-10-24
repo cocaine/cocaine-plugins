@@ -28,6 +28,7 @@ cache_t::cache_t(context_t& context,
                        const std::string& name,
                        const Json::Value& args):
     service_t(context, reactor, name, args),
+    implementation<io::cache_tag>(context, name),
     log_(new logging::log_t(context, name)),
 	cache_(args.get("max-size", 1000000).asInt())
 {
