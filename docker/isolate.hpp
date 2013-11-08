@@ -55,6 +55,7 @@ private:
     std::string m_runtime_path;
     std::string m_image;
     std::string m_tag;
+    bool m_do_pool;
 
     docker::client_t m_docker_client;
     rapidjson::Value m_run_config;
