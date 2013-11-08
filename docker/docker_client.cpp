@@ -287,7 +287,8 @@ namespace {
     }
 }
 
-client_impl_t::client_impl_t(const endpoint_t& endpoint) :
+client_impl_t::client_impl_t(const endpoint_t& endpoint,
+                             unsigned int connect_timeout) :
     m_ioservice_ref(m_ioservice),
     m_endpoint(endpoint),
     m_curl(curl_easy_init())
@@ -295,6 +296,7 @@ client_impl_t::client_impl_t(const endpoint_t& endpoint) :
     if(m_curl) {
         curl_easy_setopt(m_curl, CURLOPT_NOSIGNAL, 1L);
         curl_easy_setopt(m_curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
+        curl_easy_setopt(m_curl, CURLOPT_CONNECTTIMEOUT_MS, long(connect_timeout));
 
         curl_easy_setopt(m_curl, CURLOPT_OPENSOCKETFUNCTION, &open_callback);
         curl_easy_setopt(m_curl, CURLOPT_SOCKOPTFUNCTION, &sockopt_callback);
@@ -309,7 +311,8 @@ client_impl_t::client_impl_t(const endpoint_t& endpoint) :
 }
 
 client_impl_t::client_impl_t(boost::asio::io_service& ioservice,
-              const endpoint_t& endpoint) :
+                             const endpoint_t& endpoint,
+                             unsigned int connect_timeout) :
     m_ioservice_ref(ioservice),
     m_endpoint(endpoint),
     m_curl(curl_easy_init())
@@ -317,6 +320,7 @@ client_impl_t::client_impl_t(boost::asio::io_service& ioservice,
     if(m_curl) {
         curl_easy_setopt(m_curl, CURLOPT_NOSIGNAL, 1L);
         curl_easy_setopt(m_curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
+        curl_easy_setopt(m_curl, CURLOPT_CONNECTTIMEOUT_MS, long(connect_timeout));
 
         curl_easy_setopt(m_curl, CURLOPT_OPENSOCKETFUNCTION, &open_callback);
         curl_easy_setopt(m_curl, CURLOPT_SOCKOPTFUNCTION, &sockopt_callback);
@@ -660,20 +664,15 @@ client_t::inspect_image(rapidjson::Document& result,
 }
 
 void
-client_t::pull_image(const std::string& registry,
-                     const std::string& image,
+client_t::pull_image(const std::string& image,
                      const std::string& tag)
 {
     std::string request = "/images/create?";
 
-    std::pair<std::string, std::string> args[3];
+    std::pair<std::string, std::string> args[2];
     size_t args_count = 1;
 
     args[0] = std::pair<std::string, std::string>("fromImage", image);
-    if(!registry.empty()) {
-        args[args_count] = std::pair<std::string, std::string>("registry", registry);
-        ++args_count;
-    }
     if(!tag.empty()) {
         args[args_count] = std::pair<std::string, std::string>("tag", tag);
         ++args_count;
