@@ -59,6 +59,18 @@ public:
         // pass
     }
 
+    http_headers_t&
+    operator=(const http_headers_t& other) {
+        m_headers = other.m_headers;
+        return *this;
+    }
+
+    http_headers_t&
+    operator=(http_headers_t&& other) {
+        m_headers = std::move(other.m_headers);
+        return *this;
+    }
+
     const headers_vector_t&
     data() const {
         return m_headers;
