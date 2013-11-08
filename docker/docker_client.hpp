@@ -122,10 +122,11 @@ private:
 
 class client_impl_t {
 public:
-    client_impl_t(const endpoint_t& endpoint);
+    client_impl_t(const endpoint_t& endpoint, unsigned int connect_timeout = 10000);
 
     client_impl_t(boost::asio::io_service& ioservice,
-                  const endpoint_t& endpoint);
+                  const endpoint_t& endpoint,
+                  unsigned int connect_timeout = 10000);
 
     ~client_impl_t();
 
@@ -206,8 +207,7 @@ public:
                   const std::string& image);
 
     void
-    pull_image(const std::string& registry,
-               const std::string& image,
+    pull_image(const std::string& image,
                const std::string& tag);
 
     container_t

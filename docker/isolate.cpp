@@ -63,6 +63,15 @@ struct container_handle_t:
     void
     start(const std::vector<std::string>& binds) {
         m_container.start(binds);
+        m_container.stop(1);
+        std::string command = "LXCCONF=/var/lib/docker/containers/$(ls /var/lib/docker/containers | grep " + m_container.id() + ")/config.lxc;"
+            "echo $LXCCONF;"
+            "(sed 's/lxc\\.network\\.type = veth/lxc\\.network\\.type = macvlan\\nlxc\\.network\\.macvlan\\.mode = bridge/g' $LXCCONF > $LXCCONF);"
+            ;
+
+        std::cerr << command << std::endl;
+        system(command.data());
+        m_container.start(binds);
     }
 
     void
@@ -114,12 +123,14 @@ docker_t::docker_t(context_t& context, const std::string& name, const Json::Valu
 {
     m_runtime_path = args.get("runtime-path", "/run/cocaine").asString();
 
-    m_registry = args.get("registry", "").asString();
-    if(args.isMember("repository")) {
-        m_image = args.get("repository", "").asString() + "/" + name;
-    } else {
-        m_image = name;
+    if(args.isMember("registry")) {
+        m_image += args["registry"].asString() + "/";
     }
+
+    if(args.isMember("repository")) {
+        m_image += args["repository"].asString() + "/";
+    }
+    m_image += name;
     m_tag = ""; // empty for now
 
     m_run_config.SetObject();
@@ -158,7 +169,7 @@ docker_t::~docker_t() {
 
 void
 docker_t::spool() {
-    m_docker_client.pull_image(m_registry, m_image, m_tag);
+    m_docker_client.pull_image(m_image, m_tag);
 }
 
 std::unique_ptr<api::handle_t>

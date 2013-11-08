@@ -53,7 +53,6 @@ private:
     std::shared_ptr<cocaine::logging::log_t> m_log;
 
     std::string m_runtime_path;
-    std::string m_registry;
     std::string m_image;
     std::string m_tag;
 
