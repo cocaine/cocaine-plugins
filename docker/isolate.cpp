@@ -107,6 +107,7 @@ private:
 docker_t::docker_t(context_t& context, const std::string& name, const Json::Value& args):
     category_type(context, name, args),
     m_log(new logging::log_t(context, name)),
+    m_do_pool(false),
     m_docker_client(
         docker::endpoint_t::from_string(args.get("endpoint", "unix:///var/run/docker.sock").asString()),
         m_log
@@ -115,7 +116,13 @@ docker_t::docker_t(context_t& context, const std::string& name, const Json::Valu
     m_runtime_path = args.get("runtime-path", "/run/cocaine").asString();
 
     if(args.isMember("registry")) {
-        m_image += args["registry"].asString() + "/";
+        m_do_pool = true;
+
+        // <default> means default docker's registry (the one owned by dotCloud). User must specify it explicitly.
+        // I think that if there is no registry in the config then the plugin must not pull images from foreign registry by default.
+        if(args["registry"].asString() != "<default>") {
+            m_image += args["registry"].asString() + "/";
+        }
     }
 
     if(args.isMember("repository")) {
@@ -160,7 +167,9 @@ docker_t::~docker_t() {
 
 void
 docker_t::spool() {
-    m_docker_client.pull_image(m_image, m_tag);
+    if(m_do_pool) {
+        m_docker_client.pull_image(m_image, m_tag);
+    }
 }
 
 std::unique_ptr<api::handle_t>
