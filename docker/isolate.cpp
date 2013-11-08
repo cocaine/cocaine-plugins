@@ -63,15 +63,6 @@ struct container_handle_t:
     void
     start(const std::vector<std::string>& binds) {
         m_container.start(binds);
-        m_container.stop(1);
-        std::string command = "LXCCONF=/var/lib/docker/containers/$(ls /var/lib/docker/containers | grep " + m_container.id() + ")/config.lxc;"
-            "echo $LXCCONF;"
-            "(sed 's/lxc\\.network\\.type = veth/lxc\\.network\\.type = macvlan\\nlxc\\.network\\.macvlan\\.mode = bridge/g' $LXCCONF > $LXCCONF);"
-            ;
-
-        std::cerr << command << std::endl;
-        system(command.data());
-        m_container.start(binds);
     }
 
     void
