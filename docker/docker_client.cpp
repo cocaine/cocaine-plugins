@@ -371,12 +371,16 @@ client_impl_t::get(http_response_t& response,
     }
 
     std::vector<std::string> headers;
-    curl_slist *p_headers = NULL;
+    headers.reserve(request.headers().data().size());
     for(size_t i = 0; i < request.headers().data().size(); ++i) {
         headers.push_back(
             request.headers().data()[i].first + ": " + request.headers().data()[i].second
         );
-        p_headers = curl_slist_append(p_headers, headers.back().c_str());
+    }
+
+    curl_slist *p_headers = NULL;
+    for(size_t i = 0; i < headers.size(); ++i) {
+        p_headers = curl_slist_append(p_headers, headers[i].c_str());
     }
 
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, p_headers);
@@ -429,12 +433,16 @@ client_impl_t::post(http_response_t& response,
     }
 
     std::vector<std::string> headers;
-    curl_slist *p_headers = NULL;
+    headers.reserve(request.headers().data().size());
     for(size_t i = 0; i < request.headers().data().size(); ++i) {
         headers.push_back(
             request.headers().data()[i].first + ": " + request.headers().data()[i].second
         );
-        p_headers = curl_slist_append(p_headers, headers.back().c_str());
+    }
+
+    curl_slist *p_headers = NULL;
+    for(size_t i = 0; i < headers.size(); ++i) {
+        p_headers = curl_slist_append(p_headers, headers[i].c_str());
     }
 
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, p_headers);
@@ -485,12 +493,16 @@ client_impl_t::head(http_response_t& response,
     }
 
     std::vector<std::string> headers;
-    curl_slist *p_headers = NULL;
+    headers.reserve(request.headers().data().size());
     for(size_t i = 0; i < request.headers().data().size(); ++i) {
         headers.push_back(
             request.headers().data()[i].first + ": " + request.headers().data()[i].second
         );
-        p_headers = curl_slist_append(p_headers, headers.back().c_str());
+    }
+
+    curl_slist *p_headers = NULL;
+    for(size_t i = 0; i < headers.size(); ++i) {
+        p_headers = curl_slist_append(p_headers, headers[i].c_str());
     }
 
     curl_easy_setopt(m_curl, CURLOPT_HTTPHEADER, p_headers);
