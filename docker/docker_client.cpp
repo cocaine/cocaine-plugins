@@ -25,7 +25,12 @@
 
 #include <memory>
 #include <system_error>
+#include <chrono>
 #include <errno.h>
+
+#undef COCAINE_LOG
+#define COCAINE_LOG(_log_, _level_, _msg_, ...) \
+    std::cout << cocaine::format(_msg_, __VA_ARGS__) << std::endl;
 
 using namespace cocaine::docker;
 
@@ -127,36 +132,130 @@ connection_t::connection_t(boost::asio::io_service& ioservice,
     connect(ioservice, endpoint);
 }
 
+namespace {
+
+    void
+    timeout_handler(const boost::system::error_code& error,
+                    bool& exit_with_timeout,
+                    boost::asio::io_service& ioservice)
+    {
+        if(!error) {
+            exit_with_timeout = true;
+        }
+        ioservice.stop();
+    }
+
+    void
+    local_connection_handler(const boost::system::error_code& error,
+                             boost::system::error_code& result,
+                             boost::asio::io_service& ioservice)
+    {
+        if(error) {
+            result = error;
+        }
+        ioservice.stop();
+    }
+
+    struct tcp_connector {
+        void
+        resolve_handler(const boost::system::error_code& error,
+                        boost::asio::ip::tcp::resolver::iterator endpoint)
+        {
+            this->error = error;
+
+            if(error || endpoint == boost::asio::ip::tcp::resolver::iterator()) {
+                this->ioservice.stop();
+            } else {
+                endpoints.assign(endpoint, boost::asio::ip::tcp::resolver::iterator());
+                auto s = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
+                s->async_connect(*endpoint,
+                                 std::bind(&tcp_connector::handler,
+                                           this,
+                                           std::placeholders::_1,
+                                           1,
+                                           s));
+            }
+        }
+        void
+        handler(const boost::system::error_code& error,
+                size_t next_endpoint,
+                std::shared_ptr<boost::asio::ip::tcp::socket> self_socket)
+        {
+            this->error = error;
+
+            if(self_socket && !error) {
+                this->socket = self_socket;
+                this->ioservice.stop();
+            } else if(next_endpoint < endpoints.size()) {
+                auto s = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
+                s->async_connect(endpoints[next_endpoint],
+                                 std::bind(&tcp_connector::handler,
+                                           this,
+                                           std::placeholders::_1,
+                                           next_endpoint + 1,
+                                           s));
+            } else {
+                this->ioservice.stop();
+            }
+        }
+
+        boost::asio::io_service& ioservice;
+        std::shared_ptr<boost::asio::ip::tcp::socket> socket;
+        boost::system::error_code error;
+
+        std::vector<boost::asio::ip::tcp::endpoint> endpoints;
+    };
+
+} // namespace
+
 void
 connection_t::connect(boost::asio::io_service& ioservice,
-                      const endpoint_t& endpoint)
+                      const endpoint_t& endpoint,
+                      unsigned int connect_timeout)
 {
     if(endpoint.is_unix()) {
         auto s = std::make_shared<boost::asio::local::stream_protocol::socket>(ioservice);
-        s->connect(boost::asio::local::stream_protocol::endpoint(endpoint.get_path()));
+        boost::system::error_code error;
+        s->async_connect(boost::asio::local::stream_protocol::endpoint(endpoint.get_path()),
+                         std::bind(&local_connection_handler,
+                                   std::placeholders::_1,
+                                   std::ref(error),
+                                   std::ref(ioservice)));
+
+        if(run_with_timeout(ioservice, connect_timeout)) {
+            throw std::runtime_error("Connection timed out");
+        } else if(error) {
+            throw boost::system::system_error(error);
+        }
+
         m_socket = s;
     } else {
         boost::asio::ip::tcp::resolver resolver(ioservice);
 
-        auto it = resolver.resolve(boost::asio::ip::tcp::resolver::query(
-            endpoint.get_host(),
-            boost::lexical_cast<std::string>(endpoint.get_port())
-        ));
-        auto end = boost::asio::ip::tcp::resolver::iterator();
+        tcp_connector conn = {
+            ioservice,
+            std::shared_ptr<boost::asio::ip::tcp::socket>(),
+            boost::system::error_code()
+        };
 
-        std::exception_ptr error;
+        resolver.async_resolve(
+            boost::asio::ip::tcp::resolver::query(
+                endpoint.get_host(),
+                boost::lexical_cast<std::string>(endpoint.get_port())
+            ),
+            std::bind(&tcp_connector::resolve_handler,
+                      &conn,
+                      std::placeholders::_1,
+                      std::placeholders::_2)
+        );
 
-        for(; it != end; ++it) {
-            auto s = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
-            try {
-                s->connect(*it);
-                m_socket = s;
-                return;
-            } catch (...) {
-                error = std::current_exception();
-            }
+        if(run_with_timeout(ioservice, connect_timeout)) {
+            throw std::runtime_error("Connection timed out");
+        } else if(conn.socket) {
+            m_socket = conn.socket;
+        } else {
+            throw boost::system::system_error(conn.error);
         }
-        std::rethrow_exception(error);
     }
 }
 
@@ -207,6 +306,24 @@ namespace {
 int
 connection_t::fd() const {
     return boost::apply_visitor(fd_visitor(), m_socket);
+}
+
+bool
+connection_t::run_with_timeout(boost::asio::io_service& ioservice,
+                               unsigned int timeout)
+{
+    bool exited_with_timeout = false;
+
+    boost::asio::deadline_timer timer(ioservice);
+    timer.expires_from_now(boost::posix_time::milliseconds(timeout));
+    timer.async_wait(std::bind(&timeout_handler,
+                               std::placeholders::_1,
+                               std::ref(exited_with_timeout),
+                               std::ref(ioservice)));
+
+    ioservice.run();
+
+    return exited_with_timeout;
 }
 
 
@@ -287,40 +404,13 @@ namespace {
     }
 }
 
-client_impl_t::client_impl_t(const endpoint_t& endpoint,
-                             unsigned int connect_timeout) :
-    m_ioservice_ref(m_ioservice),
+client_impl_t::client_impl_t(const endpoint_t& endpoint) :
     m_endpoint(endpoint),
     m_curl(curl_easy_init())
 {
     if(m_curl) {
         curl_easy_setopt(m_curl, CURLOPT_NOSIGNAL, 1L);
         curl_easy_setopt(m_curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
-        curl_easy_setopt(m_curl, CURLOPT_CONNECTTIMEOUT_MS, long(connect_timeout));
-
-        curl_easy_setopt(m_curl, CURLOPT_OPENSOCKETFUNCTION, &open_callback);
-        curl_easy_setopt(m_curl, CURLOPT_SOCKOPTFUNCTION, &sockopt_callback);
-        curl_easy_setopt(m_curl, CURLOPT_CLOSESOCKETFUNCTION, &close_callback);
-        curl_easy_setopt(m_curl, CURLOPT_HEADERFUNCTION, &header_callback);
-        curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, &write_callback);
-
-        curl_easy_setopt(m_curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-    } else {
-        throw std::runtime_error("Unable to initialize libcurl.");
-    }
-}
-
-client_impl_t::client_impl_t(boost::asio::io_service& ioservice,
-                             const endpoint_t& endpoint,
-                             unsigned int connect_timeout) :
-    m_ioservice_ref(ioservice),
-    m_endpoint(endpoint),
-    m_curl(curl_easy_init())
-{
-    if(m_curl) {
-        curl_easy_setopt(m_curl, CURLOPT_NOSIGNAL, 1L);
-        curl_easy_setopt(m_curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
-        curl_easy_setopt(m_curl, CURLOPT_CONNECTTIMEOUT_MS, long(connect_timeout));
 
         curl_easy_setopt(m_curl, CURLOPT_OPENSOCKETFUNCTION, &open_callback);
         curl_easy_setopt(m_curl, CURLOPT_SOCKOPTFUNCTION, &sockopt_callback);
@@ -344,7 +434,7 @@ connection_t
 client_impl_t::get(http_response_t& response,
                    const http_request_t& request)
 {
-    connection_t socket(m_ioservice_ref, m_endpoint);
+    connection_t socket(m_ioservice, m_endpoint);
 
     std::string url;
     if(m_endpoint.is_tcp()) {
@@ -404,7 +494,7 @@ connection_t
 client_impl_t::post(http_response_t& response,
                     const http_request_t& request)
 {
-    connection_t socket(m_ioservice_ref, m_endpoint);
+    connection_t socket(m_ioservice, m_endpoint);
 
     std::string url;
     if(m_endpoint.is_tcp()) {
@@ -466,7 +556,7 @@ connection_t
 client_impl_t::head(http_response_t& response,
                     const http_request_t& request)
 {
-    connection_t socket(m_ioservice_ref, m_endpoint);
+    connection_t socket(m_ioservice, m_endpoint);
 
     std::string url;
     if(m_endpoint.is_tcp()) {
