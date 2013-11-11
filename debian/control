@@ -51,11 +51,11 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.11.0.0)
 Description: Cocaine - Docker Isolation
  Support of Docker for Cocaine.
 
-Package: libcocaine-plugin-elasticsearch2
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6), libswarm1 (>= 0.5.2.0)
-Description: Cocaine - Elasticsearch Client Service
- Elasticsearch Client Service for Cocaine.
+#Package: libcocaine-plugin-elasticsearch2
+#Architecture: any
+#Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6), libswarm1 (>= 0.5.2.0)
+#Description: Cocaine - Elasticsearch Client Service
+# Elasticsearch Client Service for Cocaine.
 
 Package: libcocaine-plugin-ipvs2
 Architecture: any
