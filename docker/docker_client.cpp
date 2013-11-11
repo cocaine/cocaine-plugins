@@ -28,10 +28,6 @@
 #include <chrono>
 #include <errno.h>
 
-#undef COCAINE_LOG
-#define COCAINE_LOG(_log_, _level_, _msg_, ...) \
-    std::cout << cocaine::format(_msg_, __VA_ARGS__) << std::endl;
-
 using namespace cocaine::docker;
 
 endpoint_t::endpoint_t() {
