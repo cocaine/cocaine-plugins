@@ -33,7 +33,7 @@ LOCATE_LIBRARY(LIBZMQ "zmq.h" "zmq")
 
 INCLUDE_DIRECTORIES(BEFORE
     ${PROJECT_SOURCE_DIR}/foreign/cppzmq
-    ${PROJECT_SOURCE_DIR}/foreign
+    ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include
 )
 
 INCLUDE_DIRECTORIES(
