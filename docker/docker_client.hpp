@@ -96,7 +96,8 @@ public:
 
     void
     connect(boost::asio::io_service& ioservice,
-            const endpoint_t& endpoint);
+            const endpoint_t& endpoint,
+            unsigned int connect_timeout = 10000);
 
     bool
     is_unix() const;
@@ -114,6 +115,11 @@ public:
     fd() const;
 
 private:
+    bool
+    run_with_timeout(boost::asio::io_service& ioservice,
+                     unsigned int timeout);
+
+private:
     typedef boost::variant<std::shared_ptr<unix_socket_t>, std::shared_ptr<tcp_socket_t>>
             variant_t;
 
@@ -123,10 +129,6 @@ private:
 class client_impl_t {
 public:
     client_impl_t(const endpoint_t& endpoint, unsigned int connect_timeout = 10000);
-
-    client_impl_t(boost::asio::io_service& ioservice,
-                  const endpoint_t& endpoint,
-                  unsigned int connect_timeout = 10000);
 
     ~client_impl_t();
 
@@ -146,8 +148,7 @@ public:
          const http_request_t& request);
 
 private:
-    boost::asio::io_service m_ioservice; // may be not used
-    boost::asio::io_service& m_ioservice_ref;
+    boost::asio::io_service m_ioservice;
     endpoint_t m_endpoint;
     CURL *m_curl;
 };
