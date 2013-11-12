@@ -137,8 +137,8 @@ namespace {
     {
         if(!error) {
             exit_with_timeout = true;
+            ioservice.stop();
         }
-        ioservice.stop();
     }
 
     void
@@ -146,9 +146,12 @@ namespace {
                              boost::system::error_code& result,
                              boost::asio::io_service& ioservice)
     {
-        if(error) {
+        if(error == boost::asio::error::operation_aborted) {
+            return;
+        } else if(error) {
             result = error;
         }
+
         ioservice.stop();
     }
 
@@ -159,38 +162,38 @@ namespace {
         {
             this->error = error;
 
-            if(error || endpoint == boost::asio::ip::tcp::resolver::iterator()) {
+            if(error == boost::asio::error::operation_aborted) {
+                return;
+            } else if(error || endpoint == boost::asio::ip::tcp::resolver::iterator()) {
                 this->ioservice.stop();
             } else {
                 endpoints.assign(endpoint, boost::asio::ip::tcp::resolver::iterator());
-                auto s = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
-                s->async_connect(*endpoint,
-                                 std::bind(&tcp_connector::handler,
-                                           this,
-                                           std::placeholders::_1,
-                                           1,
-                                           s));
+                socket = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
+                socket->async_connect(*endpoint,
+                                      std::bind(&tcp_connector::handler,
+                                                this,
+                                                std::placeholders::_1,
+                                                1));
             }
         }
         void
         handler(const boost::system::error_code& error,
-                size_t next_endpoint,
-                std::shared_ptr<boost::asio::ip::tcp::socket> self_socket)
+                size_t next_endpoint)
         {
-            this->error = error;
-
-            if(self_socket && !error) {
-                this->socket = self_socket;
+            if(error == boost::asio::error::operation_aborted) {
+                return;
+            } else if(!error) {
                 this->ioservice.stop();
             } else if(next_endpoint < endpoints.size()) {
-                auto s = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
-                s->async_connect(endpoints[next_endpoint],
-                                 std::bind(&tcp_connector::handler,
-                                           this,
-                                           std::placeholders::_1,
-                                           next_endpoint + 1,
-                                           s));
+                socket = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
+                socket->async_connect(endpoints[next_endpoint],
+                                      std::bind(&tcp_connector::handler,
+                                                this,
+                                                std::placeholders::_1,
+                                                next_endpoint + 1));
             } else {
+                this->error = error;
+                this->socket.reset();
                 this->ioservice.stop();
             }
         }
@@ -209,6 +212,8 @@ connection_t::connect(boost::asio::io_service& ioservice,
                       const endpoint_t& endpoint,
                       unsigned int connect_timeout)
 {
+    ioservice.reset();
+
     if(endpoint.is_unix()) {
         auto s = std::make_shared<boost::asio::local::stream_protocol::socket>(ioservice);
         boost::system::error_code error;
@@ -231,7 +236,8 @@ connection_t::connect(boost::asio::io_service& ioservice,
         tcp_connector conn = {
             ioservice,
             std::shared_ptr<boost::asio::ip::tcp::socket>(),
-            boost::system::error_code()
+            boost::system::error_code(),
+            std::vector<boost::asio::ip::tcp::endpoint>()
         };
 
         resolver.async_resolve(
@@ -253,6 +259,24 @@ connection_t::connect(boost::asio::io_service& ioservice,
             throw boost::system::system_error(conn.error);
         }
     }
+}
+
+bool
+connection_t::run_with_timeout(boost::asio::io_service& ioservice,
+                               unsigned int timeout)
+{
+    bool exited_with_timeout = false;
+
+    boost::asio::deadline_timer timer(ioservice);
+    timer.expires_from_now(boost::posix_time::milliseconds(timeout));
+    timer.async_wait(std::bind(&timeout_handler,
+                               std::placeholders::_1,
+                               std::ref(exited_with_timeout),
+                               std::ref(ioservice)));
+
+    ioservice.run();
+
+    return exited_with_timeout;
 }
 
 bool
@@ -302,24 +326,6 @@ namespace {
 int
 connection_t::fd() const {
     return boost::apply_visitor(fd_visitor(), m_socket);
-}
-
-bool
-connection_t::run_with_timeout(boost::asio::io_service& ioservice,
-                               unsigned int timeout)
-{
-    bool exited_with_timeout = false;
-
-    boost::asio::deadline_timer timer(ioservice);
-    timer.expires_from_now(boost::posix_time::milliseconds(timeout));
-    timer.async_wait(std::bind(&timeout_handler,
-                               std::placeholders::_1,
-                               std::ref(exited_with_timeout),
-                               std::ref(ioservice)));
-
-    ioservice.run();
-
-    return exited_with_timeout;
 }
 
 
