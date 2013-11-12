@@ -128,7 +128,7 @@ private:
 
 class client_impl_t {
 public:
-    client_impl_t(const endpoint_t& endpoint, unsigned int connect_timeout = 10000);
+    client_impl_t(const endpoint_t& endpoint);
 
     ~client_impl_t();
 
