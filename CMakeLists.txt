@@ -32,7 +32,9 @@ LOCATE_LIBRARY(LIBMSGPACK "msgpack.hpp" "msgpack")
 LOCATE_LIBRARY(LIBZMQ "zmq.h" "zmq")
 
 INCLUDE_DIRECTORIES(BEFORE
-    ${PROJECT_SOURCE_DIR}/foreign/cppzmq)
+    ${PROJECT_SOURCE_DIR}/foreign/cppzmq
+    ${PROJECT_SOURCE_DIR}/foreign
+)
 
 INCLUDE_DIRECTORIES(
     ${Boost_INCLUDE_DIRS}
