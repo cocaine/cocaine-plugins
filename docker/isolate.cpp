@@ -191,14 +191,22 @@ docker_t::spawn(const std::string& path, const api::string_map_t& args, const ap
         cmd.PushBack(it->first.c_str(), m_json_allocator);
         if(it->first == "--endpoint") {
             endpoint /= fs::path(it->second).filename();
-            cmd.PushBack(endpoint.c_str(), m_json_allocator);
+#if BOOST_VERSION >= 104600
+            cmd.PushBack(endpoint.native().c_str(), m_json_allocator);
+#else
+            cmd.PushBack(endpoint.string().c_str(), m_json_allocator);
+#endif
         } else {
             cmd.PushBack(it->second.c_str(), m_json_allocator);
         }
     }
 
     std::vector<std::string> binds;
-    std::string socket_dir(fs::path(args.at("--endpoint")).remove_filename().c_str());
+#if BOOST_VERSION >= 104600
+    std::string socket_dir(fs::path(args.at("--endpoint")).remove_filename().native().c_str());
+#else
+    std::string socket_dir(fs::path(args.at("--endpoint")).remove_filename().string().c_str());
+#endif
     binds.emplace_back((socket_dir + ":" + m_runtime_path).c_str());
 
     // create container
