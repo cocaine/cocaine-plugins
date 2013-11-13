@@ -45,7 +45,7 @@ using namespace cocaine::service::rest;
 class elasticsearch_t::impl_t {
 public:
     std::string m_url_prefix;
-    mutable swarm::network_manager m_manager; //@warning: Why should I do this mutable to perform const operations?
+    mutable swarm::network_manager m_manager; //@note: Why should I do this mutable to perform const operations?
     std::shared_ptr<logging::log_t> m_log;
 
     impl_t(cocaine::context_t &context, cocaine::io::reactor_t &reactor, const std::string &name) :
@@ -85,8 +85,8 @@ public:
     cocaine::deferred<T>
     do_rest(const std::string &url, H handler, Action action) const {
         cocaine::deferred<T> deferred;
-        request_handler_t<T> request_handler(deferred, handler);
-
+        request_handler_t<T> request_handler(deferred, handler);  
+  
         swarm::network_request request;
         request.set_url(url);
         action(request, request_handler);
@@ -116,7 +116,7 @@ elasticsearch_t::~elasticsearch_t() {
 cocaine::deferred<response::get>
 elasticsearch_t::get(const std::string &index, const std::string &type, const std::string &id) const {
     const std::string &url = cocaine::format("%s/%s/%s/%s/", d->m_url_prefix, index, type, id);
-    get_handler_t handler { d->m_log };
+    get_handler_t handler { d->m_log }; 
     return d->do_rest_get<response::get>(url, handler);
 }
 
