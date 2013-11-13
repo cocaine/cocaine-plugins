@@ -14,7 +14,7 @@ OPTION(PYTHON "Build Python Sandbox plugin" OFF)
 OPTION(CHRONO "Build Chrono Service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(ZEROMQ "Build ZeroMQ Driver plugin" ON)
-OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" OFF)
+OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
 
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")

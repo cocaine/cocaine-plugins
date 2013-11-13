@@ -58,10 +58,10 @@ struct request_handler_t {
 
 template<typename T>
 class Get {
-    const ioremap::swarm::network_manager &manager;
+    ioremap::swarm::network_manager &manager;
 
 public:
-    Get(const ioremap::swarm::network_manager &manager) :
+    Get(ioremap::swarm::network_manager &manager) :
         manager(manager)
     {}
 
@@ -73,11 +73,11 @@ public:
 
 template<typename T>
 class Post {
-    const ioremap::swarm::network_manager &manager;
+    ioremap::swarm::network_manager &manager;
     std::string body;
 
 public:
-    Post(const ioremap::swarm::network_manager &manager, std::string body) :
+    Post(ioremap::swarm::network_manager &manager, std::string body) :
         manager(manager),
         body(body)
     {}
@@ -88,12 +88,13 @@ public:
     }
 };
 
+#ifdef ELASTICSEARCH_DELETE_SUPPORT
 template<typename T>
 class Delete {
-    const ioremap::swarm::network_manager &manager;
+    ioremap::swarm::network_manager &manager;
 
 public:
-    Delete(const ioremap::swarm::network_manager &manager) :
+    Delete(ioremap::swarm::network_manager &manager) :
         manager(manager)
     {}
 
@@ -102,5 +103,6 @@ public:
         manager.do_delete(handler, request);
     }
 };
+#endif
 
 } } }
