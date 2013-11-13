@@ -47,7 +47,7 @@ Description: Cocaine - Chrono Service Development Headers
 
 Package: libcocaine-plugin-docker2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.11.0.0), libcurl4-openssl-dev
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.11.0.0)
 Description: Cocaine - Docker Isolation
  Support of Docker for Cocaine.
 
