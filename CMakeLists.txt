@@ -5,14 +5,14 @@ PROJECT(COCAINE-PLUGINS)
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 OPTION(CACHE "Build LRU Cache plugin" ON)
+OPTION(CHRONO "Build Chrono Service plugin" ON)
 OPTION(DOCKER "Build Docker Isolation plugin" ON)
+OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
 OPTION(LOGSTASH "Build Logstash Logger plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(PYTHON "Build Python Sandbox plugin" OFF)
-OPTION(CHRONO "Build Chrono Service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
-OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" OFF)
 
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
@@ -29,7 +29,9 @@ LOCATE_LIBRARY(LIBEV "ev++.h" "ev" "libev")
 LOCATE_LIBRARY(LIBMSGPACK "msgpack.hpp" "msgpack")
 
 INCLUDE_DIRECTORIES(BEFORE
-    ${PROJECT_SOURCE_DIR}/foreign/cppzmq)
+    ${PROJECT_SOURCE_DIR}/foreign/cppzmq
+    ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include
+)
 
 INCLUDE_DIRECTORIES(
     ${Boost_INCLUDE_DIRS}

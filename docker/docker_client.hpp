@@ -23,10 +23,10 @@
 
 #include "http.hpp"
 
-#include "rapidjson/rapidjson.h"
-#include "rapidjson/document.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/writer.h"
+#include <rapidjson/rapidjson.h>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 
 #include <cocaine/common.hpp>
 #include <cocaine/logging.hpp>
@@ -128,7 +128,7 @@ private:
 
 class client_impl_t {
 public:
-    client_impl_t(const endpoint_t& endpoint, unsigned int connect_timeout = 10000);
+    client_impl_t(const endpoint_t& endpoint);
 
     ~client_impl_t();
 

@@ -53,9 +53,9 @@ struct search_handler_t {
                 rapidjson::Writer<rapidjson::GenericStringBuffer<rapidjson::UTF8<>>> writer(buffer);
                 hits["hits"].Accept(writer);
                 const int total = hits["total"].GetInt();
-                deferred.write(std::make_tuple(true, total, buffer.GetString()));
+                deferred.write(std::make_tuple(true, total, std::string(buffer.GetString())));
             } else {
-                deferred.write(std::make_tuple(false, 0, ""));
+                deferred.write(std::make_tuple(false, 0, std::string()));
             }
         } else {
             std::string reason = cocaine::format("%s[%d]", root["error"].GetString(), code);

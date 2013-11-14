@@ -43,12 +43,12 @@ struct index_handler_t {
             return deferred.abort(-1, cocaine::format("parsing failed - %s", root.GetParseError()));
 
         if (!root.HasMember("_id"))
-            return deferred.write(std::make_tuple(false, "error - response has no field '_id'"));
+            return deferred.write(std::make_tuple(false, std::string("error - response has no field '_id'")));
 
         if (log)
             COCAINE_LOG_DEBUG(log, "Received data: %s", data);
 
-        deferred.write(std::make_tuple(true, root["_id"].GetString()));
+        deferred.write(std::make_tuple(true, std::string(root["_id"].GetString())));
     }
 };
 

@@ -2,9 +2,9 @@ Source: cocaine-plugins
 Section: utils
 Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
-Build-Depends: cmake, cdbs, debhelper (>= 7.0.13), libcocaine-dev (>= 0.10.6),
+Build-Depends: cmake, cdbs, debhelper (>= 7.0.13), libcocaine-dev (>= 0.12.0.0),
  libboost-filesystem-dev, libboost-thread-dev, libswarm-dev (>= 0.5.4.1)
- libnl-dev
+ libnl-dev, libcurl4-openssl-dev (>= 7.22.0)
 Standards-Version: 3.9.1
 Vcs-Git: git://github.com/cocaine/cocaine-plugins.git
 Vcs-Browser: https://github.com/cocaine/cocaine-plugins
@@ -45,11 +45,11 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.11.0.0)
 Description: Cocaine - Docker Isolation
  Support of Docker for Cocaine.
 
-#Package: libcocaine-plugin-elasticsearch2
-#Architecture: any
-#Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6), libswarm1 (>= 0.5.2.0)
-#Description: Cocaine - Elasticsearch Client Service
-# Elasticsearch Client Service for Cocaine.
+Package: libcocaine-plugin-elasticsearch2
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6), libswarm1 (>= 0.5.2.0)
+Description: Cocaine - Elasticsearch Client Service
+ Elasticsearch Client Service for Cocaine.
 
 Package: libcocaine-plugin-ipvs2
 Architecture: any
