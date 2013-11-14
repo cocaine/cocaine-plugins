@@ -55,7 +55,7 @@ struct search_handler_t {
                 const int total = hits["total"].GetInt();
                 deferred.write(std::make_tuple(true, total, std::string(buffer.GetString())));
             } else {
-		deferred.write(std::make_tuple(false, 0, std::string()));
+                deferred.write(std::make_tuple(false, 0, std::string()));
             }
         } else {
             std::string reason = cocaine::format("%s[%d]", root["error"].GetString(), code);
