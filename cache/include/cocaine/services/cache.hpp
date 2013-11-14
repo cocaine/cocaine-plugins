@@ -77,7 +77,7 @@ namespace service {
 
 class cache_t:
     public api::service_t,
-    public implementation<io::cache_tag>
+    public implements<io::cache_tag>
 {
     public:
         typedef tuple::fold<io::cache::get::result_type>::type get_tuple;

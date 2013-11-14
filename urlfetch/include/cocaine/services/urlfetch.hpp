@@ -89,7 +89,7 @@ namespace service {
 
 class urlfetch_t:
     public api::service_t,
-    public implementation<io::urlfetch_tag>
+    public implements<io::urlfetch_tag>
 {
     public:
         typedef io::event_traits<io::urlfetch::get>::result_type get_tuple;
