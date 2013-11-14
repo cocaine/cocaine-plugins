@@ -45,7 +45,7 @@ using namespace cocaine::service::rest;
 class elasticsearch_t::impl_t {
 public:
     std::string m_url_prefix;
-    mutable swarm::network_manager m_manager; //@warning: Why should I do this mutable to perform const operations?
+    mutable swarm::network_manager m_manager; //@note: Why should I do this mutable to perform const operations?
     std::shared_ptr<logging::log_t> m_log;
 
     impl_t(cocaine::context_t &context, cocaine::io::reactor_t &reactor, const std::string &name) :
