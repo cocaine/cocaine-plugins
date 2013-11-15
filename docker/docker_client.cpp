@@ -413,6 +413,7 @@ client_impl_t::client_impl_t(const endpoint_t& endpoint) :
     if(m_curl) {
         curl_easy_setopt(m_curl, CURLOPT_NOSIGNAL, 1L);
         curl_easy_setopt(m_curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
+        curl_easy_setopt(m_curl, CURLOPT_FORBID_REUSE, 1L);
 
         curl_easy_setopt(m_curl, CURLOPT_OPENSOCKETFUNCTION, &open_callback);
         curl_easy_setopt(m_curl, CURLOPT_SOCKOPTFUNCTION, &sockopt_callback);
