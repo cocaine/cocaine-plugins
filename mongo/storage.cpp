@@ -35,11 +35,11 @@ typedef std::unique_ptr<ScopedDbConnection> connection_ptr_t;
 
 mongo_storage_t::mongo_storage_t(context_t& context,
                                  const std::string& name,
-                                 const Json::Value& args)
+                                 const dynamic_t& args)
 try:
     category_type(context, name, args),
     m_log(new log_t(context, name)),
-    m_uri(args["uri"].asString(), ConnectionString::SET)
+    m_uri(args.as_object().at("uri", "").to<std::string>(), ConnectionString::SET)
 {
     if(!m_uri.isValid()) {
         throw storage_error_t("invalid mongodb uri");

@@ -42,7 +42,7 @@ class elasticsearch_t : public api::service_t {
     std::unique_ptr<impl_t> d;
 
 public:
-    elasticsearch_t(context_t &context, io::reactor_t &reactor, const std::string& name, const Json::Value& args);
+    elasticsearch_t(context_t &context, io::reactor_t &reactor, const std::string& name, const dynamic_t& args);
     ~elasticsearch_t();
 
     cocaine::deferred<response::get>

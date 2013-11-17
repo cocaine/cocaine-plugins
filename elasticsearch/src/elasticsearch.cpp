@@ -94,12 +94,12 @@ public:
     }
 };
 
-elasticsearch_t::elasticsearch_t(cocaine::context_t &context, cocaine::io::reactor_t &reactor, const std::string &name, const Json::Value &args) :
+elasticsearch_t::elasticsearch_t(cocaine::context_t &context, cocaine::io::reactor_t &reactor, const std::string &name, const dynamic_t &args) :
     service_t(context, reactor, name, args),
     d(new impl_t(context, reactor, name))
 {
-    const std::string &host = args.get("host", "127.0.0.1").asString();
-    const uint16_t port = args.get("port", 9200).asUInt();
+    const std::string &host = args.as_object().at("host", "127.0.0.1").as_string();
+    const uint16_t port = args.as_object().at("port", 9200).to<uint16_t>();
     d->m_url_prefix = cocaine::format("http://%s:%d", host, port);
 
     COCAINE_LOG_INFO(d->m_log, "Elasticsearch endpoint: %s", d->m_url_prefix);

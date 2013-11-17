@@ -124,7 +124,7 @@ class chrono_t:
         chrono_t(context_t& context,
                  io::reactor_t& reactor,
                  const std::string& name,
-                 const Json::Value& args);
+                 const dynamic_t& args);
 
         virtual
         dispatch_t&

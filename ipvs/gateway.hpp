@@ -37,7 +37,7 @@ class ipvs_t:
     public api::gateway_t
 {
     public:
-        ipvs_t(context_t& context, const std::string& name, const Json::Value& args);
+        ipvs_t(context_t& context, const std::string& name, const dynamic_t& args);
 
         virtual
        ~ipvs_t();

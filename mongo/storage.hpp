@@ -36,7 +36,7 @@ class mongo_storage_t:
     public:
         mongo_storage_t(context_t& context,
                         const std::string& name,
-                        const Json::Value& args);
+                        const dynamic_t& args);
 
         virtual
         std::string

@@ -36,7 +36,7 @@ public:
     typedef api::isolate_t category_type;
 
 public:
-    docker_t(context_t& context, const std::string& name, const Json::Value& args);
+    docker_t(context_t& context, const std::string& name, const dynamic_t& args);
 
     virtual
    ~docker_t();

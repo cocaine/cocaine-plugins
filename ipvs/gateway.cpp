@@ -61,12 +61,12 @@ ipvs_category() {
 
 }
 
-ipvs_t::ipvs_t(context_t& context, const std::string& name, const Json::Value& args):
+ipvs_t::ipvs_t(context_t& context, const std::string& name, const dynamic_t& args):
     category_type(context, name, args),
     m_context(context),
     m_log(new logging::log_t(context, name)),
-    m_default_scheduler(args.get("scheduler", "wlc").asString()),
-    m_default_weight(args.get("weight", 1).asUInt())
+    m_default_scheduler(args.as_object().at("scheduler", "wlc").to<std::string>()),
+    m_default_weight(args.as_object().at("weight", 1).to<unsigned int>())
 {
     if(::ipvs_init() != 0) {
         throw std::system_error(errno, ipvs_category(), "unable to initialize IPVS");
@@ -74,12 +74,13 @@ ipvs_t::ipvs_t(context_t& context, const std::string& name, const Json::Value& a
 
     COCAINE_LOG_INFO(m_log, "using IPVS version %d", ::ipvs_version());
 
-    if(args["port-range"].empty()) {
+    uint16_t min, max;
+
+    try {
+        std::tie(min, max) = args.as_object()["port-range"].to<std::tuple<uint16_t, uint16_t>>();
+    } catch(...) {
         throw cocaine::error_t("no port ranges have been specified");
     }
-
-    uint16_t min = args["port-range"][0].asUInt(),
-             max = args["port-range"][1].asUInt();
 
     COCAINE_LOG_INFO(m_log, "%u gateway ports available, %u through %u", max - min, min, max);
 

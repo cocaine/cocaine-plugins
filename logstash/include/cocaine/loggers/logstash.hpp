@@ -31,7 +31,7 @@ class logstash_t:
     public api::logger_t
 {
     public:
-        logstash_t(const config_t& config, const Json::Value& args);
+        logstash_t(const config_t& config, const dynamic_t& args);
 
         virtual
         void

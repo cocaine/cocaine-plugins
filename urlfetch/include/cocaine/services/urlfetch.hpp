@@ -97,7 +97,7 @@ class urlfetch_t:
         urlfetch_t(context_t& context,
                    io::reactor_t& reactor,
                    const std::string& name,
-                   const Json::Value& args);
+                   const dynamic_t& args);
 
         virtual
         dispatch_t&
@@ -115,6 +115,7 @@ class urlfetch_t:
             const std::map<std::string, std::string>& cookies,
             const std::map<std::string, std::string>& headers,
             bool follow_location);
+
         deferred<get_tuple>
         post(const std::string& url,
              const std::string& body,

@@ -63,14 +63,14 @@ private:
 urlfetch_t::urlfetch_t(context_t& context,
                        reactor_t& reactor,
                        const std::string& name,
-                       const Json::Value& args):
+                       const dynamic_t& args):
     service_t(context, reactor, name, args),
     implements<io::urlfetch_tag>(context, name),
     log_(new logging::log_t(context, name)),
     m_logger(new urlfetch_logger_interface(log_), swarm::LOG_DEBUG),
     m_manager(reactor.native(), m_logger)
 {
-    int connections_limits = args.get("connections-limit", 10).asInt();
+    int connections_limits = args.as_object().at("connections-limit", 10).to<unsigned int>();
     m_manager.set_limit(connections_limits);
 
     on<io::urlfetch::get>(std::bind(&urlfetch_t::get, this, _1, _2, _3, _4, _5));

@@ -26,11 +26,11 @@ using namespace std::placeholders;
 cache_t::cache_t(context_t& context,
                        reactor_t& reactor,
                        const std::string& name,
-                       const Json::Value& args):
+                       const dynamic_t& args):
     service_t(context, reactor, name, args),
     implements<io::cache_tag>(context, name),
     log_(new logging::log_t(context, name)),
-	cache_(args.get("max-size", 1000000).asInt())
+	cache_(args.as_object().at("max-size", 1000000).to<size_t>())
 {
     on<io::cache::get>(std::bind(&cache_t::get, this, _1));
     on<io::cache::put>(std::bind(&cache_t::put, this, _1, _2));

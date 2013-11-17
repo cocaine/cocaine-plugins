@@ -104,29 +104,30 @@ private:
 
 } // namespace
 
-docker_t::docker_t(context_t& context, const std::string& name, const Json::Value& args):
+docker_t::docker_t(context_t& context, const std::string& name, const dynamic_t& args):
     category_type(context, name, args),
     m_log(new logging::log_t(context, name)),
     m_do_pool(false),
     m_docker_client(
-        docker::endpoint_t::from_string(args.get("endpoint", "unix:///var/run/docker.sock").asString()),
+        docker::endpoint_t::from_string(args.as_object().at("endpoint", "unix:///var/run/docker.sock").as_string()),
         m_log
     )
 {
-    m_runtime_path = args.get("runtime-path", "/run/cocaine").asString();
+    const auto& config = args.as_object();
+    m_runtime_path = config.at("runtime-path", "/run/cocaine").as_string();
 
-    if(args.isMember("registry")) {
+    if(config.count("registry") > 0) {
         m_do_pool = true;
 
         // <default> means default docker's registry (the one owned by dotCloud). User must specify it explicitly.
         // I think that if there is no registry in the config then the plugin must not pull images from foreign registry by default.
-        if(args["registry"].asString() != "<default>") {
-            m_image += args["registry"].asString() + "/";
+        if(config["registry"].as_string() != "<default>") {
+            m_image += config["registry"].as_string() + "/";
         }
     }
 
-    if(args.isMember("repository")) {
-        m_image += args["repository"].asString() + "/";
+    if(config.count("repository") > 0) {
+        m_image += config["repository"].as_string() + "/";
     }
     m_image += name;
     m_tag = ""; // empty for now
@@ -135,9 +136,9 @@ docker_t::docker_t(context_t& context, const std::string& name, const Json::Valu
 
     m_run_config.AddMember("Hostname", "", m_json_allocator);
     m_run_config.AddMember("User", "", m_json_allocator);
-    m_run_config.AddMember("Memory", unsigned(args.get("memory_limit", 0).asUInt64()), m_json_allocator);
-    m_run_config.AddMember("MemorySwap", unsigned(args.get("memory_swap", 0).asUInt64()), m_json_allocator);
-    m_run_config.AddMember("CpuShares", unsigned(args.get("cpu_shares", 0).asUInt64()), m_json_allocator);
+    m_run_config.AddMember("Memory", config.at("memory_limit", 0).to<unsigned>(), m_json_allocator);
+    m_run_config.AddMember("MemorySwap", config.at("memory_swap", 0).to<unsigned>(), m_json_allocator);
+    m_run_config.AddMember("CpuShares", config.at("cpu_shares", 0).to<unsigned>(), m_json_allocator);
     m_run_config.AddMember("AttachStdin", false, m_json_allocator);
     m_run_config.AddMember("AttachStdout", false, m_json_allocator);
     m_run_config.AddMember("AttachStderr", false, m_json_allocator);

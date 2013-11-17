@@ -24,6 +24,11 @@
 #include "cocaine/asio/resolver.hpp"
 #include "cocaine/context.hpp"
 
+#include <rapidjson/rapidjson.h>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
 #include <ctime>
 #include <system_error>
 
@@ -31,16 +36,16 @@
 
 using namespace cocaine::logging;
 
-logstash_t::logstash_t(const config_t& config, const Json::Value& args):
+logstash_t::logstash_t(const config_t& config, const dynamic_t& args):
     category_type(config, args),
     m_config(config)
 {
-    if(args["port"].empty()) {
+    if(args.as_object().count("port") == 0) {
         throw cocaine::error_t("no logstash port has been specified");
     }
 
-    const auto host = args.get("host", "127.0.0.1").asString();
-    const auto port = args["port"].asUInt();
+    const auto host = args.as_object().at("host", "127.0.0.1").to<std::string>();
+    const auto port = args.as_object()["port"].to<uint16_t>();
 
     std::vector<io::udp::endpoint> endpoints;
 
@@ -98,22 +103,30 @@ logstash_t::prepare_output(logging::priorities level, const std::string& source,
         // TODO: Do something.
     }
 
-    Json::Value root, fields;
+    rapidjson::Value::AllocatorType json_allocator;
+    rapidjson::Value root, fields;
 
-    fields["level"]      = describe[level];
-    fields["uuid"]       = m_config.network.uuid;
+    root.SetObject();
+    fields.SetObject();
 
-    root["@fields"]      = fields;
-    root["@message"]     = message;
-    root["@source"]      = cocaine::format("udp://%s", m_socket->local_endpoint());
-    root["@source_host"] = m_config.network.hostname;
-    root["@source_path"] = source;
-    root["@tags"]        = Json::Value(Json::objectValue);
-    root["@timestamp"]   = cocaine::format("%s.%06ldZ", timestamp, time.tv_usec);
+    fields.AddMember("level", describe[level], json_allocator);
+    fields.AddMember("uuid", m_config.network.uuid.c_str(), json_allocator);
 
-    Json::FastWriter writer;
+    root.AddMember("@fields", fields, json_allocator);
+    root.AddMember("@message", message.c_str(), json_allocator);
+    root.AddMember("@source", cocaine::format("udp://%s", m_socket->local_endpoint()).c_str(), json_allocator);
+    root.AddMember("@source_host", m_config.network.hostname.c_str(), json_allocator);
+    root.AddMember("@source_path", source.c_str(), json_allocator);
+    rapidjson::Value empty(rapidjson::kObjectType);
+    root.AddMember("@tags", empty, json_allocator);
+    root.AddMember("@timestamp", cocaine::format("%s.%06ldZ", timestamp, time.tv_usec).c_str(), json_allocator);
 
-    return writer.write(root);
+    rapidjson::GenericStringBuffer<rapidjson::UTF8<>> buffer;
+    rapidjson::Writer<rapidjson::GenericStringBuffer<rapidjson::UTF8<>>> writer(buffer);
+
+    root.Accept(writer);
+
+    return std::string(buffer.GetString(), buffer.Size());
 }
 
 void
