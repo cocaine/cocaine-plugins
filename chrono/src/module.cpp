@@ -13,7 +13,7 @@
 * GNU General Public License for more details.
 */
 
-#include "cocaine/services/chrono.hpp"
+#include "cocaine/chrono.hpp"
 
 using namespace cocaine;
 using namespace cocaine::service;

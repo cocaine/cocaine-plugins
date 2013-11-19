@@ -13,19 +13,16 @@
 * GNU General Public License for more details.
 */
 
-#ifndef COCAINE_CACHE_SERVICE_HPP
-#define COCAINE_CACHE_SERVICE_HPP
+#ifndef COCAINE_CACHE_SERVICE_INTERFACE_HPP
+#define COCAINE_CACHE_SERVICE_INTERFACE_HPP
 
-#include "lru_cache.hpp"
-#include <cocaine/api/service.hpp>
-#include <cocaine/asio/reactor.hpp>
-#include <cocaine/dispatch.hpp>
+#include <cocaine/rpc/protocol.hpp>
 
 namespace cocaine { namespace io {
 
 struct cache_tag;
 
-namespace cache {
+struct cache {
     struct put {
         typedef cache_tag tag;
 
@@ -37,8 +34,6 @@ namespace cache {
             /* key */ std::string,
             /* value */ std::string
         > tuple_type;
-
-        typedef void result_type;
     };
 
     struct get {
@@ -52,60 +47,27 @@ namespace cache {
             /* key */ std::string
         > tuple_type;
 
-        typedef boost::mpl::list<
+        typedef stream_of<
             /* exists */ bool,
             /* value */ std::string
-        > result_type;
+        >::tag drain_type;
     };
-}
+};
 
 template<>
 struct protocol<cache_tag> {
-    typedef mpl::list<
-        cache::get,
-        cache::put
-    > type;
-
     typedef boost::mpl::int_<
         1
     >::type version;
+
+    typedef mpl::list<
+        cache::get,
+        cache::put
+    > messages;
+
+    typedef cache type;
 };
 
-} // namespace io
-
-namespace service {
-
-class cache_t:
-    public api::service_t,
-    public implements<io::cache_tag>
-{
-    public:
-        typedef tuple::fold<io::cache::get::result_type>::type get_tuple;
-
-        cache_t(context_t& context,
-                io::reactor_t& reactor,
-                const std::string& name,
-                const dynamic_t& args);
-
-        virtual
-        dispatch_t&
-        prototype() {
-            return *this;
-        }
-
-    private:
-        void
-        put(const std::string& key,
-            const std::string& value);
-
-        get_tuple
-        get(const std::string& key);
-
-    private:
-        std::shared_ptr<logging::log_t> log_;
-        cache::lru_cache<std::string, std::string> cache_;
-};
-
-}} // namespace cocaine::service
+}} // namespace cocaine::io
 
 #endif

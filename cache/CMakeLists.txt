@@ -2,9 +2,6 @@ IF(CACHE)
     INCLUDE_DIRECTORIES(
         ${PROJECT_SOURCE_DIR}/cache/include)
 
-    LINK_DIRECTORIES(
-        )
-
     ADD_LIBRARY(cache MODULE
         src/cache
         src/module)
@@ -23,7 +20,7 @@ IF(CACHE)
 
     INSTALL(
         DIRECTORY
-            include/
-        DESTINATION include
+            include/cocaine/idl
+        DESTINATION include/cocaine
         COMPONENT development)
 ENDIF(CACHE)

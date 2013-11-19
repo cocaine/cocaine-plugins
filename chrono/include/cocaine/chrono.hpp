@@ -1,0 +1,77 @@
+/*
+* 2013+ Copyright (c) Alexander Ponomarev <noname@yandex-team.ru>
+* All rights reserved.
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+* GNU General Public License for more details.
+*/
+
+#ifndef COCAINE_CHRONO_SERVICE_HPP
+#define COCAINE_CHRONO_SERVICE_HPP
+
+#include <cocaine/api/service.hpp>
+#include <cocaine/dispatch.hpp>
+#include <cocaine/rpc/result_of.hpp>
+
+#include "cocaine/idl/chrono.hpp"
+
+namespace cocaine { namespace service {
+
+class chrono_t:
+    public api::service_t,
+    public implements<io::chrono_tag>
+{
+    public:
+        chrono_t(context_t& context, io::reactor_t& reactor, const std::string& name, const dynamic_t& args);
+
+        virtual
+        auto
+        prototype() -> dispatch_t& {
+            return *this;
+        }
+
+    private:
+        struct timer_desc_t {
+            std::shared_ptr<ev::timer> timer_;
+            std::shared_ptr<streamed<io::timer_id_t>> promise_;
+        };
+
+        streamed<io::timer_id_t>
+        notify_after(double time, bool send_id);
+
+        streamed<io::timer_id_t>
+        notify_every(double time, bool send_id);
+
+        void
+        cancel(io::timer_id_t timer_id);
+
+        void
+        restart(io::timer_id_t timer_id);
+
+        void 
+        on_timer(ev::timer &w, int revents);
+
+        void
+        remove_timer(io::timer_id_t timer_id);
+        
+    private:
+        streamed<io::timer_id_t>
+        set_timer_impl(double first, double repeat, bool send_id);
+
+        std::shared_ptr<logging::log_t> log_;
+        std::map<io::timer_id_t, timer_desc_t > timers_;
+        std::map<ev::timer*, io::timer_id_t> timer_to_id_;
+        ev::timer update_timer_;
+        cocaine::io::reactor_t& reactor_;
+};
+
+}} // namespace cocaine::service
+
+#endif

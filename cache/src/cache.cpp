@@ -13,23 +13,18 @@
 * GNU General Public License for more details.
 */
 
-#include <cocaine/services/cache.hpp>
-#include <cocaine/logging.hpp>
+#include "cocaine/cache.hpp"
+
 #include <cocaine/traits/tuple.hpp>
 
 using namespace cocaine;
-using namespace cocaine::io;
 using namespace cocaine::service;
 
 using namespace std::placeholders;
 
-cache_t::cache_t(context_t& context,
-                       reactor_t& reactor,
-                       const std::string& name,
-                       const dynamic_t& args):
+cache_t::cache_t(context_t& context, io::reactor_t& reactor, const std::string& name, const dynamic_t& args):
     service_t(context, reactor, name, args),
     implements<io::cache_tag>(context, name),
-    log_(new logging::log_t(context, name)),
 	cache_(args.as_object().at("max-size", 1000000).to<size_t>())
 {
     on<io::cache::get>(std::bind(&cache_t::get, this, _1));
@@ -37,14 +32,13 @@ cache_t::cache_t(context_t& context,
 }
 
 void
-cache_t::put(const std::string& key,
-	const std::string& value) {
+cache_t::put(const std::string& key, const std::string& value) {
 	cache_.put(key, value);
 }
 
-cache_t::get_tuple
-cache_t::get(const std::string& key) {
-    if (cache_.exists(key)) {
+auto
+cache_t::get(const std::string& key) -> get_result_type {
+    if(cache_.exists(key)) {
 		return std::make_tuple(true, cache_.get(key));
 	} else {
 		return std::make_tuple(false, std::string(""));

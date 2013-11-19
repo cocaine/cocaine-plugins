@@ -17,7 +17,7 @@
 #define _URLFETCHER_HPP_INCLUDED_
 
 #include <cocaine/framework/service.hpp>
-#include <cocaine/services/urlfetch.hpp>
+#include <cocaine/idl/urlfetch.hpp>
 
 namespace cocaine { namespace framework {
 

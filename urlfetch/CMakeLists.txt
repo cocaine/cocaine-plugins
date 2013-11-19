@@ -27,7 +27,7 @@ IF(URLFETCH)
 
     INSTALL(
         DIRECTORY
-            include/
-        DESTINATION include
+            include/cocaine/idl
+        DESTINATION include/cocaine
         COMPONENT development)
 ENDIF(URLFETCH)

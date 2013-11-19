@@ -17,7 +17,7 @@
 #define _CACHE_HPP_INCLUDED_
 
 #include <cocaine/framework/service.hpp>
-#include <cocaine/services/cache.hpp>
+#include <cocaine/idl/cache.hpp>
 
 namespace cocaine { namespace framework {
 

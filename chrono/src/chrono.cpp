@@ -13,21 +13,22 @@
 * GNU General Public License for more details.
 */
 
-#include <cocaine/services/chrono.hpp>
+#include "cocaine/chrono.hpp"
+
+#include <memory>
+
 #include <cocaine/logging.hpp>
 #include <cocaine/traits/tuple.hpp>
-#include <memory>
 
 using namespace cocaine;
 using namespace cocaine::io;
-using namespace cocaine::io::chrono;
 using namespace cocaine::service;
 
 using namespace std::placeholders;
 
 chrono_t::chrono_t(context_t& context, reactor_t& reactor, const std::string& name, const dynamic_t& args):
     service_t(context, reactor, name, args),
-    implementation<io::chrono_tag>(context, name),
+    implements<io::chrono_tag>(context, name),
     log_(new logging::log_t(context, name)),
     reactor_(reactor)
 {

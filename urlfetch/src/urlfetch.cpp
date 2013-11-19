@@ -13,11 +13,14 @@
 * GNU General Public License for more details.
 */
 
-#include "cocaine/services/urlfetch.hpp"
-#include <cocaine/logging.hpp>
-#include <cocaine/traits/tuple.hpp>
+#include "cocaine/urlfetch.hpp"
+
 #include <boost/foreach.hpp>
 #include <boost/format.hpp>
+
+#include <cocaine/logging.hpp>
+#include <cocaine/traits/tuple.hpp>
+
 #include <swarm/logger.h>
 
 using namespace cocaine;
@@ -80,7 +83,7 @@ urlfetch_t::urlfetch_t(context_t& context,
 namespace {
 
 struct urlfetch_get_handler {
-    deferred<urlfetch_t::get_tuple> promise;
+    deferred<urlfetch_t::get_result_type> promise;
     std::shared_ptr<logging::log_t> log_;
 
     void
@@ -112,14 +115,14 @@ struct urlfetch_get_handler {
             headers[header_name] = header_value;
         }
 
-        urlfetch_t::get_tuple tuple = std::make_tuple(success, data, code, headers);
+        urlfetch_t::get_result_type tuple = std::make_tuple(success, data, code, headers);
         promise.write(tuple);
     }
 };
 
 }
 
-deferred<urlfetch_t::get_tuple>
+deferred<urlfetch_t::get_result_type>
 urlfetch_t::get(const std::string& url,
                 int timeout,
                 const std::map<std::string, std::string>& cookies,
@@ -139,7 +142,7 @@ urlfetch_t::get(const std::string& url,
     return handler.promise;
 }
 
-deferred<urlfetch_t::get_tuple>
+deferred<urlfetch_t::get_result_type>
 urlfetch_t::post(const std::string& url,
                  const std::string& body,
                  int timeout,
