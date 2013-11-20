@@ -20,93 +20,107 @@
 
 #pragma once
 
-#include <string>
-
-#include <boost/mpl/list.hpp>
-#include <boost/optional.hpp>
-
-#include <cocaine/rpc/tags.hpp>
+#include <cocaine/rpc/protocol.hpp>
 
 namespace cocaine { namespace io {
 
 struct elasticsearch_tag;
 
-namespace elasticsearch {
+struct elasticsearch {
+    struct get {
+        typedef elasticsearch_tag tag;
 
-struct get {
-    typedef elasticsearch_tag tag;
+        static const char* alias() {
+            return "get";
+        }
 
-    typedef boost::mpl::list<
-        /* index */ std::string,
-        /* type */ std::string,
-        /* id */ std::string
-    > tuple_type;
+        typedef boost::mpl::list<
+            /* index */ std::string,
+            /* type */ std::string,
+            /* id */ std::string
+        > tuple_type;
 
-    typedef boost::mpl::list<
-        /* status */ bool,
-        /* response */ std::string
-    >result_type;
+        typedef stream_of<
+            /* status */ bool,
+            /* response */ std::string
+        >::tag drain_type;
+    };
+
+    struct index {
+        typedef elasticsearch_tag tag;
+
+        static const char* alias() {
+            return "index";
+        }
+
+        typedef boost::mpl::list<
+            /* data */ std::string,
+            /* index */ std::string,
+            /* type */ std::string,
+            /* id */ optional<std::string>
+        > tuple_type;
+
+        typedef stream_of<
+            /* status */ bool,
+            /* id */ std::string
+        >::tag drain_type;
+    };
+
+    struct search {
+        typedef elasticsearch_tag tag;
+
+        static const char* alias() {
+            return "search";
+        }
+
+        typedef boost::mpl::list<
+            /* index */ std::string,
+            /* type */ std::string,
+            /* query */ std::string,
+            /* size */ optional_with_default<int, 10>
+        > tuple_type;
+
+        typedef stream_of<
+            /* status */ bool,
+            /* count */ int,
+            /* id */ std::string
+        >::tag drain_type;
+    };
+
+    struct delete_index {
+        typedef elasticsearch_tag tag;
+
+        static const char* alias() {
+            return "delete";
+        }
+
+        typedef boost::mpl::list<
+            /* index */ std::string,
+            /* type */ std::string,
+            /* id */ std::string
+        > tuple_type;
+
+        typedef stream_of<
+            bool
+        >::tag drain_type;
+    };
+
 };
-
-struct index {
-    typedef elasticsearch_tag tag;
-
-    typedef boost::mpl::list<
-        /* data */ std::string,
-        /* index */ std::string,
-        /* type */ std::string,
-        /* id */ optional<std::string>
-    > tuple_type;
-
-    typedef boost::mpl::list<
-        /* status */ bool,
-        /* id */ std::string
-    >result_type;
-};
-
-struct search {
-    typedef elasticsearch_tag tag;
-
-    typedef boost::mpl::list<
-        /* index */ std::string,
-        /* type */ std::string,
-        /* query */ std::string,
-        /* size */ optional_with_default<int, 10>
-    > tuple_type;
-
-    typedef boost::mpl::list<
-        /* status */ bool,
-        /* count */ int,
-        /* id */ std::string
-    > result_type;
-};
-
-struct delete_index {
-    typedef elasticsearch_tag tag;
-
-    typedef boost::mpl::list<
-        /* index */ std::string,
-        /* type */ std::string,
-        /* id */ std::string
-    > tuple_type;
-
-    typedef bool result_type;
-};
-
-}
 
 template<>
 struct protocol<elasticsearch_tag> {
+    typedef boost::mpl::int_<
+        1
+    >::type version;
+
     typedef mpl::list<
         elasticsearch::get,
         elasticsearch::index,
         elasticsearch::search,
         elasticsearch::delete_index
-    > type;
+    > messages;
 
-    typedef boost::mpl::int_<
-        1
-    >::type version;
+    typedef elasticsearch type;
 };
 
 } }

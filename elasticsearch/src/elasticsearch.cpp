@@ -96,6 +96,7 @@ public:
 
 elasticsearch_t::elasticsearch_t(cocaine::context_t &context, cocaine::io::reactor_t &reactor, const std::string &name, const dynamic_t &args) :
     service_t(context, reactor, name, args),
+    implements<io::elasticsearch_tag>(context, name),
     d(new impl_t(context, reactor, name))
 {
     const std::string &host = args.as_object().at("host", "127.0.0.1").as_string();
@@ -104,10 +105,10 @@ elasticsearch_t::elasticsearch_t(cocaine::context_t &context, cocaine::io::react
 
     COCAINE_LOG_INFO(d->m_log, "Elasticsearch endpoint: %s", d->m_url_prefix);
 
-    on<io::elasticsearch::get>("get", std::bind(&elasticsearch_t::get, this, _1, _2, _3));
-    on<io::elasticsearch::index>("index", std::bind(&elasticsearch_t::index, this, _1, _2, _3, _4));
-    on<io::elasticsearch::search>("search", std::bind(&elasticsearch_t::search, this, _1, _2, _3, _4));
-    on<io::elasticsearch::delete_index>("delete", std::bind(&elasticsearch_t::delete_index, this, _1, _2, _3));
+    on<io::elasticsearch::get>(std::bind(&elasticsearch_t::get, this, _1, _2, _3));
+    on<io::elasticsearch::index>(std::bind(&elasticsearch_t::index, this, _1, _2, _3, _4));
+    on<io::elasticsearch::search>(std::bind(&elasticsearch_t::search, this, _1, _2, _3, _4));
+    on<io::elasticsearch::delete_index>(std::bind(&elasticsearch_t::delete_index, this, _1, _2, _3));
 }
 
 elasticsearch_t::~elasticsearch_t() {
