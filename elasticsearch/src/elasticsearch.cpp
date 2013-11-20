@@ -47,36 +47,38 @@ using namespace cocaine::service::rest;
 
 class elasticsearch_t::impl_t {
 public:
-    std::string m_url_prefix;
-    mutable swarm::network_manager m_manager; //@note: Why should I make this mutable to perform const operations?
+    mutable swarm::network_manager m_manager; //!@note: Why should I make this mutable to perform const operations?
+    const std::string m_endpoint;
     std::shared_ptr<logging::log_t> m_log;
 
-    impl_t(cocaine::context_t& context, cocaine::io::reactor_t& reactor, const std::string& name) :
+    impl_t(cocaine::context_t& context, cocaine::io::reactor_t& reactor, const std::string& name, const cocaine::dynamic_t& args) :
         m_manager(reactor.native()),
+        m_endpoint(extract_endpoint(args)),
         m_log(new logging::log_t(context, name))
     {
+        COCAINE_LOG_INFO(m_log, "Elasticsearch endpoint: %s", m_endpoint);
     }
 
-    template<typename T, typename H>
+    template<typename T, typename Handler>
     cocaine::deferred<T>
-    do_rest_get(const std::string& url, H handler) const {
+    do_get(const std::string& url, Handler handler) const {
         Get<T> action(m_manager);
-        return do_rest<T, H, Get<T>>(url, handler, action);
+        return do_rest<T, Handler, Get<T>>(url, handler, action);
     }
 
-    template<typename T, typename H>
+    template<typename T, typename Handler>
     cocaine::deferred<T>
-    do_rest_post(const std::string& url, const std::string& body, H handler) const {
+    do_post(const std::string& url, const std::string& body, Handler handler) const {
         Post<T> action { m_manager, body };
-        return do_rest<T, H, Post<T>>(url, handler, action);
+        return do_rest<T, Handler, Post<T>>(url, handler, action);
     }
 
-    template<typename T, typename H>
+    template<typename T, typename Handler>
     cocaine::deferred<T>
-    do_rest_delete(const std::string& url, H handler) const {
+    do_delete(const std::string& url, Handler handler) const {
 #ifdef ELASTICSEARCH_DELETE_SUPPORT
         Delete<T> action { m_manager };
-        return do_rest<T, H, Delete<T>>(url, handler, action);
+        return do_rest<T, Handler, Delete<T>>(url, handler, action);
 #else
         cocaine::deferred<response::delete_index> deferred;
         deferred.abort(-1, "Delete operation is not supported");
@@ -84,9 +86,9 @@ public:
 #endif
     }
 
-    template<typename T, typename H, typename Action>
+    template<typename T, typename Handler, typename Action>
     cocaine::deferred<T>
-    do_rest(const std::string& url, H handler, Action action) const {
+    do_rest(const std::string& url, Handler handler, Action action) const {
         cocaine::deferred<T> deferred;
         request_handler_t<T> request_handler(deferred, handler);
 
@@ -94,6 +96,15 @@ public:
         request.set_url(url);
         action(request, request_handler);
         return deferred;
+    }
+
+private:
+    static
+    std::string
+    extract_endpoint(const cocaine::dynamic_t& args) {
+        const std::string& host = args.as_object().at("host", "127.0.0.1").as_string();
+        const uint16_t port = args.as_object().at("port", 9200).to<uint16_t>();
+        return cocaine::format("http://%s:%d", host, port);
     }
 };
 
@@ -103,14 +114,8 @@ elasticsearch_t::elasticsearch_t(cocaine::context_t& context,
                                  const dynamic_t& args) :
     service_t(context, reactor, name, args),
     implements<io::elasticsearch_tag>(context, name),
-    d(new impl_t(context, reactor, name))
+    d(new impl_t(context, reactor, name, args))
 {
-    const std::string& host = args.as_object().at("host", "127.0.0.1").as_string();
-    const uint16_t port = args.as_object().at("port", 9200).to<uint16_t>();
-    d->m_url_prefix = cocaine::format("http://%s:%d", host, port);
-
-    COCAINE_LOG_INFO(d->m_log, "Elasticsearch endpoint: %s", d->m_url_prefix);
-
     on<io::elasticsearch::get>(std::bind(&elasticsearch_t::get, this, _1, _2, _3));
     on<io::elasticsearch::index>(std::bind(&elasticsearch_t::index, this, _1, _2, _3, _4));
     on<io::elasticsearch::search>(std::bind(&elasticsearch_t::search, this, _1, _2, _3, _4));
@@ -124,9 +129,9 @@ cocaine::deferred<response::get>
 elasticsearch_t::get(const std::string& index,
                      const std::string& type,
                      const std::string& id) const {
-    const std::string& url = cocaine::format("%s/%s/%s/%s/", d->m_url_prefix, index, type, id);
+    const std::string& url = cocaine::format("%s/%s/%s/%s/", d->m_endpoint, index, type, id);
     get_handler_t handler { d->m_log };
-    return d->do_rest_get<response::get>(url, handler);
+    return d->do_get<response::get>(url, handler);
 }
 
 cocaine::deferred<response::index>
@@ -134,9 +139,9 @@ elasticsearch_t::index(const std::string& data,
                        const std::string& index,
                        const std::string& type,
                        const std::string& id) const {
-    const std::string& url = cocaine::format("%s/%s/%s/%s", d->m_url_prefix, index, type, id);
+    const std::string& url = cocaine::format("%s/%s/%s/%s", d->m_endpoint, index, type, id);
     index_handler_t handler { d->m_log };
-    return d->do_rest_post<response::index>(url, data, handler);
+    return d->do_post<response::index>(url, data, handler);
 }
 
 cocaine::deferred<response::search>
@@ -148,16 +153,16 @@ elasticsearch_t::search(const std::string& index,
         throw cocaine::error_t("desired search size (%d) must be positive number", size);
     }
 
-    const std::string& url = cocaine::format("%s/%s/%s/_search?q=%s&size=%d", d->m_url_prefix, index, type, query, size);
+    const std::string& url = cocaine::format("%s/%s/%s/_search?q=%s&size=%d", d->m_endpoint, index, type, query, size);
     search_handler_t handler { d->m_log };
-    return d->do_rest_get<response::search>(url, handler);
+    return d->do_get<response::search>(url, handler);
 }
 
 cocaine::deferred<response::delete_index>
 elasticsearch_t::delete_index(const std::string& index,
                               const std::string& type,
                               const std::string& id) const {
-    const std::string& url = cocaine::format("%s/%s/%s/%s", d->m_url_prefix, index, type, id);
+    const std::string& url = cocaine::format("%s/%s/%s/%s", d->m_endpoint, index, type, id);
     delete_handler_t handler { d->m_log };
-    return d->do_rest_delete<response::delete_index>(url, handler);
+    return d->do_delete<response::delete_index>(url, handler);
 }
