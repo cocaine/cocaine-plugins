@@ -27,7 +27,7 @@
 #include <swarm/networkrequest.h>
 #include <swarm/networkmanager.h>
 
-#include "cocaine/io/protocol.hpp"
+#include "cocaine/idl/elasticsearch.hpp"
 
 namespace cocaine { namespace service {
 
