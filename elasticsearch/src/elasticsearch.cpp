@@ -63,14 +63,14 @@ public:
     cocaine::deferred<T>
     do_get(const std::string& url, Handler handler) const {
         Get<T> action(m_manager);
-        return do_rest<T, Handler, Get<T>>(url, handler, action);
+        return do_rest<T>(url, handler, action);
     }
 
     template<typename T, typename Handler>
     cocaine::deferred<T>
     do_post(const std::string& url, const std::string& body, Handler handler) const {
         Post<T> action { m_manager, body };
-        return do_rest<T, Handler, Post<T>>(url, handler, action);
+        return do_rest<T>(url, handler, action);
     }
 
     template<typename T, typename Handler>
@@ -78,7 +78,7 @@ public:
     do_delete(const std::string& url, Handler handler) const {
 #ifdef ELASTICSEARCH_DELETE_SUPPORT
         Delete<T> action { m_manager };
-        return do_rest<T, Handler, Delete<T>>(url, handler, action);
+        return do_rest<T>(url, handler, action);
 #else
         cocaine::deferred<response::delete_index> deferred;
         deferred.abort(-1, "Delete operation is not supported");
