@@ -12,15 +12,7 @@ IF(ELASTICSEARCH)
     LINK_DIRECTORIES()
 
     ADD_LIBRARY(elasticsearch MODULE
-        include/cocaine/service/elasticsearch.hpp
-        include/cocaine/service/elasticsearch/global.hpp
-        include/cocaine/io/protocol.hpp
         src/elasticsearch
-        src/rest/handlers.hpp
-        src/rest/get.hpp
-        src/rest/index.hpp
-        src/rest/search.hpp
-        src/rest/delete.hpp
         src/module)
 
     TARGET_LINK_LIBRARIES(elasticsearch
