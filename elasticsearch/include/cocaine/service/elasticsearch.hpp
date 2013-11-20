@@ -24,9 +24,6 @@
 #include <cocaine/dispatch.hpp>
 #include <cocaine/rpc/result_of.hpp>
 
-#include <swarm/networkrequest.h>
-#include <swarm/networkmanager.h>
-
 #include "cocaine/idl/elasticsearch.hpp"
 
 namespace cocaine { namespace service {
@@ -46,7 +43,7 @@ class elasticsearch_t :
     std::unique_ptr<impl_t> d;
 
 public:
-    elasticsearch_t(context_t &context, io::reactor_t &reactor, const std::string& name, const dynamic_t& args);
+    elasticsearch_t(context_t& context, io::reactor_t& reactor, const std::string& name, const dynamic_t& args);
     ~elasticsearch_t();
 
     auto
@@ -55,16 +52,26 @@ public:
     }
 
     deferred<response::get>
-    get(const std::string &index, const std::string &type, const std::string &id) const;
+    get(const std::string& index,
+        const std::string& type,
+        const std::string& id) const;
 
     deferred<response::index>
-    index(const std::string &data, const std::string &index, const std::string &type, const std::string &id) const;
+    index(const std::string& data,
+          const std::string& index,
+          const std::string& type,
+          const std::string& id) const;
 
     deferred<response::search>
-    search(const std::string &index, const std::string &type, const std::string &query, int size = 10) const;
+    search(const std::string& index,
+           const std::string& type,
+           const std::string& query,
+           int size = io::elasticsearch::search::DEFAULT_SIZE) const;
 
     deferred<response::delete_index>
-    delete_index(const std::string &index, const std::string &type, const std::string &id) const;
+    delete_index(const std::string& index,
+                 const std::string& type,
+                 const std::string& id) const;
 };
 
 } }

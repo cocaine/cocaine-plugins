@@ -73,11 +73,13 @@ struct elasticsearch {
             return "search";
         }
 
+        static const int DEFAULT_SIZE = 10;
+
         typedef boost::mpl::list<
             /* index */ std::string,
             /* type */ std::string,
             /* query */ std::string,
-            /* size */ optional_with_default<int, 10>
+            /* size */ optional_with_default<int, DEFAULT_SIZE>
         > tuple_type;
 
         typedef stream_of<

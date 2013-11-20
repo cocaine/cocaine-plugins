@@ -33,9 +33,10 @@ struct index_handler_t {
 
     template<typename Deferred = cocaine::deferred<response::index>>
     void
-    operator()(Deferred &deferred, int code, const std::string &data) const {
-        if (log)
+    operator()(Deferred& deferred, int code, const std::string& data) const {
+        if (log) {
             COCAINE_LOG_DEBUG(log, "Index request completed [%d]", code);
+        }
 
         rapidjson::Document root;
         root.Parse<0>(data.c_str());

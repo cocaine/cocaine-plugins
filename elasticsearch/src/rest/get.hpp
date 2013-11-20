@@ -33,7 +33,7 @@ struct get_handler_t {
 
     template<typename Deferred = cocaine::deferred<response::get>>
     void
-    operator()(Deferred &deferred, int code, const std::string& data) const {
+    operator()(Deferred& deferred, int code, const std::string& data) const {
         if (code == HTTP_OK) {
             deferred.write(std::make_tuple(true, data));
         } else {
@@ -43,8 +43,8 @@ struct get_handler_t {
                 return deferred.abort(-1, cocaine::format("parsing failed - %s", root.GetParseError()));
             }
 
-            const std::string &error = root.HasMember("error") ? root["error"].GetString() : "";
-            const std::string &reason = cocaine::format("%s[%d]", error, code);
+            const std::string& error = root.HasMember("error") ? root["error"].GetString() : "";
+            const std::string& reason = cocaine::format("%s[%d]", error, code);
             deferred.write(std::make_tuple(false, reason));
         }
     }
