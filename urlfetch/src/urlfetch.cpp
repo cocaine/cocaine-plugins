@@ -116,7 +116,7 @@ struct urlfetch_get_handler {
         }
 
         urlfetch_t::get_result_type tuple = std::make_tuple(success, data, code, headers);
-        promise.write(tuple);
+        promise.write(std::move(tuple));
     }
 };
 
