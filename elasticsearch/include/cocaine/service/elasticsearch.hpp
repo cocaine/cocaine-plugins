@@ -22,7 +22,6 @@
 
 #include <cocaine/api/service.hpp>
 #include <cocaine/dispatch.hpp>
-#include <cocaine/rpc/result_of.hpp>
 
 #include "cocaine/idl/elasticsearch.hpp"
 

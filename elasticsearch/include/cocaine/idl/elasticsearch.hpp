@@ -106,7 +106,6 @@ struct elasticsearch {
             bool
         >::tag drain_type;
     };
-
 };
 
 template<>
