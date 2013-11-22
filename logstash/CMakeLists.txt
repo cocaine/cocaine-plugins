@@ -2,9 +2,6 @@ IF(LOGSTASH)
     INCLUDE_DIRECTORIES(
         ${PROJECT_SOURCE_DIR}/logstash/include)
 
-    LINK_DIRECTORIES(
-        )
-
     ADD_LIBRARY(logstash MODULE
         src/logstash
         src/module)
@@ -21,10 +18,4 @@ IF(LOGSTASH)
     INSTALL(TARGETS logstash
         LIBRARY DESTINATION lib/cocaine
         COMPONENT runtime)
-
-    INSTALL(
-        DIRECTORY
-            include/
-        DESTINATION include
-        COMPONENT development)
 ENDIF(LOGSTASH)
