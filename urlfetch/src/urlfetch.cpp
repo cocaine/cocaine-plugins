@@ -18,15 +18,13 @@
 #include <cocaine/traits/tuple.hpp>
 #include <boost/foreach.hpp>
 #include <boost/format.hpp>
-#include <swarm/logger.h>
+#include <swarm/urlfetcher/stream.hpp>
 
 using namespace cocaine;
 using namespace cocaine::io;
 using namespace cocaine::service;
 
 using namespace ioremap;
-
-using namespace std::placeholders;
 
 class urlfetch_logger_interface : public swarm::logger_interface
 {
@@ -39,21 +37,25 @@ public:
     {
         logging::priorities verbosity = logging::priorities::debug;
         switch (level) {
-        case swarm::LOG_DATA:
+        case swarm::SWARM_LOG_DATA:
             verbosity = logging::priorities::ignore;
-        case swarm::LOG_ERROR:
+        case swarm::SWARM_LOG_ERROR:
             verbosity = logging::priorities::error;
-        case swarm::LOG_INFO:
+        case swarm::SWARM_LOG_INFO:
             verbosity = logging::priorities::info;
-        case swarm::LOG_NOTICE:
+        case swarm::SWARM_LOG_NOTICE:
             verbosity = logging::priorities::info;
-        case swarm::LOG_DEBUG:
+        case swarm::SWARM_LOG_DEBUG:
         default:
             verbosity = logging::priorities::debug;
         }
 
         if (log_->verbosity() >= verbosity)
             log_->emit(verbosity, msg);
+    }
+
+    virtual void reopen()
+    {
     }
 
 private:
@@ -66,14 +68,41 @@ urlfetch_t::urlfetch_t(context_t& context,
                        const Json::Value& args):
     service_t(context, reactor, name, args),
     log_(new logging::log_t(context, name)),
-    m_logger(new urlfetch_logger_interface(log_), swarm::LOG_DEBUG),
-    m_manager(reactor.native(), m_logger)
+    m_logger(new urlfetch_logger_interface(log_), swarm::SWARM_LOG_DEBUG),
+    m_loop(m_service),
+    m_manager(m_loop, m_logger),
+    m_work(new boost::asio::io_service::work(m_service))
 {
     int connections_limits = args.get("connections-limit", 10).asInt();
-    m_manager.set_limit(connections_limits);
+    m_manager.set_total_limit(connections_limits);
+
+    using std::placeholders::_1;
+    using std::placeholders::_2;
+    using std::placeholders::_3;
+    using std::placeholders::_4;
+    using std::placeholders::_5;
+    using std::placeholders::_6;
 
     on<io::urlfetch::get>("get", std::bind(&urlfetch_t::get, this, _1, _2, _3, _4, _5));
     on<io::urlfetch::post>("post", std::bind(&urlfetch_t::post, this, _1, _2, _3, _4, _5, _6));
+
+    m_thread = boost::thread(std::bind(&urlfetch_t::run_service, this));
+}
+
+urlfetch_t::~urlfetch_t()
+{
+    m_work.reset();
+    m_thread.join();
+}
+
+void urlfetch_t::run_service()
+{
+    boost::system::error_code error;
+    m_service.run(error);
+
+    if (error) {
+        COCAINE_LOG_DEBUG(log_, "Can not run io_service, error %s", error.message() );
+    }
 }
 
 namespace {
@@ -83,29 +112,30 @@ struct urlfetch_get_handler {
     std::shared_ptr<logging::log_t> log_;
 
     void
-    operator()(const swarm::network_reply& reply) {
-        const std::string data = reply.get_data();
-        const int code = reply.get_code();
-        bool success = (reply.get_error() == 0 && (code < 400 || code >= 600) );
+    operator()(const swarm::url_fetcher::response& reply,
+               const std::string& data,
+               const boost::system::error_code& error) {
+        const int code = reply.code();
+        bool success = (!error && (code < 400 || code >= 600) );
 
         if (success) {
-            COCAINE_LOG_DEBUG(log_, "Downloaded successfully %s, http code %d", reply.get_url(), reply.get_code() );
+            COCAINE_LOG_DEBUG(log_, "Downloaded successfully %s, http code %d", reply.url().to_string(), reply.code() );
         } else {
-            COCAINE_LOG_DEBUG(log_, "Unable to download %s, network error code %d, http code %d", reply.get_url(), reply.get_error(), reply.get_code() );
+            COCAINE_LOG_DEBUG(log_, "Unable to download %s, error %s, http code %d", reply.url().to_string(), error.message(), reply.code() );
 
-            if (reply.get_code() == 0) {
+            if (reply.code() == 0) {
                 // Socket-only error, no valid http response
-                promise.abort(-reply.get_error(),
-                              cocaine::format("Unable to download %s, network error code %d",
-                                              reply.get_request().get_url(),
-                                              reply.get_error()));
+                promise.abort(error.value(),
+                              cocaine::format("Unable to download %s, error %s",
+                                              reply.request().url().to_string(),
+                                              error.message()));
                 return;
             }
         }
 
         std::map<std::string, std::string> headers;
 
-        BOOST_FOREACH(const auto& it, reply.get_headers()) {
+        BOOST_FOREACH(const auto& it, reply.headers().all()) {
             const auto& header_name = it.first;
             const auto& header_value = it.second;
             headers[header_name] = header_value;
@@ -128,7 +158,7 @@ urlfetch_t::get(const std::string& url,
     urlfetch_get_handler handler;
     handler.log_ = log_;
 
-    m_manager.get(handler,
+    m_manager.get(swarm::simple_stream::create(handler),
                   prepare_request(url,
                                   timeout,
                                   cookies,
@@ -149,25 +179,26 @@ urlfetch_t::post(const std::string& url,
     urlfetch_get_handler handler;
     handler.log_ = log_;
 
-    m_manager.post(handler,
+    m_manager.post(swarm::simple_stream::create(handler),
                    prepare_request(url,
                                    timeout,
                                    cookies,
                                    headers,
                                    follow_location),
-                   body);
+                   std::string(body));
 
     return handler.promise;
 }
 
-swarm::network_request
+swarm::url_fetcher::request
 urlfetch_t::prepare_request(const std::string& url,
                             int timeout,
                             const std::map<std::string, std::string>& cookies,
                             const std::map<std::string, std::string>& headers,
                             bool follow_location)
 {
-    swarm::network_request request;
+    swarm::url_fetcher::request request;
+    swarm::http_headers &request_headers = request.headers();
 
     request.set_url(url);
     request.set_follow_location(follow_location);
@@ -179,7 +210,7 @@ urlfetch_t::prepare_request(const std::string& url,
         const auto& header_name = it.first;
         const auto& header_value = it.second;
 
-        request.add_header(header_name, header_value);
+        request_headers.add(header_name, header_value);
     }
 
     BOOST_FOREACH(const auto& it, cookies) {
@@ -188,7 +219,7 @@ urlfetch_t::prepare_request(const std::string& url,
 
         std::string cookie_header = boost::str(boost::format("%1%=%2%") % cookie_name % cookie_value);
 
-        request.add_header("Cookie", cookie_header);
+        request_headers.add("Cookie", cookie_header);
     }
 
     return request;
