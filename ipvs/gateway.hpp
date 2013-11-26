@@ -97,7 +97,7 @@ class ipvs_t:
             io::tcp::endpoint endpoint;
 
             // Precooked endpoint tuple.
-            io::locator::endpoint_tuple_type cooked;
+            io::locator::resolve::endpoint_tuple_type cooked;
 
             // Backend UUID -> Destination mapping.
             std::map<std::string, ipvs_dest_t> backends;

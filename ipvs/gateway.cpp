@@ -259,7 +259,7 @@ ipvs_t::add_service(const std::string& name, const service_info_t& info) {
 
         // Store the virtual service information
 
-        m_remote_services[name] = remote_service_t { service, *endpoint, locator::endpoint_tuple_type(
+        m_remote_services[name] = remote_service_t { service, *endpoint, locator::resolve::endpoint_tuple_type(
             endpoint->address().to_string(),
             endpoint->port()
         )};
