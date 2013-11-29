@@ -1,3 +1,16 @@
+cocaine-plugins (0.11.0.2) unstable; urgency=low
+
+  * Docker plugin explicitly specifies version of the API.
+
+ -- Andrey Goryachev <bugsbunny@yandex-team.ru>  Fri, 29 Nov 2013 18:42:13 +0400
+
+cocaine-plugins (0.11.0.1) unstable; urgency=low
+
+  * Fixed bug with libcurl in docker plugin.
+  * Fixed debianization of docker plugin.
+
+ -- Andrey Goryachev <bugsbunny@yandex-team.ru>  Tue, 19 Nov 2013 17:12:11 +0400
+
 cocaine-plugins (0.11.0.0) unstable; urgency=low
 
   * Docker isolation plugin.
