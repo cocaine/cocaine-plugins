@@ -1,0 +1,22 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+    configure)
+    if [ $(grep -c ip_vs /etc/modules) -eq 0 ] ; then
+        echo "ip_vs" >> /etc/modules
+    fi
+    ;;
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+exit 0
+
+#DEBHELPER#
