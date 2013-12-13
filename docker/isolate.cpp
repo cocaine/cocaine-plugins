@@ -123,6 +123,8 @@ docker_t::docker_t(context_t& context, const std::string& name, const Json::Valu
         if(args["registry"].asString() != "<default>") {
             m_image += args["registry"].asString() + "/";
         }
+    } else {
+        COCAINE_LOG_WARNING(m_log, "Docker registry is not specified. Only local images will be used.");
     }
 
     if(args.isMember("repository")) {
