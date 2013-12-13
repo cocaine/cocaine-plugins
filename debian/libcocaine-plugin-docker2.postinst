@@ -1,0 +1,22 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+    configure)
+    if (getent passwd cocaine && getent group docker) > /dev/null 2>&1 && [ $(groups cocaine | grep -c docker) -eq 0 ]; then
+        usermod -a -G docker cocaine
+    fi
+    ;;
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+exit 0
+
+#DEBHELPER#
