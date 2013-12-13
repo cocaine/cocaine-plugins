@@ -124,6 +124,8 @@ docker_t::docker_t(context_t& context, const std::string& name, const dynamic_t&
         if(config["registry"].as_string() != "<default>") {
             m_image += config["registry"].as_string() + "/";
         }
+    } else {
+        COCAINE_LOG_WARNING(m_log, "Docker registry is not specified. Only local images will be used.");
     }
 
     if(config.count("repository") > 0) {
