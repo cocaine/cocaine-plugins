@@ -137,9 +137,9 @@ docker_t::docker_t(context_t& context, const std::string& name, const Json::Valu
 
     m_run_config.AddMember("Hostname", "", m_json_allocator);
     m_run_config.AddMember("User", "", m_json_allocator);
-    m_run_config.AddMember("Memory", unsigned(args.get("memory_limit", 0).asUInt64()), m_json_allocator);
-    m_run_config.AddMember("MemorySwap", unsigned(args.get("memory_swap", 0).asUInt64()), m_json_allocator);
-    m_run_config.AddMember("CpuShares", unsigned(args.get("cpu_shares", 0).asUInt64()), m_json_allocator);
+    m_run_config.AddMember("Memory", int64_t(args.get("memory_limit", 0).asInt64()), m_json_allocator);
+    m_run_config.AddMember("MemorySwap", int64_t(args.get("memory_swap", 0).asInt64()), m_json_allocator);
+    m_run_config.AddMember("CpuShares", int64_t(args.get("cpu_shares", 0).asInt64()), m_json_allocator);
     m_run_config.AddMember("AttachStdin", false, m_json_allocator);
     m_run_config.AddMember("AttachStdout", false, m_json_allocator);
     m_run_config.AddMember("AttachStderr", false, m_json_allocator);
