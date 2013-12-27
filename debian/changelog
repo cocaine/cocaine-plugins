@@ -1,3 +1,9 @@
+cocaine-plugins (0.11.0.3) unstable; urgency=low
+
+  * Docker Isolation uses proper type to store resource limits.
+
+ -- Andrey Goryachev <bugsbunny@yandex-team.ru>  Fri, 27 Dec 2013 16:48:42 +0400
+
 cocaine-plugins (0.11.0.2) unstable; urgency=low
 
   * Docker plugin explicitly specifies version of the API.
