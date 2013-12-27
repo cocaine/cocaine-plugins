@@ -138,9 +138,9 @@ docker_t::docker_t(context_t& context, const std::string& name, const dynamic_t&
 
     m_run_config.AddMember("Hostname", "", m_json_allocator);
     m_run_config.AddMember("User", "", m_json_allocator);
-    m_run_config.AddMember("Memory", config.at("memory_limit", 0).to<unsigned>(), m_json_allocator);
-    m_run_config.AddMember("MemorySwap", config.at("memory_swap", 0).to<unsigned>(), m_json_allocator);
-    m_run_config.AddMember("CpuShares", config.at("cpu_shares", 0).to<unsigned>(), m_json_allocator);
+    m_run_config.AddMember("Memory", config.at("memory_limit", 0).to<int64_t>(), m_json_allocator);
+    m_run_config.AddMember("MemorySwap", config.at("memory_swap", 0).to<int64_t>(), m_json_allocator);
+    m_run_config.AddMember("CpuShares", config.at("cpu_shares", 0).to<int64_t>(), m_json_allocator);
     m_run_config.AddMember("AttachStdin", false, m_json_allocator);
     m_run_config.AddMember("AttachStdout", false, m_json_allocator);
     m_run_config.AddMember("AttachStderr", false, m_json_allocator);
