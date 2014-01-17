@@ -20,7 +20,10 @@
 #include <cocaine/asio/reactor.hpp>
 #include <cocaine/rpc/tags.hpp>
 
-#include <swarm/networkmanager.h>
+#include <boost/thread.hpp>
+
+#include <swarm/urlfetcher/url_fetcher.hpp>
+#include <swarm/urlfetcher/boost_event_loop.hpp>
 
 namespace cocaine { namespace io {
 
@@ -88,10 +91,13 @@ class urlfetch_t:
                    io::reactor_t& reactor,
                    const std::string& name,
                    const Json::Value& args);
+        ~urlfetch_t();
 
         void initialize() {}
 
     private:
+        void run_service();
+
         deferred<get_tuple>
         get(const std::string& url,
             int timeout,
@@ -106,7 +112,7 @@ class urlfetch_t:
              const std::map<std::string, std::string>& headers,
              bool follow_location);
 
-        ioremap::swarm::network_request
+        ioremap::swarm::url_fetcher::request
         prepare_request(const std::string& url,
                         int timeout,
                         const std::map<std::string, std::string>& cookies,
@@ -116,7 +122,11 @@ class urlfetch_t:
     private:
         std::shared_ptr<logging::log_t> log_;
         ioremap::swarm::logger m_logger;
-        ioremap::swarm::network_manager m_manager;
+        boost::asio::io_service m_service;
+        ioremap::swarm::boost_event_loop m_loop;
+        ioremap::swarm::url_fetcher m_manager;
+        std::unique_ptr<boost::asio::io_service::work> m_work;
+        boost::thread m_thread;
 };
 
 }} // namespace cocaine::service

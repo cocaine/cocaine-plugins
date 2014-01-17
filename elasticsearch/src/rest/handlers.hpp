@@ -22,6 +22,8 @@
 
 #include <cocaine/service/elasticsearch.hpp>
 
+#include <swarm/urlfetcher/stream.hpp>
+
 namespace cocaine { namespace service { namespace rest {
 
 template<typename T>
@@ -37,19 +39,19 @@ struct request_handler_t {
     {}
 
     void
-    operator()(const ioremap::swarm::network_reply& reply) {
-        const std::string data = reply.get_data();
-        const int code = reply.get_code();
-        const bool success = (reply.get_error() == 0 && (code < 400 || code >= 600));
+    operator()(const ioremap::swarm::url_fetcher::response& reply,
+               const std::string& data,
+               const boost::system::error_code& error) {
+        const int code = reply.code();
+        const bool success = (!error && (code < 400 || code >= 600));
 
-        if (success) {
-        } else {
+        if (!success) {
             if (code == 0) {
                 // Socket-only error, no valid http response
-                const std::string &message = cocaine::format("Unable to download %s, network error code %d",
-                                                             reply.get_request().get_url(),
-                                                             reply.get_error());
-                return deferred.abort(-reply.get_error(), message);
+                const std::string &message = cocaine::format("Unable to download %s, error %s",
+                                                             reply.request().url().to_string(),
+                                                             error.message());
+                return deferred.abort(error.value(), message);
             }
         }
         callback(deferred, code, data);
@@ -58,48 +60,48 @@ struct request_handler_t {
 
 template<typename T>
 class Get {
-    ioremap::swarm::network_manager &manager;
+    ioremap::swarm::url_fetcher &manager;
 
 public:
-    Get(ioremap::swarm::network_manager &manager) :
+    Get(ioremap::swarm::url_fetcher &manager) :
         manager(manager)
     {}
 
     void
-    operator()(const ioremap::swarm::network_request &request, request_handler_t<T> handler) {
-        manager.get(handler, request);
+    operator()(ioremap::swarm::url_fetcher::request request, request_handler_t<T> handler) {
+        manager.get(ioremap::swarm::simple_stream::create(handler), std::move(request));
     }
 };
 
 template<typename T>
 class Post {
-    ioremap::swarm::network_manager &manager;
+    ioremap::swarm::url_fetcher &manager;
     std::string body;
 
 public:
-    Post(ioremap::swarm::network_manager &manager, std::string body) :
+    Post(ioremap::swarm::url_fetcher &manager, std::string body) :
         manager(manager),
         body(body)
     {}
 
     void
-    operator()(ioremap::swarm::network_request request, request_handler_t<T> handler) {
-        manager.post(handler, request, body);
+    operator()(ioremap::swarm::url_fetcher::request request, request_handler_t<T> handler) {
+        manager.post(ioremap::swarm::simple_stream::create(handler), std::move(request), std::move(body));
     }
 };
 
 #ifdef ELASTICSEARCH_DELETE_SUPPORT
 template<typename T>
 class Delete {
-    ioremap::swarm::network_manager &manager;
+    ioremap::swarm::url_fetcher &manager;
 
 public:
-    Delete(ioremap::swarm::network_manager &manager) :
+    Delete(ioremap::swarm::url_fetcher &manager) :
         manager(manager)
     {}
 
     void
-    operator()(ioremap::swarm::network_request request, request_handler_t<T> handler) {
+    operator()(ioremap::swarm::url_fetcher::request request, request_handler_t<T> handler) {
         manager.do_delete(handler, request);
     }
 };

@@ -27,6 +27,8 @@
 #include <cocaine/traits/tuple.hpp>
 #include <cocaine/logging.hpp>
 
+#include <swarm/urlfetcher/ev_event_loop.hpp>
+
 #include "cocaine/service/elasticsearch/config.hpp"
 #include "cocaine/service/elasticsearch.hpp"
 #include "rest/handlers.hpp"
@@ -45,11 +47,14 @@ using namespace cocaine::service::rest;
 class elasticsearch_t::impl_t {
 public:
     std::string m_url_prefix;
-    mutable swarm::network_manager m_manager; //@note: Why should I do this mutable to perform const operations?
+    swarm::ev_event_loop m_loop;
+    swarm::logger m_logger;
+    mutable swarm::url_fetcher m_manager; //@note: Why should I do this mutable to perform const operations?
     std::shared_ptr<logging::log_t> m_log;
 
     impl_t(cocaine::context_t &context, cocaine::io::reactor_t &reactor, const std::string &name) :
-        m_manager(reactor.native()),
+        m_loop(reactor.native()),
+        m_manager(m_loop, m_logger),
         m_log(new logging::log_t(context, name))
     {
     }
@@ -87,7 +92,7 @@ public:
         cocaine::deferred<T> deferred;
         request_handler_t<T> request_handler(deferred, handler);
 
-        swarm::network_request request;
+        swarm::url_fetcher::request request;
         request.set_url(url);
         action(request, request_handler);
         return deferred;

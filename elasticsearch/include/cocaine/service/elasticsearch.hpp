@@ -23,8 +23,7 @@
 #include <cocaine/api/service.hpp>
 #include <cocaine/asio/reactor.hpp>
 
-#include <swarm/networkrequest.h>
-#include <swarm/networkmanager.h>
+#include <swarm/urlfetcher/url_fetcher.hpp>
 
 #include "cocaine/io/protocol.hpp"
 
