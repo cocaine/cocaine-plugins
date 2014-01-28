@@ -4,7 +4,7 @@ PROJECT(COCAINE-PLUGINS)
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-OPTION(BLASTBEAT "Build Blastbeat Driver plugin" ON)
+OPTION(BLASTBEAT "Build Blastbeat Driver plugin" OFF)
 OPTION(CACHE "Build LRU Cache plugin" ON)
 OPTION(DOCKER "Build Docker Isolation plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
@@ -13,7 +13,7 @@ OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(PYTHON "Build Python Sandbox plugin" OFF)
 OPTION(CHRONO "Build Chrono Service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
-OPTION(ZEROMQ "Build ZeroMQ Driver plugin" ON)
+OPTION(ZEROMQ "Build ZeroMQ Driver plugin" OFF)
 OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
 
 SET(CMAKE_MODULE_PATH
@@ -29,7 +29,7 @@ INCLUDE(cmake/locate_library.cmake)
 LOCATE_LIBRARY(LIBCOCAINE "cocaine/context.hpp" "cocaine-core")
 LOCATE_LIBRARY(LIBEV "ev++.h" "ev" "libev")
 LOCATE_LIBRARY(LIBMSGPACK "msgpack.hpp" "msgpack")
-LOCATE_LIBRARY(LIBZMQ "zmq.h" "zmq")
+# LOCATE_LIBRARY(LIBZMQ "zmq.h" "zmq")
 
 INCLUDE_DIRECTORIES(BEFORE
     ${PROJECT_SOURCE_DIR}/foreign/cppzmq
