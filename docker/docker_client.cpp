@@ -851,7 +851,7 @@ client_t::create_container(const rapidjson::Value& args) {
             throw std::runtime_error("Unable to create a container.");
         }
 
-        if(answer.HasMember("Warnings") && !answer["Warnings"].IsNull()) {
+        if(answer.HasMember("Warnings") && answer["Warnings"].IsArray()) {
             auto& warnings = answer["Warnings"];
 
             for(auto it = warnings.Begin(); it != warnings.End(); ++it) {
