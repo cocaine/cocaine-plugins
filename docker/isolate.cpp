@@ -185,11 +185,16 @@ docker_t::spool() {
 std::unique_ptr<api::handle_t>
 docker_t::spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment) {
     try {
-        // prepare request to docker
+        // Prepare request to docker.
         auto& env = m_run_config["Env"];
         env.SetArray();
+
+        // We should store here strings pushed to RapidJson array :(
+        std::vector<std::string> environment_storage;
+
         for(auto it = environment.begin(); it != environment.end(); ++it) {
-            env.PushBack((it->first + "=" + it->second).c_str(), m_json_allocator);
+            environment_storage.emplace_back(it->first + "=" + it->second);
+            env.PushBack(environment_storage.back().c_str(), m_json_allocator);
         }
 
         auto& cmd = m_run_config["Cmd"];
