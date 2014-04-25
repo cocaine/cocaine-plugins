@@ -28,7 +28,7 @@ using namespace std::placeholders;
 
 chrono_t::chrono_t(context_t& context, reactor_t& reactor, const std::string& name, const dynamic_t& args):
     service_t(context, reactor, name, args),
-    implements<io::chrono_tag>(context, name),
+    implements<io::chrono_tag>(name),
     log_(new logging::log_t(context, name)),
     reactor_(reactor)
 {

@@ -64,7 +64,7 @@ class urlfetch_t:
              const std::map<std::string, std::string>& headers,
              bool follow_location);
 
-        ioremap::swarm::network_request
+        ioremap::swarm::url_fetcher::request
         prepare_request(const std::string& url,
                         int timeout,
                         const std::map<std::string, std::string>& cookies,

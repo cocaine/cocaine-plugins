@@ -24,8 +24,7 @@
 
 #include <boost/foreach.hpp>
 
-#include <swarm/networkrequest.h>
-#include <swarm/networkmanager.h>
+#include <swarm/urlfetcher/url_fetcher.hpp>
 
 #include <cocaine/traits/tuple.hpp>
 #include <cocaine/logging.hpp>
@@ -122,7 +121,7 @@ elasticsearch_t::elasticsearch_t(cocaine::context_t& context,
                                  const std::string& name,
                                  const dynamic_t& args) :
     service_t(context, reactor, name, args),
-    implements<io::elasticsearch_tag>(context, name),
+    implements<io::elasticsearch_tag>(name),
     d(new impl_t(context, reactor, name, args))
 {
     on<io::elasticsearch::get>(std::bind(&elasticsearch_t::get, this, _1, _2, _3));
