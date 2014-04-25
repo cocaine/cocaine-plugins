@@ -3,7 +3,7 @@ Section: utils
 Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
 Build-Depends: cmake, cdbs, debhelper (>= 7.0.13), libcocaine-dev (>= 0.12.0.0),
- libboost-filesystem-dev, libboost-thread-dev, libswarm-dev (>= 0.5.4.1), libswarm-dev (< 0.6),
+ libboost-filesystem-dev, libboost-thread-dev, libswarm-dev (>= 0.6.1.0),
  libnl-dev, libcurl4-openssl-dev (>= 7.22.0)
 Standards-Version: 3.9.1
 Vcs-Git: git://github.com/cocaine/cocaine-plugins.git
@@ -11,7 +11,7 @@ Vcs-Browser: https://github.com/cocaine/cocaine-plugins
 
 Package: libcocaine-plugin-cache2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.12.0.0)
 Description: Cocaine - Cache Service
  LRU Cache service for Cocaine.
 
@@ -26,7 +26,7 @@ Description: Cocaine - Cache Service Development Headers
 
 Package: libcocaine-plugin-chrono2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.12.0.0)
 Description: Cocaine - Chrono Service
  Timer service for Cocaine.
 
@@ -41,31 +41,31 @@ Description: Cocaine - Chrono Service Development Headers
 
 Package: libcocaine-plugin-docker2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.11.0.0)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.12.0.0)
 Description: Cocaine - Docker Isolation
  Support of Docker for Cocaine.
 
 Package: libcocaine-plugin-elasticsearch2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6), libswarm1 (>= 0.5.2.0), libswarm1 (< 0.6)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.12.0.0), libswarm2 (>= 0.6.1.0), libswarm2-urlfetcher (>= 0.6.1.0)
 Description: Cocaine - Elasticsearch Client Service
  Elasticsearch Client Service for Cocaine.
 
 Package: libcocaine-plugin-ipvs2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6), libnl1
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.12.0.0), libnl1
 Description: Cocaine - IPVS Gateway
  IP Virtual Service Gateway for Cocaine.
 
 Package: libcocaine-plugin-logstash2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.12.0.0)
 Description: Cocaine - Logstash Logger
  Logstash Logger for Cocaine.
 
 # Package: libcocaine-plugin-mongodb2
 # Architecture: any
-# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6),
+# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.12.0.0),
 #  libmongoclient | mongodb-clients
 # Provides: cocaine-plugin-mongodb
 # Replaces: cocaine-plugin-mongodb
@@ -74,7 +74,7 @@ Description: Cocaine - Logstash Logger
 
 Package: libcocaine-plugin-urlfetch2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6), libswarm1 (>= 0.5.4.1), libswarm1 (< 0.6)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.12.0.0), libswarm2 (>= 0.6.1.0), libswarm2-urlfetcher (>= 0.6.1.0)
 Description: Cocaine - URLFetch Service
  URLFetch service for Cocaine.
 
@@ -82,8 +82,8 @@ Package: libcocaine-plugin-urlfetch-dev
 Architecture: any
 Section: libdevel
 Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-urlfetch2 (= ${binary:Version}),
- cocaine-framework-native (>= 0.10.6),
- libswarm-dev (>= 0.5.2.0)
+ cocaine-framework-native (>= 0.11.0.0),
+ libswarm-dev (>= 0.6.1.0)
 Description: Cocaine - URLFetch Service Development Headers
  Cocaine development headers for the URLFetch Service package.
 

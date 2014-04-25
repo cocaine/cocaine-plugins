@@ -17,6 +17,7 @@ IF(ELASTICSEARCH)
 
     TARGET_LINK_LIBRARIES(elasticsearch
         swarm
+        swarm_urlfetcher
         cocaine-core)
 
     SET_TARGET_PROPERTIES(elasticsearch PROPERTIES

@@ -18,8 +18,13 @@
 
 #include <cocaine/api/service.hpp>
 #include <cocaine/dispatch.hpp>
+#include <cocaine/asio/reactor.hpp>
+#include <cocaine/rpc/tags.hpp>
 
-#include <swarm/networkmanager.h>
+#include <boost/thread.hpp>
+
+#include <swarm/urlfetcher/url_fetcher.hpp>
+#include <swarm/urlfetcher/boost_event_loop.hpp>
 
 #include "cocaine/idl/urlfetch.hpp"
 
@@ -33,6 +38,7 @@ class urlfetch_t:
         typedef result_of<io::urlfetch::get>::type get_result_type;
 
         urlfetch_t(context_t& context, io::reactor_t& reactor, const std::string& name, const dynamic_t& args);
+        ~urlfetch_t();
 
         virtual
         auto
@@ -41,6 +47,8 @@ class urlfetch_t:
         }
 
     private:
+        void run_service();
+
         deferred<get_result_type>
         get(const std::string& url,
             int timeout,
@@ -66,7 +74,11 @@ class urlfetch_t:
     private:
         std::shared_ptr<logging::log_t> log_;
         ioremap::swarm::logger m_logger;
-        ioremap::swarm::network_manager m_manager;
+        boost::asio::io_service m_service;
+        ioremap::swarm::boost_event_loop m_loop;
+        ioremap::swarm::url_fetcher m_manager;
+        std::unique_ptr<boost::asio::io_service::work> m_work;
+        boost::thread m_thread;
 };
 
 }} // namespace cocaine::service

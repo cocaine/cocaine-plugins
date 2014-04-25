@@ -24,6 +24,9 @@
 #include <cocaine/dispatch.hpp>
 
 #include "cocaine/idl/elasticsearch.hpp"
+#include <swarm/urlfetcher/url_fetcher.hpp>
+
+#include "cocaine/io/protocol.hpp"
 
 namespace cocaine { namespace service {
 
@@ -42,8 +45,12 @@ class elasticsearch_t :
     std::unique_ptr<impl_t> d;
 
 public:
-    elasticsearch_t(context_t& context, io::reactor_t& reactor, const std::string& name, const dynamic_t& args);
-    ~elasticsearch_t();
+    elasticsearch_t(context_t& context,
+                    io::reactor_t& reactor,
+                    const std::string& name,
+                    const dynamic_t& args);
+
+   ~elasticsearch_t();
 
     auto
     prototype() -> dispatch_t& {

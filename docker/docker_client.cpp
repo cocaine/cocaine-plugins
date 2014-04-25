@@ -797,31 +797,16 @@ client_t::pull_image(const std::string& image,
     m_client->post(resp, make_post(api_version + request));
 
     if(resp.code() >= 200 && resp.code() < 300) {
-        std::string body = resp.body();
-        size_t next_object = 0;
-        std::vector<std::string> messages;
+        rapidjson::GenericStringStream<rapidjson::UTF8<>> stream(resp.body().data());
 
-        // kostyl-way 7 ultimate
-        while(true) {
-            size_t end = body.find("}{", next_object);
+        while(stream.Peek() != '\0') {
+            rapidjson::Document status;
+            status.ParseStream<rapidjson::kParseStreamFlag>(stream);
 
-            if(end == std::string::npos) {
-                messages.push_back(body.substr(next_object));
-                break;
-            } else {
-                messages.push_back(body.substr(next_object, end + 1 - next_object));
-                next_object = end + 1;
-            }
-        }
-
-        for(auto it = messages.begin(); it != messages.end(); ++it) {
-            rapidjson::Document answer;
-            answer.Parse<0>(it->data());
-
-            if(answer.HasMember("error")) {
-                COCAINE_LOG_ERROR(m_logger,
-                                  "Unable to create an image. Docker replied with body: '%s'.",
-                                  resp.body());
+            if(status.HasParseError() || (status.IsObject() && status.HasMember("error"))) {
+                COCAINE_LOG_WARNING(m_logger,
+                                    "Unable to create an image. Docker replied with body: '%s'.",
+                                    resp.body());
 
                 throw std::runtime_error("Unable to create an image.");
             }
@@ -851,7 +836,7 @@ client_t::create_container(const rapidjson::Value& args) {
             throw std::runtime_error("Unable to create a container.");
         }
 
-        if(answer.HasMember("Warnings")) {
+        if(answer.HasMember("Warnings") && answer["Warnings"].IsArray()) {
             auto& warnings = answer["Warnings"];
 
             for(auto it = warnings.Begin(); it != warnings.End(); ++it) {
