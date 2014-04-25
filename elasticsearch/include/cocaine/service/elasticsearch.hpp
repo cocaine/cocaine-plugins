@@ -24,6 +24,7 @@
 #include <cocaine/dispatch.hpp>
 
 #include "cocaine/idl/elasticsearch.hpp"
+
 #include <swarm/urlfetcher/url_fetcher.hpp>
 
 namespace cocaine { namespace service {

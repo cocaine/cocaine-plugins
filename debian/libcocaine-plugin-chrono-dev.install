@@ -1,3 +1,2 @@
 usr/include/cocaine/framework/services/chrono.hpp
-usr/include/cocaine/services/chrono.hpp
-usr/include/cocaine/rpc/slots/streamed.hpp
+usr/include/cocaine/idl/chrono.hpp
