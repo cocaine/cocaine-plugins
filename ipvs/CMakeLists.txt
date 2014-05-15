@@ -1,5 +1,5 @@
 IF(IPVS)
-    ADD_SUBDIRECTORY(libipvs-1.25)
+    ADD_SUBDIRECTORY(libipvs-1.26)
 
     ADD_LIBRARY(ipvs-gateway MODULE
         gateway

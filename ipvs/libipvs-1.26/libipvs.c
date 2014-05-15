@@ -32,13 +32,22 @@ static void* ipvs_func = NULL;
 struct ip_vs_getinfo ipvs_info;
 
 #ifdef LIBIPVS_USE_NL
-struct nl_handle *sock = NULL;
-int family, try_nl = 1;
+static struct nl_handle *sock = NULL;
+static int family, try_nl = 1;
 #endif
 
 #define CHECK_IPV4(s, ret) if (s->af && s->af != AF_INET)	\
 	{ errno = EAFNOSUPPORT; return ret; }			\
 	s->__addr_v4 = s->addr.ip;				\
+
+#define CHECK_PE(s, ret) if (s->pe_name)			\
+	{ errno = EAFNOSUPPORT; return ret; }
+
+#define CHECK_COMPAT_DEST(s, ret) CHECK_IPV4(s, ret)
+
+#define CHECK_COMPAT_SVC(s, ret)				\
+	CHECK_IPV4(s, ret);					\
+	CHECK_PE(s, ret);
 
 #ifdef LIBIPVS_USE_NL
 struct nl_msg *ipvs_nl_message(int cmd, int flags)
@@ -116,6 +125,7 @@ int ipvs_init(void)
 
 #ifdef LIBIPVS_USE_NL
 	if (ipvs_nl_send_message(NULL, NULL, NULL) == 0) {
+		try_nl = 1;
 		return ipvs_getinfo();
 	}
 
@@ -217,6 +227,8 @@ static int ipvs_nl_fill_service_attr(struct nl_msg *msg, ipvs_service_t *svc)
 	}
 
 	NLA_PUT_STRING(msg, IPVS_SVC_ATTR_SCHED_NAME, svc->sched_name);
+	if (svc->pe_name)
+		NLA_PUT_STRING(msg, IPVS_SVC_ATTR_PE_NAME, svc->pe_name);
 	NLA_PUT(msg, IPVS_SVC_ATTR_FLAGS, sizeof(flags), &flags);
 	NLA_PUT_U32(msg, IPVS_SVC_ATTR_TIMEOUT, svc->timeout);
 	NLA_PUT_U32(msg, IPVS_SVC_ATTR_NETMASK, svc->netmask);
@@ -244,7 +256,7 @@ int ipvs_add_service(ipvs_service_t *svc)
 	}
 #endif
 
-	CHECK_IPV4(svc, -1);
+	CHECK_COMPAT_SVC(svc, -1);
 	return setsockopt(sockfd, IPPROTO_IP, IP_VS_SO_SET_ADD, (char *)svc,
 			  sizeof(struct ip_vs_service_kern));
 }
@@ -264,7 +276,7 @@ int ipvs_update_service(ipvs_service_t *svc)
 		return ipvs_nl_send_message(msg, ipvs_nl_noop_cb, NULL);
 	}
 #endif
-	CHECK_IPV4(svc, -1);
+	CHECK_COMPAT_SVC(svc, -1);
 	return setsockopt(sockfd, IPPROTO_IP, IP_VS_SO_SET_EDIT, (char *)svc,
 			  sizeof(struct ip_vs_service_kern));
 }
@@ -284,7 +296,7 @@ int ipvs_del_service(ipvs_service_t *svc)
 		return ipvs_nl_send_message(msg, ipvs_nl_noop_cb, NULL);
 	}
 #endif
-	CHECK_IPV4(svc, -1);
+	CHECK_COMPAT_SVC(svc, -1);
 	return setsockopt(sockfd, IPPROTO_IP, IP_VS_SO_SET_DEL, (char *)svc,
 			  sizeof(struct ip_vs_service_kern));
 }
@@ -309,7 +321,7 @@ int ipvs_zero_service(ipvs_service_t *svc)
 		return ipvs_nl_send_message(msg, ipvs_nl_noop_cb, NULL);
 	}
 #endif
-	CHECK_IPV4(svc, -1);
+	CHECK_COMPAT_SVC(svc, -1);
 	return setsockopt(sockfd, IPPROTO_IP, IP_VS_SO_SET_ZERO, (char *)svc,
 			  sizeof(struct ip_vs_service_kern));
 }
@@ -359,8 +371,8 @@ nla_put_failure:
 	}
 #endif
 
-	CHECK_IPV4(svc, -1);
-	CHECK_IPV4(dest, -1);
+	CHECK_COMPAT_SVC(svc, -1);
+	CHECK_COMPAT_DEST(dest, -1);
 	memcpy(&svcdest.svc, svc, sizeof(svcdest.svc));
 	memcpy(&svcdest.dest, dest, sizeof(svcdest.dest));
 	return setsockopt(sockfd, IPPROTO_IP, IP_VS_SO_SET_ADDDEST,
@@ -388,8 +400,8 @@ nla_put_failure:
 		return -1;
 	}
 #endif
-	CHECK_IPV4(svc, -1);
-	CHECK_IPV4(dest, -1);
+	CHECK_COMPAT_SVC(svc, -1);
+	CHECK_COMPAT_DEST(dest, -1);
 	memcpy(&svcdest.svc, svc, sizeof(svcdest.svc));
 	memcpy(&svcdest.dest, dest, sizeof(svcdest.dest));
 	return setsockopt(sockfd, IPPROTO_IP, IP_VS_SO_SET_EDITDEST,
@@ -418,8 +430,8 @@ nla_put_failure:
 	}
 #endif
 
-	CHECK_IPV4(svc, -1);
-	CHECK_IPV4(dest, -1);
+	CHECK_COMPAT_SVC(svc, -1);
+	CHECK_COMPAT_DEST(dest, -1);
 	memcpy(&svcdest.svc, svc, sizeof(svcdest.svc));
 	memcpy(&svcdest.dest, dest, sizeof(svcdest.dest));
 	return setsockopt(sockfd, IPPROTO_IP, IP_VS_SO_SET_DELDEST,
@@ -592,6 +604,11 @@ static int ipvs_services_parse_cb(struct nl_msg *msg, void *arg)
 		nla_get_string(svc_attrs[IPVS_SVC_ATTR_SCHED_NAME]),
 		IP_VS_SCHEDNAME_MAXLEN);
 
+	if (svc_attrs[IPVS_SVC_ATTR_PE_NAME])
+		strncpy(get->entrytable[i].pe_name,
+			nla_get_string(svc_attrs[IPVS_SVC_ATTR_PE_NAME]),
+			IP_VS_PENAME_MAXLEN);
+
 	get->entrytable[i].netmask = nla_get_u32(svc_attrs[IPVS_SVC_ATTR_NETMASK]);
 	get->entrytable[i].timeout = nla_get_u32(svc_attrs[IPVS_SVC_ATTR_TIMEOUT]);
 	nla_memcpy(&flags, svc_attrs[IPVS_SVC_ATTR_FLAGS], sizeof(flags));
@@ -747,7 +764,7 @@ static int ipvs_dests_parse_cb(struct nl_msg *msg, void *arg)
 	d->entrytable[i].l_threshold = nla_get_u32(dest_attrs[IPVS_DEST_ATTR_L_THRESH]);
 	d->entrytable[i].activeconns = nla_get_u32(dest_attrs[IPVS_DEST_ATTR_ACTIVE_CONNS]);
 	d->entrytable[i].inactconns = nla_get_u32(dest_attrs[IPVS_DEST_ATTR_INACT_CONNS]);
-	d->entrytable[i].activeconns = nla_get_u32(dest_attrs[IPVS_DEST_ATTR_PERSIST_CONNS]);
+	d->entrytable[i].persistconns = nla_get_u32(dest_attrs[IPVS_DEST_ATTR_PERSIST_CONNS]);
 	d->entrytable[i].af = d->af;
 
 	if (ipvs_parse_stats(&(d->entrytable[i].stats),
@@ -936,7 +953,8 @@ ipvs_get_service_err2:
 	}
 #endif
 
-	CHECK_IPV4(svc, NULL);
+	CHECK_COMPAT_SVC(svc, NULL);
+	CHECK_PE(svc, NULL);
 	if (getsockopt(sockfd, IPPROTO_IP, IP_VS_SO_GET_SERVICE,
 		       (char *)svc, &len)) {
 		free(svc);
@@ -944,6 +962,7 @@ ipvs_get_service_err2:
 	}
 	svc->af = AF_INET;
 	svc->addr.ip = svc->__addr_v4;
+	svc->pe_name[0] = '\0';
 	return svc;
 }
 
@@ -1085,9 +1104,9 @@ const char *ipvs_strerror(int err)
 		const char *message;
 	} table [] = {
 		{ ipvs_add_service, EEXIST, "Service already exists" },
-		{ ipvs_add_service, ENOENT, "Scheduler not found" },
+		{ ipvs_add_service, ENOENT, "Scheduler or persistence engine not found" },
 		{ ipvs_update_service, ESRCH, "No such service" },
-		{ ipvs_update_service, ENOENT, "Scheduler not found" },
+		{ ipvs_update_service, ENOENT, "Scheduler or persistence engine not found" },
 		{ ipvs_del_service, ESRCH, "No such service" },
 		{ ipvs_zero_service, ESRCH, "No such service" },
 		{ ipvs_add_dest, ESRCH, "Service not defined" },
