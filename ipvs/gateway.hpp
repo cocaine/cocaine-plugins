@@ -28,7 +28,7 @@
 #include <queue>
 
 extern "C" {
-    #include "libipvs-1.25/libipvs.h"
+    #include "libipvs-1.26/libipvs.h"
 }
 
 namespace cocaine { namespace gateway {
