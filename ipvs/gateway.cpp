@@ -238,7 +238,12 @@ ipvs_t::add_service(const std::string& name, const service_info_t& info) {
         std::memset(&service, 0, sizeof(service));
 
         copy_address(service.addr, *endpoint);
-
+        
+        // Chinese people do that in ipvsadm probably for a reason.
+        if(endpoint->protocol().family() == PF_INET6) {
+            service.netmask = 128;
+        }
+        
         service.af         = endpoint->protocol().family();
         service.port       = htons(endpoint->port());
         service.protocol   = IPPROTO_TCP;
