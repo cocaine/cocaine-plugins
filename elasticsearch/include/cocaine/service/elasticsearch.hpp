@@ -21,9 +21,10 @@
 #pragma once
 
 #include <cocaine/api/service.hpp>
-#include <cocaine/dispatch.hpp>
 
 #include "cocaine/idl/elasticsearch.hpp"
+
+#include <cocaine/rpc/dispatch.hpp>
 
 #include <swarm/urlfetcher/url_fetcher.hpp>
 
@@ -38,7 +39,7 @@ typedef result_of<io::elasticsearch::delete_index>::type delete_index;
 
 class elasticsearch_t :
         public api::service_t,
-        public implements<io::elasticsearch_tag>
+        public dispatch<io::elasticsearch_tag>
 {
     class impl_t;
     std::unique_ptr<impl_t> d;
@@ -52,7 +53,7 @@ public:
    ~elasticsearch_t();
 
     auto
-    prototype() -> dispatch_t& {
+    prototype() -> io::basic_dispatch_t& {
         return *this;
     }
 

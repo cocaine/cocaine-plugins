@@ -24,7 +24,7 @@ using namespace std::placeholders;
 
 cache_t::cache_t(context_t& context, io::reactor_t& reactor, const std::string& name, const dynamic_t& args):
     service_t(context, reactor, name, args),
-    implements<io::cache_tag>(name),
+    dispatch<io::cache_tag>(name),
 	cache_(args.as_object().at("max-size", 1000000).to<size_t>())
 {
     on<io::cache::get>(std::bind(&cache_t::get, this, _1));

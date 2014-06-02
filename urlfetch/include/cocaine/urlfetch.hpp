@@ -17,8 +17,9 @@
 #define COCAINE_URLFETCH_SERVICE_HPP
 
 #include <cocaine/api/service.hpp>
-#include <cocaine/dispatch.hpp>
 #include <cocaine/asio/reactor.hpp>
+
+#include <cocaine/rpc/dispatch.hpp>
 #include <cocaine/rpc/tags.hpp>
 
 #include <boost/thread.hpp>
@@ -32,7 +33,7 @@ namespace cocaine { namespace service {
 
 class urlfetch_t:
     public api::service_t,
-    public implements<io::urlfetch_tag>
+    public dispatch<io::urlfetch_tag>
 {
     public:
         typedef result_of<io::urlfetch::get>::type get_result_type;
@@ -42,7 +43,7 @@ class urlfetch_t:
 
         virtual
         auto
-        prototype() -> dispatch_t& {
+        prototype() -> io::basic_dispatch_t& {
             return *this;
         }
 

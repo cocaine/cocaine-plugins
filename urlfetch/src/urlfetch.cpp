@@ -73,7 +73,7 @@ urlfetch_t::urlfetch_t(context_t& context,
                        const std::string& name,
                        const dynamic_t& args):
     service_t(context, reactor, name, args),
-    implements<io::urlfetch_tag>(name),
+    dispatch<io::urlfetch_tag>(name),
     log_(new logging::log_t(context, name)),
     m_logger(new urlfetch_logger_interface(log_), swarm::SWARM_LOG_DEBUG),
     m_loop(m_service),

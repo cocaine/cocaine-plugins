@@ -17,22 +17,23 @@
 #define COCAINE_CHRONO_SERVICE_HPP
 
 #include <cocaine/api/service.hpp>
-#include <cocaine/dispatch.hpp>
 
 #include "cocaine/idl/chrono.hpp"
+
+#include <cocaine/rpc/dispatch.hpp>
 
 namespace cocaine { namespace service {
 
 class chrono_t:
     public api::service_t,
-    public implements<io::chrono_tag>
+    public dispatch<io::chrono_tag>
 {
     public:
         chrono_t(context_t& context, io::reactor_t& reactor, const std::string& name, const dynamic_t& args);
 
         virtual
         auto
-        prototype() -> dispatch_t& {
+        prototype() -> io::basic_dispatch_t& {
             return *this;
         }
 
