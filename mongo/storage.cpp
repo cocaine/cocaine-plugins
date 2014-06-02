@@ -31,8 +31,6 @@ using namespace cocaine::storage;
 using namespace cocaine::logging;
 using namespace mongo;
 
-typedef std::unique_ptr<ScopedDbConnection> connection_ptr_t;
-
 mongo_storage_t::mongo_storage_t(context_t& context,
                                  const std::string& name,
                                  const dynamic_t& args)
@@ -55,8 +53,8 @@ mongo_storage_t::read(const std::string& collection,
     std::string result;
 
     try {
-        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
-        GridFS gridfs(connection->conn(), "cocaine", "fs." + collection);
+        ScopedDbConnection connection(m_uri);
+        GridFS gridfs(connection.conn(), "cocaine", "fs." + collection);
         GridFile file(gridfs.findFile(key));
 
         // Fetch the blob.
@@ -64,7 +62,7 @@ mongo_storage_t::read(const std::string& collection,
             throw storage_error_t("the specified object has not been found");
         }
 
-        connection->done();
+        connection.done();
 
         std::stringstream buffer;
 
@@ -84,8 +82,8 @@ mongo_storage_t::write(const std::string& collection,
                        const std::vector<std::string>& tags)
 {
     try {
-        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
-        DBClientBase &db_client = connection->conn();
+        ScopedDbConnection connection(m_uri);
+        DBClientBase &db_client = connection.conn();
         // GridFS will store file in 'fs.collection.*' collections in 'cocaine' database.
         GridFS gridfs(db_client, "cocaine", "fs." + collection);
 
@@ -104,7 +102,7 @@ mongo_storage_t::write(const std::string& collection,
             key
         );
 
-        connection->done();
+        connection.done();
     } catch(const DBException& e) {
         throw storage_error_t(e.what());
     }
@@ -117,8 +115,8 @@ mongo_storage_t::find(const std::string& collection,
     std::vector<std::string> result;
 
     try {
-        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
-        DBClientBase &db_client = connection->conn();
+        ScopedDbConnection connection(m_uri);
+        DBClientBase &db_client = connection.conn();
 
         // Build a query to mongodb: {"$and": [{"tags": "tag1"}, {"tags": "tag2"}, {"tags": "tag3"}]}
         std::vector<BSONObj> tag_queries;
@@ -139,7 +137,7 @@ mongo_storage_t::find(const std::string& collection,
             result.push_back(object["key"].String());
         }
 
-        connection->done();
+        connection.done();
     } catch(const DBException& e) {
         throw storage_error_t(e.what());
     }
@@ -152,8 +150,8 @@ mongo_storage_t::remove(const std::string& collection,
                         const std::string& key)
 {
     try {
-        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
-        DBClientBase &db_client = connection->conn();
+        ScopedDbConnection connection(m_uri);
+        DBClientBase &db_client = connection.conn();
         GridFS gridfs(db_client, "cocaine", "fs." + collection);
 
         BSONObjBuilder meta;
@@ -165,7 +163,7 @@ mongo_storage_t::remove(const std::string& collection,
         // Remove the blob.
         gridfs.removeFile(key);
 
-        connection->done();
+        connection.done();
     } catch(const DBException& e) {
         throw storage_error_t(e.what());
     }
