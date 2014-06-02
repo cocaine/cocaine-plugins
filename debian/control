@@ -57,20 +57,14 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.12.0.0), lib
 Description: Cocaine - IPVS Gateway
  IP Virtual Service Gateway for Cocaine.
 
-Package: libcocaine-plugin-logstash2
+Package: libcocaine-plugin-mongodb2
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.12.0.0)
-Description: Cocaine - Logstash Logger
- Logstash Logger for Cocaine.
-
-# Package: libcocaine-plugin-mongodb2
-# Architecture: any
-# Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.12.0.0),
-#  libmongoclient | mongodb-clients
-# Provides: cocaine-plugin-mongodb
-# Replaces: cocaine-plugin-mongodb
-# Description: Cocaine - MongoDB Storage
-#  MongoDB storage support for Cocaine.
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.12.0.0),
+ libmongoclient | mongodb-clients
+Provides: cocaine-plugin-mongodb
+Replaces: cocaine-plugin-mongodb
+Description: Cocaine - MongoDB Storage
+ MongoDB storage support for Cocaine.
 
 Package: libcocaine-plugin-urlfetch2
 Architecture: any
