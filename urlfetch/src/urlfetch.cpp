@@ -20,6 +20,7 @@
 #include <boost/foreach.hpp>
 #include <boost/format.hpp>
 
+#include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/traits/tuple.hpp>
 
@@ -43,8 +44,6 @@ public:
     {
         logging::priorities verbosity = logging::priorities::debug;
         switch (level) {
-        case swarm::SWARM_LOG_DATA:
-            verbosity = logging::priorities::ignore;
         case swarm::SWARM_LOG_ERROR:
             verbosity = logging::priorities::error;
         case swarm::SWARM_LOG_INFO:
@@ -52,12 +51,14 @@ public:
         case swarm::SWARM_LOG_NOTICE:
             verbosity = logging::priorities::info;
         case swarm::SWARM_LOG_DEBUG:
+        case swarm::SWARM_LOG_DATA:
         default:
             verbosity = logging::priorities::debug;
         }
 
-        if (log_->verbosity() >= verbosity)
-            log_->emit(verbosity, msg);
+        if (log_->log().verbosity<logging::priorities>() >= verbosity) {
+            COCAINE_LOG(log_, verbosity, msg);
+        }
     }
 
     virtual void reopen()
@@ -74,7 +75,7 @@ urlfetch_t::urlfetch_t(context_t& context,
                        const dynamic_t& args):
     service_t(context, reactor, name, args),
     dispatch<io::urlfetch_tag>(name),
-    log_(new logging::log_t(context, name)),
+    log_(logging::make_source_wrapper(context.logger(), name)),
     m_logger(new urlfetch_logger_interface(log_), swarm::SWARM_LOG_DEBUG),
     m_loop(m_service),
     m_manager(m_loop, m_logger),

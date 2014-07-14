@@ -13,6 +13,8 @@ OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(PYTHON "Build Python Sandbox plugin" OFF)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 
+ADD_DEFINITIONS(-DBLACKHOLE_HEADER_ONLY)
+
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
