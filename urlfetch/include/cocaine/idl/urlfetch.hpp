@@ -43,7 +43,7 @@ struct urlfetch {
             /* data */ std::string,
             /* code */ int,
             /* headers */ std::map<std::string, std::string>
-        >::tag drain_type;
+        >::tag upstream_type;
     };
 
     struct post {
@@ -62,7 +62,7 @@ struct urlfetch {
             /* follow_location */ optional_with_default<bool, true>
         > tuple_type;
 
-        typedef get::drain_type drain_type;
+        typedef get::upstream_type upstream_type;
     };
 };
 
