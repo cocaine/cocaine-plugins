@@ -19,8 +19,11 @@
 #include <cocaine/api/service.hpp>
 
 #include "cocaine/idl/chrono.hpp"
-
 #include <cocaine/rpc/dispatch.hpp>
+
+#include <cocaine/locked_ptr.hpp>
+
+#include <boost/asio/deadline_timer.hpp>
 
 namespace cocaine { namespace service {
 
@@ -29,18 +32,19 @@ class chrono_t:
     public dispatch<io::chrono_tag>
 {
     public:
-        chrono_t(context_t& context, io::reactor_t& reactor, const std::string& name, const dynamic_t& args);
+        chrono_t(context_t& context, boost::asio::io_service& asio, const std::string& name, const dynamic_t& args);
 
         virtual
         auto
-        prototype() -> io::basic_dispatch_t& {
+        prototype() const -> const io::basic_dispatch_t& {
             return *this;
         }
 
     private:
         struct timer_desc_t {
-            std::shared_ptr<ev::timer> timer_;
-            std::shared_ptr<streamed<io::timer_id_t>> promise_;
+            std::shared_ptr<boost::asio::deadline_timer> timer_;
+            streamed<io::timer_id_t> promise_;
+            double interval_;
         };
 
         streamed<io::timer_id_t>
@@ -55,21 +59,19 @@ class chrono_t:
         void
         restart(io::timer_id_t timer_id);
 
-        void 
-        on_timer(ev::timer &w, int revents);
+        void
+        on_timer(const boost::system::error_code& ec, io::timer_id_t timer_id);
 
         void
         remove_timer(io::timer_id_t timer_id);
-        
+
     private:
         streamed<io::timer_id_t>
         set_timer_impl(double first, double repeat, bool send_id);
 
-        std::shared_ptr<logging::log_t> log_;
-        std::map<io::timer_id_t, timer_desc_t > timers_;
-        std::map<ev::timer*, io::timer_id_t> timer_to_id_;
-        ev::timer update_timer_;
-        cocaine::io::reactor_t& reactor_;
+        std::unique_ptr<logging::log_t> log_;
+        synchronized<std::map<io::timer_id_t, timer_desc_t>> timers_;
+        boost::asio::io_service& asio_;
 };
 
 }} // namespace cocaine::service

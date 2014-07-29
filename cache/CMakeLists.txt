@@ -7,7 +7,8 @@ IF(CACHE)
         src/module)
 
     TARGET_LINK_LIBRARIES(cache
-        cocaine-core)
+        cocaine-core
+        ${Boost_LIBRARIES})
 
     SET_TARGET_PROPERTIES(cache PROPERTIES
         PREFIX ""

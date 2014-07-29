@@ -15,8 +15,8 @@ IF(DOCKER)
 
     TARGET_LINK_LIBRARIES(docker
         cocaine-core
-        curl
-        boost_system)
+        ${Boost_LIBRARIES}
+        curl)
 
     SET_TARGET_PROPERTIES(docker PROPERTIES
         PREFIX ""

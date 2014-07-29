@@ -39,7 +39,7 @@ struct chrono {
 
         typedef stream_of<
             timer_id_t
-        >::tag drain_type;
+        >::tag upstream_type;
     };
 
     struct notify_every {
@@ -56,7 +56,7 @@ struct chrono {
 
         typedef stream_of<
             timer_id_t
-        >::tag drain_type;
+        >::tag upstream_type;
     };
 
     struct cancel {
