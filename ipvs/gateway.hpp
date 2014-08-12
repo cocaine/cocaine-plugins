@@ -23,88 +23,47 @@
 
 #include <cocaine/api/gateway.hpp>
 
-#include <cocaine/asio/tcp.hpp>
-
-#include <queue>
-
-extern "C" {
-    #include "libipvs-1.25/libipvs.h"
-}
-
 namespace cocaine { namespace gateway {
+
+class ipvs_config_t {
+public:
+    std::string  scheduler;
+    unsigned int weight;
+};
 
 class ipvs_t:
     public api::gateway_t
 {
-    public:
-        ipvs_t(context_t& context, const std::string& name, const dynamic_t& args);
+    class remote_t;
 
-        virtual
-       ~ipvs_t();
+    context_t& m_context;
 
-        virtual
-        metadata_t
-        resolve(const std::string& name) const;
+    const std::unique_ptr<logging::log_t> m_log;
+    const ipvs_config_t m_cfg;
 
-        virtual
-        void
-        consume(const std::string& uuid, const std::string& name, const metadata_t& meta);
+    // Local endpoints to bind virtual services on.
+    std::vector<boost::asio::ip::address> m_endpoints;
 
-        virtual
-        void
-        cleanup(const std::string& uuid, const std::string& name);
+    // Keeps track of IPVS configuration.
+    std::map<std::string, std::unique_ptr<remote_t>> m_remotes;
 
-    private:
-        struct service_info_t {
-            unsigned int version;
+public:
+    ipvs_t(context_t& context, const std::string& name, const dynamic_t& args);
 
-            // NOTE: There's only one service info for all the services in the cluster, which
-            // means that all the services should expose the same protocol, otherwise bad things
-            // gonna happen.
-            std::tuple_element<2, metadata_t>::type map;
-        };
+    virtual
+   ~ipvs_t();
 
-        void
-        add_service(const std::string& name, const service_info_t& info);
+    virtual
+    auto
+    resolve(const std::string& name) const -> metadata_t;
 
-        void
-        add_backend(const std::string& name, const std::string& uuid, ipvs_dest_t backend);
+    virtual
+    void
+    consume(const std::string& uuid, const std::string& name, const metadata_t& meta);
 
-        void
-        pop_service(const std::string& name);
-
-        void
-        pop_backend(const std::string& name, const std::string& uuid);
-
-    private:
-        context_t& m_context;
-
-        const std::unique_ptr<logging::log_t> m_log;
-
-        const std::string m_default_scheduler;
-        const unsigned    m_default_weight;
-
-        // Ports available for allocation to virtual services.
-        std::priority_queue<uint16_t, std::vector<uint16_t>, std::greater<uint16_t>> m_ports;
-
-        // Keeps track of service versions and mappings.
-        std::map<std::string, service_info_t> m_service_info;
-
-        struct remote_service_t {
-            ipvs_service_t handle;
-
-            // Service endpoint.
-            io::tcp::endpoint endpoint;
-
-            // Precooked endpoint tuple.
-            io::locator::resolve::endpoint_tuple_type cooked;
-
-            // Backend UUID -> Destination mapping.
-            std::map<std::string, ipvs_dest_t> backends;
-        };
-
-        // Keeps track of IPVS configuration.
-        std::map<std::string, remote_service_t> m_remote_services;
+    virtual
+    void
+    cleanup(const std::string& uuid, const std::string& name);
 };
 
 }} // namespace cocaine::gateway
