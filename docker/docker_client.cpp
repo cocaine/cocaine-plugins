@@ -480,7 +480,7 @@ client_impl_t::get(http_response_t& response,
 
     CURLcode errc = curl_easy_perform(m_curl);
 
-    int code = 0;
+    long code = 0;
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &code);
     response.set_code(code);
 
@@ -542,7 +542,7 @@ client_impl_t::post(http_response_t& response,
 
     CURLcode errc = curl_easy_perform(m_curl);
 
-    int code = 0;
+    long code = 0;
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &code);
     response.set_code(code);
 
@@ -602,7 +602,7 @@ client_impl_t::head(http_response_t& response,
 
     CURLcode errc = curl_easy_perform(m_curl);
 
-    int code = 0;
+    long code = 0;
     curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &code);
     response.set_code(code);
 
