@@ -1,3 +1,9 @@
+cocaine-plugins (0.11.2.7) unstable; urgency=low
+
+  * Fixed segfault in the docker plugin.
+
+ -- Andrey Goryachev <bugsbunny@yandex-team.ru>  Mon, 18 Aug 2014 18:51:50 +0400
+
 cocaine-plugins (0.11.2.6) unstable; urgency=low
 
   * Use libnl3 and libipvs1.26 in ipvs plugin.
