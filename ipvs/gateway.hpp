@@ -71,9 +71,6 @@ class ipvs_t:
         add_backend(const std::string& name, const std::string& uuid, ipvs_dest_t backend);
 
         void
-        pop_service(const std::string& name);
-
-        void
         pop_backend(const std::string& name, const std::string& uuid);
 
     private:
@@ -103,8 +100,12 @@ class ipvs_t:
             std::map<std::string, ipvs_dest_t> backends;
         };
 
+        void
+        pop_service(const std::string& name, std::map<std::string, remote_service_t>& remote_services);
+
         // Keeps track of IPVS configuration.
-        std::map<std::string, remote_service_t> m_remote_services;
+        std::map<std::string, remote_service_t> m_remote_services_ip4;
+        std::map<std::string, remote_service_t> m_remote_services_ip6;
 };
 
 }} // namespace cocaine::gateway
