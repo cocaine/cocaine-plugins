@@ -27,7 +27,7 @@ namespace cocaine { namespace gateway {
 
 class ipvs_config_t {
 public:
-    std::string  scheduler;
+    std::string scheduler;
     unsigned int weight;
 };
 
@@ -59,7 +59,7 @@ public:
 
     virtual
     void
-    consume(const std::string& uuid, const std::string& name, const metadata_t& meta);
+    consume(const std::string& uuid, const std::string& name, const metadata_t& info);
 
     virtual
     void
