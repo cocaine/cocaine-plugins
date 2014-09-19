@@ -33,9 +33,6 @@ class docker_t:
     COCAINE_DECLARE_NONCOPYABLE(docker_t)
 
 public:
-    typedef api::isolate_t category_type;
-
-public:
     docker_t(context_t& context, const std::string& name, const dynamic_t& args);
 
     virtual

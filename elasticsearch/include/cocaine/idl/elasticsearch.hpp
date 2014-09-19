@@ -43,7 +43,7 @@ struct elasticsearch {
         typedef stream_of<
             /* status */ bool,
             /* response */ std::string
-        >::tag drain_type;
+        >::tag upstream_type;
     };
 
     struct index {
@@ -63,7 +63,7 @@ struct elasticsearch {
         typedef stream_of<
             /* status */ bool,
             /* id */ std::string
-        >::tag drain_type;
+        >::tag upstream_type;
     };
 
     struct search {
@@ -86,7 +86,7 @@ struct elasticsearch {
             /* status */ bool,
             /* count */ int,
             /* id */ std::string
-        >::tag drain_type;
+        >::tag upstream_type;
     };
 
     struct delete_index {
@@ -104,7 +104,7 @@ struct elasticsearch {
 
         typedef stream_of<
             bool
-        >::tag drain_type;
+        >::tag upstream_type;
     };
 };
 

@@ -50,7 +50,7 @@ struct cache {
         typedef stream_of<
             /* exists */ bool,
             /* value */ std::string
-        >::tag drain_type;
+        >::tag upstream_type;
     };
 };
 
