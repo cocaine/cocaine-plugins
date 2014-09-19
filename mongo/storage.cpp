@@ -36,7 +36,7 @@ mongo_storage_t::mongo_storage_t(context_t& context,
                                  const dynamic_t& args)
 try:
     category_type(context, name, args),
-    m_log(new log_t(context, name)),
+    m_log(context.log(name)),
     m_uri(args.as_object().at("uri", "").to<std::string>(), ConnectionString::SET)
 {
     if(!m_uri.isValid()) {

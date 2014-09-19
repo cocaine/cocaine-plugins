@@ -16,13 +16,14 @@
 #ifndef COCAINE_CACHE_SERVICE_HPP
 #define COCAINE_CACHE_SERVICE_HPP
 
-#include "lru_cache.hpp"
-
 #include <cocaine/api/service.hpp>
 
 #include "cocaine/idl/cache.hpp"
-
 #include <cocaine/rpc/dispatch.hpp>
+
+#include <cocaine/locked_ptr.hpp>
+
+#include "lru_cache.hpp"
 
 namespace cocaine { namespace service {
 
@@ -31,13 +32,11 @@ class cache_t:
     public dispatch<io::cache_tag>
 {
     public:
-        typedef result_of<io::cache::get>::type get_result_type;
-
-        cache_t(context_t& context, io::reactor_t& reactor, const std::string& name, const dynamic_t& args);
+        cache_t(context_t& context, boost::asio::io_service& asio, const std::string& name, const dynamic_t& args);
 
         virtual
         auto
-        prototype() -> io::basic_dispatch_t& {
+        prototype() const -> const io::basic_dispatch_t& {
             return *this;
         }
 
@@ -46,10 +45,10 @@ class cache_t:
         put(const std::string& key, const std::string& value);
 
         auto
-        get(const std::string& key) -> get_result_type;
+        get(const std::string& key) -> result_of<io::cache::get>::type;
 
     private:
-        cache::lru_cache<std::string, std::string> cache_;
+        synchronized<cache::lru_cache<std::string, std::string>> cache_;
 };
 
 }} // namespace cocaine::service

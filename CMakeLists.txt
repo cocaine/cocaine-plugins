@@ -21,12 +21,12 @@ SET(CMAKE_MODULE_PATH
 FIND_PACKAGE(Boost 1.40.0
     REQUIRED COMPONENTS
         system
-        filesystem)
+        filesystem
+        thread)
 
 INCLUDE(cmake/locate_library.cmake)
 
 LOCATE_LIBRARY(LIBCOCAINE "cocaine/context.hpp" "cocaine-core")
-LOCATE_LIBRARY(LIBEV "ev++.h" "ev" "libev")
 LOCATE_LIBRARY(LIBMSGPACK "msgpack.hpp" "msgpack")
 
 INCLUDE_DIRECTORIES(BEFORE
@@ -48,13 +48,13 @@ LINK_DIRECTORIES(
 
 SET(PLUGINS
         cache
-        docker
         chrono
+        docker
+        elasticsearch
         ipvs
         mongo
         python
-        urlfetch
-        elasticsearch)
+        urlfetch)
 
 FOREACH(PLUGIN ${PLUGINS})
     ADD_SUBDIRECTORY(${PLUGIN})

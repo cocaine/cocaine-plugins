@@ -30,39 +30,28 @@ namespace cocaine { namespace storage {
 class mongo_storage_t:
     public api::storage_t
 {
-    public:
-        typedef api::storage_t category_type;
+    const std::unique_ptr<logging::log_t> m_log;
+    const mongo::ConnectionString m_uri;
 
-    public:
-        mongo_storage_t(context_t& context,
-                        const std::string& name,
-                        const dynamic_t& args);
+public:
+    mongo_storage_t(context_t& context, const std::string& name, const dynamic_t& args);
 
-        virtual
-        std::string
-        read(const std::string& collection,
-             const std::string& key);
+    virtual
+    std::string
+    read(const std::string& collection, const std::string& key);
 
-        virtual
-        void
-        write(const std::string& collection,
-              const std::string& key,
-              const std::string& blob,
-              const std::vector<std::string>& tags);
+    virtual
+    void
+    write(const std::string& collection, const std::string& key, const std::string& blob,
+          const std::vector<std::string>& tags);
 
-        virtual
-        std::vector<std::string>
-        find(const std::string& collection,
-             const std::vector<std::string>& tags);
+    virtual
+    std::vector<std::string>
+    find(const std::string& collection, const std::vector<std::string>& tags);
 
-        virtual
-        void
-        remove(const std::string& collection,
-               const std::string& key);
-
-    private:
-        std::shared_ptr<logging::log_t> m_log;
-        const mongo::ConnectionString m_uri;
+    virtual
+    void
+    remove(const std::string& collection, const std::string& key);
 };
 
 }}

@@ -8,7 +8,7 @@ IF(CHRONO)
 
     TARGET_LINK_LIBRARIES(chrono
         cocaine-core
-        ev)
+        ${Boost_LIBRARIES})
 
     SET_TARGET_PROPERTIES(chrono PROPERTIES
         PREFIX ""

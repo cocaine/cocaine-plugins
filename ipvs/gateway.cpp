@@ -20,327 +20,418 @@
 
 #include "gateway.hpp"
 
-#include <cocaine/asio/resolver.hpp>
-
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
 #include <cstring>
-#include <system_error>
 
-#include <netinet/in.h>
+#include <blackhole/scoped_attributes.hpp>
 
-using namespace cocaine::api;
-using namespace cocaine::io;
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/ip/host_name.hpp>
+#include <boost/asio/ip/tcp.hpp>
+
+extern "C" {
+
+#include "libipvs-1.25/libipvs.h"
+
+}
+
+using namespace blackhole;
+
+using namespace boost::asio;
+using namespace boost::asio::ip;
+
 using namespace cocaine::gateway;
+using namespace cocaine::io;
+
+// IPVS gateway internals
 
 namespace {
 
 class ipvs_category_t:
-    public std::error_category
+    public boost::system::error_category
 {
     virtual
-    const char*
-    name() const throw() {
-        return "ipvs";
+    auto
+    name() const throw() -> const char* {
+        return "cocaine.gateway.ipvs";
     }
 
     virtual
-    std::string
-    message(int code) const {
+    auto
+    message(int code) const -> std::string {
         return ::ipvs_strerror(code);
     }
 };
 
-ipvs_category_t category_instance;
-
-const std::error_category&
-ipvs_category() {
-    return category_instance;
+auto
+ipvs_category() -> const boost::system::error_category& {
+    static ipvs_category_t instance;
+    return instance;
 }
 
-}
+} // namespace
 
-ipvs_t::ipvs_t(context_t& context, const std::string& name, const dynamic_t& args):
-    category_type(context, name, args),
-    m_context(context),
-    m_log(new logging::log_t(context, name)),
-    m_default_scheduler(args.as_object().at("scheduler", "wlc").to<std::string>()),
-    m_default_weight(args.as_object().at("weight", 1).to<unsigned int>())
+class ipvs_t::remote_t {
+    COCAINE_DECLARE_NONCOPYABLE(remote_t)
+
+    struct info_t {
+        const std::string name;
+        metadata_t        meta;
+    };
+
+    ipvs_t* impl;
+    info_t  info;
+
+    // PF -> Kernel IPVS virtual service handle mapping.
+    std::map<int, ipvs_service_t> services;
+
+    // Backend UUID -> kernel IPVS destination handle mapping.
+    std::multimap<std::string, ipvs_dest_t> backends;
+
+public:
+    remote_t(ipvs_t* impl, const std::string& name, unsigned int version, const graph_basis_t& graph);
+   ~remote_t();
+
+    // Observers
+
+    auto
+    reduce() const -> metadata_t;
+
+    // Modifiers
+
+    void
+    insert(const std::string& uuid, const std::vector<tcp::endpoint>& endpoints);
+
+    void
+    remove(const std::string& uuid);
+
+private:
+    void
+    format_address(union nf_inet_addr& target, const tcp::endpoint& endpoint);
+};
+
+ipvs_t::remote_t::remote_t(ipvs_t* impl_, const std::string& name_, unsigned int version,
+                           const graph_basis_t& graph)
+:
+    impl(impl_),
+    info({name_, metadata_t({}, version, graph)})
 {
-    if(::ipvs_init() != 0) {
-        throw std::system_error(errno, ipvs_category(), "unable to initialize IPVS");
+    ipvs_service_t handle;
+
+    scoped_attributes_t attributes(*impl->m_log, {
+        attribute::make("service", info.name)
+    });
+
+    auto  port = impl->m_context.mapper().assign(info.name + ":virtual");
+    auto& endpoints = std::get<0>(info.meta);
+
+    COCAINE_LOG_DEBUG(impl->m_log, "publishing virtual service");
+
+    for(auto it = impl->m_endpoints.begin(); it != impl->m_endpoints.end(); ++it) {
+        tcp::endpoint endpoint(*it, port);
+
+        if(services.count(endpoint.protocol().family())) {
+            COCAINE_LOG_DEBUG(impl->m_log, "skipping virtual service endpoint %s", endpoint);
+
+            // If there's already a service for that PF, skip the endpoint.
+            continue;
+        }
+
+        // Cleanup the handle structure every iteration for additional safety.
+        std::memset(&handle, 0, sizeof(handle));
+
+        format_address(handle.addr, endpoint);
+
+        handle.af         = endpoint.protocol().family();
+        handle.netmask    = endpoint.address().is_v4() ? 32 : 128;
+        handle.port       = htons(endpoint.port());
+        handle.protocol   = IPPROTO_TCP;
+
+        std::strncpy(handle.sched_name, impl->m_cfg.scheduler.c_str(), IP_VS_SCHEDNAME_MAXLEN);
+
+        if(::ipvs_add_service(&handle) != 0) {
+            boost::system::error_code ec(errno, ipvs_category());
+
+            COCAINE_LOG_WARNING(impl->m_log, "unable to configure virtual service on %s: [%d] %s",
+                endpoint, ec.value(), ec.message()
+            );
+
+            continue;
+        }
+
+        // Store the endpoint.
+        endpoints.push_back(endpoint);
+
+        // Store the kernel service handle.
+        services[handle.af] = handle;
     }
 
-    COCAINE_LOG_INFO(m_log, "using IPVS version %d", ::ipvs_version());
+    if(services.empty()) {
+        COCAINE_LOG_ERROR(impl->m_log, "no valid endpoints found for virtual service");
 
-    uint16_t min, max;
-
-    try {
-        std::tie(min, max) = args.as_object()["port-range"].to<std::tuple<uint16_t, uint16_t>>();
-    } catch(...) {
-        throw cocaine::error_t("no port ranges have been specified");
+        // Force disconnect the remote node.
+        throw boost::system::system_error(EADDRNOTAVAIL, boost::system::generic_category());
     }
 
-    COCAINE_LOG_INFO(m_log, "%u gateway ports available, %u through %u", max - min, min, max);
-
-    while(min != max) {
-        m_ports.push(--max);
-    }
-
-    ::ipvs_flush();
-}
-
-ipvs_t::~ipvs_t() {
-    COCAINE_LOG_INFO(m_log, "cleaning up");
-
-    for(auto it = m_remote_services.begin(); it != m_remote_services.end(); ++it) {
-        ::ipvs_del_service(&it->second.handle);
-    }
-
-    ::ipvs_close();
-}
-
-ipvs_t::metadata_t
-ipvs_t::resolve(const std::string& name) const {
-    const auto ipvs = m_remote_services.find(name);
-
-    if(ipvs == m_remote_services.end()) {
-        throw cocaine::error_t("the specified service is not available");
-    }
-
-    const auto info = m_service_info.find(name);
-
-    BOOST_VERIFY(info != m_service_info.end());
-
-    COCAINE_LOG_DEBUG(m_log, "providing '%s' using virtual service on '%s'", name, ipvs->second.endpoint);
-
-    return metadata_t(
-        ipvs->second.cooked,
-        info->second.version,
-        info->second.map
+    COCAINE_LOG_INFO(impl->m_log, "virtual service published on port %d with %d endpoint(s)",
+        port, endpoints.size()
     );
+}
+
+ipvs_t::remote_t::~remote_t() {
+    COCAINE_LOG_DEBUG(impl->m_log, "cleaning up virtual service")(
+        "service", info.name
+    );
+
+    for(auto it = backends.begin(); it != backends.end(); ++it) {
+        auto& backend = it->second;
+
+        // Destroy the destination using the corresponding service handle.
+        ::ipvs_del_dest(&services.at(backend.af), &backend);
+    }
+
+    for(auto it = services.begin(); it != services.end(); ++it) {
+        ::ipvs_del_service(&it->second);
+    }
 }
 
 namespace {
 
-void
-copy_address(union nf_inet_addr& target, const tcp::endpoint& endpoint) {
-    switch(endpoint.protocol().family()) {
-    case PF_INET: {
-        auto source = reinterpret_cast<const sockaddr_in*>(endpoint.data());
-        std::memcpy(&target.in, &source->sin_addr, sizeof(in_addr));
-    } break;
+struct is_same_pf {
+    bool
+    operator()(const std::pair<std::string, ipvs_dest_t>& pair) const {
+        return pair.second.af == endpoint.protocol().family();
+    }
 
-    case PF_INET6: {
-        auto source = reinterpret_cast<const sockaddr_in6*>(endpoint.data());
-        std::memcpy(&target.in6, &source->sin6_addr, sizeof(in6_addr));
-    }}
+    const tcp::endpoint& endpoint;
+};
+
+struct is_serving {
+    bool
+    operator()(const tcp::endpoint& endpoint) const {
+        return std::any_of(backends.begin(), backends.end(), is_same_pf{endpoint});
+    }
+
+    const std::multimap<std::string, ipvs_dest_t>& backends;
+};
+
+} // namespace
+
+auto
+ipvs_t::remote_t::reduce() const -> metadata_t {
+    if(backends.empty()) {
+        throw boost::system::system_error(error::service_not_available);
+    }
+
+    auto endpoints = std::vector<tcp::endpoint>();
+    auto builder   = std::back_inserter(endpoints);
+
+    std::copy_if(std::get<0>(info.meta).begin(), std::get<0>(info.meta).end(), builder,
+        is_serving{backends}
+    );
+
+    return metadata_t { endpoints, std::get<1>(info.meta), std::get<2>(info.meta) };
 }
 
-}
-
 void
-ipvs_t::consume(const std::string& uuid, const std::string& name, const metadata_t& meta) {
-    COCAINE_LOG_DEBUG(m_log, "updating node '%s' service '%s'", uuid, name);
+ipvs_t::remote_t::insert(const std::string& uuid, const std::vector<tcp::endpoint>& endpoints) {
+    ipvs_dest_t handle;
 
-    ipvs_dest_t backend;
+    scoped_attributes_t attributes(*impl->m_log, {
+        attribute::make("service", info.name),
+        attribute::make("uuid",    uuid)
+    });
 
-    if(m_remote_services.find(name) == m_remote_services.end()) {
-        service_info_t info = {
-            std::get<1>(meta), /* protocol version */
-            std::get<2>(meta)  /* dispatch map */
-        };
+    std::map<int, ipvs_dest_t> handles;
 
-        try {
-            add_service(name, info);
-        } catch(const std::system_error& e) {
-            COCAINE_LOG_ERROR(m_log, "unable to create virtual service '%s' - [%d] %s", name,
-                e.code().value(), e.code().message());
+    COCAINE_LOG_DEBUG(impl->m_log, "registering destination");
 
-            return;
+    for(auto it = endpoints.begin(); it != endpoints.end(); ++it) {
+        if(!services.count(it->protocol().family()) || handles.count(it->protocol().family())) {
+            COCAINE_LOG_DEBUG(impl->m_log, "skipping destination endpoint %s", *it);
+
+            // If there's no virtual service for that PF or there's already a backend for that
+            // PF, skip the endpoint.
+            continue;
         }
-    }
 
-    // Setup the backend destination
+        // Cleanup the handle structure every iteration for additional safety.
+        std::memset(&handle, 0, sizeof(ipvs_dest_t));
 
-    std::string hostname;
-    uint16_t    port;
+        format_address(handle.addr, *it);
 
-    std::tie(hostname, port) = std::get<0>(meta);
+        handle.af         = it->protocol().family();
+        handle.conn_flags = IP_VS_CONN_F_MASQ;
+        handle.port       = htons(it->port());
+        handle.weight     = impl->m_cfg.weight;
 
-    std::vector<io::tcp::endpoint> endpoints;
+        if(::ipvs_add_dest(&services.at(handle.af), &handle) != 0) {
+            boost::system::error_code ec(errno, ipvs_category());
 
-    try {
-        endpoints = io::resolver<io::tcp>::query(
-            m_remote_services[name].endpoint.protocol(),
-            hostname,
-            port
-        );
-    } catch(const std::system_error& e) {
-        COCAINE_LOG_WARNING(m_log, "unable to resolve any endpoints for service '%s' on '%s' - [%d] %s",
-            name, hostname, e.code().value(), e.code().message());
-
-        return;
-    }
-
-    for(auto endpoint = endpoints.begin(); endpoint != endpoints.end(); ++endpoint) {
-        std::memset(&backend, 0, sizeof(ipvs_dest_t));
-
-        copy_address(backend.addr, *endpoint);
-
-        backend.af         = endpoint->protocol().family();
-        backend.conn_flags = IP_VS_CONN_F_MASQ;
-        backend.port       = htons(endpoint->port());
-        backend.weight     = m_default_weight;
-
-        try {
-            add_backend(name, uuid, backend);
-        } catch(const std::system_error& e) {
-            COCAINE_LOG_WARNING(m_log, "unable to add endpoint '%s' to virtual service '%s' - [%d] %s",
-                *endpoint, name, e.code().value(), e.code().message());
+            COCAINE_LOG_WARNING(impl->m_log, "unable to register destination for %s: [%d] %s",
+                *it, ec.value(), ec.message()
+            );
 
             continue;
         }
 
-        break;
+        handles.insert({handle.af, handle});
     }
+
+    if(handles.empty()) {
+        COCAINE_LOG_ERROR(impl->m_log, "no valid endpoints found for destination");
+
+        // Force disconnect the remote node.
+        throw boost::system::system_error(EHOSTUNREACH, boost::system::generic_category());
+    }
+
+    for(auto it = handles.begin(); it != handles.end(); ++it) {
+        backends.insert({uuid, it->second});
+    }
+
+    COCAINE_LOG_INFO(impl->m_log, "destination registered with %d endpoint(s)", handles.size());
+}
+
+void
+ipvs_t::remote_t::remove(const std::string& uuid) {
+    if(!backends.count(uuid)) {
+        return;
+    }
+
+    COCAINE_LOG_INFO(impl->m_log, "removing destination with %d endpoint(s)", backends.count(uuid))(
+        "service", info.name,
+        "uuid",    uuid
+    );
+
+    for(auto it = backends.lower_bound(uuid); it != backends.upper_bound(uuid); ++it) {
+        auto& backend = it->second;
+
+        if(::ipvs_del_dest(&services.at(backend.af), &backend) != 0) {
+            // Force disconnect the remote node.
+            throw boost::system::system_error(errno, ipvs_category());
+        }
+    }
+
+    backends.erase(uuid);
+}
+
+void
+ipvs_t::remote_t::format_address(union nf_inet_addr& target, const tcp::endpoint& endpoint) {
+    if(endpoint.address().is_v4()) {
+        auto source = reinterpret_cast<const sockaddr_in* >(endpoint.data());
+        std::memcpy(&target.in,  &source->sin_addr,  sizeof(in_addr));
+    } else {
+        auto source = reinterpret_cast<const sockaddr_in6*>(endpoint.data());
+        std::memcpy(&target.in6, &source->sin6_addr, sizeof(in6_addr));
+    }
+}
+
+// IPVS gateway
+
+namespace cocaine {
+
+template<>
+struct dynamic_converter<ipvs_config_t> {
+    typedef ipvs_config_t result_type;
+
+    static
+    result_type
+    convert(const dynamic_t& source) {
+        result_type result;
+
+        result.scheduler = source.as_object().at("scheduler", "wlc").as_string();
+        result.weight    = source.as_object().at("weight", 1u).as_uint();
+
+        return result;
+    }
+};
+
+} // namespace cocaine
+
+ipvs_t::ipvs_t(context_t& context, const std::string& name, const dynamic_t& args):
+    category_type(context, name, args),
+    m_context(context),
+    m_log(context.log(name)),
+    m_cfg(args.to<ipvs_config_t>())
+{
+    COCAINE_LOG_INFO(m_log, "initializing IPVS");
+
+    if(::ipvs_init() != 0) {
+        throw boost::system::system_error(errno, ipvs_category(), "unable to initialize IPVS");
+    }
+
+    io_service asio;
+
+    tcp::resolver resolver(asio);
+    tcp::resolver::iterator begin, end;
+
+    try {
+        begin = resolver.resolve(tcp::resolver::query(
+            m_context.config.network.hostname, std::string()
+        ));
+    } catch(const boost::system::system_error& e) {
+        std::throw_with_nested(cocaine::error_t("unable to determine local addresses"));
+    }
+
+    for(auto it = begin; it != end; ++it) {
+        m_endpoints.push_back(it->endpoint().address());
+    }
+
+    std::ostringstream stream;
+    std::ostream_iterator<ip::address> builder(stream, ", ");
+
+    std::copy(m_endpoints.begin(), m_endpoints.end(), builder);
+
+    COCAINE_LOG_INFO(m_log, "using %d local address(es): %s", m_endpoints.size(), stream.str());
+
+    // Clean up the IPVS table before use.
+    ::ipvs_flush();
+}
+
+ipvs_t::~ipvs_t() {
+    m_remotes.clear();
+
+    COCAINE_LOG_INFO(m_log, "shutting down IPVS");
+
+    // This doesn't clean the IPVS tables. Instead, the plugin cleans them up on construction.
+    ::ipvs_close();
+}
+
+auto
+ipvs_t::resolve(const std::string& name) const -> metadata_t {
+    if(!m_remotes.count(name)) {
+        throw boost::system::system_error(error::service_not_available);
+    }
+
+    COCAINE_LOG_DEBUG(m_log, "providing service using virtual node")(
+        "service", name
+    );
+
+    return m_remotes.at(name)->reduce();
+}
+
+void
+ipvs_t::consume(const std::string& uuid, const std::string& name, const metadata_t& info) {
+    auto endpoints = std::vector<tcp::endpoint>();
+    auto graph     = graph_basis_t();
+    auto version   = 0;
+
+    std::tie(endpoints, version, graph) = info;
+
+    if(!m_remotes.count(name)) {
+        m_remotes[name] = std::make_unique<remote_t>(this, name, version, graph);
+    }
+
+    m_remotes.at(name)->insert(uuid, endpoints);
 }
 
 void
 ipvs_t::cleanup(const std::string& uuid, const std::string& name) {
-    COCAINE_LOG_DEBUG(m_log, "cleaning up node '%s' service '%s'", uuid, name);
-
-    try {
-        pop_backend(name, uuid);
-
-        if(m_remote_services[name].backends.empty()) {
-            pop_service(name);
-        }
-    } catch(const std::system_error& e) {
-        COCAINE_LOG_ERROR(m_log, "unable to cleanup services - [%d] %s", e.code().value(), e.code().message());
-    }
-}
-
-void
-ipvs_t::add_service(const std::string& name, const service_info_t& info) {
-    ipvs_service_t service;
-
-    // Setup the virtual service
-
-    const auto endpoints = io::resolver<io::tcp>::query(
-        m_context.config.network.hostname,
-        m_ports.top()
-    );
-
-    int rv = 0;
-
-    for(auto endpoint = endpoints.begin(); endpoint != endpoints.end(); ++endpoint) {
-        std::memset(&service, 0, sizeof(service));
-
-        copy_address(service.addr, *endpoint);
-
-        service.af         = endpoint->protocol().family();
-        service.port       = htons(endpoint->port());
-        service.protocol   = IPPROTO_TCP;
-
-        std::strncpy(service.sched_name, m_default_scheduler.c_str(), IP_VS_SCHEDNAME_MAXLEN);
-
-        if((rv = ::ipvs_add_service(&service)) != 0) {
-            std::error_code ec(errno, ipvs_category());
-
-            COCAINE_LOG_ERROR(m_log, "unable to create virtual service '%s' on '%s' - [%d] %s", name,
-                *endpoint, ec.value(), ec.message());
-
-            continue;
-        }
-
-        COCAINE_LOG_INFO(m_log, "creating virtual service '%s' on '%s'", name, *endpoint);
-
-        // Store the virtual service information
-
-        m_remote_services[name] = remote_service_t { service, *endpoint, locator::resolve::endpoint_tuple_type(
-            endpoint->address().to_string(),
-            endpoint->port()
-        )};
-
-        break;
-    }
-
-    if(rv != 0) {
-        throw std::system_error(std::make_error_code(std::errc::address_not_available));
-    }
-
-    m_ports.pop();
-
-    // NOTE: Store the first seen protocol description for the service.
-    m_service_info[name] = info;
-}
-
-void
-ipvs_t::add_backend(const std::string& name, const std::string& uuid, ipvs_dest_t backend) {
-    auto  it = m_remote_services.find(name);
-
-    BOOST_ASSERT(it != m_remote_services.end());
-
-    auto& service = it->second;
-
-    if(service.backends.find(uuid) != service.backends.end()) {
+    if(!m_remotes.count(name)) {
         return;
     }
 
-    COCAINE_LOG_INFO(m_log, "adding node '%s' to virtual service '%s'", uuid, name);
-
-    if(::ipvs_add_dest(&service.handle, &backend) != 0) {
-        throw std::system_error(errno, ipvs_category());
-    }
-
-    service.backends[uuid] = backend;
-}
-
-void
-ipvs_t::pop_service(const std::string& name) {
-    auto  it = m_remote_services.find(name);
-
-    BOOST_ASSERT(it != m_remote_services.end());
-
-    auto& service = it->second;
-
-    BOOST_ASSERT(service.backends.empty());
-
-    COCAINE_LOG_INFO(m_log, "destroying virtual service '%s'", name);
-
-    if(::ipvs_del_service(&service.handle) != 0) {
-        throw std::system_error(errno, ipvs_category());
-    }
-
-    m_ports.push(ntohs(service.handle.port));
-
-    // Drop the IPVS state.
-    m_remote_services.erase(it);
-
-    // Drop the service info, so that it won't lay around stale.
-    m_service_info.erase(name);
-}
-
-void
-ipvs_t::pop_backend(const std::string& name, const std::string& uuid) {
-    auto  it = m_remote_services.find(name);
-
-    BOOST_ASSERT(it != m_remote_services.end());
-
-    auto& service = it->second;
-    auto  backend = service.backends.find(uuid);
-
-    if(backend == service.backends.end()) {
-        return;
-    }
-
-    COCAINE_LOG_INFO(m_log, "removing node '%s' from virtual service '%s'", uuid, name);
-
-    if(::ipvs_del_dest(&service.handle, &backend->second) != 0) {
-        throw std::system_error(errno, ipvs_category());
-    }
-
-    service.backends.erase(backend);
+    m_remotes.at(name)->remove(uuid);
 }

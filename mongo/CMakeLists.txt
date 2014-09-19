@@ -16,7 +16,7 @@ IF(MONGO)
 
         TARGET_LINK_LIBRARIES(mongodb
             cocaine-core
-            boost_thread-mt
+            ${Boost_LIBRARIES}
             mongoclient)
 
         SET_TARGET_PROPERTIES(mongodb PROPERTIES

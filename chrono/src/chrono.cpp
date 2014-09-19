@@ -17,7 +17,9 @@
 
 #include <memory>
 
+#include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
+
 #include <cocaine/traits/tuple.hpp>
 
 using namespace cocaine;
@@ -26,11 +28,11 @@ using namespace cocaine::service;
 
 using namespace std::placeholders;
 
-chrono_t::chrono_t(context_t& context, reactor_t& reactor, const std::string& name, const dynamic_t& args):
-    service_t(context, reactor, name, args),
+chrono_t::chrono_t(context_t& context, boost::asio::io_service& asio, const std::string& name, const dynamic_t& args):
+    service_t(context, asio, name, args),
     dispatch<io::chrono_tag>(name),
-    log_(new logging::log_t(context, name)),
-    reactor_(reactor)
+    log_(context.log(name)),
+    asio_(asio)
 {
     on<io::chrono::notify_after>(std::bind(&chrono_t::notify_after, this, _1, _2));
     on<io::chrono::notify_every>(std::bind(&chrono_t::notify_every, this, _1, _2));
@@ -50,80 +52,93 @@ chrono_t::notify_every(double time, bool send_id) {
 
 cocaine::streamed<io::timer_id_t>
 chrono_t::set_timer_impl(double first, double repeat, bool send_id) {
-    std::shared_ptr<streamed<io::timer_id_t>> promise(new streamed<io::timer_id_t>());
-    std::shared_ptr<ev::timer> timer(new ev::timer(reactor_.native()));
+    streamed<io::timer_id_t> promise;
+    std::shared_ptr<boost::asio::deadline_timer> timer(new boost::asio::deadline_timer(asio_));
 
     timer_desc_t desc;
     desc.timer_ = timer;
-    desc.promise_ = promise;
+    desc.interval_ = repeat;
 
     io::timer_id_t timer_id;
+
+    auto ptr = timers_.synchronize();
+
     do {
         timer_id = std::rand();
-    } while (timers_.find(timer_id) != timers_.end());
+    } while (ptr->find(timer_id) != ptr->end());
 
     try {
-        timers_.insert( std::make_pair(timer_id, desc) );
-        timer_to_id_[timer.get()] = timer_id;
+        ptr->insert(std::make_pair(timer_id, desc));
 
-        timer->set<chrono_t, &chrono_t::on_timer>(this);
-        timer->start(first, repeat);
+        desc.timer_->expires_from_now(boost::posix_time::seconds(first));
+        desc.timer_->async_wait(std::bind(&chrono_t::on_timer, this, std::placeholders::_1, timer_id));
 
         if (send_id) {
-            promise->write(timer_id);
+            desc.promise_.write(timer_id);
         }
     } catch (std::exception& ex) {
         remove_timer(timer_id);
         throw;
     }
 
-    return *promise;
+    return desc.promise_;
 }
 
 void
 chrono_t::cancel(io::timer_id_t timer_id) {
-    if (timers_.find(timer_id) != timers_.end()) {
+    auto ptr = timers_.synchronize();
+
+    if (ptr->find(timer_id) != ptr->end()) {
         remove_timer(timer_id);
     } else {
-        COCAINE_LOG_INFO(log_, "Attempt to cancel timer that does not exist, id is %1%", timer_id);
+        COCAINE_LOG_INFO(log_, "attempt to cancel timer that does not exist, id is %1%", timer_id);
     }
 }
 
 void
 chrono_t::restart(io::timer_id_t timer_id) {
-    const timer_desc_t& timer_desc = timers_.at(timer_id);
-    timer_desc.timer_->again();
+    timer_desc_t& timer_desc = timers_->at(timer_id);
+
+    timer_desc.timer_->expires_from_now(boost::posix_time::seconds(timer_desc.interval_));
+    timer_desc.timer_->async_wait(std::bind(&chrono_t::on_timer, this, std::placeholders::_1, timer_id));
 }
 
-void 
-chrono_t::on_timer(ev::timer &timer, int revents) {
-    try {
-        io::timer_id_t timer_id = timer_to_id_.at(&timer);
+void
+chrono_t::on_timer(const boost::system::error_code& ec, io::timer_id_t timer_id) {
+    if(ec == boost::asio::error::operation_aborted) {
+        return;
+    }
 
-        const timer_desc_t& timer_desc = timers_.at(timer_id);
+    BOOST_ASSERT(!ec);
+
+    auto ptr = timers_.synchronize();
+
+    try {
+        timer_desc_t& timer_desc = ptr->at(timer_id);
 
         try {
-            timer_desc.promise_->write(timer_id);
-        } catch (std::exception ex) { 
+            timer_desc.promise_.write(timer_id);
+        } catch (const std::exception& ex) {
             remove_timer(timer_id);
         }
 
-        if (!timer.is_active() && timers_.find(timer_id) != timers_.end()) {
+        if (!timer_desc.interval_ && ptr->find(timer_id) != ptr->end()) {
             remove_timer(timer_id);
+        } else if (timer_desc.interval_) {
+            restart(timer_id);
         }
     } catch (std::exception& ex) {
-        COCAINE_LOG_ERROR(log_, "Possibly bug in timer service in chrono_t::on_timer, error is %s", ex.what());
+        COCAINE_LOG_ERROR(log_, "possibly bug in timer service in chrono_t::on_timer(), error is %s", ex.what());
     }
 }
 
 void
 chrono_t::remove_timer(io::timer_id_t timer_id) {
     try {
-        timers_.at(timer_id).promise_->close();
-        ev::timer* timer_ptr = timers_.at(timer_id).timer_.get();
-        timers_.erase(timer_id);
-        timer_to_id_.erase(timer_ptr);
-    } catch (std::exception& ex) {
-        COCAINE_LOG_ERROR(log_, "Error occured while removing timer %s", ex.what());
+        // Already locked.
+        timers_.unsafe().at(timer_id).promise_.close();
+        timers_.unsafe().erase(timer_id);
+    } catch (const std::exception& ex) {
+        COCAINE_LOG_ERROR(log_, "error occured while removing timer %s", ex.what());
     }
 }

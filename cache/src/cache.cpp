@@ -14,32 +14,35 @@
 */
 
 #include "cocaine/cache.hpp"
+#include "cocaine/dynamic.hpp"
 
 #include <cocaine/traits/tuple.hpp>
 
 using namespace cocaine;
 using namespace cocaine::service;
 
-using namespace std::placeholders;
-
-cache_t::cache_t(context_t& context, io::reactor_t& reactor, const std::string& name, const dynamic_t& args):
-    service_t(context, reactor, name, args),
+cache_t::cache_t(context_t& context, boost::asio::io_service& asio, const std::string& name, const dynamic_t& args):
+    service_t(context, asio, name, args),
     dispatch<io::cache_tag>(name),
-	cache_(args.as_object().at("max-size", 1000000).to<size_t>())
+    cache_(args.as_object().at("max-size", 1000000).to<size_t>())
 {
+    using namespace std::placeholders;
+
     on<io::cache::get>(std::bind(&cache_t::get, this, _1));
     on<io::cache::put>(std::bind(&cache_t::put, this, _1, _2));
 }
 
 void
 cache_t::put(const std::string& key, const std::string& value) {
-	cache_.put(key, value);
+	cache_->put(key, value);
 }
 
 auto
-cache_t::get(const std::string& key) -> get_result_type {
-    if(cache_.exists(key)) {
-		return std::make_tuple(true, cache_.get(key));
+cache_t::get(const std::string& key) -> result_of<io::cache::get>::type {
+    auto ptr = cache_.synchronize();
+
+    if(ptr->exists(key)) {
+		return std::make_tuple(true, ptr->get(key));
 	} else {
 		return std::make_tuple(false, std::string(""));
 	}
