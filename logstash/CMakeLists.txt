@@ -1,4 +1,6 @@
 IF(LOGSTASH)
+    FIND_PACKAGE(Boost COMPONENTS system REQUIRED)
+
     INCLUDE_DIRECTORIES(
         ${PROJECT_SOURCE_DIR}/logstash/include)
 
@@ -11,7 +13,7 @@ IF(LOGSTASH)
 
     TARGET_LINK_LIBRARIES(logstash
         cocaine-core
-        boost_system-mt)
+        ${Boost_LIBRARIES})
 
     SET_TARGET_PROPERTIES(logstash PROPERTIES
         PREFIX ""
