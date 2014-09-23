@@ -1,3 +1,10 @@
+cocaine-plugins (0.11.2.8) unstable; urgency=low
+
+  * Bug fix: fixed boost dependencies for logstash plugin.
+  * Bug fix: constrained libswarm dependency for range [0.6; 0.7).
+        
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 22 Sep 2014 15:09:36 +0400
+
 cocaine-plugins (0.11.2.7) unstable; urgency=low
 
   * Fixed segfault in the docker plugin.
