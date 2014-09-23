@@ -124,7 +124,7 @@ ipvs_t::remote_t::remote_t(ipvs_t* impl_, const std::string& name_, unsigned int
         attribute::make("service", info.name)
     });
 
-    auto  port = impl->m_context.mapper().assign(info.name + ":virtual");
+    auto  port = impl->m_context.mapper.assign(info.name + ":virtual");
     auto& endpoints = std::get<0>(info.meta);
 
     COCAINE_LOG_DEBUG(impl->m_log, "publishing virtual service");
