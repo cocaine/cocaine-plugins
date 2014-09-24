@@ -61,8 +61,8 @@ struct container_handle_t:
     }
 
     void
-    start(const std::vector<std::string>& binds) {
-        m_container.start(binds);
+    start(const std::vector<std::string>& binds, const std::vector<std::string>& capabilities) {
+        m_container.start(binds, capabilities);
     }
 
     void
@@ -134,6 +134,16 @@ docker_t::docker_t(context_t& context, const std::string& name, const Json::Valu
         m_image += name;
         m_tag = ""; // empty for now
 
+        if(args.isMember("capabilities")) {
+            auto &capabilities = args["capabilities"];
+
+            BOOST_ASSERT(capabilities.isArray());
+
+            for(auto it = capabilities.begin(); it != capabilities.end(); ++it) {
+                m_additional_capabilities.push_back((*it).asString());
+            }
+        }
+
         m_run_config.SetObject();
 
         m_run_config.AddMember("Hostname", "", m_json_allocator);
@@ -154,13 +164,11 @@ docker_t::docker_t(context_t& context, const std::string& name, const Json::Valu
         rapidjson::Value v3(rapidjson::kArrayType);
         m_run_config.AddMember("Cmd", v3, m_json_allocator);
         rapidjson::Value v4;
-        m_run_config.AddMember("Dns", v4, m_json_allocator);
         m_run_config.AddMember("Image", m_image.data(), m_json_allocator);
         rapidjson::Value v5(rapidjson::kObjectType);
         m_run_config.AddMember("Volumes", v5, m_json_allocator);
         rapidjson::Value empty_object(rapidjson::kObjectType);
         m_run_config["Volumes"].AddMember(m_runtime_path.c_str(), empty_object, m_json_allocator);
-        m_run_config.AddMember("VolumesFrom", "", m_json_allocator);
         m_run_config.AddMember("WorkingDir", "/", m_json_allocator);
     } catch(const std::exception& e) {
         throw cocaine::error_t("%s", e.what());
@@ -230,7 +238,7 @@ docker_t::spawn(const std::string& path, const api::string_map_t& args, const ap
             new container_handle_t(m_docker_client.create_container(m_run_config))
         );
 
-        handle->start(binds);
+        handle->start(binds, m_additional_capabilities);
         handle->attach();
 
         return std::move(handle);

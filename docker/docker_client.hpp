@@ -171,7 +171,7 @@ public:
     }
 
     void
-    start(const std::vector<std::string>& binds = std::vector<std::string>());
+    start(const std::vector<std::string>& binds, const std::vector<std::string>& capabilities);
 
     void
     kill();

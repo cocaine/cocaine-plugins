@@ -59,6 +59,7 @@ private:
 
     docker::client_t m_docker_client;
     rapidjson::Value m_run_config;
+    std::vector<std::string> m_additional_capabilities;
     rapidjson::Value::AllocatorType m_json_allocator;
 };
 
