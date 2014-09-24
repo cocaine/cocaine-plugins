@@ -362,21 +362,25 @@ ipvs_t::ipvs_t(context_t& context, const std::string& name, const dynamic_t& arg
         throw boost::system::system_error(errno, ipvs_category(), "unable to initialize IPVS");
     }
 
-    io_service asio;
+    if(m_context.config.network.endpoint.is_unspecified()) {
+        io_service asio;
 
-    tcp::resolver resolver(asio);
-    tcp::resolver::iterator begin, end;
+        tcp::resolver resolver(asio);
+        tcp::resolver::iterator begin, end;
 
-    try {
-        begin = resolver.resolve(tcp::resolver::query(
-            m_context.config.network.hostname, std::string()
-        ));
-    } catch(const boost::system::system_error& e) {
-        std::throw_with_nested(cocaine::error_t("unable to determine local addresses"));
-    }
+        try {
+            begin = resolver.resolve(tcp::resolver::query(
+                m_context.config.network.hostname, std::string()
+            ));
+        } catch(const boost::system::system_error& e) {
+            std::throw_with_nested(cocaine::error_t("unable to determine local addresses"));
+        }
 
-    for(auto it = begin; it != end; ++it) {
-        m_endpoints.push_back(it->endpoint().address());
+        for(auto it = begin; it != end; ++it) {
+            m_endpoints.push_back(it->endpoint().address());
+        }
+    } else {
+        m_endpoints.push_back(m_context.config.network.endpoint);
     }
 
     std::ostringstream stream;
