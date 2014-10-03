@@ -35,7 +35,7 @@ struct chrono {
         typedef boost::mpl::list<
             /* time difference */ double,
             /* send id */ optional_with_default<bool, false>
-        > tuple_type;
+        > argument_type;
 
         typedef stream_of<
             timer_id_t
@@ -52,7 +52,7 @@ struct chrono {
         typedef boost::mpl::list<
             /* time difference */ double,
             /* send id */ optional_with_default<bool, false>
-        > tuple_type;
+        > argument_type;
 
         typedef stream_of<
             timer_id_t
@@ -68,7 +68,7 @@ struct chrono {
 
         typedef boost::mpl::list<
             /* timer id */ timer_id_t
-        > tuple_type;
+        > argument_type;
     };
 
     struct restart {
@@ -80,7 +80,7 @@ struct chrono {
 
         typedef boost::mpl::list<
             /* timer id */ timer_id_t
-        > tuple_type;
+        > argument_type;
     };
 };
 
@@ -89,7 +89,7 @@ struct protocol<chrono_tag> {
     typedef boost::mpl::int_<
         1
     >::type version;
-    
+
     typedef mpl::list<
         chrono::notify_after,
         chrono::notify_every,

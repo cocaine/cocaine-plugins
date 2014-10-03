@@ -36,7 +36,7 @@ struct urlfetch {
             /* cookies */ optional<std::map<std::string, std::string>>,
             /* headers */ optional<std::map<std::string, std::string>>,
             /* follow_location */ optional_with_default<bool, true>
-        > tuple_type;
+        > argument_type;
 
         typedef stream_of<
             /* success */ bool,
@@ -60,7 +60,7 @@ struct urlfetch {
             /* cookies */ optional<std::map<std::string, std::string>>,
             /* headers */ optional<std::map<std::string, std::string>>,
             /* follow_location */ optional_with_default<bool, true>
-        > tuple_type;
+        > argument_type;
 
         typedef get::upstream_type upstream_type;
     };

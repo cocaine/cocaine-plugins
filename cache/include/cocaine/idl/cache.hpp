@@ -33,7 +33,7 @@ struct cache {
         typedef boost::mpl::list<
             /* key */ std::string,
             /* value */ std::string
-        > tuple_type;
+        > argument_type;
     };
 
     struct get {
@@ -45,7 +45,7 @@ struct cache {
 
         typedef boost::mpl::list<
             /* key */ std::string
-        > tuple_type;
+        > argument_type;
 
         typedef stream_of<
             /* exists */ bool,

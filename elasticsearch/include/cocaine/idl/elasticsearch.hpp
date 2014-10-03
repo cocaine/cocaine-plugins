@@ -38,7 +38,7 @@ struct elasticsearch {
             /* index */ std::string,
             /* type */ std::string,
             /* id */ std::string
-        > tuple_type;
+        > argument_type;
 
         typedef stream_of<
             /* status */ bool,
@@ -58,7 +58,7 @@ struct elasticsearch {
             /* index */ std::string,
             /* type */ std::string,
             /* id */ optional<std::string>
-        > tuple_type;
+        > argument_type;
 
         typedef stream_of<
             /* status */ bool,
@@ -80,7 +80,7 @@ struct elasticsearch {
             /* type */ std::string,
             /* query */ std::string,
             /* size */ optional_with_default<int, DEFAULT_SIZE>
-        > tuple_type;
+        > argument_type;
 
         typedef stream_of<
             /* status */ bool,
@@ -100,7 +100,7 @@ struct elasticsearch {
             /* index */ std::string,
             /* type */ std::string,
             /* id */ std::string
-        > tuple_type;
+        > argument_type;
 
         typedef stream_of<
             bool
