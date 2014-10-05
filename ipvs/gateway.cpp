@@ -31,6 +31,11 @@
 #include <boost/asio/ip/host_name.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
+#include <boost/spirit/include/karma_generate.hpp>
+#include <boost/spirit/include/karma_list.hpp>
+#include <boost/spirit/include/karma_stream.hpp>
+#include <boost/spirit/include/karma_string.hpp>
+
 extern "C" {
 
 #include "libipvs-1.25/libipvs.h"
@@ -384,9 +389,9 @@ ipvs_t::ipvs_t(context_t& context, const std::string& name, const dynamic_t& arg
     }
 
     std::ostringstream stream;
-    std::ostream_iterator<ip::address> builder(stream, ", ");
+    std::ostream_iterator<char> builder(stream);
 
-    std::copy(m_endpoints.begin(), m_endpoints.end(), builder);
+    boost::spirit::karma::generate(builder, boost::spirit::karma::stream % ", ", m_endpoints);
 
     COCAINE_LOG_INFO(m_log, "using %d local address(es): %s", m_endpoints.size(), stream.str());
 
