@@ -10,7 +10,6 @@ OPTION(DOCKER "Build Docker Isolation plugin" ON)
 OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
-OPTION(PYTHON "Build Python Sandbox plugin" OFF)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 
 ADD_DEFINITIONS(-DBLACKHOLE_HEADER_ONLY)
@@ -18,7 +17,7 @@ ADD_DEFINITIONS(-DBLACKHOLE_HEADER_ONLY)
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
-FIND_PACKAGE(Boost 1.40.0
+FIND_PACKAGE(Boost 1.48.0
     REQUIRED COMPONENTS
         system
         filesystem
@@ -30,20 +29,17 @@ LOCATE_LIBRARY(LIBCOCAINE "cocaine/context.hpp" "cocaine-core")
 LOCATE_LIBRARY(LIBMSGPACK "msgpack.hpp" "msgpack")
 
 INCLUDE_DIRECTORIES(BEFORE
-    ${PROJECT_SOURCE_DIR}/foreign/cppzmq
     ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include
 )
 
 INCLUDE_DIRECTORIES(
     ${Boost_INCLUDE_DIRS}
     ${LIBCOCAINE_INCLUDE_DIRS}
-    ${LIBEV_INCLUDE_DIRS}
     ${LIBMSGPACK_INCLUDE_DIRS})
 
 LINK_DIRECTORIES(
     ${Boost_LIBRARY_DIRS}
     ${LIBCOCAINE_LIBRARY_DIRS}
-    ${LIBEV_LIBRARY_DIRS}
     ${LIBMSGPACK_LIBRARY_DIRS})
 
 SET(PLUGINS
@@ -53,7 +49,6 @@ SET(PLUGINS
         elasticsearch
         ipvs
         mongo
-        python
         urlfetch)
 
 FOREACH(PLUGIN ${PLUGINS})
