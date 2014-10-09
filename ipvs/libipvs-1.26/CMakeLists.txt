@@ -2,7 +2,8 @@ LOCATE_LIBRARY(LIBNL "libnl3/netlink/netlink.h" "nl-3")
 LOCATE_LIBRARY(LIBNLGENL "libnl3/netlink/netlink.h" "nl-genl-3")
 
 INCLUDE_DIRECTORIES(
-    ${LIBNL_INCLUDE_DIRS})
+    ${LIBNL_INCLUDE_DIRS}
+    ${LIBNL_INCLUDE_DIRS}/libnl3)
 
 LINK_DIRECTORIES(
     ${LIBNL_LIBRARY_DIRS}

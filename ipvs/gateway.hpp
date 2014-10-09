@@ -25,7 +25,7 @@
 
 #include <cocaine/asio/tcp.hpp>
 
-#include <queue>
+#include <set>
 
 extern "C" {
     #include "libipvs-1.26/libipvs.h"
@@ -82,7 +82,7 @@ class ipvs_t:
         const unsigned    m_default_weight;
 
         // Ports available for allocation to virtual services.
-        std::priority_queue<uint16_t, std::vector<uint16_t>, std::greater<uint16_t>> m_ports;
+        std::set<uint16_t> m_ports;
 
         // Keeps track of service versions and mappings.
         std::map<std::string, service_info_t> m_service_info;

@@ -84,7 +84,7 @@ ipvs_t::ipvs_t(context_t& context, const std::string& name, const Json::Value& a
     COCAINE_LOG_INFO(m_log, "%u gateway ports available, %u through %u", max - min, min, max);
 
     while(min != max) {
-        m_ports.push(--max);
+        m_ports.insert(--max);
     }
 
     ::ipvs_flush();
@@ -272,7 +272,7 @@ ipvs_t::add_service(const std::string& name, const service_info_t& info) {
 
     const auto endpoints = io::resolver<io::tcp>::query(
         m_context.config.network.hostname,
-        m_ports.top()
+        *m_ports.begin()
     );
 
     int rv = 0;
@@ -356,7 +356,7 @@ ipvs_t::add_service(const std::string& name, const service_info_t& info) {
         throw std::system_error(std::make_error_code(std::errc::address_not_available));
     }
 
-    m_ports.pop();
+    m_ports.erase(m_ports.begin());
 
     // NOTE: Store the first seen protocol description for the service.
     m_service_info[name] = info;
@@ -406,7 +406,7 @@ ipvs_t::pop_service(const std::string& name, std::map<std::string, remote_servic
             throw std::system_error(errno, ipvs_category());
         }
 
-        m_ports.push(ntohs(service.handle.port));
+        m_ports.insert(ntohs(service.handle.port));
 
         // Drop the IPVS state.
         remote_services.erase(it);
