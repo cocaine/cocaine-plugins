@@ -1,3 +1,9 @@
+cocaine-plugins (0.11.3.2) unstable; urgency=low
+
+  * Pre-Depend on Docker itself in Docker plugin control file.
+
+ -- Denis Zaitsev <oktocat@yandex.com>  Tue, 14 Oct 2014 21:39:43 +0400
+
 cocaine-plugins (0.11.3.1) unstable; urgency=low
 
   * Fixed bug in free ports tracking in the IPVS plugin.
