@@ -27,7 +27,7 @@ namespace cocaine { namespace gateway {
 
 class ipvs_config_t {
 public:
-    std::string scheduler;
+    std::string  scheduler;
     unsigned int weight;
 };
 
@@ -45,7 +45,7 @@ class ipvs_t:
     std::vector<boost::asio::ip::address> m_endpoints;
 
     // Keeps track of IPVS configuration.
-    std::map<std::string, std::unique_ptr<remote_t>> m_remotes;
+    synchronized<std::map<std::string, std::unique_ptr<remote_t>>> m_remotes;
 
 public:
     ipvs_t(context_t& context, const std::string& name, const dynamic_t& args);

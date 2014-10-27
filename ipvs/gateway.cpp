@@ -400,7 +400,7 @@ ipvs_t::ipvs_t(context_t& context, const std::string& name, const dynamic_t& arg
 }
 
 ipvs_t::~ipvs_t() {
-    m_remotes.clear();
+    m_remotes->clear();
 
     COCAINE_LOG_INFO(m_log, "shutting down IPVS");
 
@@ -410,7 +410,9 @@ ipvs_t::~ipvs_t() {
 
 auto
 ipvs_t::resolve(const std::string& name) const -> metadata_t {
-    if(!m_remotes.count(name)) {
+    auto ptr = m_remotes.synchronize();
+
+    if(!ptr->count(name)) {
         throw boost::system::system_error(error::service_not_available);
     }
 
@@ -418,7 +420,7 @@ ipvs_t::resolve(const std::string& name) const -> metadata_t {
         "service", name
     );
 
-    return m_remotes.at(name)->reduce();
+    return ptr->at(name)->reduce();
 }
 
 void
@@ -429,18 +431,22 @@ ipvs_t::consume(const std::string& uuid, const std::string& name, const metadata
 
     std::tie(endpoints, version, graph) = info;
 
-    if(!m_remotes.count(name)) {
-        m_remotes[name] = std::make_unique<remote_t>(this, name, version, graph);
+    auto ptr = m_remotes.synchronize();
+
+    if(!ptr->count(name)) {
+        (*ptr)[name] = std::make_unique<remote_t>(this, name, version, graph);
     }
 
-    m_remotes.at(name)->insert(uuid, endpoints);
+    ptr->at(name)->insert(uuid, endpoints);
 }
 
 void
 ipvs_t::cleanup(const std::string& uuid, const std::string& name) {
-    if(!m_remotes.count(name)) {
+    auto ptr = m_remotes.synchronize();
+
+    if(!ptr->count(name)) {
         return;
     }
 
-    m_remotes.at(name)->remove(uuid);
+    ptr->at(name)->remove(uuid);
 }
