@@ -47,7 +47,7 @@ struct cache {
             /* key */ std::string
         > argument_type;
 
-        typedef stream_of<
+        typedef option_of<
             /* exists */ bool,
             /* value */ std::string
         >::tag upstream_type;
