@@ -61,8 +61,8 @@ struct container_handle_t:
     }
 
     void
-    start(const std::vector<std::string>& binds, const std::vector<std::string>& capabilities) {
-        m_container.start(binds, capabilities);
+    start(const rapidjson::Value& args) {
+        m_container.start(args);
     }
 
     void
@@ -139,8 +139,9 @@ docker_t::docker_t(context_t& context, const std::string& name, const Json::Valu
 
             BOOST_ASSERT(capabilities.isArray());
 
+            m_additional_capabilities.SetArray();
             for(auto it = capabilities.begin(); it != capabilities.end(); ++it) {
-                m_additional_capabilities.push_back((*it).asString());
+                m_additional_capabilities.PushBack((*it).asCString(), m_json_allocator);
             }
         }
 
@@ -225,20 +226,28 @@ docker_t::spawn(const std::string& path, const api::string_map_t& args, const ap
             }
         }
 
-        std::vector<std::string> binds;
-#if BOOST_VERSION >= 104600
-        std::string socket_dir(fs::path(args.at("--endpoint")).remove_filename().native().c_str());
-#else
-        std::string socket_dir(fs::path(args.at("--endpoint")).remove_filename().string().c_str());
-#endif
-        binds.emplace_back((socket_dir + ":" + m_runtime_path).c_str());
-
         // create container
         std::unique_ptr<container_handle_t> handle(
             new container_handle_t(m_docker_client.create_container(m_run_config))
         );
 
-        handle->start(binds, m_additional_capabilities);
+        rapidjson::Value start_args;
+        rapidjson::Value binds_json;
+
+#if BOOST_VERSION >= 104600
+        std::string socket_dir(fs::path(args.at("--endpoint")).remove_filename().native().c_str());
+#else
+        std::string socket_dir(fs::path(args.at("--endpoint")).remove_filename().string().c_str());
+#endif
+
+        binds_json.SetArray();
+        binds_json.PushBack((socket_dir + ":" + m_runtime_path).data(), m_json_allocator);
+
+        start_args.SetObject();
+        start_args.AddMember("Binds", binds_json, m_json_allocator);
+        start_args.AddMember("CapAdd", m_additional_capabilities, m_json_allocator);
+
+        handle->start(start_args);
         handle->attach();
 
         return std::move(handle);

@@ -171,7 +171,7 @@ public:
     }
 
     void
-    start(const std::vector<std::string>& binds, const std::vector<std::string>& capabilities);
+    start(const rapidjson::Value& args);
 
     void
     kill();

@@ -652,28 +652,7 @@ namespace {
 }
 
 void
-container_t::start(const std::vector<std::string>& binds,
-                   const std::vector<std::string>& capabilities)
-{
-    rapidjson::Value args;
-    rapidjson::Value binds_json;
-    rapidjson::Value capabilities_json;
-    rapidjson::Value::AllocatorType allocator;
-
-    binds_json.SetArray();
-    for(auto it = binds.begin(); it != binds.end(); ++it) {
-        binds_json.PushBack(it->data(), allocator);
-    }
-
-    capabilities_json.SetArray();
-    for(auto it = capabilities.begin(); it != capabilities.end(); ++it) {
-        capabilities_json.PushBack(it->data(), allocator);
-    }
-
-    args.SetObject();
-    args.AddMember("Binds", binds_json, allocator);
-    args.AddMember("CapAdd", capabilities_json, allocator);
-
+container_t::start(const rapidjson::Value& args) {
     http_response_t resp;
     m_client->post(resp, make_post(api_version + cocaine::format("/containers/%s/start", id()), args));
 
