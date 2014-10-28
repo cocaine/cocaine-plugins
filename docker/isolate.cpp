@@ -145,6 +145,8 @@ docker_t::docker_t(context_t& context, const std::string& name, const Json::Valu
             }
         }
 
+        m_network_mode = args.get("network_mode", "bridge").asString();
+
         m_run_config.SetObject();
 
         m_run_config.AddMember("Hostname", "", m_json_allocator);
@@ -246,6 +248,7 @@ docker_t::spawn(const std::string& path, const api::string_map_t& args, const ap
         start_args.SetObject();
         start_args.AddMember("Binds", binds_json, m_json_allocator);
         start_args.AddMember("CapAdd", m_additional_capabilities, m_json_allocator);
+        start_args.AddMember("NetworkMode", m_network_mode.data(), m_json_allocator);
 
         handle->start(start_args);
         handle->attach();

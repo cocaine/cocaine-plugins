@@ -60,6 +60,7 @@ private:
     docker::client_t m_docker_client;
     rapidjson::Value m_run_config;
     rapidjson::Value m_additional_capabilities;
+    std::string m_network_mode;
     rapidjson::Value::AllocatorType m_json_allocator;
 };
 
