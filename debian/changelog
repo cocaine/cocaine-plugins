@@ -1,3 +1,9 @@
+cocaine-plugins (0.11.4.0) unstable; urgency=low
+
+  * Docker plugin provides "network_mode" option. It allows access from a container to the host's network.
+
+ -- Andrey Goryachev <bugsbunny@yandex-team.ru>  Fri, 31 Oct 2014 14:11:40 +0400
+
 cocaine-plugins (0.11.3.2) unstable; urgency=low
 
   * Pre-Depend on Docker itself in Docker plugin control file.
