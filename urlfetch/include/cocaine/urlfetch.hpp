@@ -17,11 +17,11 @@
 #define COCAINE_URLFETCH_SERVICE_HPP
 
 #include <cocaine/api/service.hpp>
-#include <cocaine/asio/reactor.hpp>
 
 #include <cocaine/rpc/dispatch.hpp>
 #include <cocaine/rpc/tags.hpp>
 
+#include <boost/asio/io_service.hpp>
 #include <boost/thread.hpp>
 
 #include <swarm/urlfetcher/url_fetcher.hpp>
@@ -38,12 +38,12 @@ class urlfetch_t:
     public:
         typedef result_of<io::urlfetch::get>::type get_result_type;
 
-        urlfetch_t(context_t& context, io::reactor_t& reactor, const std::string& name, const dynamic_t& args);
+        urlfetch_t(context_t& context, boost::asio::io_service& asio, const std::string& name, const dynamic_t& args);
         ~urlfetch_t();
 
         virtual
         auto
-        prototype() -> io::basic_dispatch_t& {
+        prototype() const -> const io::basic_dispatch_t& {
             return *this;
         }
 

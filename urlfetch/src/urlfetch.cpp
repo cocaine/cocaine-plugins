@@ -56,7 +56,7 @@ public:
             verbosity = logging::priorities::debug;
         }
 
-        if (log_->log().verbosity<logging::priorities>() >= verbosity) {
+        if (log_->log().verbosity() >= verbosity) {
             COCAINE_LOG(log_, verbosity, msg);
         }
     }
@@ -70,12 +70,12 @@ private:
 };
 
 urlfetch_t::urlfetch_t(context_t& context,
-                       reactor_t& reactor,
+                       boost::asio::io_service& asio,
                        const std::string& name,
                        const dynamic_t& args):
-    service_t(context, reactor, name, args),
+    service_t(context, asio, name, args),
     dispatch<io::urlfetch_tag>(name),
-    log_(logging::make_source_wrapper(context.logger(), name)),
+    log_(context.log(name)),
     m_logger(new urlfetch_logger_interface(log_), swarm::SWARM_LOG_DEBUG),
     m_loop(m_service),
     m_manager(m_loop, m_logger),
@@ -95,7 +95,9 @@ urlfetch_t::urlfetch_t(context_t& context,
 urlfetch_t::~urlfetch_t()
 {
     m_work.reset();
-    m_thread.join();
+    if (m_thread.joinable()) {
+        m_thread.join();
+    }
 }
 
 void urlfetch_t::run_service()
