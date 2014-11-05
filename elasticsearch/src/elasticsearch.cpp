@@ -19,25 +19,24 @@
 */
 
 #include <functional>
-#include <tuple>
 #include <stdexcept>
+#include <tuple>
 
-#include <boost/foreach.hpp>
-
-#include <swarm/urlfetcher/url_fetcher.hpp>
-
-#include <cocaine/traits/tuple.hpp>
+#include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
+#include <cocaine/traits/tuple.hpp>
 
-#include <swarm/urlfetcher/ev_event_loop.hpp>
+#include <swarm/urlfetcher/boost_event_loop.hpp>
+#include <swarm/urlfetcher/url_fetcher.hpp>
 
 #include "cocaine/service/elasticsearch/config.hpp"
 #include "cocaine/service/elasticsearch.hpp"
+
+#include "rest/delete.hpp"
+#include "rest/get.hpp"
 #include "rest/handlers.hpp"
 #include "rest/index.hpp"
-#include "rest/get.hpp"
 #include "rest/search.hpp"
-#include "rest/delete.hpp"
 
 using namespace std::placeholders;
 
@@ -49,20 +48,20 @@ using namespace cocaine::service::rest;
 class elasticsearch_t::impl_t {
 public:
     std::string m_url_prefix;
-    swarm::ev_event_loop m_loop;
+    swarm::boost_event_loop m_loop;
     swarm::logger m_logger;
-    mutable swarm::url_fetcher m_manager; //@note: Why should I do this mutable to perform const operations?
+    mutable swarm::url_fetcher m_manager;
     const std::string m_endpoint;
     std::shared_ptr<logging::log_t> m_log;
 
     impl_t(cocaine::context_t &context,
-           cocaine::io::reactor_t &reactor,
+           boost::asio::io_service &asio,
            const std::string &name,
            const cocaine::dynamic_t& args) :
-        m_loop(reactor.native()),
+        m_loop(asio),
         m_manager(m_loop, m_logger),
         m_endpoint(extract_endpoint(args)),
-        m_log(new logging::log_t(context, name))
+        m_log(context.log(name))
     {
         COCAINE_LOG_INFO(m_log, "Elasticsearch endpoint: %s", m_endpoint);
     }
@@ -117,12 +116,12 @@ private:
 };
 
 elasticsearch_t::elasticsearch_t(cocaine::context_t& context,
-                                 cocaine::io::reactor_t& reactor,
+                                 boost::asio::io_service& asio,
                                  const std::string& name,
                                  const dynamic_t& args) :
-    service_t(context, reactor, name, args),
+    service_t(context, asio, name, args),
     dispatch<io::elasticsearch_tag>(name),
-    d(new impl_t(context, reactor, name, args))
+    d(new impl_t(context, asio, name, args))
 {
     on<io::elasticsearch::get>(std::bind(&elasticsearch_t::get, this, _1, _2, _3));
     on<io::elasticsearch::index>(std::bind(&elasticsearch_t::index, this, _1, _2, _3, _4));

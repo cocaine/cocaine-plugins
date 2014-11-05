@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include <boost/asio/io_service.hpp>
+
 #include <cocaine/api/service.hpp>
 
 #include "cocaine/idl/elasticsearch.hpp"
@@ -46,14 +48,14 @@ class elasticsearch_t :
 
 public:
     elasticsearch_t(context_t& context,
-                    io::reactor_t& reactor,
+                    boost::asio::io_service& asio,
                     const std::string& name,
                     const dynamic_t& args);
 
    ~elasticsearch_t();
 
     auto
-    prototype() -> io::basic_dispatch_t& {
+    prototype() const -> const io::basic_dispatch_t& {
         return *this;
     }
 

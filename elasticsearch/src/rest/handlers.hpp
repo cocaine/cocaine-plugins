@@ -52,7 +52,8 @@ struct request_handler_t {
                 const std::string &message = cocaine::format("Unable to download %s, error %s",
                                                              reply.request().url().to_string(),
                                                              error.message());
-                return deferred.abort(error.value(), message);
+                deferred.abort(error.value(), message);
+                return;
             }
         }
         callback(deferred, code, data);

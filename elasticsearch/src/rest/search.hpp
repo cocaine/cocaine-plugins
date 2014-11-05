@@ -44,8 +44,10 @@ struct search_handler_t {
 
         rapidjson::Document root;
         root.Parse<0>(data.c_str());
-        if (root.HasParseError())
-            return deferred.abort(-1, cocaine::format("parsing failed - %s", root.GetParseError()));
+        if (root.HasParseError()) {
+            deferred.abort(-1, cocaine::format("parsing failed - %s", root.GetParseError()));
+            return;
+        }
 
         if (code == HTTP_OK) {
             if (root.HasMember("hits")) {

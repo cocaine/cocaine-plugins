@@ -40,7 +40,8 @@ struct get_handler_t {
             rapidjson::Document root;
             root.Parse<0>(data.c_str());
             if (root.HasParseError()) {
-                return deferred.abort(-1, cocaine::format("parsing failed - %s", root.GetParseError()));
+                deferred.abort(-1, cocaine::format("parsing failed - %s", root.GetParseError()));
+                return;
             }
 
             const std::string& error = root.HasMember("error") ? root["error"].GetString() : "";
