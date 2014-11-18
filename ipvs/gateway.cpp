@@ -86,8 +86,8 @@ class ipvs_t::remote_t {
         metadata_t        meta;
     };
 
-    ipvs_t* parent;
-    info_t  info;
+    ipvs_t *const parent;
+    info_t        info;
 
     // PF -> Kernel IPVS virtual service handle mapping.
     std::map<int, ipvs_service_t> services;
@@ -117,7 +117,7 @@ private:
     format_address(union nf_inet_addr& target, const tcp::endpoint& endpoint);
 };
 
-ipvs_t::remote_t::remote_t(ipvs_t* parent_, const std::string& name_, unsigned int version,
+ipvs_t::remote_t::remote_t(ipvs_t *const parent_, const std::string& name_, unsigned int version,
                            const graph_basis_t& graph)
 :
     parent(parent_),
