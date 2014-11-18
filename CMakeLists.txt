@@ -17,25 +17,25 @@ ADD_DEFINITIONS(-DBLACKHOLE_HEADER_ONLY)
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
+INCLUDE(cmake/locate_library.cmake)
+
 FIND_PACKAGE(Boost 1.48.0
     REQUIRED COMPONENTS
         system
         filesystem
         thread)
 
-INCLUDE(cmake/locate_library.cmake)
-
 LOCATE_LIBRARY(LIBCOCAINE "cocaine/context.hpp" "cocaine-core")
 LOCATE_LIBRARY(LIBMSGPACK "msgpack.hpp" "msgpack")
-
-INCLUDE_DIRECTORIES(BEFORE
-    ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include
-)
 
 INCLUDE_DIRECTORIES(
     ${Boost_INCLUDE_DIRS}
     ${LIBCOCAINE_INCLUDE_DIRS}
     ${LIBMSGPACK_INCLUDE_DIRS})
+
+INCLUDE_DIRECTORIES(BEFORE
+    ${PROJECT_SOURCE_DIR}/foreign/blackhole/src
+    ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include)
 
 LINK_DIRECTORIES(
     ${Boost_LIBRARY_DIRS}
