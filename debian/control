@@ -3,7 +3,8 @@ Section: utils
 Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
 Build-Depends: cmake, cdbs, debhelper (>= 7.0.13), libcocaine-dev (>= 0.12.0.0),
- libboost-filesystem-dev, libboost-thread-dev, libswarm-dev (>= 0.6.1.0),
+ libboost-filesystem-dev, libboost-thread-dev,
+ libswarm-dev (>= 0.6.1.0), libswarm-dev (< 0.7),
  libnl-3-dev, libnl-genl-3-dev, libcurl4-openssl-dev (>= 7.22.0)
 Standards-Version: 3.9.1
 Vcs-Git: git://github.com/cocaine/cocaine-plugins.git
@@ -46,8 +47,9 @@ Description: Cocaine - Docker Isolation
 
 Package: libcocaine-plugin-elasticsearch3
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core3 (>= 0.12.0.0), libswarm2 (>= 0.6.1.0),
- libswarm2-urlfetcher (>= 0.6.1.0)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core3 (>= 0.12.0.0),
+ libswarm2 (>= 0.6.1.0), libswarm2 (< 0.7),
+ libswarm2-urlfetcher (>= 0.6.1.0), libswarm2-urlfetcher (< 0.7)
 Description: Cocaine - Elasticsearch Client Service
  Elasticsearch Client Service for Cocaine.
 
@@ -68,8 +70,9 @@ Description: Cocaine - MongoDB Storage
 
 Package: libcocaine-plugin-urlfetch3
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core3 (>= 0.12.0.0), libswarm2 (>= 0.6.1.0),
- libswarm2-urlfetcher (>= 0.6.1.0)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core3 (>= 0.12.0.0),
+ libswarm2 (>= 0.6.1.0), libswarm2 (< 0.7),
+ libswarm2-urlfetcher (>= 0.6.1.0), libswarm2-urlfetcher (< 0.7)
 Description: Cocaine - URLFetch Service
  URLFetch service for Cocaine.
 
@@ -77,7 +80,7 @@ Package: libcocaine-plugin-urlfetch-dev
 Architecture: any
 Section: libdevel
 Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-urlfetch3 (= ${binary:Version}),
- cocaine-framework-native (>= 0.12.0.0), libswarm-dev (>= 0.6.1.0)
+ cocaine-framework-native (>= 0.12.0.0), libswarm-dev (>= 0.6.1.0), libswarm-dev (< 0.7)
 Description: Cocaine - URLFetch Service Development Headers
  Cocaine development headers for the URLFetch Service package.
 
