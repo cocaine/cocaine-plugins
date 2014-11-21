@@ -38,7 +38,7 @@ struct urlfetch {
             /* follow_location */ optional_with_default<bool, true>
         > argument_type;
 
-        typedef stream_of<
+        typedef option_of<
             /* success */ bool,
             /* data */ std::string,
             /* code */ int,
