@@ -40,7 +40,7 @@ struct elasticsearch {
             /* id */ std::string
         > argument_type;
 
-        typedef stream_of<
+        typedef option_of<
             /* status */ bool,
             /* response */ std::string
         >::tag upstream_type;
@@ -60,7 +60,7 @@ struct elasticsearch {
             /* id */ optional<std::string>
         > argument_type;
 
-        typedef stream_of<
+        typedef option_of<
             /* status */ bool,
             /* id */ std::string
         >::tag upstream_type;
@@ -82,7 +82,7 @@ struct elasticsearch {
             /* size */ optional_with_default<int, DEFAULT_SIZE>
         > argument_type;
 
-        typedef stream_of<
+        typedef option_of<
             /* status */ bool,
             /* count */ int,
             /* id */ std::string
@@ -102,7 +102,7 @@ struct elasticsearch {
             /* id */ std::string
         > argument_type;
 
-        typedef stream_of<
+        typedef option_of<
             bool
         >::tag upstream_type;
     };
