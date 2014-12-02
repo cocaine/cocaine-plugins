@@ -106,7 +106,7 @@ private:
 
 docker_t::docker_t(context_t& context, const std::string& name, const Json::Value& args):
     category_type(context, name, args),
-    m_log(new logging::log_t(context, name)),
+    m_log(new logging::log_t(context, "app/" + name)),
     m_do_pool(false),
     m_docker_client(
         docker::endpoint_t::from_string(args.get("endpoint", "unix:///var/run/docker.sock").asString()),
