@@ -106,7 +106,7 @@ private:
 
 docker_t::docker_t(context_t& context, const std::string& name, const dynamic_t& args):
     category_type(context, name, args),
-    m_log(context.log(name)),
+    m_log(context.log("app/" + name)),
     m_do_pool(false),
     m_docker_client(
         docker::endpoint_t::from_string(args.as_object().at("endpoint", "unix:///var/run/docker.sock").as_string()),
