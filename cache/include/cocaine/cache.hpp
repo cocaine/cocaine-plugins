@@ -32,7 +32,7 @@ class cache_t:
     public dispatch<io::cache_tag>
 {
     public:
-        cache_t(context_t& context, boost::asio::io_service& asio, const std::string& name, const dynamic_t& args);
+        cache_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
 
         virtual
         auto

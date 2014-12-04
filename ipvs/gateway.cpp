@@ -27,9 +27,9 @@
 
 #include <blackhole/scoped_attributes.hpp>
 
-#include <boost/asio/io_service.hpp>
-#include <boost/asio/ip/host_name.hpp>
-#include <boost/asio/ip/tcp.hpp>
+#include <asio/io_service.hpp>
+#include <asio/ip/host_name.hpp>
+#include <asio/ip/tcp.hpp>
 
 #include <boost/spirit/include/karma_generate.hpp>
 #include <boost/spirit/include/karma_list.hpp>
@@ -44,8 +44,8 @@ extern "C" {
 
 using namespace blackhole;
 
-using namespace boost::asio;
-using namespace boost::asio::ip;
+using namespace asio;
+using namespace asio::ip;
 
 using namespace cocaine::gateway;
 using namespace cocaine::io;
@@ -55,7 +55,7 @@ using namespace cocaine::io;
 namespace {
 
 class ipvs_category_t:
-    public boost::system::error_category
+    public std::error_category
 {
     virtual
     auto
@@ -71,7 +71,7 @@ class ipvs_category_t:
 };
 
 auto
-ipvs_category() -> const boost::system::error_category& {
+ipvs_category() -> const std::error_category& {
     static ipvs_category_t instance;
     return instance;
 }
@@ -157,7 +157,7 @@ ipvs_t::remote_t::remote_t(ipvs_t *const parent_, const std::string& name_, unsi
         std::strncpy(handle.sched_name, parent->m_cfg.scheduler.c_str(), IP_VS_SCHEDNAME_MAXLEN);
 
         if(::ipvs_add_service(&handle) != 0) {
-            boost::system::error_code ec(errno, ipvs_category());
+            std::error_code ec(errno, ipvs_category());
 
             COCAINE_LOG_WARNING(parent->m_log, "unable to configure virtual service on %s: [%d] %s",
                 endpoint, ec.value(), ec.message()
@@ -177,7 +177,7 @@ ipvs_t::remote_t::remote_t(ipvs_t *const parent_, const std::string& name_, unsi
         COCAINE_LOG_ERROR(parent->m_log, "no valid endpoints found for virtual service");
 
         // Force disconnect the remote node.
-        throw boost::system::system_error(EADDRNOTAVAIL, boost::system::generic_category());
+        throw std::system_error(EADDRNOTAVAIL, std::generic_category());
     }
 
     COCAINE_LOG_INFO(parent->m_log, "virtual service published on port %d with %d endpoint(s)",
@@ -227,7 +227,7 @@ struct is_serving {
 auto
 ipvs_t::remote_t::reduce() const -> metadata_t {
     if(backends.empty()) {
-        throw boost::system::system_error(error::service_not_available);
+        throw std::system_error(error::service_not_available);
     }
 
     auto endpoints = std::vector<tcp::endpoint>();
@@ -273,7 +273,7 @@ ipvs_t::remote_t::insert(const std::string& uuid, const std::vector<tcp::endpoin
         handle.weight     = parent->m_cfg.weight;
 
         if(::ipvs_add_dest(&services.at(handle.af), &handle) != 0) {
-            boost::system::error_code ec(errno, ipvs_category());
+            std::error_code ec(errno, ipvs_category());
 
             COCAINE_LOG_WARNING(parent->m_log, "unable to register destination for %s: [%d] %s",
                 *it, ec.value(), ec.message()
@@ -289,7 +289,7 @@ ipvs_t::remote_t::insert(const std::string& uuid, const std::vector<tcp::endpoin
         COCAINE_LOG_ERROR(parent->m_log, "no valid endpoints found for destination");
 
         // Force disconnect the remote node.
-        throw boost::system::system_error(EHOSTUNREACH, boost::system::generic_category());
+        throw std::system_error(EHOSTUNREACH, std::generic_category());
     }
 
     for(auto it = handles.begin(); it != handles.end(); ++it) {
@@ -315,7 +315,7 @@ ipvs_t::remote_t::remove(const std::string& uuid) {
 
         if(::ipvs_del_dest(&services.at(backend.af), &backend) != 0) {
             // Force disconnect the remote node.
-            throw boost::system::system_error(errno, ipvs_category());
+            throw std::system_error(errno, ipvs_category());
         }
     }
 
@@ -364,7 +364,7 @@ ipvs_t::ipvs_t(context_t& context, const std::string& name, const dynamic_t& arg
     COCAINE_LOG_INFO(m_log, "initializing IPVS");
 
     if(::ipvs_init() != 0) {
-        throw boost::system::system_error(errno, ipvs_category(), "unable to initialize IPVS");
+        throw std::system_error(errno, ipvs_category(), "unable to initialize IPVS");
     }
 
     port_t min_port, max_port;
@@ -383,8 +383,12 @@ ipvs_t::ipvs_t(context_t& context, const std::string& name, const dynamic_t& arg
             begin = resolver.resolve(tcp::resolver::query(
                 m_context.config.network.hostname, std::string()
             ));
-        } catch(const boost::system::system_error& e) {
+        } catch(const std::system_error& e) {
+#if defined(HAVE_GCC48)
             std::throw_with_nested(cocaine::error_t("unable to determine local addresses"));
+#else
+            throw cocaine::error_t("unable to determine local addresses");
+#endif
         }
 
         for(auto it = begin; it != end; ++it) {
@@ -419,7 +423,7 @@ ipvs_t::resolve(const std::string& name) const -> metadata_t {
     auto ptr = m_remotes.synchronize();
 
     if(!ptr->count(name)) {
-        throw boost::system::system_error(error::service_not_available);
+        throw std::system_error(error::service_not_available);
     }
 
     COCAINE_LOG_DEBUG(m_log, "providing service using virtual node")(

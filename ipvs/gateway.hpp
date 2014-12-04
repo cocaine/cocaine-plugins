@@ -42,7 +42,7 @@ class ipvs_t:
     const ipvs_config_t m_cfg;
 
     // Local endpoints to bind virtual services on.
-    std::vector<boost::asio::ip::address> m_endpoints;
+    std::vector<asio::ip::address> m_endpoints;
 
     // Keeps track of IPVS configuration.
     synchronized<std::map<std::string, std::unique_ptr<remote_t>>> m_remotes;

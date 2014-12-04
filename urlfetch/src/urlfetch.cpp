@@ -70,7 +70,7 @@ private:
 };
 
 urlfetch_t::urlfetch_t(context_t& context,
-                       boost::asio::io_service& asio,
+                       asio::io_service& asio,
                        const std::string& name,
                        const dynamic_t& args):
     service_t(context, asio, name, args),
