@@ -367,6 +367,12 @@ ipvs_t::ipvs_t(context_t& context, const std::string& name, const dynamic_t& arg
         throw boost::system::system_error(errno, ipvs_category(), "unable to initialize IPVS");
     }
 
+    port_t min_port, max_port;
+    std::tie(min_port, max_port) = m_context.config.network.ports.shared;
+    if(min_port == 0 && max_port == 0) {
+        throw cocaine::error_t("shared ports must be specified to use IPVS gateway");
+    }
+
     if(m_context.config.network.endpoint.is_unspecified()) {
         io_service asio;
 
