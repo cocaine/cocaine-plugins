@@ -56,7 +56,7 @@ Description: Cocaine - Elasticsearch Client Service
 
 Package: libcocaine-plugin-ipvs3
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core3 (>= 0.12.0.0), libnl-3-200
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core3 (>= 0.12.0.0), libnl-3-200, libnl-genl-3-200
 Description: Cocaine - IPVS Gateway
  IP Virtual Service Gateway for Cocaine.
 
