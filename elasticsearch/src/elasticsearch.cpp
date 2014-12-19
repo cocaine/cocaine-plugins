@@ -48,6 +48,7 @@ using namespace cocaine::service::rest;
 class elasticsearch_t::impl_t {
 public:
     std::string m_url_prefix;
+    boost::asio::io_service loop;
     swarm::boost_event_loop m_loop;
     swarm::logger m_logger;
     mutable swarm::url_fetcher m_manager;
@@ -55,10 +56,10 @@ public:
     std::shared_ptr<logging::log_t> m_log;
 
     impl_t(cocaine::context_t &context,
-           boost::asio::io_service &asio,
+           asio::io_service &asio,
            const std::string &name,
            const cocaine::dynamic_t& args) :
-        m_loop(asio),
+        m_loop(loop),
         m_manager(m_loop, m_logger),
         m_endpoint(extract_endpoint(args)),
         m_log(context.log(name))
@@ -116,7 +117,7 @@ private:
 };
 
 elasticsearch_t::elasticsearch_t(cocaine::context_t& context,
-                                 boost::asio::io_service& asio,
+                                 asio::io_service& asio,
                                  const std::string& name,
                                  const dynamic_t& args) :
     service_t(context, asio, name, args),

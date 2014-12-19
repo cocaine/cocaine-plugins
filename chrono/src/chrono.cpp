@@ -28,7 +28,7 @@ using namespace cocaine::service;
 
 using namespace std::placeholders;
 
-chrono_t::chrono_t(context_t& context, boost::asio::io_service& asio, const std::string& name, const dynamic_t& args):
+chrono_t::chrono_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args):
     service_t(context, asio, name, args),
     dispatch<io::chrono_tag>(name),
     log_(context.log(name)),
@@ -53,7 +53,7 @@ chrono_t::notify_every(double time, bool send_id) {
 cocaine::streamed<io::timer_id_t>
 chrono_t::set_timer_impl(double first, double repeat, bool send_id) {
     streamed<io::timer_id_t> promise;
-    std::shared_ptr<boost::asio::deadline_timer> timer(new boost::asio::deadline_timer(asio_));
+    std::shared_ptr<asio::deadline_timer> timer(new asio::deadline_timer(asio_));
 
     timer_desc_t desc;
     desc.timer_ = timer;
@@ -104,8 +104,8 @@ chrono_t::restart(io::timer_id_t timer_id) {
 }
 
 void
-chrono_t::on_timer(const boost::system::error_code& ec, io::timer_id_t timer_id) {
-    if(ec == boost::asio::error::operation_aborted) {
+chrono_t::on_timer(const std::error_code& ec, io::timer_id_t timer_id) {
+    if(ec == asio::error::operation_aborted) {
         return;
     }
 

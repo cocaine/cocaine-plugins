@@ -31,6 +31,8 @@ using namespace cocaine::storage;
 using namespace cocaine::logging;
 using namespace mongo;
 
+typedef std::unique_ptr<ScopedDbConnection> connection_ptr_t;
+
 mongo_storage_t::mongo_storage_t(context_t& context,
                                  const std::string& name,
                                  const dynamic_t& args)
@@ -53,7 +55,7 @@ mongo_storage_t::read(const std::string& collection,
     std::string result;
 
     try {
-        std::unique_ptr<ScopedDbConnection> connection(ScopedDbConnection::getScopedDbConnection(m_uri));
+        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
         GridFS gridfs(connection->conn(), "cocaine", "fs." + collection);
         GridFile file(gridfs.findFile(key));
 
@@ -82,7 +84,7 @@ mongo_storage_t::write(const std::string& collection,
                        const std::vector<std::string>& tags)
 {
     try {
-        std::unique_ptr<ScopedDbConnection> connection(ScopedDbConnection::getScopedDbConnection(m_uri));
+        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
         DBClientBase &db_client = connection->conn();
         // GridFS will store file in 'fs.collection.*' collections in 'cocaine' database.
         GridFS gridfs(db_client, "cocaine", "fs." + collection);
@@ -115,7 +117,7 @@ mongo_storage_t::find(const std::string& collection,
     std::vector<std::string> result;
 
     try {
-        std::unique_ptr<ScopedDbConnection> connection(ScopedDbConnection::getScopedDbConnection(m_uri));
+        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
         DBClientBase &db_client = connection->conn();
 
         // Build a query to mongodb: {"$and": [{"tags": "tag1"}, {"tags": "tag2"}, {"tags": "tag3"}]}
@@ -150,7 +152,7 @@ mongo_storage_t::remove(const std::string& collection,
                         const std::string& key)
 {
     try {
-        std::unique_ptr<ScopedDbConnection> connection(ScopedDbConnection::getScopedDbConnection(m_uri));
+        connection_ptr_t connection(ScopedDbConnection::getScopedDbConnection(m_uri.toString()));
         DBClientBase &db_client = connection->conn();
         GridFS gridfs(db_client, "cocaine", "fs." + collection);
 

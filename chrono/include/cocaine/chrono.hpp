@@ -23,7 +23,7 @@
 
 #include <cocaine/locked_ptr.hpp>
 
-#include <boost/asio/deadline_timer.hpp>
+#include <asio/deadline_timer.hpp>
 
 namespace cocaine { namespace service {
 
@@ -32,7 +32,7 @@ class chrono_t:
     public dispatch<io::chrono_tag>
 {
     public:
-        chrono_t(context_t& context, boost::asio::io_service& asio, const std::string& name, const dynamic_t& args);
+        chrono_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
 
         virtual
         auto
@@ -42,7 +42,7 @@ class chrono_t:
 
     private:
         struct timer_desc_t {
-            std::shared_ptr<boost::asio::deadline_timer> timer_;
+            std::shared_ptr<asio::deadline_timer> timer_;
             streamed<io::timer_id_t> promise_;
             double interval_;
         };
@@ -60,7 +60,7 @@ class chrono_t:
         restart(io::timer_id_t timer_id);
 
         void
-        on_timer(const boost::system::error_code& ec, io::timer_id_t timer_id);
+        on_timer(const std::error_code& ec, io::timer_id_t timer_id);
 
         void
         remove_timer(io::timer_id_t timer_id);
@@ -71,7 +71,7 @@ class chrono_t:
 
         std::unique_ptr<logging::log_t> log_;
         synchronized<std::map<io::timer_id_t, timer_desc_t>> timers_;
-        boost::asio::io_service& asio_;
+        asio::io_service& asio_;
 };
 
 }} // namespace cocaine::service

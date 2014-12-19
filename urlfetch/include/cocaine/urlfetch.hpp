@@ -38,7 +38,7 @@ class urlfetch_t:
     public:
         typedef result_of<io::urlfetch::get>::type get_result_type;
 
-        urlfetch_t(context_t& context, boost::asio::io_service& asio, const std::string& name, const dynamic_t& args);
+        urlfetch_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
         ~urlfetch_t();
 
         virtual

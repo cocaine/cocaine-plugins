@@ -9,7 +9,7 @@ OPTION(CHRONO "Build Chrono Service plugin" ON)
 OPTION(DOCKER "Build Docker Isolation plugin" ON)
 OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
-OPTION(MONGO "Build MongoDB Storage plugin" ON)
+OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 
 ADD_DEFINITIONS(-DBLACKHOLE_HEADER_ONLY)
@@ -19,7 +19,7 @@ SET(CMAKE_MODULE_PATH
 
 INCLUDE(cmake/locate_library.cmake)
 
-FIND_PACKAGE(Boost 1.48.0
+FIND_PACKAGE(Boost 1.46.0
     REQUIRED COMPONENTS
         system
         filesystem
@@ -34,6 +34,7 @@ INCLUDE_DIRECTORIES(
     ${LIBMSGPACK_INCLUDE_DIRS})
 
 INCLUDE_DIRECTORIES(BEFORE
+    ${PROJECT_SOURCE_DIR}/foreign/asio/asio/include
     ${PROJECT_SOURCE_DIR}/foreign/blackhole/src
     ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include)
 
