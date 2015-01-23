@@ -122,7 +122,7 @@ connection_t::connection_t() {
     // pass
 }
 
-connection_t::connection_t(boost::asio::io_service& ioservice,
+connection_t::connection_t(asio::io_service& ioservice,
                            const endpoint_t& endpoint)
 {
     connect(ioservice, endpoint);
@@ -131,9 +131,9 @@ connection_t::connection_t(boost::asio::io_service& ioservice,
 namespace {
 
     void
-    timeout_handler(const boost::system::error_code& error,
+    timeout_handler(const std::error_code& error,
                     bool& exit_with_timeout,
-                    boost::asio::io_service& ioservice)
+                    asio::io_service& ioservice)
     {
         if(!error) {
             exit_with_timeout = true;
@@ -142,11 +142,11 @@ namespace {
     }
 
     void
-    local_connection_handler(const boost::system::error_code& error,
-                             boost::system::error_code& result,
-                             boost::asio::io_service& ioservice)
+    local_connection_handler(const std::error_code& error,
+                             std::error_code& result,
+                             asio::io_service& ioservice)
     {
-        if(error == boost::asio::error::operation_aborted) {
+        if(error == asio::error::operation_aborted) {
             return;
         } else if(error) {
             result = error;
@@ -157,18 +157,18 @@ namespace {
 
     struct tcp_connector {
         void
-        resolve_handler(const boost::system::error_code& error,
-                        boost::asio::ip::tcp::resolver::iterator endpoint)
+        resolve_handler(const std::error_code& error,
+                        asio::ip::tcp::resolver::iterator endpoint)
         {
             this->error = error;
 
-            if(error == boost::asio::error::operation_aborted) {
+            if(error == asio::error::operation_aborted) {
                 return;
-            } else if(error || endpoint == boost::asio::ip::tcp::resolver::iterator()) {
+            } else if(error || endpoint == asio::ip::tcp::resolver::iterator()) {
                 this->ioservice.stop();
             } else {
-                endpoints.assign(endpoint, boost::asio::ip::tcp::resolver::iterator());
-                socket = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
+                endpoints.assign(endpoint, asio::ip::tcp::resolver::iterator());
+                socket = std::make_shared<asio::ip::tcp::socket>(ioservice);
                 socket->async_connect(*endpoint,
                                       std::bind(&tcp_connector::handler,
                                                 this,
@@ -177,15 +177,15 @@ namespace {
             }
         }
         void
-        handler(const boost::system::error_code& error,
+        handler(const std::error_code& error,
                 size_t next_endpoint)
         {
-            if(error == boost::asio::error::operation_aborted) {
+            if(error == asio::error::operation_aborted) {
                 return;
             } else if(!error) {
                 this->ioservice.stop();
             } else if(next_endpoint < endpoints.size()) {
-                socket = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
+                socket = std::make_shared<asio::ip::tcp::socket>(ioservice);
                 socket->async_connect(endpoints[next_endpoint],
                                       std::bind(&tcp_connector::handler,
                                                 this,
@@ -198,26 +198,26 @@ namespace {
             }
         }
 
-        boost::asio::io_service& ioservice;
-        std::shared_ptr<boost::asio::ip::tcp::socket> socket;
-        boost::system::error_code error;
+        asio::io_service& ioservice;
+        std::shared_ptr<asio::ip::tcp::socket> socket;
+        std::error_code error;
 
-        std::vector<boost::asio::ip::tcp::endpoint> endpoints;
+        std::vector<asio::ip::tcp::endpoint> endpoints;
     };
 
 } // namespace
 
 void
-connection_t::connect(boost::asio::io_service& ioservice,
+connection_t::connect(asio::io_service& ioservice,
                       const endpoint_t& endpoint,
                       unsigned int connect_timeout)
 {
     ioservice.reset();
 
     if(endpoint.is_unix()) {
-        auto s = std::make_shared<boost::asio::local::stream_protocol::socket>(ioservice);
-        boost::system::error_code error;
-        s->async_connect(boost::asio::local::stream_protocol::endpoint(endpoint.get_path()),
+        auto s = std::make_shared<asio::local::stream_protocol::socket>(ioservice);
+        std::error_code error;
+        s->async_connect(asio::local::stream_protocol::endpoint(endpoint.get_path()),
                          std::bind(&local_connection_handler,
                                    std::placeholders::_1,
                                    std::ref(error),
@@ -226,22 +226,22 @@ connection_t::connect(boost::asio::io_service& ioservice,
         if(run_with_timeout(ioservice, connect_timeout)) {
             throw std::runtime_error("Connection timed out");
         } else if(error) {
-            throw boost::system::system_error(error);
+            throw std::system_error(error);
         }
 
         m_socket = s;
     } else {
-        boost::asio::ip::tcp::resolver resolver(ioservice);
+        asio::ip::tcp::resolver resolver(ioservice);
 
         tcp_connector conn = {
             ioservice,
-            std::shared_ptr<boost::asio::ip::tcp::socket>(),
-            boost::system::error_code(),
-            std::vector<boost::asio::ip::tcp::endpoint>()
+            std::shared_ptr<asio::ip::tcp::socket>(),
+            std::error_code(),
+            std::vector<asio::ip::tcp::endpoint>()
         };
 
         resolver.async_resolve(
-            boost::asio::ip::tcp::resolver::query(
+            asio::ip::tcp::resolver::query(
                 endpoint.get_host(),
                 boost::lexical_cast<std::string>(endpoint.get_port())
             ),
@@ -256,18 +256,18 @@ connection_t::connect(boost::asio::io_service& ioservice,
         } else if(conn.socket) {
             m_socket = conn.socket;
         } else {
-            throw boost::system::system_error(conn.error);
+            throw std::system_error(conn.error);
         }
     }
 }
 
 bool
-connection_t::run_with_timeout(boost::asio::io_service& ioservice,
+connection_t::run_with_timeout(asio::io_service& ioservice,
                                unsigned int timeout)
 {
     bool exited_with_timeout = false;
 
-    boost::asio::deadline_timer timer(ioservice);
+    asio::deadline_timer timer(ioservice);
     timer.expires_from_now(boost::posix_time::milliseconds(timeout));
     timer.async_wait(std::bind(&timeout_handler,
                                std::placeholders::_1,
@@ -309,7 +309,7 @@ namespace {
             if(!s) {
                 throw std::runtime_error("Not connected.");
             }
-            return s->native();
+            return s->native_handle();
         }
 
         int
@@ -317,7 +317,7 @@ namespace {
             if(!s) {
                 throw std::runtime_error("Not connected.");
             }
-            return s->native();
+            return s->native_handle();
         }
     };
 

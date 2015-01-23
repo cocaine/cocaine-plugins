@@ -32,7 +32,7 @@
 #include <cocaine/logging.hpp>
 
 #include <boost/variant.hpp>
-#include <boost/asio.hpp>
+#include <asio.hpp>
 
 #include <curl/curl.h>
 
@@ -83,19 +83,19 @@ private:
 
 class connection_t {
 public:
-    typedef boost::asio::local::stream_protocol::socket
+    typedef asio::local::stream_protocol::socket
             unix_socket_t;
 
-    typedef boost::asio::ip::tcp::socket
+    typedef asio::ip::tcp::socket
             tcp_socket_t;
 
     connection_t();
 
-    connection_t(boost::asio::io_service& ioservice,
+    connection_t(asio::io_service& ioservice,
                  const endpoint_t& endpoint);
 
     void
-    connect(boost::asio::io_service& ioservice,
+    connect(asio::io_service& ioservice,
             const endpoint_t& endpoint,
             unsigned int connect_timeout = 10000);
 
@@ -116,7 +116,7 @@ public:
 
 private:
     bool
-    run_with_timeout(boost::asio::io_service& ioservice,
+    run_with_timeout(asio::io_service& ioservice,
                      unsigned int timeout);
 
 private:
@@ -148,7 +148,7 @@ public:
          const http_request_t& request);
 
 private:
-    boost::asio::io_service m_ioservice;
+    asio::io_service m_ioservice;
     endpoint_t m_endpoint;
     CURL *m_curl;
 };
