@@ -30,12 +30,14 @@ public:
 private:
     graphite_t* parent;
     graphite_t::buffer_t buffer;
+    std::string s_buffer;
     asio::ip::tcp::socket socket;
 };
 
 graphite_t::graphite_sender_t::graphite_sender_t(graphite_t* _parent, graphite_t::buffer_t&& _buffer) :
     parent(_parent),
     buffer(std::move(_buffer)),
+    s_buffer(),
     socket(parent->asio)
 {
 }
@@ -55,12 +57,12 @@ void graphite_t::graphite_sender_t::on_connect(const asio::error_code& ec) {
     }
     else {
         COCAINE_LOG_DEBUG(parent->log, "Opened socket to send metrics to graphite");
-        std::string s_buf;
+        assert(s_buffer.empty());
         for(size_t i = 0; i < buffer.size(); i++) {
-            s_buf.append(buffer[i].format());
+            s_buffer.append(buffer[i].format());
         }
         using namespace std::placeholders;
-        socket.async_send(asio::buffer(s_buf), std::bind(&graphite_sender_t::on_send, shared_from_this(), _1));
+        socket.async_send(asio::buffer(s_buffer), std::bind(&graphite_sender_t::on_send, shared_from_this(), _1));
     }
 }
 
@@ -82,7 +84,8 @@ graphite_cfg_t::graphite_cfg_t(const cocaine::dynamic_t& args) :
         asio::ip::address::from_string(args.as_object().at("endpoint", "127.0.0.1").as_string()),
         args.as_object().at("port", 2003u).as_uint()
     ),
-    flush_interval_ms(args.as_object().at("flush_interval_ms", 1000u).as_uint())
+    flush_interval_ms(args.as_object().at("flush_interval_ms", 1000u).as_uint()),
+    max_queue_size(args.as_object().at("max_queue_size", 1000u).as_uint())
 {}
 
 graphite_t::graphite_t(context_t& context, asio::io_service& _asio, const std::string& name, const dynamic_t& args) :
@@ -97,28 +100,60 @@ graphite_t::graphite_t(context_t& context, asio::io_service& _asio, const std::s
     using namespace std::placeholders;
     on<io::graphite::send_bulk>(std::bind(&graphite_t::on_send_bulk, this, _1));
     on<io::graphite::send_one>(std::bind(&graphite_t::on_send_one, this, _1));
-    timer.expires_from_now(config.flush_interval_ms);
-    timer.async_wait(std::bind(&graphite_t::send, this, std::placeholders::_1));
+    reset_timer();
 }
 
 void graphite_t::on_send_one(const graphite::metric_t& metric) {
-    buffer.synchronize()->push_back(metric);
+    size_t buffer_sz;
+    {
+        auto ptr = buffer.synchronize();
+        ptr->push_back(metric);
+        buffer_sz = ptr->size();
+    }
+    if(buffer_sz > config.max_queue_size) {
+        COCAINE_LOG_DEBUG(log, "Sending metrics by queue size");
+        send();
+    }
 }
 
 void graphite_t::on_send_bulk(const graphite::metric_pack_t& metrics) {
-    auto ptr = buffer.synchronize();
-    ptr->insert(ptr->end(), metrics.begin(), metrics.end());
+    size_t buffer_sz;
+    {
+        auto ptr = buffer.synchronize();
+        ptr->insert(ptr->end(), metrics.begin(), metrics.end());
+        buffer_sz = ptr->size();
+    }
+    if(buffer_sz > config.max_queue_size) {
+        COCAINE_LOG_DEBUG(log, "Sending metrics by queue size");
+        send();
+    }
 }
 
+void graphite_t::send_by_timer(const asio::error_code& error) {
+    if(error) {
+        //Do not reset timer as it was reset by send
+        COCAINE_LOG_DEBUG(log, "Timer: %s", error.message().c_str());
+    }
+    else {
+        COCAINE_LOG_DEBUG(log, "Sending metrics by timer");
+        send();
+    }
+}
 
-void graphite_t::send(const asio::error_code& error) {
+void graphite_t::send() {
     buffer_t tmp_buffer;
     buffer.synchronize()->swap(tmp_buffer);
     if(!tmp_buffer.empty()) {
         auto sender = std::make_shared<graphite_sender_t>(this, std::move(tmp_buffer));
         sender->send();
     }
-    timer.expires_from_now(config.flush_interval_ms);
-    timer.async_wait(std::bind(&graphite_t::send, this, std::placeholders::_1));
+    reset_timer();
 }
+
+void graphite_t::reset_timer() {
+    auto ptr = timer.synchronize();
+    ptr->expires_from_now(config.flush_interval_ms);
+    ptr->async_wait(std::bind(&graphite_t::send_by_timer, this, std::placeholders::_1));
+}
+
 }}

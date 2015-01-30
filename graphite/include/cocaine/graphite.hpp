@@ -30,6 +30,7 @@ class graphite_cfg_t {
 public:
     asio::ip::tcp::endpoint endpoint;
     boost::posix_time::milliseconds flush_interval_ms;
+    size_t max_queue_size;
     graphite_cfg_t(const cocaine::dynamic_t& args);
 };
 
@@ -54,16 +55,18 @@ public:
     }
 
     void
-    send(const asio::error_code& error);
+    send_by_timer(const asio::error_code& error);
 
 private:
     class graphite_sender_t;
     typedef graphite::metric_pack_t buffer_t;
 
+    void send();
+    void reset_timer();
     asio::io_service& asio;
     graphite_cfg_t config;
     std::shared_ptr<cocaine::logging::log_t> log;
-    asio::deadline_timer timer;
+    synchronized<asio::deadline_timer> timer;
     synchronized<buffer_t> buffer;
 };
 }}
