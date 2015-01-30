@@ -86,3 +86,9 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-urlfetch3 (= ${bi
 Description: Cocaine - URLFetch Service Development Headers
  Cocaine development headers for the URLFetch Service package.
 
+Package: libcocaine-plugin-graphite3
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core3 (>= 0.12.0.0)
+Description: Cocaine - Graphite Service
+ Service for proxying metrics to graphite.
+

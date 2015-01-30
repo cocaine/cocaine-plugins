@@ -89,9 +89,9 @@ graphite_cfg_t::graphite_cfg_t(const cocaine::dynamic_t& args) :
 {}
 
 graphite_t::graphite_t(context_t& context, asio::io_service& _asio, const std::string& name, const dynamic_t& args) :
-    asio(_asio),
     service_t(context, asio, name, args),
     dispatch<io::graphite_tag>(name),
+    asio(_asio),
     config(args),
     log(context.log("graphite")),
     timer(asio),
