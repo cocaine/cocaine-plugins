@@ -80,7 +80,7 @@ void graphite_t::graphite_sender_t::on_send(const asio::error_code& ec) {
 graphite_cfg_t::graphite_cfg_t(const cocaine::dynamic_t& args) :
     endpoint(
         asio::ip::address::from_string(args.as_object().at("endpoint", "127.0.0.1").as_string()),
-        args.as_object().at("port", 42000u).as_uint()
+        args.as_object().at("port", 2003u).as_uint()
     ),
     flush_interval_ms(args.as_object().at("flush_interval_ms", 1000u).as_uint())
 {}
