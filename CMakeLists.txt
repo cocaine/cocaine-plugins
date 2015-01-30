@@ -4,13 +4,14 @@ PROJECT(COCAINE-PLUGINS)
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-OPTION(CACHE "Build LRU Cache plugin" ON)
-OPTION(CHRONO "Build Chrono Service plugin" ON)
-OPTION(DOCKER "Build Docker Isolation plugin" ON)
-OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
-OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
+OPTION(CACHE "Build LRU Cache plugin" OFF)
+OPTION(CHRONO "Build Chrono Service plugin" OFF)
+OPTION(DOCKER "Build Docker Isolation plugin" OFF)
+OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" OFF)
+OPTION(IPVS "Build IPVS Gateway Service plugin" OFF)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
-OPTION(URLFETCH "Build URLFetch Service plugin" ON)
+OPTION(URLFETCH "Build URLFetch Service plugin" OFF)
+OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 
 ADD_DEFINITIONS(-DBLACKHOLE_HEADER_ONLY)
 
@@ -50,8 +51,12 @@ SET(PLUGINS
         elasticsearch
         ipvs
         mongo
-        urlfetch)
+        urlfetch
+        graphite)
 
 FOREACH(PLUGIN ${PLUGINS})
-    ADD_SUBDIRECTORY(${PLUGIN})
+    STRING(TOUPPER ${PLUGIN} OPTION_NAME)
+    IF(${${OPTION_NAME}})
+        ADD_SUBDIRECTORY(${PLUGIN})
+    ENDIF()
 ENDFOREACH(PLUGIN)

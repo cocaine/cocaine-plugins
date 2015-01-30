@@ -1,26 +1,29 @@
 INCLUDE_DIRECTORIES(
-    ${PROJECT_SOURCE_DIR}/cache/include)
+    ${PROJECT_SOURCE_DIR}/graphite/include)
 
-ADD_LIBRARY(cache MODULE
-    src/cache
-    src/module)
+ADD_LIBRARY(graphite MODULE
+    include/cocaine/graphite
+    include/cocaine/metric
+    include/cocaine/idl/graphite
+    src/module
+    src/metric
+    src/graphite)
 
-TARGET_LINK_LIBRARIES(cache
+TARGET_LINK_LIBRARIES(graphite
     cocaine-core
     ${Boost_LIBRARIES})
 
-SET_TARGET_PROPERTIES(cache PROPERTIES
+SET_TARGET_PROPERTIES(graphite PROPERTIES
     PREFIX ""
     SUFFIX ".cocaine-plugin"
     COMPILE_FLAGS "-std=c++0x")
 
-INSTALL(TARGETS cache
+INSTALL(TARGETS graphite
     LIBRARY DESTINATION lib/cocaine
     COMPONENT runtime)
 
 INSTALL(
     DIRECTORY
-        include/cocaine/framework
         include/cocaine/idl
     DESTINATION include/cocaine
     COMPONENT development)
