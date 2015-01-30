@@ -65,7 +65,6 @@ private:
     std::shared_ptr<cocaine::logging::log_t> log;
     asio::deadline_timer timer;
     synchronized<buffer_t> buffer;
-
 };
 }}
 #endif

@@ -18,6 +18,7 @@
 #include <cocaine/context.hpp>
 
 namespace cocaine { namespace service {
+
 class graphite_t::graphite_sender_t :
     public std::enable_shared_from_this<graphite_t::graphite_sender_t>
 {
@@ -53,6 +54,7 @@ void graphite_t::graphite_sender_t::on_connect(const asio::error_code& ec) {
         );
     }
     else {
+        COCAINE_LOG_DEBUG(parent->log, "Opened socket to send metrics to graphite");
         std::string s_buf;
         for(size_t i = 0; i < buffer.size(); i++) {
             s_buf.append(buffer[i].format());
@@ -69,6 +71,9 @@ void graphite_t::graphite_sender_t::on_send(const asio::error_code& ec) {
             buffer.size(),
             ec.message().c_str()
         );
+    }
+    else {
+        COCAINE_LOG_DEBUG(parent->log, "Successfully sent %lli metrics", buffer.size());
     }
 }
 
