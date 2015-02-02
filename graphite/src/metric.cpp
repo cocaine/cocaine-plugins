@@ -75,7 +75,7 @@ void metric_t::msgpack_unpack(const msgpack::object& source) {
     }
     auto ar = source.via.array;
     if(ar.size != 2 && ar.size != 3) {
-        msgpack::unpack_error("Invalid data size to unpack graphite::metrics_t");
+        throw msgpack::unpack_error("Invalid data size to unpack graphite::metrics_t");
     }
     name = std::move(ar.ptr[0].as<std::string>());
     value = ar.ptr[1].as<double>();
