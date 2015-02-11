@@ -31,6 +31,11 @@
 using namespace cocaine::docker;
 
 namespace {
+
+/*
+    This magic is intended to run curl_global_init during static initialization in single-threaded environment.
+    See http://curl.haxx.se/libcurl/c/curl_global_init.html
+ */
 int
 curl_init() {
     if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
