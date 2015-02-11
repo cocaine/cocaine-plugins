@@ -29,6 +29,7 @@ namespace cocaine { namespace service {
 class graphite_cfg_t {
 public:
     asio::ip::tcp::endpoint endpoint;
+    std::string prefix;
     boost::posix_time::milliseconds flush_interval_ms;
     size_t max_queue_size;
     graphite_cfg_t(const cocaine::dynamic_t& args);

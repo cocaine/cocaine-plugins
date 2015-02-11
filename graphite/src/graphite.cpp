@@ -59,7 +59,7 @@ void graphite_t::graphite_sender_t::on_connect(const asio::error_code& ec) {
         COCAINE_LOG_DEBUG(parent->log, "Opened socket to send metrics to graphite");
         assert(s_buffer.empty());
         for(size_t i = 0; i < buffer.size(); i++) {
-            s_buffer.append(buffer[i].format());
+            s_buffer.append(buffer[i].format(parent->config.prefix));
         }
         using namespace std::placeholders;
         socket.async_send(asio::buffer(s_buffer), std::bind(&graphite_sender_t::on_send, shared_from_this(), _1));
@@ -84,6 +84,7 @@ graphite_cfg_t::graphite_cfg_t(const cocaine::dynamic_t& args) :
         asio::ip::address::from_string(args.as_object().at("endpoint", "127.0.0.1").as_string()),
         args.as_object().at("port", 2003u).as_uint()
     ),
+    prefix(args.as_object().at("prefix", "cocaine").as_string()),
     flush_interval_ms(args.as_object().at("flush_interval_ms", 1000u).as_uint()),
     max_queue_size(args.as_object().at("max_queue_size", 1000u).as_uint())
 {}

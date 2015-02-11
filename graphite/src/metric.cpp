@@ -82,10 +82,16 @@ void metric_t::msgpack_unpack(const msgpack::object& source) {
     ts = ar.size == 3 ? ar.ptr[2].as<time_t>() : time(nullptr);
 }
 
-std::string metric_t::format() const {
-    return
-        get_name() + ' ' +
-        std::to_string(get_value()) + ' ' +
-        std::to_string(get_timestamp()) + '\n';
+std::string metric_t::format(std::string prefix) const {
+    if(!prefix.empty() && prefix.back() != '.') {
+        prefix += '.';
+    }
+    prefix += get_name();
+    prefix += ' ';
+    prefix += std::to_string(get_value());
+    prefix += ' ';
+    prefix += std::to_string(get_timestamp());
+    prefix += '\n';
+    return prefix;
 }
 }}}

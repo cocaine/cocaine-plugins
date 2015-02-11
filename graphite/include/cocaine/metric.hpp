@@ -47,7 +47,7 @@ public:
 
     void msgpack_unpack(const msgpack::object& source);
 
-    auto format() const -> std::string;
+    auto format(std::string prefix = "") const -> std::string;
 private:
     std::string name;
     double value;
