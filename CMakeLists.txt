@@ -11,6 +11,7 @@ OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
+OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 
 ADD_DEFINITIONS(-DBLACKHOLE_HEADER_ONLY)
 
@@ -50,8 +51,12 @@ SET(PLUGINS
         elasticsearch
         ipvs
         mongo
-        urlfetch)
+        urlfetch
+        graphite)
 
 FOREACH(PLUGIN ${PLUGINS})
-    ADD_SUBDIRECTORY(${PLUGIN})
+    STRING(TOUPPER ${PLUGIN} OPTION_NAME)
+    IF(${${OPTION_NAME}})
+        ADD_SUBDIRECTORY(${PLUGIN})
+    ENDIF()
 ENDFOREACH(PLUGIN)

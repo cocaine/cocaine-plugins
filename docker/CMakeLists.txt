@@ -1,30 +1,28 @@
-IF(DOCKER)
-    LOCATE_LIBRARY(LIBCURL "curl/curl.h" "curl")
+LOCATE_LIBRARY(LIBCURL "curl/curl.h" "curl")
 
-    INCLUDE_DIRECTORIES(
-        ${LIBCURL_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(
+    ${LIBCURL_INCLUDE_DIRS})
 
-    LINK_DIRECTORIES(
-        ${LIBCURL_LIBRARY_DIRS})
+LINK_DIRECTORIES(
+    ${LIBCURL_LIBRARY_DIRS})
 
-    ADD_LIBRARY(docker MODULE
-        http
-        docker_client
-        module
-        isolate)
+ADD_LIBRARY(docker MODULE
+    http
+    docker_client
+    module
+    isolate)
 
-    TARGET_LINK_LIBRARIES(docker
-        cocaine-core
-        ${Boost_LIBRARIES}
-        curl)
+TARGET_LINK_LIBRARIES(docker
+    cocaine-core
+    ${Boost_LIBRARIES}
+    curl)
 
-    SET_TARGET_PROPERTIES(docker PROPERTIES
-        PREFIX ""
-        SUFFIX ".cocaine-plugin"
-        COMPILE_FLAGS "-std=c++0x")
+SET_TARGET_PROPERTIES(docker PROPERTIES
+    PREFIX ""
+    SUFFIX ".cocaine-plugin"
+    COMPILE_FLAGS "-std=c++0x")
 
-    INSTALL(
-        TARGETS docker
-        LIBRARY DESTINATION lib/cocaine
-        COMPONENT runtime)
-ENDIF(DOCKER)
+INSTALL(
+    TARGETS docker
+    LIBRARY DESTINATION lib/cocaine
+    COMPONENT runtime)

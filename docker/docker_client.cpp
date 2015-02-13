@@ -30,6 +30,23 @@
 
 using namespace cocaine::docker;
 
+namespace {
+
+/*
+    This magic is intended to run curl_global_init during static initialization in single-threaded environment.
+    See http://curl.haxx.se/libcurl/c/curl_global_init.html
+ */
+int
+curl_init() {
+    if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
+        std::cout << "Curl initialization failed. Aborting execution." << std::endl;
+        std::terminate();
+    }
+    return 42;
+}
+int curl_init_placeholder = curl_init();
+}
+
 endpoint_t::endpoint_t() {
     // pass
 }
