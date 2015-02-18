@@ -40,7 +40,7 @@ bool session_t::valid() const {
 }
 
 void session_t::assign(const clientid_t* native) {
-    zk_session.passwd = native->passwd;
+    zk_session.client_id = native->client_id;
     std::copy(native->passwd, native->passwd+16, zk_session.passwd);
 }
 }

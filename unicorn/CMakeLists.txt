@@ -10,13 +10,18 @@ ADD_LIBRARY(unicorn MODULE
     include/cocaine/unicorn/path
     include/cocaine/unicorn/value
     src/module
-    src/unicorn
+    src/unicorn.cpp
+    src/unicorn/value
+    src/zookeeper/zookeeper
     src/zookeeper/session
     src/zookeeper/handler
     src/zookeeper/connection)
 
 TARGET_LINK_LIBRARIES(unicorn
-    cocaine-core)
+    msgpack
+    cocaine-core
+    zookeeper_mt
+    ${Boost_LIBRARIES})
 
 SET_TARGET_PROPERTIES(unicorn PROPERTIES
     PREFIX ""
@@ -26,9 +31,3 @@ SET_TARGET_PROPERTIES(unicorn PROPERTIES
 INSTALL(TARGETS unicorn
     LIBRARY DESTINATION lib/cocaine
     COMPONENT runtime)
-
-INSTALL(
-    DIRECTORY
-        include/cocaine/idl
-    DESTINATION include/cocaine
-    COMPONENT development)

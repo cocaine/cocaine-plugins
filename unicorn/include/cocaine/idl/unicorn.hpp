@@ -40,29 +40,14 @@ struct unicorn {
 
         typedef boost::mpl::list<
             path_t,
-            value_t
-        > argument_type;
-
-        typedef option_of<
-            bool
-        >::tag upstream_type;
-    };
-
-    /*struct get {
-        typedef unicorn_tag tag;
-
-        static const char* alias() {
-            return "get";
-        }
-
-        typedef boost::mpl::list<
-            path_t
+            value_t,
+            version_t
         > argument_type;
 
         typedef option_of<
             versioned_value_t
         >::tag upstream_type;
-    };*/
+    };
 
     struct subscribe {
         typedef unicorn_tag tag;
@@ -76,13 +61,9 @@ struct unicorn {
             version_t
         > argument_type;
 
-        typedef option_of<
+        typedef stream_of<
             versioned_value_t
         >::tag upstream_type;
-
-        typedef option_of<
-            bool
-        >::tag dispatch_type;
     };
 
     struct del {
@@ -93,29 +74,12 @@ struct unicorn {
         }
 
         typedef boost::mpl::list<
-            path_t
-        > argument_type;
-
-        typedef option_of<
-            bool
-        >::tag upstream_type;
-    };
-
-    struct compare_and_del {
-        typedef unicorn_tag tag;
-
-        static const char* alias() {
-            return "compare_and_del";
-        }
-
-        typedef boost::mpl::list<
             path_t,
             version_t
         > argument_type;
 
         typedef option_of<
-            bool,
-            versioned_value_t
+            bool
         >::tag upstream_type;
     };
 
@@ -132,27 +96,8 @@ struct unicorn {
         > argument_type;
 
         typedef option_of <
-            numeric_value_t
-        > upstream_type;
-    };
-
-    struct cas {
-        typedef unicorn_tag tag;
-
-        static const char* alias() {
-            return "cas";
-        }
-
-        typedef boost::mpl::list<
-            path_t,
-            value_t,
-            version_t
-        > argument_type;
-
-        typedef option_of<
-            std::true_type,
-            versioned_value_t
-        > upstream_type;
+            value_t
+        >::tag upstream_type;
     };
 };
 
@@ -163,13 +108,10 @@ struct protocol<unicorn_tag> {
     >::type version;
 
     typedef boost::mpl::list<
-        unicorn::put,
-        unicorn::get,
         unicorn::subscribe,
+        unicorn::put,
         unicorn::del,
-        unicorn::compare_and_del,
-        unicorn::increment,
-        unicorn::cas
+        unicorn::increment
     > messages;
 
     typedef unicorn type;

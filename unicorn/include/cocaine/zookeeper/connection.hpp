@@ -27,20 +27,35 @@ namespace zookeeper {
 
 struct cfg_t {
     struct endpoint_t {
+        endpoint_t(std::string _hostname, unsigned int _port) :
+            hostname(_hostname),
+            port(_port)
+        {}
         std::string hostname;
         unsigned int port;
+        std::string to_string() const {
+            std::string result;
+            if(!hostname.empty() && port != 0) {
+                result = hostname + ':' + std::to_string(port);
+            }
+            return result;
+        }
     };
     std::vector<endpoint_t> endpoints;
     unsigned int recv_timeout;
     cfg_t(std::vector<endpoint_t> endpoints, unsigned int recv_timeout);
     std::string connection_string() const;
 };
+
 class connection_t {
 public:
     connection_t(const cfg_t& cfg, session_t& session);
-    void put(const std::string& path, const std::string& value, stat_handler_ptr handler);
-    void get(const std::string& path, data_handler_ptr handler);
-    void get(const std::string& path, data_handler_ptr handler, watch_handler_ptr watch_handler);
+    void put(const path_t& path, const value_t& value, stat_handler_ptr handler);
+    void put(const path_t& path, const value_t& value, version_t version, stat_handler_ptr handler);
+    void get(const path_t& path, data_handler_ptr handler);
+    void get(const path_t& path, data_handler_ptr handler, watch_handler_ptr watch_handler);
+    void create(const path_t& path, const value_t& value, string_handler_ptr handler);
+    void del(const path_t& path, version_t version, void_handler_ptr handler);
 private:
     zhandle_t* zhandle;
 };

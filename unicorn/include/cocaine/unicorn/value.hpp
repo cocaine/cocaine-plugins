@@ -16,28 +16,47 @@
 #ifndef COCAINE_UNICORN_VALUE_HPP
 #define COCAINE_UNICORN_VALUE_HPP
 
+#include "cocaine/zookeeper/zookeeper.hpp"
+
+#include <cocaine/common.hpp>
+#include <cocaine/dynamic.hpp>
+#include <cocaine/traits/dynamic.hpp>
+
+#include <msgpack.hpp>
+
 #include <string>
 
 namespace cocaine { namespace unicorn {
-typedef unsigned long version_t ;
-typedef std::function<void(const versioned_value_t&)> subscribe_callback_t;
-class value_base {
+
+typedef zookeeper::version_t version_t;
+
+typedef cocaine::dynamic_t value_t;
+
+class versioned_value_t {
 public:
-    std::string serialize() const;
-protected:
-    ~value_holder();
+    versioned_value_t() = default;
+    versioned_value_t(const versioned_value_t& other) = default;
+    versioned_value_t(versioned_value_t&& other) :
+        value(std::move(other.value)),
+        version(std::move(other.version))
+    {}
+
+        versioned_value_t(value_t _value, version_t _version) :
+        value(std::move(_value)),
+        version(std::move(_version))
+    {}
+
+    template<class Stream>
+    void msgpack_pack(msgpack::packer<Stream>& packer) const {
+        packer.pack_array(2);
+        cocaine::io::type_traits<value_t>::pack(packer, value);
+        cocaine::io::type_traits<version_t>::pack(packer, version);
+    }
+private:
+    value_t value;
+    version_t version;
 };
-
-class value_t : public value_base {
-
-};
-
-class numeric_value_t : public value_base {
-
-};
-
-class versioned_value_t : public value_base {
-
-};
+zookeeper::value_t serialize(const value_t& val);
+value_t unserialize(const zookeeper::value_t& val);
 }}
 #endif

@@ -17,46 +17,58 @@
 #include "cocaine/zookeeper/zookeeper.hpp"
 
 namespace zookeeper {
-void watcher_cb (zhandle_t* zh, int type, int state, const char* path, void* watcherCtx) {
-    std::unique_ptr<watch_handler_base_t> ptr (static_cast<watch_handler_base_t*>(watcherCtx));
-    ptr->operator()(type, state, path_t(path));
+namespace {
+template <class Target>
+Target* back_cast(const void* data) {
+    return const_cast<Target*>(static_cast<const Target*>(data));
+}
 }
 
-void void_cb(int rc, const void *data) {
-    std::unique_ptr<void_handler_base_t> ptr = static_cast<void_handler_base_t*>(data);
-    ptr->operator()(rc);
+void watcher_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx) {
+    if(watcherCtx != nullptr) {
+        std::unique_ptr<watch_handler_base_t> ptr(static_cast<watch_handler_base_t*>(watcherCtx));
+        ptr->operator()(type, state, path_t(path));
+    }
 }
 
-void stat_cb(int rc, const struct Stat *stat, const void *data) {
-    std::unique_ptr<stat_handler_base_t> ptr = static_cast<stat_handler_base_t*>(data);
+void void_cb(int rc, const void* data) {
+    if(data != nullptr) {
+        std::unique_ptr<void_handler_base_t> ptr(back_cast<void_handler_base_t>(data));
+        ptr->operator()(rc);
+    }
+}
+
+void stat_cb(int rc, const struct Stat* stat, const void* data) {
+    std::unique_ptr<stat_handler_base_t> ptr(back_cast<stat_handler_base_t>(data));
     ptr->operator()(rc, *stat);
 }
 
-void data_cb(int rc, const char *value, int value_len, const struct Stat *stat, const void *data) {
-    std::unique_ptr<data_handler_base_t> ptr = static_cast<data_handler_base_t*>(data);
+void data_cb(int rc, const char* value, int value_len, const struct Stat* stat, const  void* data) {
+    std::unique_ptr<data_handler_base_t> ptr(back_cast<data_handler_base_t>(data));
     ptr->operator()(rc, std::string(value, value_len), *stat);
 }
+
+void string_cb(int rc, const char *value, const void *data) {
+    std::string s_value;
+    if(value != nullptr) {
+        s_value = value;
+    }
+    std::unique_ptr<string_handler_base_t> ptr(back_cast<string_handler_base_t>(data));
+    ptr->operator()(rc, s_value);
+}
 /*
-void string_cb(int rc, const char *value, const void *data);
 void strings_cb(int rc, const struct String_vector *strings, const void *data);
 void strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
 void acl_cb(int rc, struct ACL_vector *acl, struct Stat *stat, const void *data);
 */
-
-
-void watch_handler_base_t::preprocess(int type, int state, path_t path) {}
-
-void stat_handler_base_t::preprocess(int rc, const node_stat& stat) {}
-
-void data_handler_base_t::preprocess(int rc, std::string value, const node_stat& stat) {}
-
-create_and_put_handler_t::create_and_put_handler_t(std::string _path, std::string _value) :
-    path(std::move(_path)),
-    value(std::move(_value))
-{}
-
-void create_and_put_handler_t::preprocess(int rc, std::string value, const node_stat& stat) {
-    if(rc == ZNONODE) {
-
+std::string get_error_message(int rc) {
+    switch (rc) {
+        case CHILD_NOT_ALLOWED :
+            return "Can not get value of a node with childs";
+        case INVALID_TYPE :
+            return "Invalid type of value stored for requested operation";
+        default:
+            return zerror(rc);
     }
+}
 }

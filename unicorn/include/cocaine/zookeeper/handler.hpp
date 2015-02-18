@@ -16,9 +16,10 @@
 #define ZOOKEEPER_HANDLER_HPP
 
 #include "cocaine/zookeeper/zookeeper.hpp"
-#include <zookeeper/zookeeper.h>
-#include <functional>
 
+#include <functional>
+#include <string>
+#include <memory>
 
 namespace zookeeper {
 
@@ -27,9 +28,9 @@ void void_cb(int rc, const void *data);
 void stat_cb(int rc, const struct Stat *stat, const void *data);
 void data_cb(int rc, const char *value, int value_len, const struct Stat *stat, const void *data);
 void string_cb(int rc, const char *value, const void *data);
-void strings_cb(int rc, const struct String_vector *strings, const void *data);
-void strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
-void acl_cb(int rc, struct ACL_vector *acl, struct Stat *stat, const void *data);
+//void strings_cb(int rc, const struct String_vector *strings, const void *data);
+//void strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
+//void acl_cb(int rc, struct ACL_vector *acl, struct Stat *stat, const void *data);
 std::string get_error_message(int rc);
 
 typedef Stat node_stat;
@@ -54,13 +55,20 @@ public:
 
 class data_handler_base_t {
 public:
-    virtual void operator() (int rc, std::string value, const node_stat& stat) = 0;
-    virtual ~stat_handler_base_t() {}
+    virtual void operator() (int rc, value_t value, const node_stat& stat) = 0;
+    virtual ~data_handler_base_t() {}
+};
+
+class string_handler_base_t {
+public:
+    virtual void operator() (int rc, value_t value) = 0;
+    virtual ~string_handler_base_t() {}
 };
 
 typedef std::unique_ptr<watch_handler_base_t> watch_handler_ptr;
 typedef std::unique_ptr<void_handler_base_t> void_handler_ptr;
 typedef std::unique_ptr<stat_handler_base_t> stat_handler_ptr;
 typedef std::unique_ptr<data_handler_base_t> data_handler_ptr;
+typedef std::unique_ptr<string_handler_base_t> string_handler_ptr;
 }
 #endif

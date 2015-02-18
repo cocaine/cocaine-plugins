@@ -22,9 +22,9 @@ public:
     const clientid_t* native();
     void reset();
     void assign(const clientid_t* native);
+    bool valid() const;
 private:
     clientid_t zk_session;
-    bool valid() const;
 };
 }
 #endif
