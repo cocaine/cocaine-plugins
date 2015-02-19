@@ -16,13 +16,33 @@
 #define ZOOKEEPER_SESSION_HPP
 #include <zookeeper/zookeeper.h>
 namespace zookeeper {
+/**
+* Class representing zookeeper clientid_t from C api.
+*/
 class session_t {
 public:
     session_t();
-    const clientid_t* native();
-    void reset();
-    void assign(const clientid_t* native);
-    bool valid() const;
+
+    const
+    clientid_t* native();
+
+    /**
+    * Reset session. Used to reset expired sesions
+    */
+    void
+    reset();
+
+    /**
+    * Assign native handle to session
+    */
+    void
+    assign(const clientid_t& native);
+
+    /**
+    * Check if session was filled with valid native handle
+    */
+    bool
+    valid() const;
 private:
     clientid_t zk_session;
 };

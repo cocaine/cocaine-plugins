@@ -24,6 +24,11 @@ Target* back_cast(const void* data) {
 }
 }
 
+/**
+* All callback are called from C ZK client, convert previously passed void* to
+* matching callback and invoke it.
+*/
+
 void watcher_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx) {
     if(watcherCtx != nullptr) {
         std::unique_ptr<watch_handler_base_t> ptr(static_cast<watch_handler_base_t*>(watcherCtx));
@@ -43,9 +48,19 @@ void stat_cb(int rc, const struct Stat* stat, const void* data) {
     ptr->operator()(rc, *stat);
 }
 
+void stat_with_watch_cb(int rc, const struct Stat* stat, const void* data) {
+    std::unique_ptr<stat_handler_with_watch_t> ptr(back_cast<stat_handler_with_watch_t>(data));
+    ptr->run(rc, *stat);
+}
+
 void data_cb(int rc, const char* value, int value_len, const struct Stat* stat, const  void* data) {
     std::unique_ptr<data_handler_base_t> ptr(back_cast<data_handler_base_t>(data));
     ptr->operator()(rc, std::string(value, value_len), *stat);
+}
+
+void data_with_watch_cb(int rc, const char* value, int value_len, const struct Stat* stat, const  void* data) {
+    std::unique_ptr<data_handler_with_watch_t> ptr(back_cast<data_handler_with_watch_t>(data));
+    ptr->run(rc, std::string(value, value_len), *stat);
 }
 
 void string_cb(int rc, const char *value, const void *data) {
@@ -61,14 +76,39 @@ void strings_cb(int rc, const struct String_vector *strings, const void *data);
 void strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
 void acl_cb(int rc, struct ACL_vector *acl, struct Stat *stat, const void *data);
 */
-std::string get_error_message(int rc) {
-    switch (rc) {
-        case CHILD_NOT_ALLOWED :
-            return "Can not get value of a node with childs";
-        case INVALID_TYPE :
-            return "Invalid type of value stored for requested operation";
-        default:
-            return zerror(rc);
+
+data_handler_with_watch_t::data_handler_with_watch_t() :
+    watch_ptr(nullptr)
+{}
+
+void
+data_handler_with_watch_t::run (int rc, value_t value, const node_stat& stat) {
+    if(rc != ZOK && watch_ptr) {
+        delete watch_ptr;
     }
+    operator()(rc, value, stat);
 }
+
+void
+data_handler_with_watch_t::bind_watch(watch_handler_base_t* _watch_ptr) {
+    watch_ptr = _watch_ptr;
+}
+
+stat_handler_with_watch_t::stat_handler_with_watch_t() :
+    watch_ptr(nullptr)
+{
+}
+
+void stat_handler_with_watch_t::run(int rc, const node_stat& stat) {
+    //Seems that watch can be woken up in case of ZNONODE
+    if(rc != ZOK && rc != ZNONODE && watch_ptr) {
+        delete watch_ptr;
+    }
+    operator()(rc, stat);
+}
+
+void stat_handler_with_watch_t::bind_watch(watch_handler_base_t* _watch_ptr) {
+    watch_ptr = _watch_ptr;
+}
+
 }

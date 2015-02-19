@@ -31,11 +31,21 @@
 
 using namespace cocaine::unicorn;
 namespace cocaine { namespace service {
+
+/**
+* Service for providing access to unified configuration service.
+* Currently we use zookeeper as backend.
+* For protocol methods description see include/cocaine/idl/unicorn.hpp
+*/
 class unicorn_t:
     public api::service_t,
     public dispatch<io::unicorn_tag>
 {
 public:
+
+    /**
+    * Typedefs for result type. Actual result types are in include/cocaine/idl/unicorn.hpp
+    */
     struct response {
         typedef deferred<result_of<io::unicorn::put>::type> put;
         typedef deferred<result_of<io::unicorn::del>::type> del;
@@ -63,13 +73,18 @@ public:
         return *this;
     }
 
+    /**
+    * Callbacks to handle async ZK responses.
+    */
+    struct nonode_action_t;
+
     struct subscribe_context_t;
     struct subscribe_action_t;
+    struct subscribe_nonode_action_t;
     struct watch_handler_t;
 
     struct put_context_t;
     struct put_action_t;
-    struct put_nonode_action_t;
     struct put_badversion_action_t;
 
     struct del_action_t;

@@ -38,12 +38,24 @@ struct unicorn {
             return "put";
         }
 
+        /**
+        *  put command implements cas behaviour. It accepts:
+        *
+        * path_t - path to change.
+        * value_t - value to write in path
+        * version_t - version to compare with. If version in zk do not match - error will be returned.
+        *   -1 indicates that version check is not performed (forced put).
+        **/
         typedef boost::mpl::list<
             path_t,
             value_t,
             version_t
         > argument_type;
 
+        /**
+        * Return value is current value in ZK.
+        * If version was passed - incremented version by 1 indicates sucessfull completion
+        */
         typedef option_of<
             versioned_value_t
         >::tag upstream_type;
@@ -56,11 +68,17 @@ struct unicorn {
             return "subscribe";
         }
 
+        /**
+        * subscribe for updates on path. Will send last update which version is greater than specified.
+        */
         typedef boost::mpl::list<
             path_t,
             version_t
         > argument_type;
 
+        /**
+        * current version in ZK
+        */
         typedef stream_of<
             versioned_value_t
         >::tag upstream_type;
@@ -73,6 +91,9 @@ struct unicorn {
             return "del";
         }
 
+        /**
+        * delete node. Will only succeed if there are no child nodes.
+        */
         typedef boost::mpl::list<
             path_t,
             version_t
@@ -90,13 +111,21 @@ struct unicorn {
             return "increment";
         }
 
+        /**
+        * increment node value in path by passed value.
+        * If either passed or stored value is not numeric will return error.
+        * If one of the values is float - result value will be float.
+        */
         typedef boost::mpl::list<
             path_t,
             value_t
         > argument_type;
 
+        /**
+        * return value after increment
+        */
         typedef option_of <
-            value_t
+            versioned_value_t
         >::tag upstream_type;
     };
 };

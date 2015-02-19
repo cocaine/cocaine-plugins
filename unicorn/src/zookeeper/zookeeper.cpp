@@ -18,7 +18,27 @@
 #include <stdexcept>
 
 namespace zookeeper {
-path_t path_parent(const path_t& path, unsigned int depth) {
+
+std::string
+get_error_message(int rc) {
+    switch (rc) {
+        case CHILD_NOT_ALLOWED :
+            return "Can not get value of a node with childs";
+        case INVALID_TYPE :
+            return "Invalid type of value stored for requested operation";
+        case INVALID_VALUE :
+            return "Could not unserialize value stored in zookeeper";
+        default:
+            return zerror(rc);
+    }
+}
+
+std::string get_error_message(int rc, const std::exception& e) {
+    return get_error_message(rc) + ", exception: " + e.what();
+}
+
+path_t
+path_parent(const path_t& path, unsigned int depth) {
     size_t last_char = path.size();
     size_t pos = 0;
     for (size_t i = 0; i <= depth; i++) {

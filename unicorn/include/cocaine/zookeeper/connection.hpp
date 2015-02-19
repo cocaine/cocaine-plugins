@@ -25,37 +25,90 @@
 
 namespace zookeeper {
 
-struct cfg_t {
-    struct endpoint_t {
-        endpoint_t(std::string _hostname, unsigned int _port) :
-            hostname(_hostname),
-            port(_port)
-        {}
+class cfg_t {
+public:
+    class endpoint_t {
+    public:
+        endpoint_t(std::string _hostname, unsigned int _port);
+
+        std::string
+        to_string() const;
+
+    private:
         std::string hostname;
         unsigned int port;
-        std::string to_string() const {
-            std::string result;
-            if(!hostname.empty() && port != 0) {
-                result = hostname + ':' + std::to_string(port);
-            }
-            return result;
-        }
     };
-    std::vector<endpoint_t> endpoints;
-    unsigned int recv_timeout;
+
     cfg_t(std::vector<endpoint_t> endpoints, unsigned int recv_timeout);
-    std::string connection_string() const;
+
+    /**
+    * ZK connection string.
+    * ZK accepts several host:port values of a cluster splitted by comma.
+    */
+    std::string
+    connection_string() const;
+
+    const unsigned int recv_timeout;
+private:
+    std::vector<endpoint_t> endpoints;
+
 };
 
+/**
+* Adapter class to zookeeper C api.
+* Add ability to pass std::unique_ptr of handler object instead of function callback and void*
+*/
 class connection_t {
 public:
     connection_t(const cfg_t& cfg, session_t& session);
-    void put(const path_t& path, const value_t& value, stat_handler_ptr handler);
-    void put(const path_t& path, const value_t& value, version_t version, stat_handler_ptr handler);
-    void get(const path_t& path, data_handler_ptr handler);
-    void get(const path_t& path, data_handler_ptr handler, watch_handler_ptr watch_handler);
-    void create(const path_t& path, const value_t& value, string_handler_ptr handler);
-    void del(const path_t& path, version_t version, void_handler_ptr handler);
+
+    /**
+    * forced put (no version check)
+    * See zoo_aset.
+    */
+    void
+    put(const path_t& path, const value_t& value, stat_handler_ptr handler);
+
+    /**
+    * put value to path. If version in ZK is different returns an error.
+    * See zoo_aset.
+    */
+    void
+    put(const path_t& path, const value_t& value, version_t version, stat_handler_ptr handler);
+
+    /**
+    * Get value from ZK.
+    * See zoo_aget.
+    */
+    void
+    get(const path_t& path, data_handler_ptr handler);
+
+    /**
+    * Get node value from ZK and set watch for that node.
+    * See zoo_awget
+    */
+    void
+    get(const path_t& path, data_handler_with_watch_ptr handler, watch_handler_ptr watch_handler);
+
+    /**
+    * Create node in ZK with specified path and value.
+    * See zoo_acreate
+    */
+    void
+    create(const path_t& path, const value_t& value, string_handler_ptr handler);
+
+    /**
+    * delete node in ZK
+    * See zoo_adelete
+    */
+    void
+    del(const path_t& path, version_t version, void_handler_ptr handler);
+
+    /**
+    * Check if node exists
+    */
+    void
+    exists(const path_t& path, stat_handler_with_watch_ptr handler, watch_handler_ptr watch);
 private:
     zhandle_t* zhandle;
 };

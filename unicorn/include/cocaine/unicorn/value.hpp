@@ -29,25 +29,30 @@
 namespace cocaine { namespace unicorn {
 
 typedef zookeeper::version_t version_t;
-
 typedef cocaine::dynamic_t value_t;
+
+/**
+* Serializes service representation of value to zookepeers representation.
+* Currently ZK store msgpacked data, and service uses cocaine::dynamic_t
+*/
+zookeeper::value_t
+serialize(const value_t& val);
+
+/**
+* Unserializes zookepeers representation to service representation.
+*/
+value_t
+unserialize(const zookeeper::value_t& val);
 
 class versioned_value_t {
 public:
     versioned_value_t() = default;
     versioned_value_t(const versioned_value_t& other) = default;
-    versioned_value_t(versioned_value_t&& other) :
-        value(std::move(other.value)),
-        version(std::move(other.version))
-    {}
-
-        versioned_value_t(value_t _value, version_t _version) :
-        value(std::move(_value)),
-        version(std::move(_version))
-    {}
+    versioned_value_t(value_t _value, version_t _version);
 
     template<class Stream>
-    void msgpack_pack(msgpack::packer<Stream>& packer) const {
+    void
+    msgpack_pack(msgpack::packer<Stream>& packer) const {
         packer.pack_array(2);
         cocaine::io::type_traits<value_t>::pack(packer, value);
         cocaine::io::type_traits<version_t>::pack(packer, version);
@@ -56,7 +61,6 @@ private:
     value_t value;
     version_t version;
 };
-zookeeper::value_t serialize(const value_t& val);
-value_t unserialize(const zookeeper::value_t& val);
+
 }}
 #endif
