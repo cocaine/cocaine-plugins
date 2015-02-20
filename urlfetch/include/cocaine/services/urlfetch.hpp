@@ -121,6 +121,7 @@ class urlfetch_t:
 
     private:
         std::shared_ptr<logging::log_t> log_;
+        std::unique_ptr<ioremap::swarm::logger_base> m_logger_base;
         ioremap::swarm::logger m_logger;
         boost::asio::io_service m_service;
         ioremap::swarm::boost_event_loop m_loop;
