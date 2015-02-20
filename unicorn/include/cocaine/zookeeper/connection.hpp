@@ -58,9 +58,11 @@ private:
 * Adapter class to zookeeper C api.
 * Add ability to pass std::unique_ptr of handler object instead of function callback and void*
 */
-class connection_t {
+class connection_t :
+    public watch_handler_base_t
+{
 public:
-    connection_t(const cfg_t& cfg, session_t& session);
+    connection_t(const cfg_t& cfg, const session_t& session);
 
     /**
     * forced put (no version check)
@@ -95,7 +97,7 @@ public:
     * See zoo_acreate
     */
     void
-    create(const path_t& path, const value_t& value, string_handler_ptr handler);
+    create(const path_t& path, const value_t& value, bool ephemeral, string_handler_ptr handler);
 
     /**
     * delete node in ZK
@@ -109,8 +111,22 @@ public:
     */
     void
     exists(const path_t& path, stat_handler_with_watch_ptr handler, watch_handler_ptr watch);
+
+    /**
+    * Get node value from ZK and set watch for that node.
+    * See zoo_awget
+    */
+    void
+    childs(const path_t& path, strings_stat_handler_with_watch_ptr handler, watch_handler_ptr watch_handler);
+
+    virtual void operator()(int type, int state, path_t path);
+
 private:
+    cfg_t cfg;
+    session_t session;
     zhandle_t* zhandle;
+    void check_rc(int rc);
+    void reconnect();
 };
 }
 #endif

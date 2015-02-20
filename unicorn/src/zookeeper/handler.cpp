@@ -32,8 +32,13 @@ Target* back_cast(const void* data) {
 void watcher_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx) {
     if(watcherCtx != nullptr) {
         std::unique_ptr<watch_handler_base_t> ptr(static_cast<watch_handler_base_t*>(watcherCtx));
-        ptr->operator()(type, state, path_t(path));
+        ptr->operator()(type, state, path ? path_t(path) : path_t());
     }
+}
+
+void watcher_non_owning_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx) {
+    watch_handler_base_t* ptr(static_cast<watch_handler_base_t*>(watcherCtx));
+    ptr->operator()(type, state, path ? path_t(path) : path_t());
 }
 
 void void_cb(int rc, const void* data) {
@@ -45,32 +50,57 @@ void void_cb(int rc, const void* data) {
 
 void stat_cb(int rc, const struct Stat* stat, const void* data) {
     std::unique_ptr<stat_handler_base_t> ptr(back_cast<stat_handler_base_t>(data));
-    ptr->operator()(rc, *stat);
+    ptr->operator()(rc, rc == ZOK ? *stat : node_stat());
 }
 
 void stat_with_watch_cb(int rc, const struct Stat* stat, const void* data) {
     std::unique_ptr<stat_handler_with_watch_t> ptr(back_cast<stat_handler_with_watch_t>(data));
-    ptr->run(rc, *stat);
+    ptr->run(rc, rc == ZOK ? *stat : node_stat());
 }
 
 void data_cb(int rc, const char* value, int value_len, const struct Stat* stat, const  void* data) {
     std::unique_ptr<data_handler_base_t> ptr(back_cast<data_handler_base_t>(data));
-    ptr->operator()(rc, std::string(value, value_len), *stat);
+    ptr->operator()(
+        rc,
+        rc == ZOK ? std::string(value, value_len) : std::string(),
+        rc == ZOK ? *stat : node_stat()
+    );
 }
 
 void data_with_watch_cb(int rc, const char* value, int value_len, const struct Stat* stat, const  void* data) {
     std::unique_ptr<data_handler_with_watch_t> ptr(back_cast<data_handler_with_watch_t>(data));
-    ptr->run(rc, std::string(value, value_len), *stat);
+    ptr->run(
+        rc,
+        rc == ZOK ? std::string(value, value_len) : std::string(),
+        rc == ZOK ? *stat : node_stat()
+    );
 }
 
 void string_cb(int rc, const char *value, const void *data) {
-    std::string s_value;
-    if(value != nullptr) {
-        s_value = value;
-    }
     std::unique_ptr<string_handler_base_t> ptr(back_cast<string_handler_base_t>(data));
-    ptr->operator()(rc, s_value);
+    ptr->operator()(rc, value ? value : std::string());
 }
+
+void
+strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data) {
+    strings_stat_handler_ptr ptr(back_cast<strings_stat_handler_base_t>(data));
+    ptr->operator()(
+        rc,
+        rc == ZOK ? std::vector<std::string>(strings->data, strings->data+strings->count) : std::vector<std::string>(),
+        rc == ZOK ? *stat : node_stat()
+    );
+}
+
+void
+strings_stat_with_watch_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data) {
+    strings_stat_handler_with_watch_ptr ptr(back_cast<strings_stat_handler_with_watch_t>(data));
+    ptr->run(
+        rc,
+        rc == ZOK ? std::vector<std::string>(strings->data, strings->data+strings->count) : std::vector<std::string>(),
+        rc == ZOK ? *stat : node_stat()
+    );
+}
+
 /*
 void strings_cb(int rc, const struct String_vector *strings, const void *data);
 void strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
@@ -108,6 +138,22 @@ void stat_handler_with_watch_t::run(int rc, const node_stat& stat) {
 }
 
 void stat_handler_with_watch_t::bind_watch(watch_handler_base_t* _watch_ptr) {
+    watch_ptr = _watch_ptr;
+}
+
+strings_stat_handler_with_watch_t::strings_stat_handler_with_watch_t():
+    watch_ptr(nullptr)
+{
+}
+
+void strings_stat_handler_with_watch_t::run(int rc, std::vector<std::string> childs, const node_stat& stat) {
+    if(rc != ZOK) {
+        delete watch_ptr;
+    }
+    operator()(rc, std::move(childs), stat);
+}
+
+void strings_stat_handler_with_watch_t::bind_watch(watch_handler_base_t* _watch_ptr) {
     watch_ptr = _watch_ptr;
 }
 

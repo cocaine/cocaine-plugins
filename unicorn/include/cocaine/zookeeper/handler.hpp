@@ -20,6 +20,7 @@
 #include <functional>
 #include <string>
 #include <memory>
+#include <vector>
 
 namespace zookeeper {
 
@@ -27,6 +28,9 @@ typedef Stat node_stat;
 
 void
 watcher_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx);
+
+void
+watcher_non_owning_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx);
 
 void
 void_cb(int rc, const void *data);
@@ -46,8 +50,14 @@ data_with_watch_cb(int rc, const char *value, int value_len, const struct Stat *
 void
 string_cb(int rc, const char *value, const void *data);
 
+void
+strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
+
+void
+strings_stat_with_watch_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
+
 //void strings_cb(int rc, const struct String_vector *strings, const void *data);
-//void strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
+
 //void acl_cb(int rc, struct ACL_vector *acl, struct Stat *stat, const void *data);
 
 
@@ -145,6 +155,40 @@ public:
     ~string_handler_base_t() {}
 };
 
+class strings_stat_handler_base_t {
+public:
+    virtual void
+    operator() (int rc, std::vector<std::string> childs, const node_stat& stat) = 0;
+
+    virtual
+    ~strings_stat_handler_base_t() {}
+};
+
+class strings_stat_handler_with_watch_t {
+public:
+    strings_stat_handler_with_watch_t();
+
+    virtual
+    ~strings_stat_handler_with_watch_t() {}
+
+    virtual void
+    operator() (int rc, std::vector<std::string> childs, const node_stat& stat) = 0;
+
+private:
+    friend void
+    strings_stat_with_watch_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
+
+    friend class connection_t;
+
+    void
+    run(int rc, std::vector<std::string> childs, const node_stat& stat);
+
+    void
+    bind_watch(watch_handler_base_t* _watch_ptr);
+
+    watch_handler_base_t* watch_ptr;
+};
+
 typedef std::unique_ptr<watch_handler_base_t> watch_handler_ptr;
 typedef std::unique_ptr<void_handler_base_t> void_handler_ptr;
 typedef std::unique_ptr<stat_handler_base_t> stat_handler_ptr;
@@ -152,6 +196,7 @@ typedef std::unique_ptr<stat_handler_with_watch_t> stat_handler_with_watch_ptr;
 typedef std::unique_ptr<data_handler_base_t> data_handler_ptr;
 typedef std::unique_ptr<data_handler_with_watch_t> data_handler_with_watch_ptr;
 typedef std::unique_ptr<string_handler_base_t> string_handler_ptr;
-
+typedef std::unique_ptr<strings_stat_handler_base_t> strings_stat_handler_ptr;
+typedef std::unique_ptr<strings_stat_handler_with_watch_t> strings_stat_handler_with_watch_ptr;
 }
 #endif

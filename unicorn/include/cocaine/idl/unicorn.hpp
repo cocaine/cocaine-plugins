@@ -27,6 +27,7 @@
 namespace cocaine { namespace io {
 
 struct unicorn_tag;
+struct unicorn_locked_tag;
 
 using namespace cocaine::unicorn;
 
@@ -128,6 +129,58 @@ struct unicorn {
             versioned_value_t
         >::tag upstream_type;
     };
+
+    struct lsubscribe {
+        typedef unicorn_tag tag;
+
+        static const char* alias() {
+            return "lsubscribe";
+        }
+
+        typedef boost::mpl::list<
+            path_t,
+            version_t
+        > argument_type;
+
+        typedef stream_of<
+            version_t,
+            std::vector<std::string>
+        >::tag upstream_type;
+    };
+    struct lock {
+        typedef unicorn_tag tag;
+
+        static const char* alias() {
+            return "lock";
+        }
+
+        typedef unicorn_locked_tag dispatch_type;
+
+        typedef boost::mpl::list<
+            path_t
+        > argument_type;
+    };
+
+    struct unlock {
+        typedef unicorn_locked_tag tag;
+        static const char* alias() {
+            return "unlock";
+        }
+    };
+
+    struct acquire {
+        typedef unicorn_locked_tag tag;
+        static const char* alias() {
+            return "acquire";
+        }
+        typedef option_of <
+            bool
+        >::tag upstream_type;
+
+        typedef boost::mpl::list<
+        > argument_type;
+        typedef unicorn_locked_tag dispatch_type;
+    };
 };
 
 template<>
@@ -138,9 +191,25 @@ struct protocol<unicorn_tag> {
 
     typedef boost::mpl::list<
         unicorn::subscribe,
+        unicorn::lsubscribe,
         unicorn::put,
         unicorn::del,
-        unicorn::increment
+        unicorn::increment,
+        unicorn::lock
+    > messages;
+
+    typedef unicorn type;
+};
+
+template<>
+struct protocol<unicorn_locked_tag> {
+    typedef boost::mpl::int_<
+        1
+    >::type version;
+
+    typedef boost::mpl::list<
+        unicorn::acquire,
+        unicorn::unlock
     > messages;
 
     typedef unicorn type;

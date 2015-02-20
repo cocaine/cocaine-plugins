@@ -2,13 +2,14 @@ INCLUDE_DIRECTORIES(
     ${PROJECT_SOURCE_DIR}/unicorn/include)
 
 ADD_LIBRARY(unicorn MODULE
-    include/cocaine/unicorn
+    include/cocaine/unicorn.hpp
     include/cocaine/zookeeper/session
     include/cocaine/zookeeper/connection
-    include/cocaine/zookeeper/context
     include/cocaine/zookeeper/handler
     include/cocaine/unicorn/path
     include/cocaine/unicorn/value
+    include/cocaine/unicorn/handlers
+
     src/module
     src/unicorn.cpp
     src/unicorn/value
