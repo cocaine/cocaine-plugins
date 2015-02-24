@@ -6,6 +6,7 @@ ADD_LIBRARY(unicorn MODULE
     include/cocaine/zookeeper/session
     include/cocaine/zookeeper/connection
     include/cocaine/zookeeper/handler
+    include/cocaine/zookeeper/exception
     include/cocaine/unicorn/path
     include/cocaine/unicorn/value
     include/cocaine/unicorn/handlers
@@ -14,6 +15,7 @@ ADD_LIBRARY(unicorn MODULE
     src/unicorn.cpp
     src/unicorn/value
     src/zookeeper/zookeeper
+    src/zookeeper/exception
     src/zookeeper/session
     src/zookeeper/handler
     src/zookeeper/connection)

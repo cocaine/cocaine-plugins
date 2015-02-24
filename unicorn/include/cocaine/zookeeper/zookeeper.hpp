@@ -28,7 +28,9 @@ namespace zookeeper {
 enum ZOO_EXTRA_ERROR {
     CHILD_NOT_ALLOWED = -1000,
     INVALID_TYPE = -1001,
-    INVALID_VALUE = -1002
+    INVALID_VALUE = -1002,
+    COULD_NOT_CONNECT = -1003,
+    UNKNOWN_ERROR = -1004
 };
 
 typedef std::string path_t;

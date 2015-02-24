@@ -14,6 +14,7 @@
 */
 
 #include "cocaine/unicorn/value.hpp"
+#include "cocaine/zookeeper/exception.hpp"
 
 namespace cocaine { namespace unicorn {
 
@@ -40,7 +41,7 @@ value_t unserialize(const zookeeper::value_t& val) {
 
     //Only strict unparse.
     if(static_cast<msgpack::unpack_return>(ret) != msgpack::UNPACK_SUCCESS) {
-        throw std::runtime_error("Invalid value for unserialization: " + val);
+        throw zookeeper::exception(zookeeper::ZOO_EXTRA_ERROR::INVALID_VALUE);
     }
     value_t target;
     cocaine::io::type_traits<cocaine::dynamic_t>::unpack(obj, target);

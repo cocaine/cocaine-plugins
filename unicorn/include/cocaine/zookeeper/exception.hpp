@@ -12,21 +12,26 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 * GNU General Public License for more details.
 */
+#ifndef ZOOKEEPER_EXCEPTION_HPP
+#define ZOOKEEPER_EXCEPTION_HPP
 
-#include <cocaine/unicorn.hpp>
+#include <exception>
+#include <string>
 
-using namespace cocaine;
-using namespace cocaine::service;
+namespace zookeeper {
+class exception :
+    public std::exception
+{
+public:
+    exception(std::string message_prefix, int zk_error_code);
+    exception(int zk_error_code);
+    int code() const;
 
-extern "C" {
-auto
-validation() -> api::preconditions_t {
-    return api::preconditions_t { COCAINE_MAKE_VERSION(0, 12, 0) };
+    virtual const char* what() const noexcept;
+
+private:
+    int zk_error_code;
+    std::string message;
+};
 }
-
-void
-initialize(api::repository_t& repository) {
-    repository.insert<unicorn_t>("unicorn");
-}
-
-}
+#endif

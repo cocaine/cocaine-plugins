@@ -16,6 +16,7 @@
 #include "cocaine/zookeeper/connection.hpp"
 #include "cocaine/zookeeper/session.hpp"
 #include "cocaine/zookeeper/handler.hpp"
+#include "cocaine/zookeeper/exception.hpp"
 #include <zookeeper/zookeeper.h>
 #include <stdexcept>
 #include <string>
@@ -65,26 +66,14 @@ cfg_t::connection_string() const {
 zookeeper::connection_t::connection_t(const cfg_t& _cfg, const session_t& _session) :
     cfg(_cfg),
     session(_session),
-    zhandle(zookeeper_init(cfg.connection_string().c_str(), watcher_cb, cfg.recv_timeout, session.native(), nullptr, 0))
+    zhandle()
 {
-    if(!zhandle) {
-        if(session.valid()) {
-            session.reset();
-            zhandle = zookeeper_init(cfg.connection_string().c_str(), watcher_cb, cfg.recv_timeout, session.native(), nullptr, 0);
-        }
-        if(!zhandle) {
-            throw std::runtime_error("Could not connect to zookeper. Errno: " + std::to_string(errno));
-        }
-    }
-    else {
-        if(!session.valid()) {
-            session.assign(*zoo_client_id(zhandle));
-        }
-    }
+    reconnect();
 }
 
 void
 connection_t::put(const path_t& path, const value_t& value, stat_handler_ptr handler) {
+    check_connectivity();
     check_rc(
         zoo_aset(zhandle, path.c_str(), value.c_str(), value.size(), -1, stat_cb, c_ptr(handler.get()))
     );
@@ -93,6 +82,7 @@ connection_t::put(const path_t& path, const value_t& value, stat_handler_ptr han
 
 void
 connection_t::put(const path_t& path, const value_t& value, version_t version, stat_handler_ptr handler) {
+    check_connectivity();
     check_rc(
         zoo_aset(zhandle, path.c_str(), value.c_str(), value.size(), version, stat_cb, c_ptr(handler.get()))
     );
@@ -101,6 +91,7 @@ connection_t::put(const path_t& path, const value_t& value, version_t version, s
 
 void
 connection_t::get(const path_t& path, data_handler_ptr handler) {
+    check_connectivity();
     check_rc(
         zoo_aget(zhandle, path.c_str(), -1, data_cb, c_ptr(handler.get()))
     );
@@ -109,6 +100,7 @@ connection_t::get(const path_t& path, data_handler_ptr handler) {
 
 void
 connection_t::get(const path_t& path, data_handler_with_watch_ptr handler, watch_handler_ptr watch) {
+    check_connectivity();
     handler->bind_watch(watch.get());
     check_rc(
         zoo_awget(zhandle, path.c_str(), watcher_cb, c_ptr(watch.get()), data_with_watch_cb, c_ptr(handler.get()))
@@ -119,6 +111,7 @@ connection_t::get(const path_t& path, data_handler_with_watch_ptr handler, watch
 
 void
 connection_t::create(const path_t& path, const value_t& value, bool ephemeral, string_handler_ptr handler) {
+    check_connectivity();
     auto acl = ZOO_OPEN_ACL_UNSAFE;
     int flag = ephemeral ? ZOO_EPHEMERAL : 0;
     check_rc(
@@ -129,6 +122,7 @@ connection_t::create(const path_t& path, const value_t& value, bool ephemeral, s
 
 void
 connection_t::del(const path_t& path, version_t version, void_handler_ptr handler) {
+    check_connectivity();
     check_rc(
         zoo_adelete(zhandle, path.c_str(), version, void_cb, c_ptr(handler.get()))
     );
@@ -137,6 +131,7 @@ connection_t::del(const path_t& path, version_t version, void_handler_ptr handle
 
 void
 connection_t::exists(const path_t& path, stat_handler_with_watch_ptr handler, watch_handler_ptr watch) {
+    check_connectivity();
     handler->bind_watch(watch.get());
     check_rc(
         zoo_awexists(zhandle, path.c_str(), watcher_cb, c_ptr(watch.get()), stat_with_watch_cb, c_ptr(handler.get()))
@@ -147,6 +142,7 @@ connection_t::exists(const path_t& path, stat_handler_with_watch_ptr handler, wa
 
 void
 connection_t::childs(const path_t& path, strings_stat_handler_with_watch_ptr handler, watch_handler_ptr watch) {
+    check_connectivity();
     handler->bind_watch(watch.get());
     check_rc(
         zoo_awget_children2(zhandle, path.c_str(), watcher_cb, c_ptr(watch.get()), strings_stat_with_watch_cb, c_ptr(handler.get()))
@@ -156,12 +152,14 @@ connection_t::childs(const path_t& path, strings_stat_handler_with_watch_ptr han
 
 }
 
-void connection_t::check_rc(int rc) {
+void connection_t::check_connectivity() {
     if(is_unrecoverable(zhandle)) {
         reconnect();
     }
+}
+void connection_t::check_rc(int rc) {
     if(rc != ZOK) {
-        throw std::runtime_error("Zookeeper connection error " + std::to_string(rc) + " : " + get_error_message(rc));
+        throw exception("Zookeeper connection error. ", rc);
     }
 }
 
@@ -175,22 +173,25 @@ void connection_t::operator()(int type, int state, path_t path) {
 }
 
 void connection_t::reconnect() {
-    zhandle = zookeeper_init(cfg.connection_string().c_str(), watcher_non_owning_cb, cfg.recv_timeout, session.native(), this, 0);
-    if(!zhandle) {
+
+    zhandle_t* new_zhandle = zookeeper_init(cfg.connection_string().c_str(), watcher_non_owning_cb, cfg.recv_timeout, session.native(), this, 0);
+    if(!new_zhandle) {
         if(session.valid()) {
             //Try to reset session before second attempt
             session.reset();
-            zhandle = zookeeper_init(cfg.connection_string().c_str(), watcher_cb, cfg.recv_timeout, session.native(), this, 0);
+            new_zhandle = zookeeper_init(cfg.connection_string().c_str(), watcher_non_owning_cb, cfg.recv_timeout, session.native(), this, 0);
         }
-        if(!zhandle) {
-            throw std::runtime_error("Could not connect to zookeper. Errno: " + std::to_string(errno));
+        if(!new_zhandle || is_unrecoverable(new_zhandle)) {
+            throw exception(ZOO_EXTRA_ERROR::COULD_NOT_CONNECT);
         }
     }
     else {
         if(!session.valid()) {
-            session.assign(*zoo_client_id(zhandle));
+            session.assign(*zoo_client_id(new_zhandle));
         }
     }
+    std::swap(new_zhandle, zhandle);
+    zookeeper_close(new_zhandle);
 }
 
 }

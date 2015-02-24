@@ -48,6 +48,7 @@ public:
     */
     struct response {
         typedef deferred<result_of<io::unicorn::put>::type> put;
+        typedef deferred<result_of<io::unicorn::create>::type> create;
         typedef deferred<result_of<io::unicorn::del>::type> del;
         typedef deferred<result_of<io::unicorn::increment>::type> increment;
         typedef streamed<result_of<io::unicorn::subscribe>::type> subscribe;
@@ -60,14 +61,17 @@ public:
     response::put
     put(path_t path, value_t value, version_t version);
 
+    response::create
+    create(path_t path, value_t value);
+
     response::del
     del(path_t path, version_t version);
 
     response::subscribe
-    subscribe(path_t path, version_t upstream_version);
+    subscribe(path_t path);
 
     response::lsubscribe
-    lsubscribe(path_t path, version_t upstream_version);
+    lsubscribe(path_t path);
 
     response::increment
     increment(path_t path, value_t value);
@@ -98,6 +102,8 @@ public:
     struct put_context_t;
     struct put_action_t;
     struct put_badversion_action_t;
+
+    struct create_context_t;
 
     struct del_action_t;
 
@@ -151,6 +157,8 @@ public:
 
     struct put_ephemeral_context_t;
 private:
+    void release_lock() const;
+
     struct state_t {
         bool lock_acquired;
         bool discarded;

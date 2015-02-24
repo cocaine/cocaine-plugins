@@ -32,6 +32,35 @@ struct unicorn_locked_tag;
 using namespace cocaine::unicorn;
 
 struct unicorn {
+    struct create {
+        typedef unicorn_tag tag;
+
+        static const char* alias() {
+            return "create";
+        }
+
+        /**
+        *  put command implements cas behaviour. It accepts:
+        *
+        * path_t - path to change.
+        * value_t - value to write in path
+        * version_t - version to compare with. If version in zk do not match - error will be returned.
+        *   -1 indicates that version check is not performed (forced put).
+        **/
+        typedef boost::mpl::list<
+            path_t,
+            value_t
+        > argument_type;
+
+        /**
+        * Return value is current value in ZK.
+        * If version was passed - incremented version by 1 indicates sucessfull completion
+        */
+        typedef option_of<
+            bool
+        >::tag upstream_type;
+    };
+
     struct put {
         typedef unicorn_tag tag;
 
@@ -73,8 +102,7 @@ struct unicorn {
         * subscribe for updates on path. Will send last update which version is greater than specified.
         */
         typedef boost::mpl::list<
-            path_t,
-            version_t
+            path_t
         > argument_type;
 
         /**
@@ -138,8 +166,7 @@ struct unicorn {
         }
 
         typedef boost::mpl::list<
-            path_t,
-            version_t
+            path_t
         > argument_type;
 
         typedef stream_of<
@@ -193,6 +220,7 @@ struct protocol<unicorn_tag> {
         unicorn::subscribe,
         unicorn::lsubscribe,
         unicorn::put,
+        unicorn::create,
         unicorn::del,
         unicorn::increment,
         unicorn::lock

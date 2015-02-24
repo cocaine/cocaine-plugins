@@ -121,12 +121,14 @@ public:
 
     virtual void operator()(int type, int state, path_t path);
 
+    void reconnect();
 private:
     cfg_t cfg;
     session_t session;
     zhandle_t* zhandle;
     void check_rc(int rc);
-    void reconnect();
+    void check_connectivity();
+
 };
 }
 #endif

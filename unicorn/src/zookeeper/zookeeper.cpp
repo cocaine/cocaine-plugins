@@ -16,6 +16,7 @@
 #include "cocaine/zookeeper/zookeeper.hpp"
 
 #include <stdexcept>
+#include <errno.h>
 
 namespace zookeeper {
 
@@ -28,6 +29,10 @@ get_error_message(int rc) {
             return "Invalid type of value stored for requested operation";
         case INVALID_VALUE :
             return "Could not unserialize value stored in zookeeper";
+        case COULD_NOT_CONNECT:
+            return "Could not reconnect to zookeper. Current errno:" + std::to_string(errno);
+        case UNKNOWN_ERROR:
+            return "Unknown zookeeper error";
         default:
             return zerror(rc);
     }

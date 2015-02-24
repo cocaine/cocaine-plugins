@@ -46,7 +46,7 @@ struct unicorn_t::nonode_action_t :
 struct unicorn_t::subscribe_context_base_t :
     public std::enable_shared_from_this<unicorn_t::subscribe_context_base_t>
 {
-    subscribe_context_base_t(unicorn_t* _parent, path_t _path, version_t version);
+    subscribe_context_base_t(unicorn_t* _parent, path_t _path);
 
     void
     abort(int rc, const std::string& message);
@@ -73,7 +73,9 @@ private:
 struct unicorn_t::subscribe_context_t :
     public unicorn_t::subscribe_context_base_t
 {
-    subscribe_context_t(unicorn_t* _parent, unicorn_t::response::subscribe _result, path_t _path, version_t _version);
+    subscribe_context_t(unicorn_t* _parent, unicorn_t::response::subscribe _result, path_t _path);
+
+    ~subscribe_context_t();
 
     virtual void
     on_abort(int rc, const std::string& message);
@@ -119,6 +121,7 @@ struct unicorn_t::subscribe_watch_handler_t :
 {
     subscribe_watch_handler_t(subscribe_context_ptr _context);
 
+
     virtual void
     operator()(int type, int state, zookeeper::path_t path);
 
@@ -132,7 +135,7 @@ struct unicorn_t::subscribe_watch_handler_t :
 struct unicorn_t::lsubscribe_context_t :
     public unicorn_t::subscribe_context_base_t
 {
-    lsubscribe_context_t(unicorn_t* _parent, unicorn_t::response::lsubscribe _result, path_t _path, version_t _version);
+    lsubscribe_context_t(unicorn_t* _parent, unicorn_t::response::lsubscribe _result, path_t _path);
 
     virtual void
     on_abort(int rc, const std::string& message);
@@ -205,6 +208,8 @@ struct unicorn_t::put_context_t :
 {
     put_context_t(unicorn_t* _parent, path_t _path, value_t _value, version_t _version, unicorn_t::response::put _result);
 
+    ~put_context_t();
+
     virtual void
     finalize(versioned_value_t cur_value);
 
@@ -213,6 +218,25 @@ struct unicorn_t::put_context_t :
 
     unicorn_t::response::put result;
 };
+
+/**
+* Context of create operation.
+* It persists until result of operation is determined and is being moved between different ZK handlers
+*/
+struct unicorn_t::create_context_t :
+    public unicorn_t::put_context_base_t
+{
+    create_context_t(unicorn_t* _parent, path_t _path, value_t _value, unicorn_t::response::create _result);
+
+    virtual void
+        finalize(versioned_value_t cur_value);
+
+    virtual void
+        abort(int rc, const std::string& message);
+
+    unicorn_t::response::create result;
+};
+
 
 /**
 * Handler for put request to ZK.
@@ -269,6 +293,7 @@ struct unicorn_t::del_action_t :
 struct unicorn_t::increment_context_t {
 
     increment_context_t(unicorn_t* _parent, unicorn_t::response::increment _result, path_t _path, value_t _increment);
+    ~increment_context_t();
 
     unicorn_t* parent;
     unicorn_t::response::increment result;
@@ -315,6 +340,8 @@ struct distributed_lock_t::put_ephemeral_context_t :
         path_t _path, value_t _value,
         version_t _version,
         unicorn_t::response::acquire _result);
+
+    ~put_ephemeral_context_t();
 
     virtual void
     finalize(versioned_value_t cur_value);

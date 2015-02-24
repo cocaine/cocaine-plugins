@@ -198,5 +198,6 @@ typedef std::unique_ptr<data_handler_with_watch_t> data_handler_with_watch_ptr;
 typedef std::unique_ptr<string_handler_base_t> string_handler_ptr;
 typedef std::unique_ptr<strings_stat_handler_base_t> strings_stat_handler_ptr;
 typedef std::unique_ptr<strings_stat_handler_with_watch_t> strings_stat_handler_with_watch_ptr;
+
 }
 #endif
