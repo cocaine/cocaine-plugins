@@ -26,9 +26,8 @@ public:
     exception(std::string message_prefix, int zk_error_code);
     exception(int zk_error_code);
     int code() const;
-
     virtual const char* what() const noexcept;
-
+    virtual ~exception() noexcept {}
 private:
     int zk_error_code;
     std::string message;
