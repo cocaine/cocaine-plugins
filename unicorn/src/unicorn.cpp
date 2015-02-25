@@ -135,7 +135,8 @@ unicorn_t::response::increment
 unicorn_t::increment(path_t path, value_t value) {
     unicorn_t::response::increment result;
     if (!value.is_double() && !value.is_int() && !value.is_uint()) {
-        result.abort(-1, "Non numeric value passed for increment");
+        int rc = zookeeper::ZOO_EXTRA_ERROR::INVALID_TYPE;
+        result.abort(rc, zookeeper::get_error_message(rc));
         return result;
     }
     increment_context_ptr context = std::make_unique<increment_context_t>(
@@ -191,7 +192,7 @@ unicorn_t::nonode_action_t::operator()(int rc, std::string value) {
 unicorn_t::subscribe_context_base_t::subscribe_context_base_t(unicorn_t* _parent, path_t _path) :
     parent(_parent),
     write_lock(),
-    last_version(-1),
+    last_version(unicorn::MIN_VERSION),
     path(std::move(_path)),
     is_aborted(false) {
 }
@@ -232,11 +233,18 @@ unicorn_t::subscribe_action_t::subscribe_action_t(subscribe_context_ptr _context
 void
 unicorn_t::subscribe_action_t::operator()(int rc, std::string value, const zookeeper::node_stat& stat) {
     if(rc == ZNONODE) {
-        if(context->last_version != -1) {
+        if(context->last_version != MIN_VERSION && context->last_version != NOT_EXISTING_VERSION) {
             context->abort(rc, zookeeper::get_error_message(rc));
         }
         else {
-            context->result.write(versioned_value_t(value_t(), -1));
+            // Write that node is not exist to client only first time.
+            // After that set a watch to see when it will appear
+            if(context->last_version == MIN_VERSION) {
+                std::lock_guard<std::mutex> guard(context->write_lock);
+                if (NOT_EXISTING_VERSION > context->last_version) {
+                    context->result.write(versioned_value_t(value_t(), NOT_EXISTING_VERSION));
+                }
+            }
             auto& context_ref = *context;
             //TODO: Performance can be increased if we do not delete-create watcher object
             // but override run method and use old watcher.
@@ -281,7 +289,22 @@ unicorn_t::subscribe_nonode_action_t::subscribe_nonode_action_t(subscribe_contex
 
 void
 unicorn_t::subscribe_nonode_action_t::operator()(int rc, zookeeper::node_stat const& stat) {
-    //Nothing to do here
+    // Someone created a node in a gap between
+    // we received nonode and issued exists
+    if(rc == ZOK) {
+        if (context->aborted()) {
+            return;
+        }
+        auto subscribe_handler = std::make_unique<subscribe_action_t>(context);
+        auto watch_handler = std::make_unique<subscribe_watch_handler_t>(context);
+        try {
+            context->parent->zk.get(context->path, std::move(subscribe_handler), std::move(watch_handler));
+        }
+        catch(const zookeeper::exception& e)  {
+            context->abort(e.code(), e.what());
+            COCAINE_LOG_WARNING(context->parent->log, "Failure during subscription: %s", e.what());
+        }
+    }
 }
 
 unicorn_t::subscribe_watch_handler_t::subscribe_watch_handler_t(subscribe_context_ptr _context) :
@@ -400,7 +423,7 @@ unicorn_t::create_context_t::create_context_t(
     value_t _value,
     unicorn_t::response::create _result
 ) :
-    put_context_base_t(_parent, std::move(_path), std::move(_value), -1, false),
+    put_context_base_t(_parent, std::move(_path), std::move(_value), NOT_EXISTING_VERSION, false),
     result(std::move(_result))
 {}
 
@@ -422,13 +445,13 @@ void
 unicorn_t::put_action_t::operator()(int rc, zookeeper::node_stat const& stat) {
     auto parent = context->parent;
     try {
-        if (rc == ZNONODE && context->version == -1) {
+        if (rc == ZNONODE && context->version == NOT_EXISTING_VERSION) {
             auto& context_ref = *context;
             auto ptr = std::make_unique<nonode_action_t>(std::move(context));
             context_ref.parent->zk.create(context_ref.path, context_ref.value, context_ref.ephemeral, std::move(ptr));
         }
         else if (rc == ZNONODE) {
-            context->finalize(versioned_value_t(value_t(), -1));
+            context->finalize(versioned_value_t(value_t(), NOT_EXISTING_VERSION));
         }
         else if (rc == ZBADVERSION) {
             auto& context_ref = *context;
@@ -652,7 +675,7 @@ distributed_lock_t::acquire() {
 
 void distributed_lock_t::release_lock() const {
     try {
-        parent->zk.del(path, -1, nullptr);
+        parent->zk.del(path, NOT_EXISTING_VERSION, nullptr);
     }
     catch(const zookeeper::exception& e) {
         COCAINE_LOG_WARNING(parent->log, "ZK Exception during delete of lock: %s. Reconnecting to discard lock for sure.", e.what());

@@ -31,6 +31,9 @@ namespace cocaine { namespace unicorn {
 typedef zookeeper::version_t version_t;
 typedef cocaine::dynamic_t value_t;
 
+static constexpr version_t MIN_VERSION = -2;
+static constexpr version_t NOT_EXISTING_VERSION = -1;
+
 /**
 * Serializes service representation of value to zookepeers representation.
 * Currently ZK store msgpacked data, and service uses cocaine::dynamic_t
