@@ -71,6 +71,12 @@ zookeeper::connection_t::connection_t(const cfg_t& _cfg, const session_t& _sessi
     reconnect();
 }
 
+zookeeper::connection_t::~connection_t() {
+    if(zhandle) {
+        zookeeper_close(zhandle);
+    }
+}
+
 void
 connection_t::put(const path_t& path, const value_t& value, stat_handler_ptr handler) {
     check_connectivity();

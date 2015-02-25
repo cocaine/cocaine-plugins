@@ -64,6 +64,8 @@ class connection_t :
 public:
     connection_t(const cfg_t& cfg, const session_t& session);
 
+    ~connection_t();
+
     /**
     * forced put (no version check)
     * See zoo_aset.
