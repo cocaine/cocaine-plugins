@@ -10,7 +10,8 @@ ADD_LIBRARY(graphite MODULE
     src/graphite)
 
 TARGET_LINK_LIBRARIES(graphite
-    cocaine-core)
+    cocaine-core
+    ${Boost_LIBRARIES})
 
 SET_TARGET_PROPERTIES(graphite PROPERTIES
     PREFIX ""
