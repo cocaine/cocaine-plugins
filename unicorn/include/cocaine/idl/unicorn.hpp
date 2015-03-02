@@ -27,6 +27,7 @@
 namespace cocaine { namespace io {
 
 struct unicorn_tag;
+struct unicorn_final_tag;
 struct unicorn_locked_tag;
 
 using namespace cocaine::unicorn;
@@ -59,6 +60,8 @@ struct unicorn {
         typedef option_of<
             bool
         >::tag upstream_type;
+
+        typedef unicorn_final_tag dispatch_type;
     };
 
     struct put {
@@ -89,6 +92,8 @@ struct unicorn {
         typedef option_of<
             versioned_value_t
         >::tag upstream_type;
+
+        typedef unicorn_final_tag dispatch_type;
     };
 
     struct subscribe {
@@ -111,6 +116,8 @@ struct unicorn {
         typedef stream_of<
             versioned_value_t
         >::tag upstream_type;
+
+        typedef unicorn_final_tag dispatch_type;
     };
 
     struct del {
@@ -131,6 +138,8 @@ struct unicorn {
         typedef option_of<
             bool
         >::tag upstream_type;
+
+        typedef unicorn_final_tag dispatch_type;
     };
 
     struct increment {
@@ -156,6 +165,8 @@ struct unicorn {
         typedef option_of <
             versioned_value_t
         >::tag upstream_type;
+
+        typedef unicorn_final_tag dispatch_type;
     };
 
     struct lsubscribe {
@@ -173,6 +184,8 @@ struct unicorn {
             version_t,
             std::vector<std::string>
         >::tag upstream_type;
+
+        typedef unicorn_final_tag dispatch_type;
     };
     struct lock {
         typedef unicorn_tag tag;
@@ -186,6 +199,10 @@ struct unicorn {
         typedef boost::mpl::list<
             path_t
         > argument_type;
+
+        typedef option_of <
+            bool
+        >::tag upstream_type;
     };
 
     struct unlock {
@@ -193,20 +210,15 @@ struct unicorn {
         static const char* alias() {
             return "unlock";
         }
+
+        typedef unicorn_final_tag dispatch_type;
     };
 
-    struct acquire {
-        typedef unicorn_locked_tag tag;
+    struct close {
+        typedef unicorn_final_tag tag;
         static const char* alias() {
-            return "acquire";
+            return "close";
         }
-        typedef option_of <
-            bool
-        >::tag upstream_type;
-
-        typedef boost::mpl::list<
-        > argument_type;
-        typedef unicorn_locked_tag dispatch_type;
     };
 };
 
@@ -238,6 +250,19 @@ struct protocol<unicorn_locked_tag> {
     typedef boost::mpl::list<
         unicorn::acquire,
         unicorn::unlock
+    > messages;
+
+    typedef unicorn type;
+};
+
+template<>
+struct protocol<unicorn_final_tag> {
+    typedef boost::mpl::int_<
+        1
+    >::type version;
+
+    typedef boost::mpl::list<
+        unicorn::close
     > messages;
 
     typedef unicorn type;

@@ -16,58 +16,143 @@
 #define ZOOKEEPER_HANDLER_HPP
 
 #include "cocaine/zookeeper/zookeeper.hpp"
+#include "cocaine/zookeeper/exception.hpp"
+
+#include <cocaine/locked_ptr.hpp>
 
 #include <functional>
 #include <string>
 #include <memory>
 #include <vector>
 
+#include <iostream>
+#include <atomic>
+#include <unordered_map>
+
 namespace zookeeper {
 
 typedef Stat node_stat;
 
-void
-watcher_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx);
+class handler_tag {
+private:
+    handler_tag() {}
+    friend class handler_scope_t;
+};
 
-void
-watcher_non_owning_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx);
+class managed_handler_base_t {
+public:
+    // Tagged constructor.
+    // Used to disable implicit instantiation.
+    // All instantiations are made through scope object.
+    managed_handler_base_t(const handler_tag&) {}
+    managed_handler_base_t(const managed_handler_base_t& other) = delete;
+    managed_handler_base_t& operator=(const managed_handler_base_t& other) = delete;
+    virtual ~managed_handler_base_t() {}
+};
 
-void
-void_cb(int rc, const void *data);
+class handler_dispatcher_t {
+public:
+    static
+    void
+        watcher_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx);
 
-void
-stat_cb(int rc, const struct Stat *stat, const void *data);
+    static
+    void
+        void_cb(int rc, const void *data);
 
-void
-stat_with_watch_cb(int rc, const struct Stat* stat, const void* data);
+    static
+    void
+        stat_cb(int rc, const struct Stat *stat, const void *data);
 
-void
-data_cb(int rc, const char *value, int value_len, const struct Stat *stat, const void *data);
+    static
+    void
+        data_cb(int rc, const char *value, int value_len, const struct Stat *stat, const void *data);
 
-void
-data_with_watch_cb(int rc, const char *value, int value_len, const struct Stat *stat, const void *data);
+    static
+    void
+        managed_data_cb(int rc, const char *value, int value_len, const struct Stat *stat, const void *data);
 
-void
-string_cb(int rc, const char *value, const void *data);
+    static
+    void
+        string_cb(int rc, const char *value, const void *data);
 
-void
-strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
+    static
+    void
+        strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
 
-void
-strings_stat_with_watch_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
+private:
+    typedef std::shared_ptr<managed_handler_base_t> handler_ptr;
 
-//void strings_cb(int rc, const struct String_vector *strings, const void *data);
+    //Ugly hack. That is fixed in C++14 - we can search in set by convertible value. Now we use map.
+    typedef std::unordered_map<managed_handler_base_t*, handler_ptr> storage_t;
 
-//void acl_cb(int rc, struct ACL_vector *acl, struct Stat *stat, const void *data);
+    friend
+    class handler_scope_t;
 
+    static handler_dispatcher_t& instance();
 
-class watch_handler_base_t {
+    template<class T, class ...Args>
+    void
+    call(managed_handler_base_t* callback, Args&& ...args) {
+        std::shared_ptr<T> cb(nullptr);
+        {
+            std::unique_lock<std::mutex> lock(storage_lock);
+            auto it = callbacks.find(callback);
+            if (it != callbacks.end()) {
+                cb = std::dynamic_pointer_cast<T>(it->second);
+            }
+        }
+        if(cb) {
+            std::cout << "CALL: " << callback << std::endl;
+            cb->operator()(std::forward<Args>(args)...);
+        }
+    }
+
+    void add(managed_handler_base_t* callback);
+
+    void release(managed_handler_base_t* callback);
+
+    handler_dispatcher_t() {}
+    handler_dispatcher_t(const handler_dispatcher_t& other) = delete;
+    handler_dispatcher_t& operator=(const handler_dispatcher_t& other) = delete;
+    std::mutex storage_lock;
+    storage_t callbacks;
+};
+
+class handler_scope_t {
+public:
+    handler_scope_t() :
+        storage_mutex(),
+        registered_callbacks()
+    {}
+
+    ~handler_scope_t();
+
+    template<class T, class ...Args>
+    T&
+    get_handler(Args&& ...args) {
+        auto handler = new T(handler_tag(), std::forward<Args>(args)...);
+        handler_dispatcher_t::instance().add(handler);
+        std::unique_lock<std::mutex> lock(storage_mutex);
+        registered_callbacks.push_back(handler);
+        return *handler;
+    }
+
+private:
+    std::mutex storage_mutex;
+    std::vector<managed_handler_base_t*> registered_callbacks;
+};
+
+class managed_watch_handler_base_t :
+    virtual public managed_handler_base_t
+{
 public:
     virtual void
-    operator() (int type, int state, path_t path) = 0;
+        operator() (int type, int state, path_t path) = 0;
 
-    virtual
-    ~watch_handler_base_t() {}
+    managed_watch_handler_base_t(const handler_tag& tag) :
+        managed_handler_base_t(tag)
+    {}
 };
 
 class void_handler_base_t {
@@ -79,125 +164,65 @@ public:
     ~void_handler_base_t() {}
 };
 
-class stat_handler_base_t {
+class managed_stat_handler_base_t :
+    virtual public managed_handler_base_t
+{
 public:
     virtual void
     operator() (int rc, const node_stat& stat) = 0;
 
-    virtual
-    ~stat_handler_base_t() {}
-};
-
-class stat_handler_with_watch_t {
-public:
-    stat_handler_with_watch_t();
+    managed_stat_handler_base_t(const handler_tag& tag) :
+        managed_handler_base_t(tag)
+    {}
 
     virtual
-    ~stat_handler_with_watch_t() {}
-
-    virtual void
-    operator() (int rc, const node_stat& stat) = 0;
-private:
-    friend void
-    stat_with_watch_cb(int rc, const struct Stat *stat, const void *data);
-
-    friend class connection_t;
-
-    void
-    run (int rc, const node_stat& stat);
-
-    void
-    bind_watch(watch_handler_base_t* _watch_ptr);
-
-    watch_handler_base_t* watch_ptr;
+    ~managed_stat_handler_base_t() {}
 };
 
-class data_handler_base_t {
+class managed_data_handler_base_t :
+    virtual public managed_handler_base_t
+{
 public:
     virtual void
     operator() (int rc, value_t value, const node_stat& stat) = 0;
 
-    virtual
-    ~data_handler_base_t() {}
-};
-
-class data_handler_with_watch_t {
-public:
-    data_handler_with_watch_t();
+    managed_data_handler_base_t(const handler_tag& tag) :
+        managed_handler_base_t(tag)
+    {}
 
     virtual
-    ~data_handler_with_watch_t() {}
-
-    virtual void
-    operator() (int rc, value_t value, const node_stat& stat) = 0;
-
-private:
-    friend void
-    data_with_watch_cb(int rc, const char *value, int value_len, const struct Stat *stat, const void *data);
-
-    friend class connection_t;
-
-    void
-    run (int rc, value_t value, const node_stat& stat);
-
-    void
-    bind_watch(watch_handler_base_t* _watch_ptr);
-
-    watch_handler_base_t* watch_ptr;
+    ~managed_data_handler_base_t() {}
 };
 
-class string_handler_base_t {
+class managed_string_handler_base_t :
+public managed_handler_base_t
+{
 public:
     virtual void
     operator() (int rc, value_t value) = 0;
 
+    managed_string_handler_base_t(const handler_tag& tag) :
+        managed_handler_base_t(tag)
+    {}
+
     virtual
-    ~string_handler_base_t() {}
+    ~managed_string_handler_base_t() {}
 };
 
-class strings_stat_handler_base_t {
+class managed_strings_stat_handler_base_t:
+virtual public managed_handler_base_t
+{
 public:
     virtual void
-    operator() (int rc, std::vector<std::string> childs, const node_stat& stat) = 0;
+        operator() (int rc, std::vector<std::string> childs, const node_stat& stat) = 0;
 
-    virtual
-    ~strings_stat_handler_base_t() {}
+    managed_strings_stat_handler_base_t(const handler_tag& tag) :
+        managed_handler_base_t(tag)
+    {}
 };
 
-class strings_stat_handler_with_watch_t {
-public:
-    strings_stat_handler_with_watch_t();
 
-    virtual
-    ~strings_stat_handler_with_watch_t() {}
-
-    virtual void
-    operator() (int rc, std::vector<std::string> childs, const node_stat& stat) = 0;
-
-private:
-    friend void
-    strings_stat_with_watch_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
-
-    friend class connection_t;
-
-    void
-    run(int rc, std::vector<std::string> childs, const node_stat& stat);
-
-    void
-    bind_watch(watch_handler_base_t* _watch_ptr);
-
-    watch_handler_base_t* watch_ptr;
-};
-
-typedef std::unique_ptr<watch_handler_base_t> watch_handler_ptr;
 typedef std::unique_ptr<void_handler_base_t> void_handler_ptr;
-typedef std::unique_ptr<stat_handler_base_t> stat_handler_ptr;
-typedef std::unique_ptr<stat_handler_with_watch_t> stat_handler_with_watch_ptr;
-typedef std::unique_ptr<data_handler_base_t> data_handler_ptr;
-typedef std::unique_ptr<data_handler_with_watch_t> data_handler_with_watch_ptr;
-typedef std::unique_ptr<string_handler_base_t> string_handler_ptr;
-typedef std::unique_ptr<strings_stat_handler_base_t> strings_stat_handler_ptr;
-typedef std::unique_ptr<strings_stat_handler_with_watch_t> strings_stat_handler_with_watch_ptr;
 
 }
 #endif

@@ -30,24 +30,20 @@ Target* back_cast(const void* data) {
 */
 
 void
-watcher_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx) {
-    if(watcherCtx != nullptr) {
-        std::unique_ptr<watch_handler_base_t> ptr(static_cast<watch_handler_base_t*>(watcherCtx));
-        ptr->operator()(type, state, path ? path_t(path) : path_t());
+handler_dispatcher_t::watcher_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx) {
+    if(!watcherCtx) {
+        return;
     }
-}
-
-/**
-* Non owning watcher callback. It does not destroy watcher context after invoke.
-*/
-void
-watcher_non_owning_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx) {
-    watch_handler_base_t* ptr(static_cast<watch_handler_base_t*>(watcherCtx));
-    ptr->operator()(type, state, path ? path_t(path) : path_t());
+    handler_dispatcher_t::instance().call<managed_watch_handler_base_t>(
+        static_cast<managed_watch_handler_base_t*>(watcherCtx),
+        type,
+        state,
+        path
+    );
 }
 
 void
-void_cb(int rc, const void* data) {
+handler_dispatcher_t::void_cb(int rc, const void* data) {
     if(data != nullptr) {
         std::unique_ptr<void_handler_base_t> ptr(back_cast<void_handler_base_t>(data));
         ptr->operator()(rc);
@@ -55,25 +51,18 @@ void_cb(int rc, const void* data) {
 }
 
 void
-stat_cb(int rc, const struct Stat* stat, const void* data) {
-    std::unique_ptr<stat_handler_base_t> ptr(back_cast<stat_handler_base_t>(data));
-    ptr->operator()(rc, rc == ZOK ? *stat : node_stat());
+handler_dispatcher_t::stat_cb(int rc, const struct Stat* stat, const void* data) {
+    handler_dispatcher_t::instance().call<managed_stat_handler_base_t>(
+        back_cast<managed_stat_handler_base_t>(data),
+        rc,
+        rc == ZOK ? *stat : node_stat()
+    );
 }
 
-/**
-* Callback for stat_handler_with_watch_t callback. Calls run instead operator()
-*/
 void
-stat_with_watch_cb(int rc, const struct Stat* stat, const void* data) {
-    std::unique_ptr<stat_handler_with_watch_t> ptr(back_cast<stat_handler_with_watch_t>(data));
-    ptr->run(rc, rc == ZOK ? *stat : node_stat());
-}
-
-
-void
-data_cb(int rc, const char* value, int value_len, const struct Stat* stat, const  void* data) {
-    std::unique_ptr<data_handler_base_t> ptr(back_cast<data_handler_base_t>(data));
-    ptr->operator()(
+handler_dispatcher_t::data_cb(int rc, const char* value, int value_len, const struct Stat* stat, const  void* data) {
+    handler_dispatcher_t::instance().call<managed_data_handler_base_t>(
+        back_cast<managed_data_handler_base_t>(data),
         rc,
         rc == ZOK ? std::string(value, value_len) : std::string(),
         rc == ZOK ? *stat : node_stat()
@@ -81,99 +70,47 @@ data_cb(int rc, const char* value, int value_len, const struct Stat* stat, const
 }
 
 void
-data_with_watch_cb(int rc, const char* value, int value_len, const struct Stat* stat, const  void* data) {
-    std::unique_ptr<data_handler_with_watch_t> ptr(back_cast<data_handler_with_watch_t>(data));
-    ptr->run(
+handler_dispatcher_t::string_cb(int rc, const char *value, const void *data) {
+    handler_dispatcher_t::instance().call<managed_string_handler_base_t>(
+        back_cast<managed_string_handler_base_t>(data),
         rc,
-        rc == ZOK ? std::string(value, value_len) : std::string(),
-        rc == ZOK ? *stat : node_stat()
+        value ? value : std::string()
     );
 }
 
 void
-string_cb(int rc, const char *value, const void *data) {
-    std::unique_ptr<string_handler_base_t> ptr(back_cast<string_handler_base_t>(data));
-    ptr->operator()(rc, value ? value : std::string());
-}
-
-void
-strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data) {
-    strings_stat_handler_ptr ptr(back_cast<strings_stat_handler_base_t>(data));
-    ptr->operator()(
+handler_dispatcher_t::strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data) {
+    handler_dispatcher_t::instance().call<managed_strings_stat_handler_base_t>(
+        back_cast<managed_strings_stat_handler_base_t>(data),
         rc,
         rc == ZOK ? std::vector<std::string>(strings->data, strings->data+strings->count) : std::vector<std::string>(),
         rc == ZOK ? *stat : node_stat()
     );
 }
 
-void
-strings_stat_with_watch_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data) {
-    strings_stat_handler_with_watch_ptr ptr(back_cast<strings_stat_handler_with_watch_t>(data));
-    ptr->run(
-        rc,
-        rc == ZOK ? std::vector<std::string>(strings->data, strings->data+strings->count) : std::vector<std::string>(),
-        rc == ZOK ? *stat : node_stat()
-    );
+handler_dispatcher_t& handler_dispatcher_t::instance() {
+    static handler_dispatcher_t inst;
+    return inst;
 }
 
-/*
-void strings_cb(int rc, const struct String_vector *strings, const void *data);
-void strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
-void acl_cb(int rc, struct ACL_vector *acl, struct Stat *stat, const void *data);
-*/
+void handler_dispatcher_t::add(managed_handler_base_t* callback) {
+    std::cout << "ADD: " << callback << std::endl;
+    std::unique_lock<std::mutex> lock(storage_lock);
+    callbacks.insert(std::make_pair(callback, handler_ptr(callback)));
+}
 
-data_handler_with_watch_t::data_handler_with_watch_t() :
-    watch_ptr(nullptr)
-{}
-
-void
-data_handler_with_watch_t::run (int rc, value_t value, const node_stat& stat) {
-    if(rc != ZOK && watch_ptr) {
-        delete watch_ptr;
+void handler_dispatcher_t::release(managed_handler_base_t* callback) {
+    std::cout << "RELEASE: " << callback << std::endl;
+    std::unique_lock<std::mutex> lock(storage_lock);
+    auto it = callbacks.find(callback);
+    if(it != callbacks.end()) {
+        callbacks.erase(it);
     }
-    operator()(rc, value, stat);
 }
 
-void
-data_handler_with_watch_t::bind_watch(watch_handler_base_t* _watch_ptr) {
-    watch_ptr = _watch_ptr;
-}
-
-stat_handler_with_watch_t::stat_handler_with_watch_t() :
-    watch_ptr(nullptr)
-{
-}
-
-void
-stat_handler_with_watch_t::run(int rc, const node_stat& stat) {
-    //Seems that watch can be woken up in case of ZNONODE
-    if(rc != ZOK && rc != ZNONODE && watch_ptr) {
-        delete watch_ptr;
+handler_scope_t::~handler_scope_t() {
+    for(size_t i = 0; i < registered_callbacks.size(); i++) {
+        handler_dispatcher_t::instance().release(registered_callbacks[i]);
     }
-    operator()(rc, stat);
 }
-
-void
-stat_handler_with_watch_t::bind_watch(watch_handler_base_t* _watch_ptr) {
-    watch_ptr = _watch_ptr;
-}
-
-strings_stat_handler_with_watch_t::strings_stat_handler_with_watch_t():
-    watch_ptr(nullptr)
-{
-}
-
-void
-strings_stat_handler_with_watch_t::run(int rc, std::vector<std::string> childs, const node_stat& stat) {
-    if(rc != ZOK) {
-        delete watch_ptr;
-    }
-    operator()(rc, std::move(childs), stat);
-}
-
-void
-strings_stat_handler_with_watch_t::bind_watch(watch_handler_base_t* _watch_ptr) {
-    watch_ptr = _watch_ptr;
-}
-
 }

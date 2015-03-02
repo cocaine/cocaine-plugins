@@ -58,48 +58,35 @@ private:
 * Adapter class to zookeeper C api.
 * Add ability to pass std::unique_ptr of handler object instead of function callback and void*
 */
-class connection_t :
-    public watch_handler_base_t
-{
+class connection_t {
 public:
     connection_t(const cfg_t& cfg, const session_t& session);
 
     ~connection_t();
 
     /**
-    * forced put (no version check)
-    * See zoo_aset.
-    */
-    void
-    put(const path_t& path, const value_t& value, stat_handler_ptr handler);
-
-    /**
     * put value to path. If version in ZK is different returns an error.
     * See zoo_aset.
     */
     void
-    put(const path_t& path, const value_t& value, version_t version, stat_handler_ptr handler);
-
-    /**
-    * Get value from ZK.
-    * See zoo_aget.
-    */
-    void
-    get(const path_t& path, data_handler_ptr handler);
+    put(const path_t& path, const value_t& value, version_t version, managed_stat_handler_base_t& handler);
 
     /**
     * Get node value from ZK and set watch for that node.
     * See zoo_awget
     */
     void
-    get(const path_t& path, data_handler_with_watch_ptr handler, watch_handler_ptr watch_handler);
+    get(const path_t& path, managed_data_handler_base_t& handler, managed_watch_handler_base_t& watch_handler);
+
+    void
+    get(const path_t& path, managed_data_handler_base_t& handler);
 
     /**
     * Create node in ZK with specified path and value.
     * See zoo_acreate
     */
     void
-    create(const path_t& path, const value_t& value, bool ephemeral, string_handler_ptr handler);
+    create(const path_t& path, const value_t& value, bool ephemeral, managed_string_handler_base_t& handler);
 
     /**
     * delete node in ZK
@@ -112,25 +99,40 @@ public:
     * Check if node exists
     */
     void
-    exists(const path_t& path, stat_handler_with_watch_ptr handler, watch_handler_ptr watch);
+    exists(const path_t& path, managed_stat_handler_base_t& handler, managed_watch_handler_base_t& watch);
 
     /**
     * Get node value from ZK and set watch for that node.
     * See zoo_awget
     */
     void
-    childs(const path_t& path, strings_stat_handler_with_watch_ptr handler, watch_handler_ptr watch_handler);
-
-    virtual void operator()(int type, int state, path_t path);
+    childs(const path_t& path, managed_strings_stat_handler_base_t& handler, managed_watch_handler_base_t& watch_handler);
 
     void reconnect();
 private:
+    struct reconnect_action_t :
+        public managed_watch_handler_base_t
+    {
+        reconnect_action_t(const handler_tag& tag, connection_t& _parent) :
+            managed_handler_base_t(tag),
+            managed_watch_handler_base_t(tag),
+            parent(_parent)
+        {}
+
+        virtual void operator()(int type, int state, path_t path);
+
+        connection_t& parent;
+    };
+
+
     cfg_t cfg;
     session_t session;
     zhandle_t* zhandle;
-    void check_rc(int rc);
+    void check_rc(int rc) const;
     void check_connectivity();
-
+    zhandle_t* init();
+    handler_scope_t w_scope;
+    managed_watch_handler_base_t& watcher;
 };
 }
 #endif

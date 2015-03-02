@@ -66,7 +66,9 @@ cfg_t::connection_string() const {
 zookeeper::connection_t::connection_t(const cfg_t& _cfg, const session_t& _session) :
     cfg(_cfg),
     session(_session),
-    zhandle()
+    zhandle(),
+    w_scope(),
+    watcher(w_scope.get_handler<reconnect_action_t>(*this))
 {
     reconnect();
 }
@@ -78,84 +80,62 @@ zookeeper::connection_t::~connection_t() {
 }
 
 void
-connection_t::put(const path_t& path, const value_t& value, stat_handler_ptr handler) {
+connection_t::put(const path_t& path, const value_t& value, version_t version, managed_stat_handler_base_t& handler) {
     check_connectivity();
     check_rc(
-        zoo_aset(zhandle, path.c_str(), value.c_str(), value.size(), -1, stat_cb, c_ptr(handler.get()))
+        zoo_aset(zhandle, path.c_str(), value.c_str(), value.size(), version, &handler_dispatcher_t::stat_cb, c_ptr(&handler))
     );
-    handler.release();
 }
 
 void
-connection_t::put(const path_t& path, const value_t& value, version_t version, stat_handler_ptr handler) {
+connection_t::get(const path_t& path, managed_data_handler_base_t& handler, managed_watch_handler_base_t& watch) {
     check_connectivity();
     check_rc(
-        zoo_aset(zhandle, path.c_str(), value.c_str(), value.size(), version, stat_cb, c_ptr(handler.get()))
+        zoo_awget(zhandle, path.c_str(), &handler_dispatcher_t::watcher_cb, c_ptr(&watch), &handler_dispatcher_t::data_cb, c_ptr(&handler))
     );
-    handler.release();
 }
 
 void
-connection_t::get(const path_t& path, data_handler_ptr handler) {
+connection_t::get(const path_t& path, managed_data_handler_base_t& handler) {
     check_connectivity();
     check_rc(
-        zoo_aget(zhandle, path.c_str(), -1, data_cb, c_ptr(handler.get()))
+        zoo_awget(zhandle, path.c_str(), &handler_dispatcher_t::watcher_cb, nullptr, &handler_dispatcher_t::data_cb, c_ptr(&handler))
     );
-    handler.release();
 }
 
 void
-connection_t::get(const path_t& path, data_handler_with_watch_ptr handler, watch_handler_ptr watch) {
-    check_connectivity();
-    handler->bind_watch(watch.get());
-    check_rc(
-        zoo_awget(zhandle, path.c_str(), watcher_cb, c_ptr(watch.get()), data_with_watch_cb, c_ptr(handler.get()))
-    );
-    handler.release();
-    watch.release();
-}
-
-void
-connection_t::create(const path_t& path, const value_t& value, bool ephemeral, string_handler_ptr handler) {
+connection_t::create(const path_t& path, const value_t& value, bool ephemeral, managed_string_handler_base_t& handler) {
     check_connectivity();
     auto acl = ZOO_OPEN_ACL_UNSAFE;
     int flag = ephemeral ? ZOO_EPHEMERAL : 0;
     check_rc(
-        zoo_acreate(zhandle, path.c_str(), value.c_str(), value.size(), &acl, flag, string_cb, c_ptr(handler.get()))
+        zoo_acreate(zhandle, path.c_str(), value.c_str(), value.size(), &acl, flag, &handler_dispatcher_t::string_cb, c_ptr(&handler))
     );
-    handler.release();
 }
 
 void
 connection_t::del(const path_t& path, version_t version, void_handler_ptr handler) {
     check_connectivity();
     check_rc(
-        zoo_adelete(zhandle, path.c_str(), version, void_cb, c_ptr(handler.get()))
+        zoo_adelete(zhandle, path.c_str(), version, &handler_dispatcher_t::void_cb, c_ptr(handler.get()))
     );
     handler.release();
 }
 
 void
-connection_t::exists(const path_t& path, stat_handler_with_watch_ptr handler, watch_handler_ptr watch) {
+connection_t::exists(const path_t& path, managed_stat_handler_base_t& handler, managed_watch_handler_base_t& watch) {
     check_connectivity();
-    handler->bind_watch(watch.get());
     check_rc(
-        zoo_awexists(zhandle, path.c_str(), watcher_cb, c_ptr(watch.get()), stat_with_watch_cb, c_ptr(handler.get()))
+        zoo_awexists(zhandle, path.c_str(), &handler_dispatcher_t::watcher_cb, c_ptr(&watch), &handler_dispatcher_t::stat_cb, c_ptr(&handler))
     );
-    handler.release();
-    watch.release();
 }
 
 void
-connection_t::childs(const path_t& path, strings_stat_handler_with_watch_ptr handler, watch_handler_ptr watch) {
+connection_t::childs(const path_t& path, managed_strings_stat_handler_base_t& handler, managed_watch_handler_base_t& watch) {
     check_connectivity();
-    handler->bind_watch(watch.get());
     check_rc(
-        zoo_awget_children2(zhandle, path.c_str(), watcher_cb, c_ptr(watch.get()), strings_stat_with_watch_cb, c_ptr(handler.get()))
+        zoo_awget_children2(zhandle, path.c_str(), &handler_dispatcher_t::watcher_cb, c_ptr(&watch), &handler_dispatcher_t::strings_stat_cb, c_ptr(&handler))
     );
-    handler.release();
-    watch.release();
-
 }
 
 void connection_t::check_connectivity() {
@@ -163,29 +143,20 @@ void connection_t::check_connectivity() {
         reconnect();
     }
 }
-void connection_t::check_rc(int rc) {
+void connection_t::check_rc(int rc) const {
     if(rc != ZOK) {
         throw exception("Zookeeper connection error. ", rc);
     }
 }
 
-void connection_t::operator()(int type, int state, path_t path) {
-    if(type == ZOO_SESSION_EVENT) {
-        if(state == ZOO_EXPIRED_SESSION_STATE) {
-            session.reset();
-            reconnect();
-        }
-    }
-}
-
 void connection_t::reconnect() {
 
-    zhandle_t* new_zhandle = zookeeper_init(cfg.connection_string().c_str(), watcher_non_owning_cb, cfg.recv_timeout, session.native(), this, 0);
+    zhandle_t* new_zhandle = init();
     if(!new_zhandle) {
         if(session.valid()) {
             //Try to reset session before second attempt
             session.reset();
-            new_zhandle = zookeeper_init(cfg.connection_string().c_str(), watcher_non_owning_cb, cfg.recv_timeout, session.native(), this, 0);
+            new_zhandle = init();
         }
         if(!new_zhandle || is_unrecoverable(new_zhandle)) {
             throw exception(ZOO_EXTRA_ERROR::COULD_NOT_CONNECT);
@@ -200,4 +171,24 @@ void connection_t::reconnect() {
     zookeeper_close(new_zhandle);
 }
 
+zhandle_t* connection_t::init() {
+    zhandle_t* new_zhandle = zookeeper_init(
+        cfg.connection_string().c_str(),
+        &handler_dispatcher_t::watcher_cb,
+        cfg.recv_timeout,
+        session.native(),
+        &watcher,
+        0
+    );
+    return new_zhandle;
+}
+
+void connection_t::reconnect_action_t::operator()(int type, int state, path_t path) {
+    if(type == ZOO_SESSION_EVENT) {
+        if(state == ZOO_EXPIRED_SESSION_STATE) {
+            parent.session.reset();
+            parent.reconnect();
+        }
+    }
+}
 }

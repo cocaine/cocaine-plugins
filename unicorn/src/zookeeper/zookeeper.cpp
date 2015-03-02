@@ -33,6 +33,8 @@ get_error_message(int rc) {
             return "Could not reconnect to zookeper. Current errno:" + std::to_string(errno);
         case UNKNOWN_ERROR:
             return "Unknown zookeeper error";
+        case HANDLER_SCOPE_RELEASED:
+            return "Handler scope was released";
         default:
             return zerror(rc);
     }
@@ -44,16 +46,19 @@ std::string get_error_message(int rc, const std::exception& e) {
 
 path_t
 path_parent(const path_t& path, unsigned int depth) {
+    if(depth == 0) {
+        return path;
+    }
     size_t last_char = path.size();
-    size_t pos = 0;
-    for (size_t i = 0; i <= depth; i++) {
+    size_t pos = std::string::npos;
+    for (size_t i = 0; i < depth; i++) {
         pos = path.find_last_of('/', last_char);
         if (pos == path.size() - 1) {
             last_char = pos - 1;
             pos = path.find_last_of('/', last_char);
         }
         if (pos == std::string::npos || pos == 0) {
-            throw std::runtime_error("could not get " + std::to_string(depth) + "th parent from path: " + path);
+            throw std::runtime_error("could not get " + std::to_string(depth) + "th service from path: " + path);
         }
         last_char = pos - 1;
     }

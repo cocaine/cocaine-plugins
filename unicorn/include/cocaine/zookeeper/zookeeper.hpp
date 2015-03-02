@@ -30,7 +30,8 @@ enum ZOO_EXTRA_ERROR {
     INVALID_TYPE = -1001,
     INVALID_VALUE = -1002,
     COULD_NOT_CONNECT = -1003,
-    UNKNOWN_ERROR = -1004
+    UNKNOWN_ERROR = -1004,
+    HANDLER_SCOPE_RELEASED = -1005
 };
 
 typedef std::string path_t;
@@ -52,8 +53,8 @@ get_error_message(int rc, const std::exception& e);
 
 
 /**
-* Get nth parent of path (starting from 0)
-* For path /A/B/C/D 0th parent is /A/B/C and 2nd parent is /A
+* Get nth parent of path (starting from 1)
+* For path /A/B/C/D 1th parent is /A/B/C
 */
 path_t
 path_parent(const path_t& path, unsigned int depth);
