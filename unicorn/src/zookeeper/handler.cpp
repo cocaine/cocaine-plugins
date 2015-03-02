@@ -94,13 +94,11 @@ handler_dispatcher_t& handler_dispatcher_t::instance() {
 }
 
 void handler_dispatcher_t::add(managed_handler_base_t* callback) {
-    std::cout << "ADD: " << callback << std::endl;
     std::unique_lock<std::mutex> lock(storage_lock);
     callbacks.insert(std::make_pair(callback, handler_ptr(callback)));
 }
 
 void handler_dispatcher_t::release(managed_handler_base_t* callback) {
-    std::cout << "RELEASE: " << callback << std::endl;
     std::unique_lock<std::mutex> lock(storage_lock);
     auto it = callbacks.find(callback);
     if(it != callbacks.end()) {

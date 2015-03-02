@@ -37,20 +37,28 @@ struct unicorn_dispatch_t::subscribe_action_t :
         path_t _path
     );
 
+    /**
+    * Handling get events
+    */
     virtual
     void
     operator()(int rc, std::string value, const zookeeper::node_stat& stat);
 
+    /**
+    * Handling exist events in case node does not exist.
+    */
     virtual
     void
     operator()(int rc, zookeeper::node_stat const& stat);
 
+    /**
+    * Handling watch events
+    */
     virtual
     void
     operator()(int type, int state, zookeeper::path_t path);
 
     unicorn_dispatch_t::response::subscribe result;
-    std::weak_ptr<zookeeper::handler_scope_t> watcher_scope;
     unicorn_service_t* service;
     std::mutex write_lock;
     version_t last_version;
@@ -75,9 +83,15 @@ struct unicorn_dispatch_t::lsubscribe_action_t :
         path_t _path
     );
 
+    /**
+    * Handling child requests
+    */
     virtual void
     operator()(int rc, std::vector<std::string> childs, const zookeeper::node_stat& stat);
 
+    /**
+    * Handling watch
+    */
     virtual void
     operator()(int type, int state, zookeeper::path_t path);
 
@@ -104,11 +118,17 @@ struct unicorn_dispatch_t::put_action_t :
         version_t _version
     );
 
+    /**
+    * handling set request
+    */
     virtual void
     operator()(int rc, zookeeper::node_stat const& stat);
 
+    /**
+    * handling get request after version mismatch
+    */
     virtual void
-    operator()(int rc, std::string value, zookeeper::node_stat const& stat);
+    operator()(int rc, zookeeper::value_t value, zookeeper::node_stat const& stat);
 
     unicorn_service_t* service;
     unicorn_dispatch_t::response::put result;
@@ -119,7 +139,9 @@ struct unicorn_dispatch_t::put_action_t :
 };
 
 
-
+/**
+* Base handler for node creation. Used in create, lock, increment requests
+*/
 struct unicorn_dispatch_t::create_action_base_t :
     public zookeeper::managed_string_handler_base_t
 {
@@ -132,12 +154,21 @@ struct unicorn_dispatch_t::create_action_base_t :
         bool _ephemeral
     );
 
+    /**
+    * called from create subrequest.
+    */
     virtual void
     operator()(int rc, zookeeper::value_t value);
 
+    /**
+    * Called on success
+    */
     virtual void
     finalize() = 0;
 
+    /**
+    * Called on failure
+    */
     virtual void
     abort(int rc) = 0;
 
@@ -236,7 +267,7 @@ struct unicorn_dispatch_t::increment_create_action_t:
     unicorn_dispatch_t::response::increment result;
 };
 
-struct unicorn_dispatch_t::put_ephemeral_context_t:
+struct distributed_lock_t::put_ephemeral_context_t:
     public unicorn_dispatch_t::create_action_base_t
 {
     put_ephemeral_context_t(
@@ -245,7 +276,7 @@ struct unicorn_dispatch_t::put_ephemeral_context_t:
         const std::shared_ptr<distributed_lock_t>& _parent,
         path_t _path,
         value_t _value,
-        unicorn_dispatch_t::response::acquire _result
+        unicorn_dispatch_t::response::lock _result
     );
 
     virtual void
@@ -255,7 +286,7 @@ struct unicorn_dispatch_t::put_ephemeral_context_t:
     abort(int rc);
 
     std::weak_ptr<distributed_lock_t> parent;
-    unicorn_dispatch_t::response::acquire result;
+    unicorn_dispatch_t::response::lock result;
 };
 
 }}

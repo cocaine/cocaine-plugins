@@ -22,7 +22,6 @@
 #include <cocaine/rpc/protocol.hpp>
 #include <boost/mpl/list.hpp>
 #include <vector>
-#include <functional>
 
 namespace cocaine { namespace io {
 
@@ -210,8 +209,6 @@ struct unicorn {
         static const char* alias() {
             return "unlock";
         }
-
-        typedef unicorn_final_tag dispatch_type;
     };
 
     struct close {
@@ -248,7 +245,6 @@ struct protocol<unicorn_locked_tag> {
     >::type version;
 
     typedef boost::mpl::list<
-        unicorn::acquire,
         unicorn::unlock
     > messages;
 

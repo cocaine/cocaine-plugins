@@ -84,7 +84,7 @@ unicorn_service_t::unicorn_service_t(context_t& context, asio::io_service& _asio
     on<io::unicorn::create>    (std::make_shared<create_slot_t>    (this, &unicorn_dispatch_t::create));
     on<io::unicorn::del>       (std::make_shared<del_slot_t>       (this, &unicorn_dispatch_t::del));
     on<io::unicorn::increment> (std::make_shared<increment_slot_t> (this, &unicorn_dispatch_t::increment));
-    on<io::unicorn::lock>      (std::make_shared<lock_slot_t>      (this));
+    on<io::unicorn::lock>      (std::make_shared<lock_slot_t>      (this, &distributed_lock_t::lock));
 
 }
 
@@ -113,6 +113,7 @@ unicorn_dispatch_t::put(path_t path, value_t value, version_t version) {
 unicorn_dispatch_t::response::create
 unicorn_dispatch_t::create(path_t path, value_t value) {
     response::create result;
+    //Note: There is a possibility to use unmanaged handler.
     auto& handler = handler_scope->get_handler<create_action_t>(
         service,
         result,
@@ -177,8 +178,6 @@ unicorn_dispatch_t::increment(path_t path, value_t value) {
 
 
 
-
-
 /**************************************************
 ****************    PUT    ************************
 **************************************************/
@@ -222,7 +221,7 @@ unicorn_dispatch_t::put_action_t::operator()(int rc, zookeeper::node_stat const&
 }
 
 void
-unicorn_dispatch_t::put_action_t::operator()(int rc, std::string value, zookeeper::node_stat const& stat) {
+unicorn_dispatch_t::put_action_t::operator()(int rc, zookeeper::value_t value, zookeeper::node_stat const& stat) {
     if (rc) {
         result.abort(rc, "Failed get after version mismatch:" + zookeeper::get_error_message(rc));
     }
@@ -587,7 +586,7 @@ distributed_lock_t::put_ephemeral_context_t::put_ephemeral_context_t(
     const std::shared_ptr<distributed_lock_t>& _parent,
     path_t _path,
     value_t _value,
-    unicorn_dispatch_t::response::acquire _result
+    unicorn_dispatch_t::response::lock _result
 ) :
     unicorn_dispatch_t::create_action_base_t(tag, service, std::move(_path), std::move(_value), true),
     parent(_parent),
@@ -615,27 +614,12 @@ distributed_lock_t::put_ephemeral_context_t::abort(int rc) {
     result.abort(rc, zookeeper::get_error_message(rc));
 }
 
-lock_slot_t::lock_slot_t(unicorn_service_t* _service):
-    service(_service)
-{}
-
-boost::optional<std::shared_ptr<const lock_slot_t::dispatch_type>>
-lock_slot_t::operator()(tuple_type&& args, upstream_type&& upstream)
-{
-    //At least clang(Apple LLVM version 6.0) do not accept implicit return of shared_ptr
-    return boost::optional<std::shared_ptr<const lock_slot_t::dispatch_type>> (
-        //We use non const here because clang doesn't accept const
-        std::make_shared<distributed_lock_t>(service->name, std::move(std::get<0>(args)), service)
-    );
-}
-
-distributed_lock_t::distributed_lock_t(const std::string& name, path_t _path, unicorn_service_t* _service) :
+distributed_lock_t::distributed_lock_t(const std::string& name, unicorn_service_t* _service) :
     dispatch<io::unicorn_locked_tag>(name),
-    path(_path),
+    path(),
     service(_service)
 {
     on<io::unicorn::unlock>(std::bind(&distributed_lock_t::discard, this, std::error_code()));
-    on<io::unicorn::acquire>(std::bind(&distributed_lock_t::acquire, this));
 }
 
 
@@ -648,9 +632,10 @@ distributed_lock_t::discard(const std::error_code& ec) const {
     ptr->discarded = true;
 }
 
-unicorn_dispatch_t::response::acquire
-distributed_lock_t::acquire() {
-    unicorn_dispatch_t::response::acquire result;
+unicorn_dispatch_t::response::lock
+distributed_lock_t::lock(path_t lock_path) {
+    path = std::move(lock_path);
+    unicorn_dispatch_t::response::lock result;
     auto& handler = handler_scope.get_handler<put_ephemeral_context_t>(service, shared_from_this(), path, value_t(time(nullptr)), result);
     service->zk.create(path, handler.encoded_value, handler.ephemeral, handler);
     return result;

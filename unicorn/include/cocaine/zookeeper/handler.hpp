@@ -25,9 +25,8 @@
 #include <memory>
 #include <vector>
 
-#include <iostream>
-#include <atomic>
 #include <unordered_map>
+#include <cassert>
 
 namespace zookeeper {
 
@@ -70,10 +69,6 @@ public:
 
     static
     void
-        managed_data_cb(int rc, const char *value, int value_len, const struct Stat *stat, const void *data);
-
-    static
-    void
         string_cb(int rc, const char *value, const void *data);
 
     static
@@ -94,17 +89,17 @@ private:
     template<class T, class ...Args>
     void
     call(managed_handler_base_t* callback, Args&& ...args) {
-        std::shared_ptr<T> cb(nullptr);
+        handler_ptr cb;
         {
             std::unique_lock<std::mutex> lock(storage_lock);
             auto it = callbacks.find(callback);
             if (it != callbacks.end()) {
-                cb = std::dynamic_pointer_cast<T>(it->second);
+                cb = it->second;
+                assert(cb);
             }
         }
         if(cb) {
-            std::cout << "CALL: " << callback << std::endl;
-            cb->operator()(std::forward<Args>(args)...);
+            std::dynamic_pointer_cast<T>(cb)->operator()(std::forward<Args>(args)...);
         }
     }
 
@@ -119,10 +114,14 @@ private:
     storage_t callbacks;
 };
 
+/**
+* Scope of the handlers. After this goes out of scope all handlers ae destroyed.
+* However call of this handlers via handler manager is defined and do nothing.
+* Thread unsafe. For thread safety consider external locking or creating separate class.
+*/
 class handler_scope_t {
 public:
     handler_scope_t() :
-        storage_mutex(),
         registered_callbacks()
     {}
 
@@ -133,13 +132,11 @@ public:
     get_handler(Args&& ...args) {
         auto handler = new T(handler_tag(), std::forward<Args>(args)...);
         handler_dispatcher_t::instance().add(handler);
-        std::unique_lock<std::mutex> lock(storage_mutex);
         registered_callbacks.push_back(handler);
         return *handler;
     }
 
 private:
-    std::mutex storage_mutex;
     std::vector<managed_handler_base_t*> registered_callbacks;
 };
 
@@ -155,6 +152,10 @@ public:
     {}
 };
 
+/**
+* At this time managed void handler is unneeded so it's being deleted after invocation.
+* Maybe better to stick to only managed handlers for consistency.
+*/
 class void_handler_base_t {
 public:
     virtual void

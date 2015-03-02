@@ -52,7 +52,6 @@ public:
     unicorn_service_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
     friend class unicorn_dispatch_t;
     friend class distributed_lock_t;
-    friend class lock_slot_t;
     friend void release_lock(unicorn_service_t* service, const path_t& path);
     const std::string& get_name() const { return name; }
 private:
@@ -83,7 +82,7 @@ public:
         typedef deferred<result_of<io::unicorn::increment>::type> increment;
         typedef streamed<result_of<io::unicorn::subscribe>::type> subscribe;
         typedef streamed<result_of<io::unicorn::lsubscribe>::type> lsubscribe;
-        typedef deferred<result_of<io::unicorn::acquire>::type> acquire;
+        typedef deferred<result_of<io::unicorn::lock>::type> lock;
     };
 
     unicorn_dispatch_t(const std::string& name, unicorn_service_t* parent);
@@ -106,6 +105,9 @@ public:
     response::increment
     increment(path_t path, value_t value);
 
+    response::lock
+    lock(path_t path);
+
 
     /**
     * Callbacks to handle async ZK responses
@@ -126,10 +128,38 @@ public:
     struct increment_action_t;
     struct increment_create_action_t;
 
-    friend class lock_slot_t;
-    friend class distributed_lock_t;
 private:
     scope_ptr handler_scope;
+    unicorn_service_t* service;
+};
+
+class distributed_lock_t:
+    public dispatch<io::unicorn_locked_tag>,
+    public std::enable_shared_from_this<distributed_lock_t>
+{
+public:
+    distributed_lock_t(const std::string& name, unicorn_service_t* _service);
+
+    virtual
+    void
+    discard(const std::error_code& ec) const;
+
+    unicorn_dispatch_t::response::lock
+    lock(path_t path);
+
+    struct put_ephemeral_context_t;
+private:
+    struct state_t {
+        bool lock_acquired;
+        bool discarded;
+        state_t() :
+            lock_acquired(false),
+            discarded(false)
+        {}
+    };
+    mutable synchronized<state_t> state;
+    zookeeper::handler_scope_t handler_scope;
+    path_t path;
     unicorn_service_t* service;
 };
 
@@ -169,54 +199,7 @@ typedef unicorn_slot_t<io::unicorn::put,        decltype(&unicorn_dispatch_t::pu
 typedef unicorn_slot_t<io::unicorn::create,     decltype(&unicorn_dispatch_t::create),     unicorn_dispatch_t> create_slot_t;
 typedef unicorn_slot_t<io::unicorn::del,        decltype(&unicorn_dispatch_t::del),        unicorn_dispatch_t> del_slot_t;
 typedef unicorn_slot_t<io::unicorn::increment,  decltype(&unicorn_dispatch_t::increment),  unicorn_dispatch_t> increment_slot_t;
-
-class lock_slot_t :
-    public io::basic_slot<io::unicorn::lock>
-{
-public:
-    lock_slot_t(unicorn_service_t* service);
-
-    typedef io::basic_slot<io::unicorn::lock>::dispatch_type dispatch_type;
-    typedef io::basic_slot<io::unicorn::lock>::tuple_type tuple_type;
-    typedef io::basic_slot<io::unicorn::lock>::upstream_type upstream_type;
-
-    virtual
-    boost::optional<std::shared_ptr<const dispatch_type>>
-        operator()(tuple_type&& args, upstream_type&& upstream);
-
-private:
-    unicorn_service_t* service;
-};
-
-class distributed_lock_t:
-    public dispatch<io::unicorn_locked_tag>,
-    public std::enable_shared_from_this<distributed_lock_t>
-{
-public:
-    distributed_lock_t(const std::string& name, path_t _path, unicorn_service_t* _service);
-
-    virtual
-    void
-    discard(const std::error_code& ec) const;
-
-    unicorn_dispatch_t::response::acquire
-    acquire();
-
-    struct put_ephemeral_context_t;
-private:
-    struct state_t {
-        bool lock_acquired;
-        bool discarded;
-        state_t() :
-            lock_acquired(false),
-            discarded(false)
-        {}
-    };
-    mutable synchronized<state_t> state;
-    zookeeper::handler_scope_t handler_scope;
-    path_t path;
-    unicorn_service_t* service;
-};
+typedef unicorn_slot_t<io::unicorn::lock,       decltype(&distributed_lock_t::lock),       distributed_lock_t> lock_slot_t;
 
 }}
 #endif
