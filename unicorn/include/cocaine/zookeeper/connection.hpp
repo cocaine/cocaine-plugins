@@ -107,6 +107,7 @@ public:
     */
     void
     childs(const path_t& path, managed_strings_stat_handler_base_t& handler, managed_watch_handler_base_t& watch_handler);
+
     void
     childs(const path_t& path, managed_strings_stat_handler_base_t& handler);
 

@@ -32,6 +32,7 @@ namespace zookeeper {
 
 typedef Stat node_stat;
 
+//Used to prevent direct creation of managed handlers derived classes.
 class handler_tag {
 private:
     handler_tag() {}

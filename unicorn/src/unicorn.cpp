@@ -49,19 +49,7 @@ zookeeper::cfg_t make_zk_config(const dynamic_t& args) {
 }
 
 void release_lock(unicorn_service_t* service, const path_t& path) {
-    COCAINE_LOG_DEBUG(service->log, "Release lock: %s", path.c_str());
-    try {
-        service->zk.del(path, NOT_EXISTING_VERSION, nullptr);
-    }
-    catch(const zookeeper::exception& e) {
-        COCAINE_LOG_WARNING(service->log, "ZK Exception during delete of lock: %s. Reconnecting to discard lock for sure.", e.what());
-        try {
-            service->zk.reconnect();
-        }
-        catch(const zookeeper::exception& e) {
-            COCAINE_LOG_WARNING(service->log, "Give up on deleting lock. Exception: %s", e.what());
-        }
-    }
+
 }
 
 const io::basic_dispatch_t&
@@ -500,12 +488,12 @@ unicorn_dispatch_t::increment_action_t::increment_action_t(
     const std::shared_ptr<zookeeper::handler_scope_t>& _scope
 ):
     managed_handler_base_t(tag),
+    create_action_base_t(tag, _service, std::move(_path), std::move(_increment), false, false),
     managed_stat_handler_base_t(tag),
     managed_data_handler_base_t(tag),
     service(_service),
     result(std::move(_result)),
     path(std::move(_path)),
-    increment(std::move(_increment)),
     total(),
     scope(_scope)
 {}
@@ -516,7 +504,13 @@ void unicorn_dispatch_t::increment_action_t::operator()(int rc, zookeeper::node_
         result.write(versioned_value_t(total, stat.version));
     }
     else if (rc == ZBADVERSION) {
-        service->zk.get(path, *this);
+        try {
+            service->zk.get(path, *this);
+        }
+        catch(const zookeeper::exception& e) {
+            result.abort(e.code(), e.what());
+            COCAINE_LOG_WARNING(service->log, "Failure during increment get: %s", e.what());
+        }
     }
 }
 
@@ -524,12 +518,7 @@ void
 unicorn_dispatch_t::increment_action_t::operator()(int rc, zookeeper::value_t value, const zookeeper::node_stat& stat) {
     try {
         if(rc == ZNONODE) {
-            auto scope_ptr = scope.lock();
-            if (!scope_ptr) {
-                return;
-            }
-            auto& create_handler = scope_ptr->get_handler<increment_create_action_t>(service, std::move(result), path, increment);
-            service->zk.create(path, serialize(increment), create_handler.ephemeral, create_handler.sequence, create_handler);
+            service->zk.create(path, value, ephemeral, sequence, *this);
         }
         else if (rc != ZOK) {
             result.abort(rc, "Error during value get:" + zookeeper::get_error_message(rc));
@@ -549,12 +538,12 @@ unicorn_dispatch_t::increment_action_t::operator()(int rc, zookeeper::value_t va
                 result.abort(rc, "Error during value get:" + zookeeper::get_error_message(rc));
                 return;
             }
-            if (parsed.is_double() || increment.is_double()) {
-                total = parsed.to<double>() + increment.to<double>();
+            if (parsed.is_double() || initial_value.is_double()) {
+                total = parsed.to<double>() + initial_value.to<double>();
                 service->zk.put(path, serialize(total), stat.version, *this);
             }
             else {
-                total = parsed.to<int64_t>() + increment.to<int64_t>();
+                total = parsed.to<int64_t>() + initial_value.to<int64_t>();
                 service->zk.put(path, serialize(total), stat.version, *this);
             }
         }
@@ -565,29 +554,17 @@ unicorn_dispatch_t::increment_action_t::operator()(int rc, zookeeper::value_t va
     }
 }
 
-unicorn_dispatch_t::increment_create_action_t::increment_create_action_t(
-    const zookeeper::handler_tag& tag,
-    unicorn_service_t* _service,
-    unicorn_dispatch_t::response::increment _result,
-    path_t _path,
-    value_t _value
-):
-    zookeeper::managed_handler_base_t(tag),
-    create_action_base_t(tag, _service, std::move(_path), std::move(_value), false, false),
-    result(_result)
-{}
-
 void
-unicorn_dispatch_t::increment_create_action_t::finalize(zookeeper::value_t) {
+unicorn_dispatch_t::increment_action_t::finalize(zookeeper::value_t) {
     result.write(versioned_value_t(initial_value, version_t()));
 }
 
 void
-unicorn_dispatch_t::increment_create_action_t::abort(int rc) {
+unicorn_dispatch_t::increment_action_t::abort(int rc) {
     result.abort(rc, zookeeper::get_error_message(rc));
 }
 
-distributed_lock_t::put_ephemeral_context_t::put_ephemeral_context_t(
+distributed_lock_t::lock_action_t::lock_action_t(
     const zookeeper::handler_tag& tag,
     unicorn_service_t* service,
     const std::shared_ptr<distributed_lock_t>& _parent,
@@ -607,22 +584,31 @@ distributed_lock_t::put_ephemeral_context_t::put_ephemeral_context_t(
 {}
 
 void
-distributed_lock_t::put_ephemeral_context_t::operator()(int rc, std::vector<std::string> childs, zookeeper::node_stat const& stat) {
+distributed_lock_t::lock_action_t::operator()(int rc, std::vector<std::string> childs, zookeeper::node_stat const& stat) {
+
+    //Copy as there maybe concurrent call from exists and watcher.
+    auto cur_parent = parent;
+    if(!cur_parent.use_count()) {
+        return;
+    }
     /**
     * Here we assume:
-    *  * nobody has written in specified directory
+    *  * nobody has written trash data(any data except locks) in specified directory
     *  * sequence number issued by zookeeper is comaparable by string comparision.
+    *
+    *  First is responsibility of clients.
+    *  Second is true for zookeeper at least 3.4.6,
     */
-    path_t next_min_node = created_node;
-    COCAINE_LOG_DEBUG(service->log, "Childs size: %lli",childs.size());
+    path_t next_min_node = created_node_name;
     for(size_t i = 0; i < childs.size(); i++) {
-        COCAINE_LOG_DEBUG(service->log, "Child %lli: %s",i,childs[i].c_str());
+        /**
+        * Skip most obvious "trash" data.
+        */
         if(!zookeeper::is_valid_sequence_node(childs[i])) {
             continue;
         }
         if(childs[i] < next_min_node) {
-            COCAINE_LOG_DEBUG(service->log, "Child %lli: %s less than %s",i,childs[i].c_str(), next_min_node.c_str());
-            if(next_min_node == created_node) {
+            if(next_min_node == created_node_name) {
                 next_min_node.swap(childs[i]);
             }
             else {
@@ -630,65 +616,168 @@ distributed_lock_t::put_ephemeral_context_t::operator()(int rc, std::vector<std:
                     next_min_node.swap(childs[i]);
                 }
             }
-            COCAINE_LOG_DEBUG(service->log, "NEXT MIN %s",next_min_node.c_str());
-        }
-        else {
-            COCAINE_LOG_DEBUG(service->log, "Child %lli: %s greater than %s",i,childs[i], next_min_node.c_str());
         }
     }
-    if(next_min_node == created_node) {
-        {
-            auto ptr = parent->state.synchronize();
-            if (ptr->discarded) {
-                //Client has gone and did not delete lock.
-                release_lock(service, parent->state.unsafe().created_path);
-            }
-            ptr->lock_acquired = true;
+    if(next_min_node == created_node_name) {
+        if(!cur_parent->state.release_if_discarded()) {
+            result.write(true);
         }
-        result.write(true);
         parent.reset();
+        return;
     }
     else {
-        service->zk.exists(folder + "/" + next_min_node, *this, *this);
+        try {
+            service->zk.exists(folder + "/" + next_min_node, *this, *this);
+        }
+        catch(const zookeeper::exception& e) {
+            result.abort(e.code(), e.what());
+            cur_parent->state.release();
+            parent.reset();
+        }
     }
 }
 
-void distributed_lock_t::put_ephemeral_context_t::operator()(int rc, zookeeper::node_stat const& stat) {
+void distributed_lock_t::lock_action_t::operator()(int rc, zookeeper::node_stat const& stat) {
+    auto cur_parent = parent;
+    if(!cur_parent.use_count()) {
+        return;
+    }
+    /* If next lock in queue disappeared during request - issue childs immediately. */
     if(rc == ZNONODE) {
+        try {
+            service->zk.childs(folder, *this);
+        }
+        catch(const zookeeper::exception& e) {
+            result.abort(e.code(), e.what());
+            cur_parent->state.release();
+            parent.reset();
+        }
+    }
+}
+
+void distributed_lock_t::lock_action_t::operator()(int type, int state, path_t path) {
+    auto cur_parent = parent;
+    if(!cur_parent.use_count()) {
+        return;
+    }
+    try {
+        service->zk.childs(folder, *this);
+    }
+    catch(const zookeeper::exception& e) {
+        result.abort(e.code(), e.what());
+        cur_parent->state.release();
+        parent.reset();
+    }
+}
+
+void
+distributed_lock_t::lock_action_t::finalize(zookeeper::value_t value) {
+    zookeeper::path_t created_path = std::move(value);
+    created_node_name = zookeeper::get_node_name(created_path);
+    if(parent->state.set_lock_created(std::move(created_path))) {
         service->zk.childs(folder, *this);
     }
 }
 
-void distributed_lock_t::put_ephemeral_context_t::operator()(int type, int state, path_t path) {
-    service->zk.childs(folder, *this);
+void
+distributed_lock_t::lock_action_t::abort(int rc) {
+    result.abort(rc, zookeeper::get_error_message(rc));
 }
 
+distributed_lock_t::lock_state_t::lock_state_t(unicorn_service_t* _service) :
+    service(_service),
+    lock_created(false),
+    lock_released(false),
+    discarded(false),
+    created_path(),
+    access_mutex()
+{}
+
 void
-distributed_lock_t::put_ephemeral_context_t::finalize(zookeeper::value_t value) {
-    zookeeper::path_t created_path = std::move(value);
-    created_node = zookeeper::get_node_name(created_path);
+distributed_lock_t::lock_state_t::release() {
+    bool should_release = false;
     {
-        auto ptr = parent->state.synchronize();
-        if (ptr->discarded) {
-            //Client has gone and did not delete lock.
-            release_lock(service, created_path);
-        }
-        else {
-            ptr->created_path = std::move(created_path);
-            ptr->lock_acquired = true;
+        std::lock_guard<std::mutex> guard(access_mutex);
+        should_release = lock_created && !lock_released;
+        lock_released = lock_released || should_release;
+    }
+    if(should_release) {
+        release_impl();
+    }
+}
+
+bool
+distributed_lock_t::lock_state_t::release_if_discarded() {
+    bool should_release = false;
+    {
+        std::lock_guard<std::mutex> guard(access_mutex);
+        if(discarded && lock_created && !lock_released) {
+            should_release = true;
+            lock_released = true;
         }
     }
-    //further lock processing
-    service->zk.childs(folder, *this);
+    if(should_release) {
+        release_impl();
+    }
+    return lock_released;
 }
 
 void
-distributed_lock_t::put_ephemeral_context_t::abort(int rc) {
-    result.abort(rc, zookeeper::get_error_message(rc));
+distributed_lock_t::lock_state_t::discard() {
+    bool should_release = false;
+    {
+        std::lock_guard<std::mutex> guard(access_mutex);
+        discarded = true;
+        should_release = lock_created && !lock_released;
+        lock_released = lock_released || should_release;
+    }
+    if(should_release) {
+        release_impl();
+    }
+}
+
+bool
+distributed_lock_t::lock_state_t::set_lock_created(path_t _created_path) {
+    //Safe as there is only one call to this
+    created_path = std::move(_created_path);
+    COCAINE_LOG_DEBUG(service->log, "Created lock: %s", created_path.c_str());
+    //Can not be removed before created.
+    assert(!lock_released);
+    bool should_release = false;
+    {
+        std::lock_guard<std::mutex> guard(access_mutex);
+        lock_created = true;
+        if(discarded) {
+            lock_released = true;
+            should_release = true;
+        }
+    }
+    if(should_release) {
+        release_impl();
+    }
+    return !lock_released;
+}
+
+void
+distributed_lock_t::lock_state_t::release_impl() {
+    COCAINE_LOG_DEBUG(service->log, "Release lock: %s", created_path.c_str());
+    try {
+        service->zk.del(created_path, NOT_EXISTING_VERSION, nullptr);
+    }
+    catch(const zookeeper::exception& e) {
+        COCAINE_LOG_WARNING(service->log, "ZK Exception during delete of lock: %s. Reconnecting to discard lock for sure.", e.what());
+        try {
+            service->zk.reconnect();
+        }
+        catch(const zookeeper::exception& e) {
+            COCAINE_LOG_WARNING(service->log, "Give up on deleting lock. Exception: %s", e.what());
+        }
+    }
 }
 
 distributed_lock_t::distributed_lock_t(const std::string& name, unicorn_service_t* _service) :
     dispatch<io::unicorn_locked_tag>(name),
+    state(_service),
     path(),
     service(_service)
 {
@@ -698,11 +787,7 @@ distributed_lock_t::distributed_lock_t(const std::string& name, unicorn_service_
 
 void
 distributed_lock_t::discard(const std::error_code& ec) const {
-    auto ptr = state.synchronize();
-    if(ptr->lock_acquired) {
-        release_lock(service, ptr->created_path);
-    }
-    ptr->discarded = true;
+    state.discard();
 }
 
 unicorn_dispatch_t::response::lock
@@ -710,7 +795,7 @@ distributed_lock_t::lock(path_t lock_path) {
     path_t folder = std::move(lock_path);
     path = folder + "/lock";
     unicorn_dispatch_t::response::lock result;
-    auto& handler = handler_scope.get_handler<put_ephemeral_context_t>(service, shared_from_this(), path, std::move(folder), value_t(time(nullptr)), result);
+    auto& handler = handler_scope.get_handler<lock_action_t>(service, shared_from_this(), path, std::move(folder), value_t(time(nullptr)), result);
     service->zk.create(path, handler.encoded_value, handler.ephemeral, handler.sequence, handler);
     return result;
 }

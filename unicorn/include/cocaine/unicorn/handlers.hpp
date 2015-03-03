@@ -66,10 +66,10 @@ struct unicorn_dispatch_t::subscribe_action_t :
 };
 
 /**
-* Action for handling get requests during subscription for childs.
+* Action for handling requests during subscription for childs.
 * When client subscribes for a path - we make a get request to ZK with setting watch on specified path.
 * On each get completion we compare last sent verison to client with current and if current version is greater send update to client.
-* On each watch invoke we issue child command (to later process with this handler) with new watcher.
+* On each watch invoke we issue child command (to later process with this handler) starting new watch.
 */
 struct unicorn_dispatch_t::lsubscribe_action_t :
     public zookeeper::managed_strings_stat_handler_base_t,
@@ -182,6 +182,9 @@ struct unicorn_dispatch_t::create_action_base_t :
     bool sequence;
 };
 
+/**
+* Handler for simple node creation
+*/
 struct unicorn_dispatch_t::create_action_t:
     public create_action_base_t
 {
@@ -218,10 +221,9 @@ struct unicorn_dispatch_t::del_action_t :
 
 /**
 * Context for handling increment queries to service.
-* This is needed because increment is emulated via GET-PUT command.
-* It persists until increment is completed, or unrecoverable error occured
 */
 struct unicorn_dispatch_t::increment_action_t:
+    public create_action_base_t,
     public zookeeper::managed_stat_handler_base_t,
     public zookeeper::managed_data_handler_base_t
 {
@@ -235,48 +237,46 @@ struct unicorn_dispatch_t::increment_action_t:
         const std::shared_ptr<zookeeper::handler_scope_t>& _scope
     );
 
+    /**
+    * Get part of increment
+    */
     virtual void
     operator()(int rc, const zookeeper::node_stat& stat);
 
+    /**
+    * Put part of increment
+    */
     virtual void
     operator() (int rc, zookeeper::value_t value, const zookeeper::node_stat& stat);
 
-    unicorn_service_t* service;
-    unicorn_dispatch_t::response::increment result;
-    const path_t path;
-    value_t increment;
-    value_t total;
-    std::weak_ptr<zookeeper::handler_scope_t> scope;
-};
-
-struct unicorn_dispatch_t::increment_create_action_t:
-    public create_action_base_t
-{
-    increment_create_action_t(
-        const zookeeper::handler_tag& tag,
-        unicorn_service_t* _service,
-        unicorn_dispatch_t::response::increment result,
-        path_t _path,
-        value_t _value
-    );
-
+    /**
+    * Create part of increment
+    */
     virtual void
     finalize(zookeeper::value_t);
 
     virtual void
     abort(int rc);
 
+    unicorn_service_t* service;
     unicorn_dispatch_t::response::increment result;
+    const path_t path;
+    value_t total;
+    std::weak_ptr<zookeeper::handler_scope_t> scope;
 };
 
-struct distributed_lock_t::put_ephemeral_context_t:
+/**
+* Lock mechanism is described here:
+* http://zookeeper.apache.org/doc/r3.1.2/recipes.html#sc_recipes_Locks
+*/
+struct distributed_lock_t::lock_action_t :
     public unicorn_dispatch_t::create_action_base_t,
     public zookeeper::managed_strings_stat_handler_base_t,
     public zookeeper::managed_stat_handler_base_t,
     public zookeeper::managed_watch_handler_base_t
 
 {
-    put_ephemeral_context_t(
+    lock_action_t(
         const zookeeper::handler_tag& tag,
         unicorn_service_t* service,
         const std::shared_ptr<distributed_lock_t>& _parent,
@@ -300,8 +300,14 @@ struct distributed_lock_t::put_ephemeral_context_t:
     operator()(int rc, zookeeper::node_stat const& stat);
 
 
+    /**
+    * Watcher handler to watch on lock release.
+    */
     virtual void operator()(int type, int state, path_t path);
 
+    /**
+    * Lock creation handler.
+    */
     virtual void
     finalize(zookeeper::value_t);
 
@@ -315,7 +321,7 @@ struct distributed_lock_t::put_ephemeral_context_t:
     std::shared_ptr<distributed_lock_t> parent;
     unicorn_dispatch_t::response::lock result;
     path_t folder;
-    zookeeper::path_t created_node;
+    std::string created_node_name;
 };
 
 }}

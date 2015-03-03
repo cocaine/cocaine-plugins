@@ -34,6 +34,8 @@
 в  зукипер передавать УКАЗАТЕЛЬ на weak_ptr. когда коллбек дергается - мы пытаемся кастануть к shared_ptr и если не вышло,
 ничего не делаем.  weak_ptr в любом случае удаляем. Так будет чуть больше аллокаций, но можно иметь один класс для обработки и
 не нужен менеджер.
+
+UPD: Хуйня - опять ведь кто будет удалять указатель на weak_ptr если вотч не сработает.
 От dynamic_cast можно избавиться если сделать connection темплейтным, но это может грозить неправильным использованием.
  */
 
@@ -143,20 +145,39 @@ public:
     unicorn_dispatch_t::response::lock
     lock(path_t path);
 
-    struct put_ephemeral_context_t;
-private:
-    struct state_t {
-        bool lock_acquired;
+    struct lock_action_t;
+
+    class lock_state_t :
+        public std::enable_shared_from_this<lock_state_t>
+    {
+    public:
+        lock_state_t(unicorn_service_t* service);
+
+        void
+        release();
+
+        bool
+        release_if_discarded();
+
+        void
+        discard();
+
+        bool
+        set_lock_created(path_t created_path);
+    //private:
+        void
+        release_impl();
+
+        unicorn_service_t* service;
+        bool lock_created;
+        bool lock_released;
         bool discarded;
         path_t created_path;
-
-        state_t() :
-            lock_acquired(false),
-            discarded(false),
-            created_path()
-        {}
+        std::mutex access_mutex;
     };
-    mutable synchronized<state_t> state;
+
+private:
+    mutable lock_state_t state;
     zookeeper::handler_scope_t handler_scope;
     path_t path;
     unicorn_service_t* service;
