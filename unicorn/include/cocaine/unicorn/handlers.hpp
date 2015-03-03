@@ -279,7 +279,7 @@ struct distributed_lock_t::lock_action_t :
     lock_action_t(
         const zookeeper::handler_tag& tag,
         unicorn_service_t* service,
-        const std::shared_ptr<distributed_lock_t>& _parent,
+        std::shared_ptr<distributed_lock_t::lock_state_t> state,
         path_t _path,
         path_t folder,
         value_t _value,
@@ -318,7 +318,7 @@ struct distributed_lock_t::lock_action_t :
     * Yes here is a cycle reference, but we will break it after lock.
     * We need this for handler to be alive when we need to release lock due to early client disconnection.
     */
-    std::shared_ptr<distributed_lock_t> parent;
+    std::shared_ptr<distributed_lock_t::lock_state_t> state;
     unicorn_dispatch_t::response::lock result;
     path_t folder;
     std::string created_node_name;

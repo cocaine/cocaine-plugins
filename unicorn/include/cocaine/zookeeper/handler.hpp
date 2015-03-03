@@ -80,7 +80,7 @@ private:
     typedef std::shared_ptr<managed_handler_base_t> handler_ptr;
 
     //Ugly hack. That is fixed in C++14 - we can search in set by convertible value. Now we use map.
-    typedef std::unordered_map<managed_handler_base_t*, handler_ptr> storage_t;
+    typedef std::unordered_map<const managed_handler_base_t*, handler_ptr> storage_t;
 
     friend
     class handler_scope_t;
@@ -89,11 +89,11 @@ private:
 
     template<class T, class ...Args>
     void
-    call(managed_handler_base_t* callback, Args&& ...args) {
+    call(const void* callback, Args&& ...args) {
         handler_ptr cb;
         {
             std::unique_lock<std::mutex> lock(storage_lock);
-            auto it = callbacks.find(callback);
+            auto it = callbacks.find(reinterpret_cast<const managed_handler_base_t*>(callback));
             if (it != callbacks.end()) {
                 cb = it->second;
                 assert(cb);

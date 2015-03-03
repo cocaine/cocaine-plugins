@@ -152,6 +152,9 @@ public:
     {
     public:
         lock_state_t(unicorn_service_t* service);
+        ~lock_state_t();
+        lock_state_t(const lock_state_t& other) = delete;
+        lock_state_t& operator=(const lock_state_t& other) = delete;
 
         void
         release();
@@ -164,7 +167,7 @@ public:
 
         bool
         set_lock_created(path_t created_path);
-    //private:
+    private:
         void
         release_impl();
 
@@ -177,7 +180,7 @@ public:
     };
 
 private:
-    mutable lock_state_t state;
+    mutable std::shared_ptr<lock_state_t> state;
     zookeeper::handler_scope_t handler_scope;
     path_t path;
     unicorn_service_t* service;

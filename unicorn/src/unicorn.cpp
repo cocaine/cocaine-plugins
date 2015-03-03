@@ -567,7 +567,7 @@ unicorn_dispatch_t::increment_action_t::abort(int rc) {
 distributed_lock_t::lock_action_t::lock_action_t(
     const zookeeper::handler_tag& tag,
     unicorn_service_t* service,
-    const std::shared_ptr<distributed_lock_t>& _parent,
+    std::shared_ptr<distributed_lock_t::lock_state_t> _state,
     path_t _path,
     path_t _folder,
     value_t _value,
@@ -578,19 +578,13 @@ distributed_lock_t::lock_action_t::lock_action_t(
     zookeeper::managed_strings_stat_handler_base_t(tag),
     zookeeper::managed_stat_handler_base_t(tag),
     zookeeper::managed_watch_handler_base_t(tag),
-    parent(_parent),
+    state(std::move(_state)),
     result(std::move(_result)),
     folder(std::move(_folder))
 {}
 
 void
 distributed_lock_t::lock_action_t::operator()(int rc, std::vector<std::string> childs, zookeeper::node_stat const& stat) {
-
-    //Copy as there maybe concurrent call from exists and watcher.
-    auto cur_parent = parent;
-    if(!cur_parent.use_count()) {
-        return;
-    }
     /**
     * Here we assume:
     *  * nobody has written trash data(any data except locks) in specified directory
@@ -619,10 +613,9 @@ distributed_lock_t::lock_action_t::operator()(int rc, std::vector<std::string> c
         }
     }
     if(next_min_node == created_node_name) {
-        if(!cur_parent->state.release_if_discarded()) {
+        if(!state->release_if_discarded()) {
             result.write(true);
         }
-        parent.reset();
         return;
     }
     else {
@@ -631,17 +624,12 @@ distributed_lock_t::lock_action_t::operator()(int rc, std::vector<std::string> c
         }
         catch(const zookeeper::exception& e) {
             result.abort(e.code(), e.what());
-            cur_parent->state.release();
-            parent.reset();
+            state->release();
         }
     }
 }
 
 void distributed_lock_t::lock_action_t::operator()(int rc, zookeeper::node_stat const& stat) {
-    auto cur_parent = parent;
-    if(!cur_parent.use_count()) {
-        return;
-    }
     /* If next lock in queue disappeared during request - issue childs immediately. */
     if(rc == ZNONODE) {
         try {
@@ -649,24 +637,18 @@ void distributed_lock_t::lock_action_t::operator()(int rc, zookeeper::node_stat 
         }
         catch(const zookeeper::exception& e) {
             result.abort(e.code(), e.what());
-            cur_parent->state.release();
-            parent.reset();
+            state->release();
         }
     }
 }
 
-void distributed_lock_t::lock_action_t::operator()(int type, int state, path_t path) {
-    auto cur_parent = parent;
-    if(!cur_parent.use_count()) {
-        return;
-    }
+void distributed_lock_t::lock_action_t::operator()(int type, int zk_state, path_t path) {
     try {
         service->zk.childs(folder, *this);
     }
     catch(const zookeeper::exception& e) {
         result.abort(e.code(), e.what());
-        cur_parent->state.release();
-        parent.reset();
+        state->release();
     }
 }
 
@@ -674,8 +656,14 @@ void
 distributed_lock_t::lock_action_t::finalize(zookeeper::value_t value) {
     zookeeper::path_t created_path = std::move(value);
     created_node_name = zookeeper::get_node_name(created_path);
-    if(parent->state.set_lock_created(std::move(created_path))) {
-        service->zk.childs(folder, *this);
+    if(state->set_lock_created(std::move(created_path))) {
+        try {
+            service->zk.childs(folder, *this);
+        }
+        catch(const zookeeper::exception& e) {
+            result.abort(e.code(), e.what());
+            state->release();
+        }
     }
 }
 
@@ -692,6 +680,10 @@ distributed_lock_t::lock_state_t::lock_state_t(unicorn_service_t* _service) :
     created_path(),
     access_mutex()
 {}
+
+distributed_lock_t::lock_state_t::~lock_state_t(){
+    release();
+}
 
 void
 distributed_lock_t::lock_state_t::release() {
@@ -777,7 +769,7 @@ distributed_lock_t::lock_state_t::release_impl() {
 
 distributed_lock_t::distributed_lock_t(const std::string& name, unicorn_service_t* _service) :
     dispatch<io::unicorn_locked_tag>(name),
-    state(_service),
+    state(std::make_shared<lock_state_t>(_service)),
     path(),
     service(_service)
 {
@@ -787,7 +779,7 @@ distributed_lock_t::distributed_lock_t(const std::string& name, unicorn_service_
 
 void
 distributed_lock_t::discard(const std::error_code& ec) const {
-    state.discard();
+    state->discard();
 }
 
 unicorn_dispatch_t::response::lock
@@ -795,7 +787,7 @@ distributed_lock_t::lock(path_t lock_path) {
     path_t folder = std::move(lock_path);
     path = folder + "/lock";
     unicorn_dispatch_t::response::lock result;
-    auto& handler = handler_scope.get_handler<lock_action_t>(service, shared_from_this(), path, std::move(folder), value_t(time(nullptr)), result);
+    auto& handler = handler_scope.get_handler<lock_action_t>(service, state, path, std::move(folder), value_t(time(nullptr)), result);
     service->zk.create(path, handler.encoded_value, handler.ephemeral, handler.sequence, handler);
     return result;
 }

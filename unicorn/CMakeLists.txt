@@ -29,7 +29,7 @@ TARGET_LINK_LIBRARIES(unicorn
 SET_TARGET_PROPERTIES(unicorn PROPERTIES
     PREFIX ""
     SUFFIX ".cocaine-plugin"
-    COMPILE_FLAGS "-std=c++0x")
+    COMPILE_FLAGS "-std=c++0x -ggdb")
 
 INSTALL(TARGETS unicorn
     LIBRARY DESTINATION lib/cocaine

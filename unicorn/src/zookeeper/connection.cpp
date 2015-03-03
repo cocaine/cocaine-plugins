@@ -28,6 +28,12 @@ template <class Ptr>
 void* c_ptr(Ptr p) {
     return reinterpret_cast<void*>(p);
 }
+
+template <class Ptr>
+void* mc_ptr(Ptr p) {
+    return reinterpret_cast<void*>(static_cast<managed_handler_base_t*>(p));
+}
+
 }
 
 cfg_t::endpoint_t::endpoint_t(std::string _hostname, unsigned int _port) :
@@ -83,7 +89,7 @@ void
 connection_t::put(const path_t& path, const value_t& value, version_t version, managed_stat_handler_base_t& handler) {
     check_connectivity();
     check_rc(
-        zoo_aset(zhandle, path.c_str(), value.c_str(), value.size(), version, &handler_dispatcher_t::stat_cb, c_ptr(&handler))
+        zoo_aset(zhandle, path.c_str(), value.c_str(), value.size(), version, &handler_dispatcher_t::stat_cb, mc_ptr(&handler))
     );
 }
 
@@ -91,7 +97,7 @@ void
 connection_t::get(const path_t& path, managed_data_handler_base_t& handler, managed_watch_handler_base_t& watch) {
     check_connectivity();
     check_rc(
-        zoo_awget(zhandle, path.c_str(), &handler_dispatcher_t::watcher_cb, c_ptr(&watch), &handler_dispatcher_t::data_cb, c_ptr(&handler))
+        zoo_awget(zhandle, path.c_str(), &handler_dispatcher_t::watcher_cb, mc_ptr(&watch), &handler_dispatcher_t::data_cb, mc_ptr(&handler))
     );
 }
 
@@ -99,7 +105,7 @@ void
 connection_t::get(const path_t& path, managed_data_handler_base_t& handler) {
     check_connectivity();
     check_rc(
-        zoo_awget(zhandle, path.c_str(), &handler_dispatcher_t::watcher_cb, nullptr, &handler_dispatcher_t::data_cb, c_ptr(&handler))
+        zoo_awget(zhandle, path.c_str(), &handler_dispatcher_t::watcher_cb, nullptr, &handler_dispatcher_t::data_cb, mc_ptr(&handler))
     );
 }
 
@@ -110,7 +116,7 @@ connection_t::create(const path_t& path, const value_t& value, bool ephemeral, b
     int flag = ephemeral ? ZOO_EPHEMERAL : 0;
     flag = flag | (sequence ? ZOO_SEQUENCE : 0);
     check_rc(
-        zoo_acreate(zhandle, path.c_str(), value.c_str(), value.size(), &acl, flag, &handler_dispatcher_t::string_cb, c_ptr(&handler))
+        zoo_acreate(zhandle, path.c_str(), value.c_str(), value.size(), &acl, flag, &handler_dispatcher_t::string_cb, mc_ptr(&handler))
     );
 }
 
@@ -127,7 +133,7 @@ void
 connection_t::exists(const path_t& path, managed_stat_handler_base_t& handler, managed_watch_handler_base_t& watch) {
     check_connectivity();
     check_rc(
-        zoo_awexists(zhandle, path.c_str(), &handler_dispatcher_t::watcher_cb, c_ptr(&watch), &handler_dispatcher_t::stat_cb, c_ptr(&handler))
+        zoo_awexists(zhandle, path.c_str(), &handler_dispatcher_t::watcher_cb, mc_ptr(&watch), &handler_dispatcher_t::stat_cb, mc_ptr(&handler))
     );
 }
 
@@ -135,7 +141,7 @@ void
 connection_t::childs(const path_t& path, managed_strings_stat_handler_base_t& handler, managed_watch_handler_base_t& watch) {
     check_connectivity();
     check_rc(
-        zoo_awget_children2(zhandle, path.c_str(), &handler_dispatcher_t::watcher_cb, c_ptr(&watch), &handler_dispatcher_t::strings_stat_cb, c_ptr(&handler))
+        zoo_awget_children2(zhandle, path.c_str(), &handler_dispatcher_t::watcher_cb, mc_ptr(&watch), &handler_dispatcher_t::strings_stat_cb, mc_ptr(&handler))
     );
 }
 
@@ -143,7 +149,7 @@ void
 connection_t::childs(const path_t& path, managed_strings_stat_handler_base_t& handler) {
     check_connectivity();
     check_rc(
-        zoo_awget_children2(zhandle, path.c_str(), nullptr, nullptr, &handler_dispatcher_t::strings_stat_cb, c_ptr(&handler))
+        zoo_awget_children2(zhandle, path.c_str(), nullptr, nullptr, &handler_dispatcher_t::strings_stat_cb, mc_ptr(&handler))
     );
 }
 
