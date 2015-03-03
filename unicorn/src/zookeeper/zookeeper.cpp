@@ -14,6 +14,7 @@
 */
 
 #include "cocaine/zookeeper/zookeeper.hpp"
+#include "cocaine/zookeeper/exception.hpp"
 
 #include <stdexcept>
 #include <errno.h>
@@ -35,6 +36,10 @@ get_error_message(int rc) {
             return "Unknown zookeeper error";
         case HANDLER_SCOPE_RELEASED:
             return "Handler scope was released";
+        case INVALID_NODE_NAME:
+            return "Inavlid node name specified";
+        case INVALID_PATH:
+            return "Inavlid path specified";
         default:
             return zerror(rc);
     }
@@ -64,4 +69,33 @@ path_parent(const path_t& path, unsigned int depth) {
     }
     return path.substr(0, pos);
 }
+
+bool is_valid_sequence_node(const path_t& path) {
+    return !path.empty() && isdigit(static_cast<unsigned char>(path[path.size()-1]));
+}
+
+unsigned long
+get_sequence_from_node_name_or_path(const path_t& path) {
+    if(!is_valid_sequence_node(path)) {
+        throw zookeeper::exception(INVALID_NODE_NAME);
+    }
+    auto pos = path.size()-1;
+    unsigned char ch = static_cast<unsigned char>(path[pos]);
+    while(isdigit(ch)) {
+        pos--;
+        ch =  static_cast<unsigned char>(path[pos]);
+    }
+    pos++;
+    return std::stoul(path.substr(pos));
+}
+
+std::string
+get_node_name(const path_t& path) {
+    auto pos = path.find_last_of('/');
+    if(pos == std::string::npos || pos == path.size()-1) {
+        throw zookeeper::exception(INVALID_PATH);
+    }
+    return path.substr(pos+1);
+}
+
 }

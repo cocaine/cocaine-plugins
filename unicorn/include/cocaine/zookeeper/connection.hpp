@@ -86,7 +86,7 @@ public:
     * See zoo_acreate
     */
     void
-    create(const path_t& path, const value_t& value, bool ephemeral, managed_string_handler_base_t& handler);
+    create(const path_t& path, const value_t& value, bool ephemeral, bool sequence, managed_string_handler_base_t& handler);
 
     /**
     * delete node in ZK
@@ -107,6 +107,8 @@ public:
     */
     void
     childs(const path_t& path, managed_strings_stat_handler_base_t& handler, managed_watch_handler_base_t& watch_handler);
+    void
+    childs(const path_t& path, managed_strings_stat_handler_base_t& handler);
 
     void reconnect();
 private:

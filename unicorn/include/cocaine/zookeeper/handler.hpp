@@ -196,7 +196,7 @@ public:
 };
 
 class managed_string_handler_base_t :
-public managed_handler_base_t
+    virtual public managed_handler_base_t
 {
 public:
     virtual void
@@ -211,7 +211,7 @@ public:
 };
 
 class managed_strings_stat_handler_base_t:
-virtual public managed_handler_base_t
+    virtual public managed_handler_base_t
 {
 public:
     virtual void

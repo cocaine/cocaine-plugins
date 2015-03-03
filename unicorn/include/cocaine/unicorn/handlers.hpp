@@ -151,7 +151,8 @@ struct unicorn_dispatch_t::create_action_base_t :
         unicorn_service_t* _service,
         path_t _path,
         value_t _value,
-        bool _ephemeral
+        bool _ephemeral,
+        bool _sequence
     );
 
     /**
@@ -164,7 +165,7 @@ struct unicorn_dispatch_t::create_action_base_t :
     * Called on success
     */
     virtual void
-    finalize() = 0;
+    finalize(zookeeper::value_t) = 0;
 
     /**
     * Called on failure
@@ -178,6 +179,7 @@ struct unicorn_dispatch_t::create_action_base_t :
     value_t initial_value;
     zookeeper::value_t encoded_value;
     bool ephemeral;
+    bool sequence;
 };
 
 struct unicorn_dispatch_t::create_action_t:
@@ -192,7 +194,7 @@ struct unicorn_dispatch_t::create_action_t:
     );
 
     virtual void
-    finalize();
+    finalize(zookeeper::value_t);
 
     virtual void
     abort(int rc);
@@ -259,7 +261,7 @@ struct unicorn_dispatch_t::increment_create_action_t:
     );
 
     virtual void
-    finalize();
+    finalize(zookeeper::value_t);
 
     virtual void
     abort(int rc);
@@ -268,25 +270,52 @@ struct unicorn_dispatch_t::increment_create_action_t:
 };
 
 struct distributed_lock_t::put_ephemeral_context_t:
-    public unicorn_dispatch_t::create_action_base_t
+    public unicorn_dispatch_t::create_action_base_t,
+    public zookeeper::managed_strings_stat_handler_base_t,
+    public zookeeper::managed_stat_handler_base_t,
+    public zookeeper::managed_watch_handler_base_t
+
 {
     put_ephemeral_context_t(
         const zookeeper::handler_tag& tag,
         unicorn_service_t* service,
         const std::shared_ptr<distributed_lock_t>& _parent,
         path_t _path,
+        path_t folder,
         value_t _value,
         unicorn_dispatch_t::response::lock _result
     );
 
+
+    /**
+    * Childs subrequest handler
+    */
     virtual void
-    finalize();
+    operator()(int rc, std::vector<std::string> childs, zookeeper::node_stat const& stat);
+
+    /**
+    * Exists subrequest handler
+    */
+    virtual void
+    operator()(int rc, zookeeper::node_stat const& stat);
+
+
+    virtual void operator()(int type, int state, path_t path);
+
+    virtual void
+    finalize(zookeeper::value_t);
 
     virtual void
     abort(int rc);
 
-    std::weak_ptr<distributed_lock_t> parent;
+    /**
+    * Yes here is a cycle reference, but we will break it after lock.
+    * We need this for handler to be alive when we need to release lock due to early client disconnection.
+    */
+    std::shared_ptr<distributed_lock_t> parent;
     unicorn_dispatch_t::response::lock result;
+    path_t folder;
+    zookeeper::path_t created_node;
 };
 
 }}

@@ -44,14 +44,18 @@ handler_dispatcher_t::watcher_cb(zhandle_t* zh, int type, int state, const char*
 
 void
 handler_dispatcher_t::void_cb(int rc, const void* data) {
-    if(data != nullptr) {
-        std::unique_ptr<void_handler_base_t> ptr(back_cast<void_handler_base_t>(data));
-        ptr->operator()(rc);
+    if(data == nullptr) {
+        return;
     }
+    std::unique_ptr<void_handler_base_t> ptr(back_cast<void_handler_base_t>(data));
+    ptr->operator()(rc);
 }
 
 void
 handler_dispatcher_t::stat_cb(int rc, const struct Stat* stat, const void* data) {
+    if(data == nullptr) {
+        return;
+    }
     handler_dispatcher_t::instance().call<managed_stat_handler_base_t>(
         back_cast<managed_stat_handler_base_t>(data),
         rc,
@@ -61,6 +65,9 @@ handler_dispatcher_t::stat_cb(int rc, const struct Stat* stat, const void* data)
 
 void
 handler_dispatcher_t::data_cb(int rc, const char* value, int value_len, const struct Stat* stat, const  void* data) {
+    if(data == nullptr) {
+        return;
+    }
     handler_dispatcher_t::instance().call<managed_data_handler_base_t>(
         back_cast<managed_data_handler_base_t>(data),
         rc,
@@ -71,6 +78,9 @@ handler_dispatcher_t::data_cb(int rc, const char* value, int value_len, const st
 
 void
 handler_dispatcher_t::string_cb(int rc, const char *value, const void *data) {
+    if(data == nullptr) {
+        return;
+    }
     handler_dispatcher_t::instance().call<managed_string_handler_base_t>(
         back_cast<managed_string_handler_base_t>(data),
         rc,
@@ -80,6 +90,9 @@ handler_dispatcher_t::string_cb(int rc, const char *value, const void *data) {
 
 void
 handler_dispatcher_t::strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data) {
+    if(data == nullptr) {
+        return;
+    }
     handler_dispatcher_t::instance().call<managed_strings_stat_handler_base_t>(
         back_cast<managed_strings_stat_handler_base_t>(data),
         rc,

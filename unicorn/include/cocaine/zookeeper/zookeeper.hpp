@@ -17,6 +17,7 @@
 #define ZOOKEEPER_HPP
 
 #include <zookeeper/zookeeper.h>
+#include <zookeeper/zookeeper.jute.h>
 
 #include <string>
 
@@ -31,7 +32,9 @@ enum ZOO_EXTRA_ERROR {
     INVALID_VALUE = -1002,
     COULD_NOT_CONNECT = -1003,
     UNKNOWN_ERROR = -1004,
-    HANDLER_SCOPE_RELEASED = -1005
+    HANDLER_SCOPE_RELEASED = -1005,
+    INVALID_NODE_NAME = -1006,
+    INVALID_PATH = -1007
 };
 
 typedef std::string path_t;
@@ -58,6 +61,20 @@ get_error_message(int rc, const std::exception& e);
 */
 path_t
 path_parent(const path_t& path, unsigned int depth);
+
+/**
+* Check if node has a sequence on it's end
+*/
+bool is_valid_sequence_node(const path_t& path);
+
+/**
+* Get sequence number from nodes created via automated sequence
+*/
+unsigned long
+get_sequence_from_node_name_or_path(const path_t& path);
+
+std::string
+get_node_name(const path_t& path);
 }
 
 #endif

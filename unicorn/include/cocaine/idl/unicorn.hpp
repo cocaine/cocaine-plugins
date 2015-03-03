@@ -40,12 +40,10 @@ struct unicorn {
         }
 
         /**
-        *  put command implements cas behaviour. It accepts:
+        * Create a node if it does not exist.
         *
         * path_t - path to change.
         * value_t - value to write in path
-        * version_t - version to compare with. If version in zk do not match - error will be returned.
-        *   -1 indicates that version check is not performed (forced put).
         **/
         typedef boost::mpl::list<
             path_t,
@@ -53,8 +51,7 @@ struct unicorn {
         > argument_type;
 
         /**
-        * Return value is current value in ZK.
-        * If version was passed - incremented version by 1 indicates sucessfull completion
+        * true if node was created. Error on any kind of error
         */
         typedef option_of<
             bool
@@ -86,9 +83,9 @@ struct unicorn {
 
         /**
         * Return value is current value in ZK.
-        * If version was passed - incremented version by 1 indicates sucessfull completion
         */
         typedef option_of<
+            bool,
             versioned_value_t
         >::tag upstream_type;
 
@@ -186,6 +183,7 @@ struct unicorn {
 
         typedef unicorn_final_tag dispatch_type;
     };
+
     struct lock {
         typedef unicorn_tag tag;
 

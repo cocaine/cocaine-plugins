@@ -105,10 +105,6 @@ public:
     response::increment
     increment(path_t path, value_t value);
 
-    response::lock
-    lock(path_t path);
-
-
     /**
     * Callbacks to handle async ZK responses
     */
@@ -152,9 +148,12 @@ private:
     struct state_t {
         bool lock_acquired;
         bool discarded;
+        path_t created_path;
+
         state_t() :
             lock_acquired(false),
-            discarded(false)
+            discarded(false),
+            created_path()
         {}
     };
     mutable synchronized<state_t> state;
