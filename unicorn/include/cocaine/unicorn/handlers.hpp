@@ -32,7 +32,7 @@ struct unicorn_dispatch_t::subscribe_action_t :
 
     subscribe_action_t(
         const zookeeper::handler_tag& tag,
-        unicorn_dispatch_t::response::subscribe _result,
+        unicorn::writable_helper<unicorn_dispatch_t::response::subscribe_result>::ptr _result,
         unicorn_service_t* _service,
         unicorn::path_t _path
     );
@@ -58,7 +58,7 @@ struct unicorn_dispatch_t::subscribe_action_t :
     void
     operator()(int type, int state, zookeeper::path_t path);
 
-    unicorn_dispatch_t::response::subscribe result;
+    unicorn::writable_helper<unicorn_dispatch_t::response::subscribe_result>::ptr result;
     unicorn_service_t* service;
     std::mutex write_lock;
     unicorn::version_t last_version;
@@ -78,7 +78,7 @@ struct unicorn_dispatch_t::children_subscribe_action_t :
 
     children_subscribe_action_t(
         const zookeeper::handler_tag& tag,
-        unicorn_dispatch_t::response::children_subscribe,
+        unicorn::writable_helper<unicorn_dispatch_t::response::children_subscribe_result>::ptr result,
         unicorn_service_t* _service,
         unicorn::path_t _path
     );
@@ -96,7 +96,7 @@ struct unicorn_dispatch_t::children_subscribe_action_t :
     operator()(int type, int state, zookeeper::path_t path);
 
 
-    unicorn_dispatch_t::response::children_subscribe result;
+    unicorn::writable_helper<unicorn_dispatch_t::response::children_subscribe_result>::ptr result;
     unicorn_service_t* service;
     std::mutex write_lock;
     unicorn::version_t last_version;
@@ -191,9 +191,11 @@ struct unicorn_dispatch_t::create_action_t:
     create_action_t(
         const zookeeper::handler_tag& tag,
         unicorn_service_t* _service,
-        unicorn_dispatch_t::response::create result,
+        unicorn::writable_helper<unicorn_dispatch_t::response::create_result>::ptr result,
         unicorn::path_t _path,
-        unicorn::value_t _value
+        unicorn::value_t _value,
+        bool ephemeral = false,
+        bool sequence = false
     );
 
     virtual void
@@ -202,7 +204,7 @@ struct unicorn_dispatch_t::create_action_t:
     virtual void
     abort(int rc);
 
-    unicorn_dispatch_t::response::create result;
+    unicorn::writable_helper<unicorn_dispatch_t::response::create_result>::ptr result;
 };
 
 /**

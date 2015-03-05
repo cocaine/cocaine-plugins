@@ -14,6 +14,7 @@
 */
 
 #include <cocaine/unicorn.hpp>
+#include <cocaine/cluster/unicorn.hpp>
 
 using namespace cocaine;
 using namespace cocaine::service;
@@ -27,6 +28,7 @@ validation() -> api::preconditions_t {
 void
 initialize(api::repository_t& repository) {
     repository.insert<unicorn_service_t>("unicorn");
+    repository.insert<cluster::unicorn_cluster_t>("unicorn_cluster");
 }
 
 }
