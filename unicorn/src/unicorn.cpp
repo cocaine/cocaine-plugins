@@ -30,6 +30,7 @@ using namespace cocaine::unicorn;
 namespace cocaine {
 namespace service {
 
+typedef unicorn_dispatch_t::response response;
 namespace {
 /**
 * Converts dynamic_t to zookepers config.
@@ -85,7 +86,7 @@ unicorn_dispatch_t::unicorn_dispatch_t(const std::string& name, unicorn_service_
 }
 
 
-unicorn_dispatch_t::response::put
+response::put
 unicorn_dispatch_t::put(path_t path, value_t value, version_t version) {
     response::put result;
     auto& handler = handler_scope->get_handler<put_action_t>(
@@ -99,21 +100,31 @@ unicorn_dispatch_t::put(path_t path, value_t value, version_t version) {
     return result;
 }
 
-unicorn_dispatch_t::response::create
+response::create
 unicorn_dispatch_t::create(path_t path, value_t value) {
     response::create result;
-    //Note: There is a possibility to use unmanaged handler.
-    auto& handler = handler_scope->get_handler<create_action_t>(
-        service,
-        result,
-        std::move(path),
-        std::move(value)
-    );
-    service->zk.create(handler.path, handler.encoded_value, handler.ephemeral, handler.sequence, handler);
+    typedef writable_helper<response::create_result>::deferred_adapter create_adapter;
+    auto wptr = std::make_shared<create_adapter>(result);
+    create_with_cb(std::move(wptr), path, value, false, false);
     return result;
 }
 
-unicorn_dispatch_t::response::del
+void
+unicorn_dispatch_t::create_with_cb(writable_helper<response::create_result>::ptr result, path_t path, value_t value, bool ephemeral, bool sequence) {
+    //Note: There is a possibility to use unmanaged handler.
+    auto& handler = handler_scope->get_handler<create_action_t>(
+        service,
+        std::move(result),
+        std::move(path),
+        std::move(value),
+        ephemeral,
+        sequence
+    );
+    service->zk.create(handler.path, handler.encoded_value, handler.ephemeral, handler.sequence, handler);
+}
+
+
+response::del
 unicorn_dispatch_t::del(path_t path, version_t version) {
     response::del result;
     auto handler = std::make_unique<del_action_t>(result);
@@ -121,25 +132,55 @@ unicorn_dispatch_t::del(path_t path, version_t version) {
     return result;
 }
 
-unicorn_dispatch_t::response::subscribe
+response::get
+unicorn_dispatch_t::get(path_t path) {
+    response::get result;
+    typedef writable_helper<response::get_result>::deferred_adapter get_adapter;
+    auto wptr = std::make_shared<get_adapter>(result);
+    get_with_cb(std::move(wptr), path);
+    return result;
+}
+
+void
+unicorn_dispatch_t::get_with_cb(writable_helper<response::get_result>::ptr result, path_t path) {
+    auto& handler = handler_scope->get_handler<subscribe_action_t>(std::move(result), service, std::move(path));
+    service->zk.get(handler.path, handler);
+}
+
+
+response::subscribe
 unicorn_dispatch_t::subscribe(path_t path) {
-    unicorn_dispatch_t::response::subscribe result;
-    auto& handler = handler_scope->get_handler<subscribe_action_t>(result, service, std::move(path));
+    response::subscribe result;
+    typedef writable_helper<response::subscribe_result>::streamed_adapter subscribe_adapter;
+    auto wptr = std::make_shared<subscribe_adapter>(result);
+    subscribe_with_cb(std::move(wptr), path);
+    return result;
+}
+
+void
+unicorn_dispatch_t::subscribe_with_cb(writable_helper<response::subscribe_result>::ptr result, path_t path) {
+    auto& handler = handler_scope->get_handler<subscribe_action_t>(std::move(result), service, std::move(path));
     service->zk.get(handler.path, handler, handler);
-    return result;
 }
 
-unicorn_dispatch_t::response::lsubscribe
+response::lsubscribe
 unicorn_dispatch_t::lsubscribe(path_t path) {
-    unicorn_dispatch_t::response::lsubscribe result;
-    auto& handler = handler_scope->get_handler<lsubscribe_action_t>(result, service, std::move(path));
-    service->zk.childs(handler.path, handler, handler);
+    response::lsubscribe result;
+    typedef writable_helper<response::lsubscribe_result>::streamed_adapter lsubscribe_adapter;
+    auto wptr = std::make_shared<lsubscribe_adapter>(result);
+    lsubscribe_with_cb(std::move(wptr), path);
     return result;
 }
 
-unicorn_dispatch_t::response::increment
+void
+unicorn_dispatch_t::lsubscribe_with_cb(writable_helper<response::lsubscribe_result>::ptr result, path_t path) {
+    auto& handler = handler_scope->get_handler<lsubscribe_action_t>(std::move(result), service, std::move(path));
+    service->zk.childs(handler.path, handler, handler);
+}
+
+response::increment
 unicorn_dispatch_t::increment(path_t path, value_t value) {
-    unicorn_dispatch_t::response::increment result;
+    response::increment result;
     if (!value.is_double() && !value.is_int() && !value.is_uint()) {
         int rc = zookeeper::ZOO_EXTRA_ERROR::INVALID_TYPE;
         result.abort(rc, zookeeper::get_error_message(rc));
@@ -159,14 +200,6 @@ unicorn_dispatch_t::increment(path_t path, value_t value) {
 
 
 
-
-
-
-
-
-
-
-
 /**************************************************
 ****************    PUT    ************************
 **************************************************/
@@ -175,7 +208,7 @@ unicorn_dispatch_t::increment(path_t path, value_t value) {
 unicorn_dispatch_t::put_action_t::put_action_t(
     const zookeeper::handler_tag& tag,
     unicorn_service_t* _service,
-    unicorn_dispatch_t::response::put _result,
+    response::put _result,
     path_t _path,
     value_t _value,
     version_t _version
@@ -287,23 +320,25 @@ unicorn_dispatch_t::create_action_base_t::operator()(int rc, zookeeper::value_t 
 unicorn_dispatch_t::create_action_t::create_action_t(
     const zookeeper::handler_tag& tag,
     unicorn_service_t* _service,
-    unicorn_dispatch_t::response::create _result,
+    writable_helper<response::create_result>::ptr _result,
     path_t _path,
-    value_t _value
+    value_t _value,
+    bool ephemeral,
+    bool sequence
 ):
     zookeeper::managed_handler_base_t(tag),
-    create_action_base_t(tag, _service, std::move(_path), std::move(_value), false, false),
-    result(_result)
+    create_action_base_t(tag, _service, std::move(_path), std::move(_value), ephemeral, sequence),
+    result(std::move(_result))
 {}
 
 void
 unicorn_dispatch_t::create_action_t::finalize(zookeeper::value_t) {
-    result.write(true);
+    result->write(true);
 }
 
 void
 unicorn_dispatch_t::create_action_t::abort(int rc) {
-    result.abort(rc, zookeeper::get_error_message(rc));
+    result->abort(rc, zookeeper::get_error_message(rc));
 }
 
 
@@ -312,7 +347,7 @@ unicorn_dispatch_t::create_action_t::abort(int rc) {
 ****************    DEL    ************************
 **************************************************/
 
-unicorn_dispatch_t::del_action_t::del_action_t(unicorn_dispatch_t::response::del _result) :
+unicorn_dispatch_t::del_action_t::del_action_t(response::del _result) :
     result(std::move(_result)) {
 }
 
@@ -335,7 +370,7 @@ unicorn_dispatch_t::del_action_t::operator()(int rc) {
 
 unicorn_dispatch_t::subscribe_action_t::subscribe_action_t(
     const zookeeper::handler_tag& tag,
-    unicorn_dispatch_t::response::subscribe _result,
+    writable_helper<response::subscribe_result>::ptr _result,
     unicorn_service_t* _service,
     path_t _path
 ) :
@@ -354,7 +389,7 @@ void
 unicorn_dispatch_t::subscribe_action_t::operator()(int rc, std::string value, const zookeeper::node_stat& stat) {
     if(rc == ZNONODE) {
         if(last_version != MIN_VERSION && last_version != NOT_EXISTING_VERSION) {
-            result.abort(rc, zookeeper::get_error_message(rc));
+            result->abort(rc, zookeeper::get_error_message(rc));
         }
         else {
             // Write that node is not exist to client only first time.
@@ -362,7 +397,7 @@ unicorn_dispatch_t::subscribe_action_t::operator()(int rc, std::string value, co
             if(last_version == MIN_VERSION) {
                 std::lock_guard<std::mutex> guard(write_lock);
                 if (NOT_EXISTING_VERSION > last_version) {
-                    result.write(versioned_value_t(value_t(), NOT_EXISTING_VERSION));
+                    result->write(versioned_value_t(value_t(), NOT_EXISTING_VERSION));
                 }
             }
             try {
@@ -370,16 +405,16 @@ unicorn_dispatch_t::subscribe_action_t::operator()(int rc, std::string value, co
             }
             catch(const zookeeper::exception& e) {
                 COCAINE_LOG_WARNING(service->log, "Failure during subscription: %s", e.what());
-                result.abort(e.code(), e.what());
+                result->abort(e.code(), e.what());
             }
         }
     }
     else if (rc != 0) {
-        result.abort(rc, zookeeper::get_error_message(rc));
+        result->abort(rc, zookeeper::get_error_message(rc));
     }
     else if (stat.numChildren != 0) {
         rc = zookeeper::CHILD_NOT_ALLOWED;
-        result.abort(rc, zookeeper::get_error_message(rc));
+        result->abort(rc, zookeeper::get_error_message(rc));
     }
     else {
         version_t new_version(stat.version);
@@ -388,10 +423,10 @@ unicorn_dispatch_t::subscribe_action_t::operator()(int rc, std::string value, co
             last_version = new_version;
             value_t val;
             try {
-                result.write(versioned_value_t(unserialize(value), new_version));
+                result->write(versioned_value_t(unserialize(value), new_version));
             }
             catch(const zookeeper::exception& e) {
-                result.abort(e.code(), e.what());
+                result->abort(e.code(), e.what());
             }
         }
     }
@@ -407,7 +442,7 @@ unicorn_dispatch_t::subscribe_action_t::operator()(int rc, zookeeper::node_stat 
         }
         catch(const zookeeper::exception& e)  {
             COCAINE_LOG_WARNING(service->log, "Failure during subscription: %s", e.what());
-            result.abort(e.code(), e.what());
+            result->abort(e.code(), e.what());
         }
     }
 }
@@ -418,7 +453,7 @@ unicorn_dispatch_t::subscribe_action_t::operator()(int type, int state, zookeepe
         service->zk.get(path, *this, *this);
     }
     catch(const zookeeper::exception& e)  {
-        result.abort(e.code(), e.what());
+        result->abort(e.code(), e.what());
         COCAINE_LOG_WARNING(service->log, "Failure during subscription: %s", e.what());
     }
 }
@@ -432,7 +467,7 @@ unicorn_dispatch_t::subscribe_action_t::operator()(int type, int state, zookeepe
 
 unicorn_dispatch_t::lsubscribe_action_t::lsubscribe_action_t(
     const zookeeper::handler_tag& tag,
-    unicorn_dispatch_t::response::lsubscribe _result,
+    writable_helper<response::lsubscribe_result>::ptr _result,
     unicorn_service_t* _service,
     path_t _path
 ) :
@@ -450,7 +485,7 @@ unicorn_dispatch_t::lsubscribe_action_t::lsubscribe_action_t(
 void
 unicorn_dispatch_t::lsubscribe_action_t::operator()(int rc, std::vector<std::string> childs, const zookeeper::node_stat& stat) {
     if (rc != 0) {
-        result.abort(rc, zookeeper::get_error_message(rc));
+        result->abort(rc, zookeeper::get_error_message(rc));
     }
     else {
         version_t new_version(stat.cversion);
@@ -458,7 +493,7 @@ unicorn_dispatch_t::lsubscribe_action_t::operator()(int rc, std::vector<std::str
         if (new_version > last_version) {
             last_version = new_version;
             value_t val;
-            result.write(std::make_tuple(new_version, childs));
+            result->write(std::make_tuple(new_version, childs));
         }
     }
 }
@@ -469,7 +504,7 @@ unicorn_dispatch_t::lsubscribe_action_t::operator()(int type, int state, zookeep
         service->zk.childs(path, *this, *this);
     }
     catch(const zookeeper::exception& e) {
-        result.abort(e.code(), e.what());
+        result->abort(e.code(), e.what());
         COCAINE_LOG_WARNING(service->log, "Failure during subscription for childs: %s", e.what());
     }
 }
@@ -482,7 +517,7 @@ unicorn_dispatch_t::lsubscribe_action_t::operator()(int type, int state, zookeep
 unicorn_dispatch_t::increment_action_t::increment_action_t(
     const zookeeper::handler_tag& tag,
     unicorn_service_t* _service,
-    unicorn_dispatch_t::response::increment _result,
+    response::increment _result,
     path_t _path,
     value_t _increment,
     const std::shared_ptr<zookeeper::handler_scope_t>& _scope
@@ -571,7 +606,7 @@ distributed_lock_t::lock_action_t::lock_action_t(
     path_t _path,
     path_t _folder,
     value_t _value,
-    unicorn_dispatch_t::response::lock _result
+    response::lock _result
 ) :
     zookeeper::managed_handler_base_t(tag),
     unicorn_dispatch_t::create_action_base_t(tag, service, std::move(_path), std::move(_value), true, true),
@@ -782,11 +817,11 @@ distributed_lock_t::discard(const std::error_code& ec) const {
     state->discard();
 }
 
-unicorn_dispatch_t::response::lock
+response::lock
 distributed_lock_t::lock(path_t lock_path) {
     path_t folder = std::move(lock_path);
     path = folder + "/lock";
-    unicorn_dispatch_t::response::lock result;
+    response::lock result;
     auto& handler = handler_scope.get_handler<lock_action_t>(service, state, path, std::move(folder), value_t(time(nullptr)), result);
     service->zk.create(path, handler.encoded_value, handler.ephemeral, handler.sequence, handler);
     return result;

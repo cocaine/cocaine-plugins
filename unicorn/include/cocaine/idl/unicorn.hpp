@@ -92,6 +92,30 @@ struct unicorn {
         typedef unicorn_final_tag dispatch_type;
     };
 
+    struct get {
+        typedef unicorn_tag tag;
+
+        static const char* alias() {
+            return "get";
+        }
+
+        /**
+        * subscribe for updates on path. Will send last update which version is greater than specified.
+        */
+        typedef boost::mpl::list<
+            path_t
+        > argument_type;
+
+        /**
+        * current version in ZK
+        */
+        typedef option_of<
+            versioned_value_t
+        >::tag upstream_type;
+
+        typedef unicorn_final_tag dispatch_type;
+    };
+
     struct subscribe {
         typedef unicorn_tag tag;
 
@@ -224,6 +248,7 @@ struct protocol<unicorn_tag> {
     >::type version;
 
     typedef boost::mpl::list<
+        unicorn::get,
         unicorn::subscribe,
         unicorn::lsubscribe,
         unicorn::put,

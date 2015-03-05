@@ -19,6 +19,7 @@
 #include "cocaine/idl/unicorn.hpp"
 #include "cocaine/unicorn/path.hpp"
 #include "cocaine/unicorn/value.hpp"
+#include "cocaine/unicorn/writable.hpp"
 
 #include "cocaine/zookeeper/connection.hpp"
 #include "cocaine/zookeeper/session.hpp"
@@ -31,6 +32,7 @@
 
 
 using namespace cocaine::unicorn;
+
 namespace cocaine { namespace service {
 
 class unicorn_service_t:
@@ -59,6 +61,7 @@ private:
 * Currently we use zookeeper as backend.
 * For protocol methods description see include/cocaine/idl/unicorn.hpp
 */
+
 class unicorn_dispatch_t :
     public dispatch<io::unicorn_final_tag>
 {
@@ -69,13 +72,23 @@ public:
     * Typedefs for result type. Actual result types are in include/cocaine/idl/unicorn.hpp
     */
     struct response {
-        typedef deferred<result_of<io::unicorn::put>::type> put;
-        typedef deferred<result_of<io::unicorn::create>::type> create;
-        typedef deferred<result_of<io::unicorn::del>::type> del;
-        typedef deferred<result_of<io::unicorn::increment>::type> increment;
-        typedef streamed<result_of<io::unicorn::subscribe>::type> subscribe;
-        typedef streamed<result_of<io::unicorn::lsubscribe>::type> lsubscribe;
-        typedef deferred<result_of<io::unicorn::lock>::type> lock;
+        typedef result_of<io::unicorn::put>::type put_result;
+        typedef result_of<io::unicorn::create>::type create_result;
+        typedef result_of<io::unicorn::del>::type del_result;
+        typedef result_of<io::unicorn::increment>::type increment_result;
+        typedef result_of<io::unicorn::get>::type get_result;
+        typedef result_of<io::unicorn::subscribe>::type subscribe_result;
+        typedef result_of<io::unicorn::lsubscribe>::type lsubscribe_result;
+        typedef result_of<io::unicorn::lock>::type lock_result;
+
+        typedef deferred<put_result> put;
+        typedef deferred<create_result> create;
+        typedef deferred<del_result> del;
+        typedef deferred<increment_result> increment;
+        typedef deferred<get_result> get;
+        typedef streamed<subscribe_result> subscribe;
+        typedef streamed<lsubscribe_result> lsubscribe;
+        typedef deferred<lock_result> lock;
     };
 
     unicorn_dispatch_t(const std::string& name, unicorn_service_t* parent);
@@ -86,14 +99,30 @@ public:
     response::create
     create(path_t path, value_t value);
 
+    void
+    create_with_cb(writable_helper<response::create_result>::ptr result, path_t path, value_t value, bool ephemeral, bool sequence);
+
     response::del
     del(path_t path, version_t version);
+
+    response::get
+    get(path_t path);
+
+    void
+    get_with_cb(writable_helper<response::get_result>::ptr result, path_t path);
 
     response::subscribe
     subscribe(path_t path);
 
+
+    void
+    subscribe_with_cb(writable_helper<response::subscribe_result>::ptr result, path_t path);
+
     response::lsubscribe
     lsubscribe(path_t path);
+
+    void
+    lsubscribe_with_cb(writable_helper<response::lsubscribe_result>::ptr result, path_t path);
 
     response::increment
     increment(path_t path, value_t value);

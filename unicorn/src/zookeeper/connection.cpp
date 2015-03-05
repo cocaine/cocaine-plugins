@@ -105,7 +105,7 @@ void
 connection_t::get(const path_t& path, managed_data_handler_base_t& handler) {
     check_connectivity();
     check_rc(
-        zoo_awget(zhandle, path.c_str(), &handler_dispatcher_t::watcher_cb, nullptr, &handler_dispatcher_t::data_cb, mc_ptr(&handler))
+        zoo_awget(zhandle, path.c_str(), nullptr, nullptr, &handler_dispatcher_t::data_cb, mc_ptr(&handler))
     );
 }
 

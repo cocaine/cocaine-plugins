@@ -10,6 +10,7 @@ ADD_LIBRARY(unicorn MODULE
     include/cocaine/unicorn/path
     include/cocaine/unicorn/value
     include/cocaine/unicorn/handlers
+    include/cocaine/cluster/unicorn
 
     src/module
     src/unicorn.cpp
@@ -18,7 +19,9 @@ ADD_LIBRARY(unicorn MODULE
     src/zookeeper/exception
     src/zookeeper/session
     src/zookeeper/handler
-    src/zookeeper/connection)
+    src/zookeeper/connection
+    src/cluster/unicorn.cpp
+    )
 
 TARGET_LINK_LIBRARIES(unicorn
     msgpack

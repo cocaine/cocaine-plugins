@@ -60,6 +60,17 @@ public:
         cocaine::io::type_traits<value_t>::pack(packer, value);
         cocaine::io::type_traits<version_t>::pack(packer, version);
     }
+
+    const value_t&
+    get_value() const {
+        return value;
+    }
+
+    version_t
+    get_version() const {
+        return version;
+    }
+
 private:
     value_t value;
     version_t version;

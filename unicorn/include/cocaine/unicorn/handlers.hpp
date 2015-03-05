@@ -32,7 +32,7 @@ struct unicorn_dispatch_t::subscribe_action_t :
 
     subscribe_action_t(
         const zookeeper::handler_tag& tag,
-        unicorn_dispatch_t::response::subscribe _result,
+        writable_helper<unicorn_dispatch_t::response::subscribe_result>::ptr _result,
         unicorn_service_t* _service,
         path_t _path
     );
@@ -58,7 +58,7 @@ struct unicorn_dispatch_t::subscribe_action_t :
     void
     operator()(int type, int state, zookeeper::path_t path);
 
-    unicorn_dispatch_t::response::subscribe result;
+    writable_helper<unicorn_dispatch_t::response::subscribe_result>::ptr result;
     unicorn_service_t* service;
     std::mutex write_lock;
     version_t last_version;
@@ -78,7 +78,7 @@ struct unicorn_dispatch_t::lsubscribe_action_t :
 
     lsubscribe_action_t(
         const zookeeper::handler_tag& tag,
-        unicorn_dispatch_t::response::lsubscribe,
+        writable_helper<unicorn_dispatch_t::response::lsubscribe_result>::ptr result,
         unicorn_service_t* _service,
         path_t _path
     );
@@ -96,7 +96,7 @@ struct unicorn_dispatch_t::lsubscribe_action_t :
     operator()(int type, int state, zookeeper::path_t path);
 
 
-    unicorn_dispatch_t::response::lsubscribe result;
+    writable_helper<unicorn_dispatch_t::response::lsubscribe_result>::ptr result;
     unicorn_service_t* service;
     std::mutex write_lock;
     version_t last_version;
@@ -191,9 +191,11 @@ struct unicorn_dispatch_t::create_action_t:
     create_action_t(
         const zookeeper::handler_tag& tag,
         unicorn_service_t* _service,
-        unicorn_dispatch_t::response::create result,
+        writable_helper<unicorn_dispatch_t::response::create_result>::ptr result,
         path_t _path,
-        value_t _value
+        value_t _value,
+        bool ephemeral = false,
+        bool sequence = false
     );
 
     virtual void
@@ -202,7 +204,7 @@ struct unicorn_dispatch_t::create_action_t:
     virtual void
     abort(int rc);
 
-    unicorn_dispatch_t::response::create result;
+    writable_helper<unicorn_dispatch_t::response::create_result>::ptr result;
 };
 
 /**
