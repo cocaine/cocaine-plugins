@@ -54,27 +54,27 @@ class handler_dispatcher_t {
 public:
     static
     void
-        watcher_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx);
+    watcher_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx);
 
     static
     void
-        void_cb(int rc, const void *data);
+    void_cb(int rc, const void *data);
 
     static
     void
-        stat_cb(int rc, const struct Stat *stat, const void *data);
+    stat_cb(int rc, const struct Stat* stat, const void* data);
 
     static
     void
-        data_cb(int rc, const char *value, int value_len, const struct Stat *stat, const void *data);
+    data_cb(int rc, const char* value, int value_len, const struct Stat* stat, const void* data);
 
     static
     void
-        string_cb(int rc, const char *value, const void *data);
+    string_cb(int rc, const char* value, const void* data);
 
     static
     void
-        strings_stat_cb(int rc, const struct String_vector *strings, const struct Stat *stat, const void *data);
+    strings_stat_cb(int rc, const struct String_vector* strings, const struct Stat* stat, const void* data);
 
 private:
     typedef std::shared_ptr<managed_handler_base_t> handler_ptr;
