@@ -162,13 +162,16 @@ struct unicorn {
         typedef unicorn_final_tag dispatch_type;
     };
 
-    struct lsubscribe {
+    struct children_subscribe {
         typedef unicorn_tag tag;
 
         static const char* alias() {
-            return "lsubscribe";
+            return "children_subscribe";
         }
 
+        /**
+        * subscribe for updates of children of the node. It will return actual list of children on each child creation/deletion.
+        */
         typedef boost::mpl::list<
             cocaine::unicorn::path_t
         > argument_type;
@@ -222,7 +225,7 @@ struct protocol<unicorn_tag> {
 
     typedef boost::mpl::list<
         unicorn::subscribe,
-        unicorn::lsubscribe,
+        unicorn::children_subscribe,
         unicorn::put,
         unicorn::create,
         unicorn::del,

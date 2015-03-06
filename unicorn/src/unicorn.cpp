@@ -67,13 +67,13 @@ unicorn_service_t::unicorn_service_t(context_t& context, asio::io_service& _asio
 {
     using namespace std::placeholders;
 
-    on<io::unicorn::subscribe> (std::make_shared<subscribe_slot_t> (this, &unicorn_dispatch_t::subscribe));
-    on<io::unicorn::lsubscribe>(std::make_shared<lsubscribe_slot_t>(this, &unicorn_dispatch_t::lsubscribe));
-    on<io::unicorn::put>       (std::make_shared<put_slot_t>       (this, &unicorn_dispatch_t::put));
-    on<io::unicorn::create>    (std::make_shared<create_slot_t>    (this, &unicorn_dispatch_t::create));
-    on<io::unicorn::del>       (std::make_shared<del_slot_t>       (this, &unicorn_dispatch_t::del));
-    on<io::unicorn::increment> (std::make_shared<increment_slot_t> (this, &unicorn_dispatch_t::increment));
-    on<io::unicorn::lock>      (std::make_shared<lock_slot_t>      (this, &distributed_lock_t::lock));
+    on<io::unicorn::subscribe>         (std::make_shared<subscribe_slot_t>         (this, &unicorn_dispatch_t::subscribe));
+    on<io::unicorn::children_subscribe>(std::make_shared<children_subscribe_slot_t>(this, &unicorn_dispatch_t::children_subscribe));
+    on<io::unicorn::put>               (std::make_shared<put_slot_t>               (this, &unicorn_dispatch_t::put));
+    on<io::unicorn::create>            (std::make_shared<create_slot_t>            (this, &unicorn_dispatch_t::create));
+    on<io::unicorn::del>               (std::make_shared<del_slot_t>               (this, &unicorn_dispatch_t::del));
+    on<io::unicorn::increment>         (std::make_shared<increment_slot_t>         (this, &unicorn_dispatch_t::increment));
+    on<io::unicorn::lock>              (std::make_shared<lock_slot_t>              (this, &distributed_lock_t::lock));
 
 }
 
@@ -134,10 +134,10 @@ unicorn_dispatch_t::subscribe(path_t path) {
     return result;
 }
 
-unicorn_dispatch_t::response::lsubscribe
-unicorn_dispatch_t::lsubscribe(path_t path) {
-    unicorn_dispatch_t::response::lsubscribe result;
-    auto& handler = handler_scope->get_handler<lsubscribe_action_t>(result, service, std::move(path));
+unicorn_dispatch_t::response::children_subscribe
+unicorn_dispatch_t::children_subscribe(path_t path) {
+    unicorn_dispatch_t::response::children_subscribe result;
+    auto& handler = handler_scope->get_handler<children_subscribe_action_t>(result, service, std::move(path));
     service->zk.childs(handler.path, handler, handler);
     return result;
 }
@@ -435,9 +435,9 @@ unicorn_dispatch_t::subscribe_action_t::operator()(int type, int state, zookeepe
 **************************************************/
 
 
-unicorn_dispatch_t::lsubscribe_action_t::lsubscribe_action_t(
+unicorn_dispatch_t::children_subscribe_action_t::children_subscribe_action_t(
     const zookeeper::handler_tag& tag,
-    unicorn_dispatch_t::response::lsubscribe _result,
+    unicorn_dispatch_t::response::children_subscribe _result,
     unicorn_service_t* _service,
     path_t _path
 ) :
@@ -453,7 +453,7 @@ unicorn_dispatch_t::lsubscribe_action_t::lsubscribe_action_t(
 
 
 void
-unicorn_dispatch_t::lsubscribe_action_t::operator()(int rc, std::vector<std::string> childs, const zookeeper::node_stat& stat) {
+unicorn_dispatch_t::children_subscribe_action_t::operator()(int rc, std::vector<std::string> childs, const zookeeper::node_stat& stat) {
     if (rc != 0) {
         result.abort(rc, zookeeper::get_error_message(rc));
     }
@@ -469,7 +469,7 @@ unicorn_dispatch_t::lsubscribe_action_t::operator()(int rc, std::vector<std::str
 }
 
 void
-unicorn_dispatch_t::lsubscribe_action_t::operator()(int type, int state, zookeeper::path_t path) {
+unicorn_dispatch_t::children_subscribe_action_t::operator()(int type, int state, zookeeper::path_t path) {
     try {
         service->zk.childs(path, *this, *this);
     }

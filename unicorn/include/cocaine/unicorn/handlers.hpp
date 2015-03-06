@@ -71,14 +71,14 @@ struct unicorn_dispatch_t::subscribe_action_t :
 * On each get completion we compare last sent verison to client with current and if current version is greater send update to client.
 * On each watch invoke we issue child command (to later process with this handler) starting new watch.
 */
-struct unicorn_dispatch_t::lsubscribe_action_t :
+struct unicorn_dispatch_t::children_subscribe_action_t :
     public zookeeper::managed_strings_stat_handler_base_t,
     public zookeeper::managed_watch_handler_base_t
 {
 
-    lsubscribe_action_t(
+    children_subscribe_action_t(
         const zookeeper::handler_tag& tag,
-        unicorn_dispatch_t::response::lsubscribe,
+        unicorn_dispatch_t::response::children_subscribe,
         unicorn_service_t* _service,
         unicorn::path_t _path
     );
@@ -96,7 +96,7 @@ struct unicorn_dispatch_t::lsubscribe_action_t :
     operator()(int type, int state, zookeeper::path_t path);
 
 
-    unicorn_dispatch_t::response::lsubscribe result;
+    unicorn_dispatch_t::response::children_subscribe result;
     unicorn_service_t* service;
     std::mutex write_lock;
     unicorn::version_t last_version;

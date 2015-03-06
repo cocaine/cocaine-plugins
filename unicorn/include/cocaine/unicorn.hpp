@@ -72,7 +72,7 @@ public:
         typedef deferred<result_of<io::unicorn::del>::type> del;
         typedef deferred<result_of<io::unicorn::increment>::type> increment;
         typedef streamed<result_of<io::unicorn::subscribe>::type> subscribe;
-        typedef streamed<result_of<io::unicorn::lsubscribe>::type> lsubscribe;
+        typedef streamed<result_of<io::unicorn::children_subscribe>::type> children_subscribe;
         typedef deferred<result_of<io::unicorn::lock>::type> lock;
     };
 
@@ -90,8 +90,8 @@ public:
     response::subscribe
     subscribe(unicorn::path_t path);
 
-    response::lsubscribe
-    lsubscribe(unicorn::path_t path);
+    response::children_subscribe
+    children_subscribe(unicorn::path_t path);
 
     response::increment
     increment(unicorn::path_t path, unicorn::value_t value);
@@ -103,7 +103,7 @@ public:
 
     struct subscribe_action_t;
 
-    struct lsubscribe_action_t;
+    struct children_subscribe_action_t;
 
     struct put_action_t;
 
@@ -205,7 +205,7 @@ private:
     Method method;
 };
 
-typedef unicorn_slot_t<io::unicorn::lsubscribe, decltype(&unicorn_dispatch_t::lsubscribe), unicorn_dispatch_t> lsubscribe_slot_t;
+typedef unicorn_slot_t<io::unicorn::children_subscribe, decltype(&unicorn_dispatch_t::children_subscribe), unicorn_dispatch_t> children_subscribe_slot_t;
 typedef unicorn_slot_t<io::unicorn::subscribe,  decltype(&unicorn_dispatch_t::subscribe),  unicorn_dispatch_t> subscribe_slot_t;
 typedef unicorn_slot_t<io::unicorn::put,        decltype(&unicorn_dispatch_t::put),        unicorn_dispatch_t> put_slot_t;
 typedef unicorn_slot_t<io::unicorn::create,     decltype(&unicorn_dispatch_t::create),     unicorn_dispatch_t> create_slot_t;
