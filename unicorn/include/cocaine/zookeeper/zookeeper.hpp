@@ -24,7 +24,7 @@
 namespace zookeeper {
 
 /**
-* Extensions of zookeeper error used by cocaine.
+* Extensions of zookeeper error used by cocaine. values greater than -1000 are reserved for zookeeper.
 */
 enum ZOO_EXTRA_ERROR {
     CHILD_NOT_ALLOWED = -1000,
