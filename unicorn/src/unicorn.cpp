@@ -44,7 +44,7 @@ zookeeper::cfg_t make_zk_config(const dynamic_t& args) {
     if (endpoints.empty()) {
         endpoints.emplace_back("localhost", 2181);
     }
-    return zookeeper::cfg_t(endpoints, cfg.at("recv_timeout", 1000u).as_uint());
+    return zookeeper::cfg_t(endpoints, cfg.at("recv_timeout_ms", 1000u).as_uint());
 }
 }
 

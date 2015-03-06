@@ -51,9 +51,9 @@ cfg_t::endpoint_t::to_string() const {
 }
 
 
-cfg_t::cfg_t(std::vector<cfg_t::endpoint_t> _endpoints, unsigned int _recv_timeout):
+cfg_t::cfg_t(std::vector<cfg_t::endpoint_t> _endpoints, unsigned int _recv_timeout_ms):
     endpoints(std::move(_endpoints)),
-    recv_timeout(_recv_timeout)
+    recv_timeout_ms(_recv_timeout_ms)
 {
 }
 
@@ -190,7 +190,7 @@ zhandle_t* connection_t::init() {
     zhandle_t* new_zhandle = zookeeper_init(
         cfg.connection_string().c_str(),
         &handler_dispatcher_t::watcher_cb,
-        cfg.recv_timeout,
+        cfg.recv_timeout_ms,
         session.native(),
         &watcher,
         0
