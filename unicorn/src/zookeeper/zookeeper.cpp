@@ -65,7 +65,7 @@ path_parent(const path_t& path, unsigned int depth) {
             pos = path.find_last_of('/', last_char);
         }
         if (pos == std::string::npos || pos == 0) {
-            throw std::runtime_error("could not get " + std::to_string(depth) + "th service from path: " + path);
+            throw std::runtime_error("could not get " + std::to_string(depth) + " level parent from path: " + path);
         }
         last_char = pos - 1;
     }

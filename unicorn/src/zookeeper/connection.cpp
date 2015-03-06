@@ -176,8 +176,7 @@ void connection_t::reconnect() {
         if(!new_zhandle || is_unrecoverable(new_zhandle)) {
             throw exception(ZOO_EXTRA_ERROR::COULD_NOT_CONNECT);
         }
-    }
-    else {
+    } else {
         if(!session.valid()) {
             session.assign(*zoo_client_id(new_zhandle));
         }
