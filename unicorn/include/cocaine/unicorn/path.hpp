@@ -18,8 +18,6 @@
 
 #include "cocaine/zookeeper/zookeeper.hpp"
 
-#include <string>
-
 namespace cocaine { namespace unicorn {
 typedef zookeeper::path_t path_t;
 }}

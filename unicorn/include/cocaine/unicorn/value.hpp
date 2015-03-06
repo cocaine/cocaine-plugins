@@ -24,8 +24,6 @@
 
 #include <msgpack.hpp>
 
-#include <string>
-
 namespace cocaine { namespace unicorn {
 
 typedef zookeeper::version_t version_t;
