@@ -23,6 +23,8 @@ class exception :
     public std::exception
 {
 public:
+    // You can specify some prefix.
+    // what() will return "$your_prefixZookeeper error($zk_error_code) : $description_of_zk_error_code"
     exception(std::string message_prefix, int zk_error_code);
     exception(int zk_error_code);
     int code() const;
