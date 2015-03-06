@@ -4,13 +4,13 @@ PROJECT(COCAINE-PLUGINS)
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-OPTION(CACHE "Build LRU Cache plugin" OFF)
-OPTION(CHRONO "Build Chrono Service plugin" OFF)
-OPTION(DOCKER "Build Docker Isolation plugin" OFF)
-OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" OFF)
-OPTION(IPVS "Build IPVS Gateway Service plugin" OFF)
-OPTION(MONGO "Build MongoDB Storage plugin" OFF)
-OPTION(URLFETCH "Build URLFetch Service plugin" OFF)
+OPTION(CACHE "Build LRU Cache plugin" ON)
+OPTION(CHRONO "Build Chrono Service plugin" ON)
+OPTION(DOCKER "Build Docker Isolation plugin" ON)
+OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
+OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
+OPTION(MONGO "Build MongoDB Storage plugin" ON)
+OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(UNICORN "Build Unified configuration service plugin" ON)
 
@@ -37,9 +37,6 @@ INCLUDE_DIRECTORIES(BEFORE
     ${PROJECT_SOURCE_DIR}/foreign/asio/asio/include
     ${PROJECT_SOURCE_DIR}/foreign/blackhole/src
     ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include)
-INCLUDE_DIRECTORIES(
-    /usr/local/include
-    )
 
 LINK_DIRECTORIES(
     ${Boost_LIBRARY_DIRS}
