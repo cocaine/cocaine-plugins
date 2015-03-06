@@ -71,7 +71,6 @@ struct unicorn {
         * path_t - path to change.
         * value_t - value to write in path
         * version_t - version to compare with. If version in zk do not match - error will be returned.
-        *   -1 indicates that version check is not performed (forced put).
         **/
         typedef boost::mpl::list<
             cocaine::unicorn::path_t,

@@ -88,6 +88,11 @@ unicorn_dispatch_t::unicorn_dispatch_t(const std::string& name, unicorn_service_
 unicorn_dispatch_t::response::put
 unicorn_dispatch_t::put(path_t path, value_t value, version_t version) {
     response::put result;
+    if (version < 0) {
+        int rc = zookeeper::VERSION_NOT_ALLOWED;
+        result.abort(rc, zookeeper::get_error_message(rc));
+        return result;
+    }
     auto& handler = handler_scope->get_handler<put_action_t>(
         service,
         result,

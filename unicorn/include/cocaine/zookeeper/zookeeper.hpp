@@ -34,7 +34,8 @@ enum ZOO_EXTRA_ERROR {
     UNKNOWN_ERROR = -1004,
     HANDLER_SCOPE_RELEASED = -1005,
     INVALID_NODE_NAME = -1006,
-    INVALID_PATH = -1007
+    INVALID_PATH = -1007,
+    VERSION_NOT_ALLOWED = -1008
 };
 
 typedef std::string path_t;
