@@ -29,8 +29,6 @@
 #include <asio/ip/tcp.hpp>
 #include <asio/deadline_timer.hpp>
 
-
-using namespace cocaine::unicorn;
 namespace cocaine { namespace service {
 
 class unicorn_service_t:
@@ -45,7 +43,7 @@ public:
     unicorn_service_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
     friend class unicorn_dispatch_t;
     friend class distributed_lock_t;
-    friend void release_lock(unicorn_service_t* service, const path_t& path);
+    friend void release_lock(unicorn_service_t* service, const unicorn::path_t& path);
     const std::string& get_name() const { return name; }
 private:
     std::string name;
@@ -81,22 +79,22 @@ public:
     unicorn_dispatch_t(const std::string& name, unicorn_service_t* parent);
 
     response::put
-    put(path_t path, value_t value, version_t version);
+    put(unicorn::path_t path, unicorn::value_t value, unicorn::version_t version);
 
     response::create
-    create(path_t path, value_t value);
+    create(unicorn::path_t path, unicorn::value_t value);
 
     response::del
-    del(path_t path, version_t version);
+    del(unicorn::path_t path, unicorn::version_t version);
 
     response::subscribe
-    subscribe(path_t path);
+    subscribe(unicorn::path_t path);
 
     response::lsubscribe
-    lsubscribe(path_t path);
+    lsubscribe(unicorn::path_t path);
 
     response::increment
-    increment(path_t path, value_t value);
+    increment(unicorn::path_t path, unicorn::value_t value);
 
     /**
     * Callbacks to handle async ZK responses
@@ -134,7 +132,7 @@ public:
     discard(const std::error_code& ec) const;
 
     unicorn_dispatch_t::response::lock
-    lock(path_t path);
+    lock(unicorn::path_t path);
 
     struct lock_action_t;
 
@@ -157,7 +155,7 @@ public:
         discard();
 
         bool
-        set_lock_created(path_t created_path);
+        set_lock_created(unicorn::path_t created_path);
     private:
         void
         release_impl();
@@ -166,14 +164,14 @@ public:
         bool lock_created;
         bool lock_released;
         bool discarded;
-        path_t created_path;
+        unicorn::path_t created_path;
         std::mutex access_mutex;
     };
 
 private:
     mutable std::shared_ptr<lock_state_t> state;
     zookeeper::handler_scope_t handler_scope;
-    path_t path;
+    unicorn::path_t path;
     unicorn_service_t* service;
 };
 

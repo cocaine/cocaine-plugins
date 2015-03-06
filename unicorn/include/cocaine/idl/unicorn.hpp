@@ -29,8 +29,6 @@ struct unicorn_tag;
 struct unicorn_final_tag;
 struct unicorn_locked_tag;
 
-using namespace cocaine::unicorn;
-
 struct unicorn {
     struct create {
         typedef unicorn_tag tag;
@@ -46,8 +44,8 @@ struct unicorn {
         * value_t - value to write in path
         **/
         typedef boost::mpl::list<
-            path_t,
-            value_t
+            cocaine::unicorn::path_t,
+            cocaine::unicorn::value_t
         > argument_type;
 
         /**
@@ -76,9 +74,9 @@ struct unicorn {
         *   -1 indicates that version check is not performed (forced put).
         **/
         typedef boost::mpl::list<
-            path_t,
-            value_t,
-            version_t
+            cocaine::unicorn::path_t,
+            cocaine::unicorn::value_t,
+            cocaine::unicorn::version_t
         > argument_type;
 
         /**
@@ -86,7 +84,7 @@ struct unicorn {
         */
         typedef option_of<
             bool,
-            versioned_value_t
+            cocaine::unicorn::versioned_value_t
         >::tag upstream_type;
 
         typedef unicorn_final_tag dispatch_type;
@@ -103,14 +101,14 @@ struct unicorn {
         * subscribe for updates on path. Will send last update which version is greater than specified.
         */
         typedef boost::mpl::list<
-            path_t
+            cocaine::unicorn::path_t
         > argument_type;
 
         /**
         * current version in ZK
         */
         typedef stream_of<
-            versioned_value_t
+            cocaine::unicorn::versioned_value_t
         >::tag upstream_type;
 
         typedef unicorn_final_tag dispatch_type;
@@ -127,8 +125,8 @@ struct unicorn {
         * delete node. Will only succeed if there are no child nodes.
         */
         typedef boost::mpl::list<
-            path_t,
-            version_t
+            cocaine::unicorn::path_t,
+            cocaine::unicorn::version_t
         > argument_type;
 
         typedef option_of<
@@ -151,15 +149,15 @@ struct unicorn {
         * If one of the values is float - result value will be float.
         */
         typedef boost::mpl::list<
-            path_t,
-            value_t
+            cocaine::unicorn::path_t,
+            cocaine::unicorn::value_t
         > argument_type;
 
         /**
         * return value after increment
         */
         typedef option_of <
-            versioned_value_t
+            cocaine::unicorn::versioned_value_t
         >::tag upstream_type;
 
         typedef unicorn_final_tag dispatch_type;
@@ -173,11 +171,11 @@ struct unicorn {
         }
 
         typedef boost::mpl::list<
-            path_t
+            cocaine::unicorn::path_t
         > argument_type;
 
         typedef stream_of<
-            version_t,
+            cocaine::unicorn::version_t,
             std::vector<std::string>
         >::tag upstream_type;
 
@@ -194,7 +192,7 @@ struct unicorn {
         typedef unicorn_locked_tag dispatch_type;
 
         typedef boost::mpl::list<
-            path_t
+            cocaine::unicorn::path_t
         > argument_type;
 
         typedef option_of <
@@ -233,7 +231,7 @@ struct protocol<unicorn_tag> {
         unicorn::lock
     > messages;
 
-    typedef unicorn type;
+    typedef unicorn scope;
 };
 
 template<>
@@ -246,7 +244,7 @@ struct protocol<unicorn_locked_tag> {
         unicorn::unlock
     > messages;
 
-    typedef unicorn type;
+    typedef unicorn scope;
 };
 
 template<>
@@ -259,7 +257,7 @@ struct protocol<unicorn_final_tag> {
         unicorn::close
     > messages;
 
-    typedef unicorn type;
+    typedef unicorn scope;
 };
 
 }} // namespace cocaine::io

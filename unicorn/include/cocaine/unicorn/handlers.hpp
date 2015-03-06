@@ -34,7 +34,7 @@ struct unicorn_dispatch_t::subscribe_action_t :
         const zookeeper::handler_tag& tag,
         unicorn_dispatch_t::response::subscribe _result,
         unicorn_service_t* _service,
-        path_t _path
+        unicorn::path_t _path
     );
 
     /**
@@ -61,8 +61,8 @@ struct unicorn_dispatch_t::subscribe_action_t :
     unicorn_dispatch_t::response::subscribe result;
     unicorn_service_t* service;
     std::mutex write_lock;
-    version_t last_version;
-    const path_t path;
+    unicorn::version_t last_version;
+    const unicorn::path_t path;
 };
 
 /**
@@ -80,7 +80,7 @@ struct unicorn_dispatch_t::lsubscribe_action_t :
         const zookeeper::handler_tag& tag,
         unicorn_dispatch_t::response::lsubscribe,
         unicorn_service_t* _service,
-        path_t _path
+        unicorn::path_t _path
     );
 
     /**
@@ -99,8 +99,8 @@ struct unicorn_dispatch_t::lsubscribe_action_t :
     unicorn_dispatch_t::response::lsubscribe result;
     unicorn_service_t* service;
     std::mutex write_lock;
-    version_t last_version;
-    const path_t path;
+    unicorn::version_t last_version;
+    const unicorn::path_t path;
 };
 
 
@@ -113,9 +113,9 @@ struct unicorn_dispatch_t::put_action_t :
         const zookeeper::handler_tag& tag,
         unicorn_service_t* _service,
         unicorn_dispatch_t::response::put result,
-        path_t _path,
-        value_t _value,
-        version_t _version
+        unicorn::path_t _path,
+        unicorn::value_t _value,
+        unicorn::version_t _version
     );
 
     /**
@@ -132,10 +132,10 @@ struct unicorn_dispatch_t::put_action_t :
 
     unicorn_service_t* service;
     unicorn_dispatch_t::response::put result;
-    path_t path;
-    value_t initial_value;
+    unicorn::path_t path;
+    unicorn::value_t initial_value;
     zookeeper::value_t encoded_value;
-    version_t version;
+    unicorn::version_t version;
 };
 
 
@@ -149,8 +149,8 @@ struct unicorn_dispatch_t::create_action_base_t :
     create_action_base_t(
         const zookeeper::handler_tag& tag,
         unicorn_service_t* _service,
-        path_t _path,
-        value_t _value,
+        unicorn::path_t _path,
+        unicorn::value_t _value,
         bool _ephemeral,
         bool _sequence
     );
@@ -175,8 +175,8 @@ struct unicorn_dispatch_t::create_action_base_t :
 
     int depth;
     unicorn_service_t* service;
-    path_t path;
-    value_t initial_value;
+    unicorn::path_t path;
+    unicorn::value_t initial_value;
     zookeeper::value_t encoded_value;
     bool ephemeral;
     bool sequence;
@@ -192,8 +192,8 @@ struct unicorn_dispatch_t::create_action_t:
         const zookeeper::handler_tag& tag,
         unicorn_service_t* _service,
         unicorn_dispatch_t::response::create result,
-        path_t _path,
-        value_t _value
+        unicorn::path_t _path,
+        unicorn::value_t _value
     );
 
     virtual void
@@ -232,8 +232,8 @@ struct unicorn_dispatch_t::increment_action_t:
         const zookeeper::handler_tag& tag,
         unicorn_service_t* _service,
         unicorn_dispatch_t::response::increment _result,
-        path_t _path,
-        value_t _increment,
+        unicorn::path_t _path,
+        unicorn::value_t _increment,
         const std::shared_ptr<zookeeper::handler_scope_t>& _scope
     );
 
@@ -260,8 +260,8 @@ struct unicorn_dispatch_t::increment_action_t:
 
     unicorn_service_t* service;
     unicorn_dispatch_t::response::increment result;
-    const path_t path;
-    value_t total;
+    const unicorn::path_t path;
+    unicorn::value_t total;
     std::weak_ptr<zookeeper::handler_scope_t> scope;
 };
 
@@ -280,9 +280,9 @@ struct distributed_lock_t::lock_action_t :
         const zookeeper::handler_tag& tag,
         unicorn_service_t* service,
         std::shared_ptr<distributed_lock_t::lock_state_t> state,
-        path_t _path,
-        path_t folder,
-        value_t _value,
+        unicorn::path_t _path,
+        unicorn::path_t folder,
+        unicorn::value_t _value,
         unicorn_dispatch_t::response::lock _result
     );
 
@@ -303,7 +303,7 @@ struct distributed_lock_t::lock_action_t :
     /**
     * Watcher handler to watch on lock release.
     */
-    virtual void operator()(int type, int state, path_t path);
+    virtual void operator()(int type, int state, unicorn::path_t path);
 
     /**
     * Lock creation handler.
@@ -320,7 +320,7 @@ struct distributed_lock_t::lock_action_t :
     */
     std::shared_ptr<distributed_lock_t::lock_state_t> state;
     unicorn_dispatch_t::response::lock result;
-    path_t folder;
+    unicorn::path_t folder;
     std::string created_node_name;
 };
 
