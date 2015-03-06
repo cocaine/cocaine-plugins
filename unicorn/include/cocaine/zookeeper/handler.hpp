@@ -92,7 +92,7 @@ private:
     call(const void* callback, Args&& ...args) {
         handler_ptr cb;
         {
-            std::unique_lock<std::mutex> lock(storage_lock);
+            std::lock_guard<std::mutex> lock(storage_lock);
             auto it = callbacks.find(reinterpret_cast<const managed_handler_base_t*>(callback));
             if (it != callbacks.end()) {
                 cb = it->second;
