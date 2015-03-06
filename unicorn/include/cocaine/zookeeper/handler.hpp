@@ -146,7 +146,7 @@ class managed_watch_handler_base_t :
 {
 public:
     virtual void
-        operator() (int type, int state, path_t path) = 0;
+    operator() (int type, int state, path_t path) = 0;
 
     managed_watch_handler_base_t(const handler_tag& tag) :
         managed_handler_base_t(tag)
@@ -216,7 +216,7 @@ class managed_strings_stat_handler_base_t:
 {
 public:
     virtual void
-        operator() (int rc, std::vector<std::string> childs, const node_stat& stat) = 0;
+    operator() (int rc, std::vector<std::string> childs, const node_stat& stat) = 0;
 
     managed_strings_stat_handler_base_t(const handler_tag& tag) :
         managed_handler_base_t(tag)
