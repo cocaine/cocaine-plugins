@@ -29,6 +29,16 @@ struct unicorn_tag;
 struct unicorn_final_tag;
 struct unicorn_locked_tag;
 
+/**
+* Protocol starts with initial dispatch.
+*
+* All methods except lock move protocol to unicorn_final_tag,
+* which provides only close leading to terminal transition.
+* This is done in order to create a dispatch during transition which controls lifetime of the session.
+*
+* "lock" moves protocol to locked_tag which also controls lifetime of the lock.
+* It has only unlock method leading to terminal transition.
+*/
 struct unicorn {
     struct create {
         typedef unicorn_tag tag;
