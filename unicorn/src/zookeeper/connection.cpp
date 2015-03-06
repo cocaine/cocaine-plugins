@@ -43,11 +43,11 @@ cfg_t::endpoint_t::endpoint_t(std::string _hostname, unsigned int _port) :
 
 std::string
 cfg_t::endpoint_t::to_string() const {
-    std::string result;
-    if(!hostname.empty() && port != 0) {
-        result = hostname + ':' + std::to_string(port);
+    if(hostname.empty() || port == 0) {
+        throw zookeeper::exception(INVALID_CONNECTION_ENDPOINT);
     }
-    return result;
+    //Zookeeper handles even ipv6 addresses correctly in this case
+    return hostname + ':' + std::to_string(port);
 }
 
 
@@ -121,7 +121,7 @@ connection_t::create(const path_t& path, const value_t& value, bool ephemeral, b
 }
 
 void
-connection_t::del(const path_t& path, version_t version, void_handler_ptr handler) {
+connection_t::del(const path_t& path, version_t version, std::unique_ptr<void_handler_base_t> handler) {
     check_connectivity();
     check_rc(
         zoo_adelete(zhandle, path.c_str(), version, &handler_dispatcher_t::void_cb, c_ptr(handler.get()))

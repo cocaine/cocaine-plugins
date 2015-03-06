@@ -224,7 +224,5 @@ public:
 };
 
 
-typedef std::unique_ptr<void_handler_base_t> void_handler_ptr;
-
 }
 #endif

@@ -42,6 +42,8 @@ get_error_message(int rc) {
             return "Inavlid path specified";
         case VERSION_NOT_ALLOWED:
             return "Specified version is not allowed for command";
+        case INVALID_CONNECTION_ENDPOINT:
+            return "Invalid connection endpoint specified";
         default:
             return zerror(rc);
     }

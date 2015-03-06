@@ -93,7 +93,7 @@ public:
     * See zoo_adelete
     */
     void
-    del(const path_t& path, version_t version, void_handler_ptr handler);
+    del(const path_t& path, version_t version, std::unique_ptr<void_handler_base_t> handler);
 
     /**
     * Check if node exists
