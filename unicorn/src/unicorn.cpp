@@ -45,12 +45,8 @@ zookeeper::cfg_t make_zk_config(const dynamic_t& args) {
     if (endpoints.empty()) {
         endpoints.emplace_back("localhost", 2181);
     }
-    return zookeeper::cfg_t(endpoints, cfg.at("recv_timeout", 1000u).as_uint());
+    return zookeeper::cfg_t(endpoints, cfg.at("recv_timeout_ms", 1000u).as_uint());
 }
-}
-
-void release_lock(unicorn_service_t* service, const path_t& path) {
-
 }
 
 const io::basic_dispatch_t&
@@ -68,13 +64,13 @@ unicorn_service_t::unicorn_service_t(context_t& context, asio::io_service& _asio
 {
     using namespace std::placeholders;
 
-    on<io::unicorn::subscribe> (std::make_shared<subscribe_slot_t> (this, &unicorn_dispatch_t::subscribe));
-    on<io::unicorn::lsubscribe>(std::make_shared<lsubscribe_slot_t>(this, &unicorn_dispatch_t::lsubscribe));
-    on<io::unicorn::put>       (std::make_shared<put_slot_t>       (this, &unicorn_dispatch_t::put));
-    on<io::unicorn::create>    (std::make_shared<create_slot_t>    (this, &unicorn_dispatch_t::create));
-    on<io::unicorn::del>       (std::make_shared<del_slot_t>       (this, &unicorn_dispatch_t::del));
-    on<io::unicorn::increment> (std::make_shared<increment_slot_t> (this, &unicorn_dispatch_t::increment));
-    on<io::unicorn::lock>      (std::make_shared<lock_slot_t>      (this, &distributed_lock_t::lock));
+    on<io::unicorn::subscribe>         (std::make_shared<subscribe_slot_t>         (this, &unicorn_dispatch_t::subscribe));
+    on<io::unicorn::children_subscribe>(std::make_shared<children_subscribe_slot_t>(this, &unicorn_dispatch_t::children_subscribe));
+    on<io::unicorn::put>               (std::make_shared<put_slot_t>               (this, &unicorn_dispatch_t::put));
+    on<io::unicorn::create>            (std::make_shared<create_slot_t>            (this, &unicorn_dispatch_t::create));
+    on<io::unicorn::del>               (std::make_shared<del_slot_t>               (this, &unicorn_dispatch_t::del));
+    on<io::unicorn::increment>         (std::make_shared<increment_slot_t>         (this, &unicorn_dispatch_t::increment));
+    on<io::unicorn::lock>              (std::make_shared<lock_slot_t>              (this, &distributed_lock_t::lock));
 
 }
 
@@ -89,6 +85,11 @@ unicorn_dispatch_t::unicorn_dispatch_t(const std::string& name, unicorn_service_
 response::put
 unicorn_dispatch_t::put(path_t path, value_t value, version_t version) {
     response::put result;
+    if (version < 0) {
+        int rc = zookeeper::VERSION_NOT_ALLOWED;
+        result.abort(rc, zookeeper::get_error_message(rc));
+        return result;
+    }
     auto& handler = handler_scope->get_handler<put_action_t>(
         service,
         result,
@@ -163,18 +164,18 @@ unicorn_dispatch_t::subscribe_with_cb(writable_helper<response::subscribe_result
     service->zk.get(handler.path, handler, handler);
 }
 
-response::lsubscribe
-unicorn_dispatch_t::lsubscribe(path_t path) {
-    response::lsubscribe result;
-    typedef writable_helper<response::lsubscribe_result>::streamed_adapter lsubscribe_adapter;
+response::children_subscribe
+unicorn_dispatch_t::children_subscribe(path_t path) {
+    response::children_subscribe result;
+    typedef writable_helper<response::children_subscribe_result>::streamed_adapter lsubscribe_adapter;
     auto wptr = std::make_shared<lsubscribe_adapter>(result);
-    lsubscribe_with_cb(std::move(wptr), path);
+    children_subscribe_with_cb(std::move(wptr), path);
     return result;
 }
 
 void
-unicorn_dispatch_t::lsubscribe_with_cb(writable_helper<response::lsubscribe_result>::ptr result, path_t path) {
-    auto& handler = handler_scope->get_handler<lsubscribe_action_t>(std::move(result), service, std::move(path));
+unicorn_dispatch_t::children_subscribe_with_cb(writable_helper<response::children_subscribe_result>::ptr result, path_t path) {
+    auto& handler = handler_scope->get_handler<children_subscribe_action_t>(std::move(result), service, std::move(path));
     service->zk.childs(handler.path, handler, handler);
 }
 
@@ -196,8 +197,6 @@ unicorn_dispatch_t::increment(path_t path, value_t value) {
     service->zk.get(handler.path, handler);
     return result;
 }
-
-
 
 
 /**************************************************
@@ -229,16 +228,13 @@ unicorn_dispatch_t::put_action_t::operator()(int rc, zookeeper::node_stat const&
     try {
         if (rc == ZBADVERSION) {
             service->zk.get(path, *this);
-        }
-        else if (rc != 0) {
+        } else if (rc != 0) {
             result.abort(rc, zookeeper::get_error_message(rc));
-        }
-        else {
+        } else {
             result.write(std::make_tuple(true, versioned_value_t(initial_value, stat.version)));
         }
-    }
-    catch(const zookeeper::exception& e) {
-        COCAINE_LOG_WARNING(service->log, "Failure during put action: %s", e.what());
+    } catch (const zookeeper::exception& e) {
+        COCAINE_LOG_WARNING(service->log, "failure during put action: %s", e.what());
     }
 }
 
@@ -246,25 +242,19 @@ void
 unicorn_dispatch_t::put_action_t::operator()(int rc, zookeeper::value_t value, zookeeper::node_stat const& stat) {
     if (rc) {
         result.abort(rc, "Failed get after version mismatch:" + zookeeper::get_error_message(rc));
-    }
-    else {
+    } else {
         try {
             result.write(std::make_tuple(false,versioned_value_t(unserialize(value), stat.version)));
-        }
-        catch (const zookeeper::exception& e) {
+        } catch (const zookeeper::exception& e) {
             result.abort(e.code(), std::string("Error during new value get:") + e.what());
         }
     }
 }
 
 
-
 /**************************************************
 *******************  CREATE  **********************
 **************************************************/
-
-
-
 
 
 unicorn_dispatch_t::create_action_base_t::create_action_base_t(
@@ -292,26 +282,21 @@ unicorn_dispatch_t::create_action_base_t::operator()(int rc, zookeeper::value_t 
         if (rc == ZOK) {
             if (depth == 0) {
                 finalize(std::move(value));
-            }
-            else if (depth == 1) {
+            } else if (depth == 1) {
                 depth--;
                 service->zk.create(path, encoded_value, ephemeral, sequence, *this);
-            }
-            else {
+            } else {
                 depth--;
                 service->zk.create(zookeeper::path_parent(path, depth), "", false, false, *this);
             }
-        }
-        else if (rc == ZNONODE) {
+        } else if (rc == ZNONODE) {
             depth++;
             service->zk.create(zookeeper::path_parent(path, depth), "", false, false, *this);
-        }
-        else {
+        } else {
             abort(rc);
         }
-    }
-    catch(const zookeeper::exception& e) {
-        COCAINE_LOG_WARNING(service->log, "Could not create node hierarchy. Exception: %s", e.what());
+    } catch(const zookeeper::exception& e) {
+        COCAINE_LOG_WARNING(service->log, "could not create node hierarchy. Exception: %s", e.what());
         abort(e.code());
     }
 }
@@ -355,8 +340,7 @@ void
 unicorn_dispatch_t::del_action_t::operator()(int rc) {
     if (rc) {
         result.abort(rc, zookeeper::get_error_message(rc));
-    }
-    else {
+    } else {
         result.write(true);
     }
 }
@@ -390,8 +374,7 @@ unicorn_dispatch_t::subscribe_action_t::operator()(int rc, std::string value, co
     if(rc == ZNONODE) {
         if(last_version != MIN_VERSION && last_version != NOT_EXISTING_VERSION) {
             result->abort(rc, zookeeper::get_error_message(rc));
-        }
-        else {
+        } else {
             // Write that node is not exist to client only first time.
             // After that set a watch to see when it will appear
             if(last_version == MIN_VERSION) {
@@ -401,22 +384,18 @@ unicorn_dispatch_t::subscribe_action_t::operator()(int rc, std::string value, co
                 }
             }
             try {
-                service->zk.exists(path,*this, *this);
-            }
-            catch(const zookeeper::exception& e) {
-                COCAINE_LOG_WARNING(service->log, "Failure during subscription: %s", e.what());
+                service->zk.exists(path, *this, *this);
+            } catch(const zookeeper::exception& e) {
+                COCAINE_LOG_WARNING(service->log, "failure during subscription: %s", e.what());
                 result->abort(e.code(), e.what());
             }
         }
-    }
-    else if (rc != 0) {
+    } else if (rc != 0) {
         result->abort(rc, zookeeper::get_error_message(rc));
-    }
-    else if (stat.numChildren != 0) {
+    } else if (stat.numChildren != 0) {
         rc = zookeeper::CHILD_NOT_ALLOWED;
         result->abort(rc, zookeeper::get_error_message(rc));
-    }
-    else {
+    } else {
         version_t new_version(stat.version);
         std::lock_guard<std::mutex> guard(write_lock);
         if (new_version > last_version) {
@@ -424,8 +403,7 @@ unicorn_dispatch_t::subscribe_action_t::operator()(int rc, std::string value, co
             value_t val;
             try {
                 result->write(versioned_value_t(unserialize(value), new_version));
-            }
-            catch(const zookeeper::exception& e) {
+            } catch(const zookeeper::exception& e) {
                 result->abort(e.code(), e.what());
             }
         }
@@ -439,9 +417,8 @@ unicorn_dispatch_t::subscribe_action_t::operator()(int rc, zookeeper::node_stat 
     if(rc == ZOK) {
         try {
             service->zk.get(path, *this, *this);
-        }
-        catch(const zookeeper::exception& e)  {
-            COCAINE_LOG_WARNING(service->log, "Failure during subscription: %s", e.what());
+        } catch(const zookeeper::exception& e)  {
+            COCAINE_LOG_WARNING(service->log, "failure during subscription: %s", e.what());
             result->abort(e.code(), e.what());
         }
     }
@@ -451,13 +428,11 @@ void
 unicorn_dispatch_t::subscribe_action_t::operator()(int type, int state, zookeeper::path_t path) {
     try {
         service->zk.get(path, *this, *this);
-    }
-    catch(const zookeeper::exception& e)  {
+    } catch(const zookeeper::exception& e)  {
         result->abort(e.code(), e.what());
-        COCAINE_LOG_WARNING(service->log, "Failure during subscription: %s", e.what());
+        COCAINE_LOG_WARNING(service->log, "failure during subscription: %s", e.what());
     }
 }
-
 
 
 /**************************************************
@@ -465,9 +440,9 @@ unicorn_dispatch_t::subscribe_action_t::operator()(int type, int state, zookeepe
 **************************************************/
 
 
-unicorn_dispatch_t::lsubscribe_action_t::lsubscribe_action_t(
+unicorn_dispatch_t::children_subscribe_action_t::children_subscribe_action_t(
     const zookeeper::handler_tag& tag,
-    writable_helper<response::lsubscribe_result>::ptr _result,
+    writable_helper<response::children_subscribe_result>::ptr _result,
     unicorn_service_t* _service,
     path_t _path
 ) :
@@ -483,11 +458,10 @@ unicorn_dispatch_t::lsubscribe_action_t::lsubscribe_action_t(
 
 
 void
-unicorn_dispatch_t::lsubscribe_action_t::operator()(int rc, std::vector<std::string> childs, const zookeeper::node_stat& stat) {
+unicorn_dispatch_t::children_subscribe_action_t::operator()(int rc, std::vector<std::string> childs, const zookeeper::node_stat& stat) {
     if (rc != 0) {
         result->abort(rc, zookeeper::get_error_message(rc));
-    }
-    else {
+    } else {
         version_t new_version(stat.cversion);
         std::lock_guard<std::mutex> guard(write_lock);
         if (new_version > last_version) {
@@ -499,13 +473,12 @@ unicorn_dispatch_t::lsubscribe_action_t::operator()(int rc, std::vector<std::str
 }
 
 void
-unicorn_dispatch_t::lsubscribe_action_t::operator()(int type, int state, zookeeper::path_t path) {
+unicorn_dispatch_t::children_subscribe_action_t::operator()(int type, int state, zookeeper::path_t path) {
     try {
         service->zk.childs(path, *this, *this);
-    }
-    catch(const zookeeper::exception& e) {
+    } catch(const zookeeper::exception& e) {
         result->abort(e.code(), e.what());
-        COCAINE_LOG_WARNING(service->log, "Failure during subscription for childs: %s", e.what());
+        COCAINE_LOG_WARNING(service->log, "failure during subscription for childs: %s", e.what());
     }
 }
 
@@ -513,6 +486,7 @@ unicorn_dispatch_t::lsubscribe_action_t::operator()(int type, int state, zookeep
 /**************************************************
 *****************   INCREMENT   *******************
 **************************************************/
+
 
 unicorn_dispatch_t::increment_action_t::increment_action_t(
     const zookeeper::handler_tag& tag,
@@ -537,14 +511,12 @@ unicorn_dispatch_t::increment_action_t::increment_action_t(
 void unicorn_dispatch_t::increment_action_t::operator()(int rc, zookeeper::node_stat const& stat) {
     if (rc == ZOK) {
         result.write(versioned_value_t(total, stat.version));
-    }
-    else if (rc == ZBADVERSION) {
+    } else if (rc == ZBADVERSION) {
         try {
             service->zk.get(path, *this);
-        }
-        catch(const zookeeper::exception& e) {
+        } catch(const zookeeper::exception& e) {
             result.abort(e.code(), e.what());
-            COCAINE_LOG_WARNING(service->log, "Failure during increment get: %s", e.what());
+            COCAINE_LOG_WARNING(service->log, "failure during increment get: %s", e.what());
         }
     }
 }
@@ -554,11 +526,9 @@ unicorn_dispatch_t::increment_action_t::operator()(int rc, zookeeper::value_t va
     try {
         if(rc == ZNONODE) {
             service->zk.create(path, value, ephemeral, sequence, *this);
-        }
-        else if (rc != ZOK) {
+        } else if (rc != ZOK) {
             result.abort(rc, "Error during value get:" + zookeeper::get_error_message(rc));
-        }
-        else {
+        } else {
             value_t parsed;
             if (!value.empty()) {
                 parsed = unserialize(value);
@@ -576,15 +546,13 @@ unicorn_dispatch_t::increment_action_t::operator()(int rc, zookeeper::value_t va
             if (parsed.is_double() || initial_value.is_double()) {
                 total = parsed.to<double>() + initial_value.to<double>();
                 service->zk.put(path, serialize(total), stat.version, *this);
-            }
-            else {
+            } else {
                 total = parsed.to<int64_t>() + initial_value.to<int64_t>();
                 service->zk.put(path, serialize(total), stat.version, *this);
             }
         }
-    }
-    catch(const zookeeper::exception& e) {
-        COCAINE_LOG_WARNING(service->log, "Failure during get action of increment: %s", e.what());
+    } catch(const zookeeper::exception& e) {
+        COCAINE_LOG_WARNING(service->log, "failure during get action of increment: %s", e.what());
         result.abort(e.code(), zookeeper::get_error_message(e.code()));
     }
 }
@@ -639,8 +607,7 @@ distributed_lock_t::lock_action_t::operator()(int rc, std::vector<std::string> c
         if(childs[i] < next_min_node) {
             if(next_min_node == created_node_name) {
                 next_min_node.swap(childs[i]);
-            }
-            else {
+            } else {
                 if(childs[i] > next_min_node) {
                     next_min_node.swap(childs[i]);
                 }
@@ -652,12 +619,10 @@ distributed_lock_t::lock_action_t::operator()(int rc, std::vector<std::string> c
             result.write(true);
         }
         return;
-    }
-    else {
+    } else {
         try {
             service->zk.exists(folder + "/" + next_min_node, *this, *this);
-        }
-        catch(const zookeeper::exception& e) {
+        } catch(const zookeeper::exception& e) {
             result.abort(e.code(), e.what());
             state->release();
         }
@@ -669,8 +634,7 @@ void distributed_lock_t::lock_action_t::operator()(int rc, zookeeper::node_stat 
     if(rc == ZNONODE) {
         try {
             service->zk.childs(folder, *this);
-        }
-        catch(const zookeeper::exception& e) {
+        } catch(const zookeeper::exception& e) {
             result.abort(e.code(), e.what());
             state->release();
         }
@@ -680,8 +644,7 @@ void distributed_lock_t::lock_action_t::operator()(int rc, zookeeper::node_stat 
 void distributed_lock_t::lock_action_t::operator()(int type, int zk_state, path_t path) {
     try {
         service->zk.childs(folder, *this);
-    }
-    catch(const zookeeper::exception& e) {
+    } catch(const zookeeper::exception& e) {
         result.abort(e.code(), e.what());
         state->release();
     }
@@ -694,8 +657,7 @@ distributed_lock_t::lock_action_t::finalize(zookeeper::value_t value) {
     if(state->set_lock_created(std::move(created_path))) {
         try {
             service->zk.childs(folder, *this);
-        }
-        catch(const zookeeper::exception& e) {
+        } catch(const zookeeper::exception& e) {
             result.abort(e.code(), e.what());
             state->release();
         }
@@ -767,7 +729,7 @@ bool
 distributed_lock_t::lock_state_t::set_lock_created(path_t _created_path) {
     //Safe as there is only one call to this
     created_path = std::move(_created_path);
-    COCAINE_LOG_DEBUG(service->log, "Created lock: %s", created_path.c_str());
+    COCAINE_LOG_DEBUG(service->log, "created lock: %s", created_path.c_str());
     //Can not be removed before created.
     assert(!lock_released);
     bool should_release = false;
@@ -787,17 +749,15 @@ distributed_lock_t::lock_state_t::set_lock_created(path_t _created_path) {
 
 void
 distributed_lock_t::lock_state_t::release_impl() {
-    COCAINE_LOG_DEBUG(service->log, "Release lock: %s", created_path.c_str());
+    COCAINE_LOG_DEBUG(service->log, "release lock: %s", created_path.c_str());
     try {
         service->zk.del(created_path, NOT_EXISTING_VERSION, nullptr);
-    }
-    catch(const zookeeper::exception& e) {
-        COCAINE_LOG_WARNING(service->log, "ZK Exception during delete of lock: %s. Reconnecting to discard lock for sure.", e.what());
+    } catch(const zookeeper::exception& e) {
+        COCAINE_LOG_WARNING(service->log, "ZK exception during delete of lock: %s. Reconnecting to discard lock for sure.", e.what());
         try {
             service->zk.reconnect();
-        }
-        catch(const zookeeper::exception& e) {
-            COCAINE_LOG_WARNING(service->log, "Give up on deleting lock. Exception: %s", e.what());
+        } catch(const zookeeper::exception& e) {
+            COCAINE_LOG_WARNING(service->log, "give up on deleting lock. Exception: %s", e.what());
         }
     }
 }

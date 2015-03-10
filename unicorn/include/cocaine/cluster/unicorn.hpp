@@ -36,7 +36,7 @@ public:
     unicorn_cluster_t(context_t& context, interface& locator, const std::string& name, const dynamic_t& args);
 
     struct on_announce:
-        public writable_adapter_base_t<service::unicorn_dispatch_t::response::create_result>,
+        public unicorn::writable_adapter_base_t<service::unicorn_dispatch_t::response::create_result>,
         public std::enable_shared_from_this<on_announce>
     {
         on_announce(unicorn_cluster_t* _parent);
@@ -51,7 +51,7 @@ public:
     };
 
     struct on_update:
-        public writable_adapter_base_t<service::unicorn_dispatch_t::response::subscribe_result>,
+        public unicorn::writable_adapter_base_t<service::unicorn_dispatch_t::response::subscribe_result>,
         public std::enable_shared_from_this<on_update>
     {
         on_update(unicorn_cluster_t* _parent);
@@ -66,7 +66,7 @@ public:
     };
 
     struct on_fetch :
-        public writable_adapter_base_t<service::unicorn_dispatch_t::response::get_result>
+        public unicorn::writable_adapter_base_t<service::unicorn_dispatch_t::response::get_result>
     {
         on_fetch(std::string uuid, unicorn_cluster_t* _parent);
 
@@ -81,12 +81,12 @@ public:
     };
 
     struct on_list_update :
-    public writable_adapter_base_t<service::unicorn_dispatch_t::response::lsubscribe_result>
+    public unicorn::writable_adapter_base_t<service::unicorn_dispatch_t::response::children_subscribe_result>
     {
         on_list_update(unicorn_cluster_t* _parent);
 
         virtual void
-        write(service::unicorn_dispatch_t::response::lsubscribe_result&& result);
+        write(service::unicorn_dispatch_t::response::children_subscribe_result&& result);
 
         virtual void
         abort(int ec, const std::string& reason);

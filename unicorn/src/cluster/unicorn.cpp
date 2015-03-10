@@ -159,7 +159,7 @@ unicorn_cluster_t::on_list_update::on_list_update(unicorn_cluster_t* _parent) :
 {}
 
 void
-unicorn_cluster_t::on_list_update::write(service::unicorn_dispatch_t::response::lsubscribe_result&& result) {
+unicorn_cluster_t::on_list_update::write(service::unicorn_dispatch_t::response::children_subscribe_result&& result) {
     auto nodes = std::get<1>(result);
     std::sort(nodes.begin(), nodes.end());
     std::vector<std::string> to_delete, to_add;
@@ -204,15 +204,13 @@ unicorn_cluster_t::unicorn_cluster_t(
     subscribe_timer(_locator.asio())
 {
     context.signals.ready.connect(
-        context_t::signals_t::context_signals_t::slot_type(
-            std::bind(&unicorn_cluster_t::init, this)
-        )
+        std::bind(&unicorn_cluster_t::init, this)
     );
 }
 
 void
 unicorn_cluster_t::init() {
-    auto unicorn_service_opt = context.locate("unicorn");
+    auto unicorn_service_opt = context.locate("unicorn").lock();
     assert(unicorn_service_opt);
     const service::unicorn_service_t& unicorn_service = dynamic_cast<const service::unicorn_service_t&>(unicorn_service_opt->prototype());
     unicorn = std::make_shared<service::unicorn_dispatch_t>(unicorn_service.get_name(), const_cast<service::unicorn_service_t*>(&unicorn_service));
@@ -222,14 +220,14 @@ unicorn_cluster_t::init() {
 
 void
 unicorn_cluster_t::announce() {
-    const auto actor = context.locate("locator");
+    const auto actor = context.locate("locator").lock();
 
     if(!actor) {
         COCAINE_LOG_ERROR(log, "unable to announce local endpoints: locator is not available");
         std::abort();
     }
 
-    const auto endpoints = actor.get().endpoints();
+    const auto endpoints = actor->endpoints();
 
     COCAINE_LOG_DEBUG(log, "Going to announce self");
     try {
@@ -266,7 +264,7 @@ void unicorn_cluster_t::on_subscribe_timer(const std::error_code& ec) {
 void
 unicorn_cluster_t::subscribe() {
     try {
-        unicorn->lsubscribe_with_cb(
+        unicorn->children_subscribe_with_cb(
             std::make_shared<on_list_update>(this),
             config.path
         );
