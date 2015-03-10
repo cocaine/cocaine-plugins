@@ -102,7 +102,8 @@ public:
         unicorn::path_t path,
         unicorn::value_t value,
         bool ephemeral,
-        bool sequence);
+        bool sequence
+    );
 
     response::del
     del(unicorn::path_t path, unicorn::version_t version);
