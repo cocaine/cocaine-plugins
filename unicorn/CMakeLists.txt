@@ -37,3 +37,9 @@ SET_TARGET_PROPERTIES(unicorn PROPERTIES
 INSTALL(TARGETS unicorn
     LIBRARY DESTINATION lib/cocaine
     COMPONENT runtime)
+
+INSTALL(
+    DIRECTORY
+        include/cocaine
+    DESTINATION include
+    COMPONENT development)
