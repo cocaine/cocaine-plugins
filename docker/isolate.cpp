@@ -135,6 +135,8 @@ docker_t::docker_t(context_t& context, const std::string& name, const dynamic_t&
         m_image += name;
         m_tag = ""; // empty for now
 
+        m_network_mode = config.at("network_mode", "bridge").as_string();
+
         m_run_config.SetObject();
 
         m_run_config.AddMember("Hostname", "", m_json_allocator);
@@ -163,6 +165,7 @@ docker_t::docker_t(context_t& context, const std::string& name, const dynamic_t&
         m_run_config["Volumes"].AddMember(m_runtime_path.c_str(), empty_object, m_json_allocator);
         m_run_config.AddMember("VolumesFrom", "", m_json_allocator);
         m_run_config.AddMember("WorkingDir", "/", m_json_allocator);
+        m_run_config.AddMember("NetworkMode", m_network_mode.data(), m_json_allocator);
     } catch(const std::exception& e) {
         throw cocaine::error_t("%s", e.what());
     }
