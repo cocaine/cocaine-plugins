@@ -633,7 +633,7 @@ client_impl_t::head(http_response_t& response,
 }
 
 namespace {
-    std::string api_version = "/v1.4";
+    std::string api_version = "/v1.14";
 
     http_request_t
     make_post(const std::string& url,
@@ -669,23 +669,11 @@ namespace {
 }
 
 void
-container_t::start(const std::vector<std::string>& binds) {
-    rapidjson::Value args;
-    rapidjson::Value b;
-    rapidjson::Value::AllocatorType allocator;
-
-    b.SetArray();
-    for(auto it = binds.begin(); it != binds.end(); ++it) {
-        b.PushBack(it->data(), allocator);
-    }
-
-    args.SetObject();
-    args.AddMember("Binds", b, allocator);
-
+container_t::start(const rapidjson::Value& args) {
     http_response_t resp;
     m_client->post(resp, make_post(api_version + cocaine::format("/containers/%s/start", id()), args));
 
-    if(!(resp.code() >= 200 && resp.code() < 300)) {
+    if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
                             "Unable to start container %s. Docker replied with code %d and body '%s'.",
                             id(),
@@ -700,7 +688,7 @@ container_t::kill() {
     http_response_t resp;
     m_client->post(resp, make_post(api_version + cocaine::format("/containers/%s/kill", id())));
 
-    if(!(resp.code() >= 200 && resp.code() < 300)) {
+    if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
                             "Unable to kill container %s. Docker replied with code %d and body '%s'.",
                             id(),
@@ -715,7 +703,7 @@ container_t::stop(unsigned int timeout) {
     http_response_t resp;
     m_client->post(resp, make_post(api_version + cocaine::format("/containers/%s/stop?t=%d", id(), timeout)));
 
-    if(!(resp.code() >= 200 && resp.code() < 300)) {
+    if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
                             "Unable to stop container %s. Docker replied with code %d and body '%s'.",
                             id(),

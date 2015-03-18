@@ -61,8 +61,8 @@ struct container_handle_t:
     }
 
     void
-    start(const std::vector<std::string>& binds) {
-        m_container.start(binds);
+    start(const rapidjson::Value& args) {
+        m_container.start(args);
     }
 
     void
@@ -135,6 +135,20 @@ docker_t::docker_t(context_t& context, const std::string& name, const dynamic_t&
         m_image += name;
         m_tag = ""; // empty for now
 
+        if(config.count("capabilities")) {
+            auto &capabilities = config["capabilities"];
+
+            BOOST_ASSERT(capabilities.is_array());
+
+            m_additional_capabilities.SetArray();
+            for(auto it = capabilities.as_array().begin(); it != capabilities.as_array().end(); ++it) {
+                m_additional_capabilities.PushBack((*it).as_string().c_str(), m_json_allocator);
+            }
+        }
+
+
+        m_network_mode = config.at("network_mode", "bridge").as_string();
+
         m_run_config.SetObject();
 
         m_run_config.AddMember("Hostname", "", m_json_allocator);
@@ -163,6 +177,7 @@ docker_t::docker_t(context_t& context, const std::string& name, const dynamic_t&
         m_run_config["Volumes"].AddMember(m_runtime_path.c_str(), empty_object, m_json_allocator);
         m_run_config.AddMember("VolumesFrom", "", m_json_allocator);
         m_run_config.AddMember("WorkingDir", "/", m_json_allocator);
+        m_run_config.AddMember("NetworkMode", m_network_mode.data(), m_json_allocator);
     } catch(const std::exception& e) {
         throw cocaine::error_t("%s", e.what());
     }
@@ -218,20 +233,31 @@ docker_t::spawn(const std::string& path, const api::string_map_t& args, const ap
             }
         }
 
-        std::vector<std::string> binds;
-#if BOOST_VERSION >= 104600
-        std::string socket_dir(fs::path(args.at("--endpoint")).remove_filename().native().c_str());
-#else
-        std::string socket_dir(fs::path(args.at("--endpoint")).remove_filename().string().c_str());
-#endif
-        binds.emplace_back((socket_dir + ":" + m_runtime_path).c_str());
-
         // create container
         std::unique_ptr<container_handle_t> handle(
             new container_handle_t(m_docker_client.create_container(m_run_config))
         );
 
-        handle->start(binds);
+        rapidjson::Value start_args;
+        rapidjson::Value binds_json;
+
+#if BOOST_VERSION >= 104600
+        std::string socket_dir(fs::path(args.at("--endpoint")).remove_filename().native().c_str());
+#else
+        std::string socket_dir(fs::path(args.at("--endpoint")).remove_filename().string().c_str());
+#endif
+        // We should store here string pushed to RapidJson array :(
+        std::string socket_path(socket_dir + ":" + m_runtime_path);
+
+        binds_json.SetArray();
+        binds_json.PushBack(socket_path.data(), m_json_allocator);
+
+        start_args.SetObject();
+        start_args.AddMember("Binds", binds_json, m_json_allocator);
+        start_args.AddMember("CapAdd", m_additional_capabilities, m_json_allocator);
+        start_args.AddMember("NetworkMode", m_network_mode.data(), m_json_allocator);
+
+        handle->start(start_args);
         handle->attach();
 
         return std::move(handle);
