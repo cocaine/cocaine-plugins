@@ -669,19 +669,7 @@ namespace {
 }
 
 void
-container_t::start(const std::vector<std::string>& binds) {
-    rapidjson::Value args;
-    rapidjson::Value b;
-    rapidjson::Value::AllocatorType allocator;
-
-    b.SetArray();
-    for(auto it = binds.begin(); it != binds.end(); ++it) {
-        b.PushBack(it->data(), allocator);
-    }
-
-    args.SetObject();
-    args.AddMember("Binds", b, allocator);
-
+container_t::start(const rapidjson::Value& args) {
     http_response_t resp;
     m_client->post(resp, make_post(api_version + cocaine::format("/containers/%s/start", id()), args));
 

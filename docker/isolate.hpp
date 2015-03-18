@@ -57,9 +57,10 @@ private:
     docker::client_t m_docker_client;
     rapidjson::Value m_run_config;
     std::string m_network_mode;
+    rapidjson::Value m_additional_capabilities;
     rapidjson::Value::AllocatorType m_json_allocator;
 };
 
-}} // namespace cocaine::storage
+}} // namespace cocaine::isolate
 
 #endif // COCAINE_DOCKER_ISOLATE_HPP
