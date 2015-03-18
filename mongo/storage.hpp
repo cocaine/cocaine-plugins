@@ -22,7 +22,6 @@
 #define COCAINE_MONGO_STORAGE_HPP
 
 #include <cocaine/api/storage.hpp>
-
 #include <mongo/client/dbclient.h>
 
 namespace cocaine { namespace storage {
@@ -31,7 +30,9 @@ class mongo_storage_t:
     public api::storage_t
 {
     const std::unique_ptr<logging::log_t> m_log;
-    const mongo::ConnectionString m_uri;
+
+    // Should be const, but is not constructible in initialization list due to stupid design.
+    std::unique_ptr<mongo::DBClientBase> m_client;
 
 public:
     mongo_storage_t(context_t& context, const std::string& name, const dynamic_t& args);
