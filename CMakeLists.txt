@@ -24,6 +24,7 @@ FIND_PACKAGE(Boost 1.46.0
     REQUIRED COMPONENTS
         system
         filesystem
+        regex
         thread)
 
 LOCATE_LIBRARY(LIBCOCAINE "cocaine/context.hpp" "cocaine-core")
