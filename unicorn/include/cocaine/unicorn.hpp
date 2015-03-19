@@ -135,6 +135,7 @@ public:
     lock(unicorn::path_t path);
 
     struct lock_action_t;
+    struct release_lock_action_t;
 
     class lock_state_t :
         public std::enable_shared_from_this<lock_state_t>
@@ -144,6 +145,9 @@ public:
         ~lock_state_t();
         lock_state_t(const lock_state_t& other) = delete;
         lock_state_t& operator=(const lock_state_t& other) = delete;
+
+        void
+        schedule_for_lock(std::shared_ptr<distributed_lock_t> parent);
 
         void
         release();
@@ -159,6 +163,8 @@ public:
     private:
         void
         release_impl();
+
+        std::shared_ptr<distributed_lock_t> lock;
 
         unicorn_service_t* service;
         bool lock_created;

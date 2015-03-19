@@ -154,7 +154,7 @@ connection_t::childs(const path_t& path, managed_strings_stat_handler_base_t& ha
 }
 
 void connection_t::check_connectivity() {
-    if(is_unrecoverable(zhandle)) {
+    if(!zhandle || is_unrecoverable(zhandle)) {
         reconnect();
     }
 }
@@ -174,6 +174,9 @@ void connection_t::reconnect() {
             new_zhandle = init();
         }
         if(!new_zhandle || is_unrecoverable(new_zhandle)) {
+            // Swap in any case.
+            // Sometimes we really want to force reconnect even when zk is unavailable at all. For example on lock release.
+            std::swap(new_zhandle, zhandle);
             throw exception(ZOO_EXTRA_ERROR::COULD_NOT_CONNECT);
         }
     } else {

@@ -260,7 +260,6 @@ struct unicorn_dispatch_t::increment_action_t:
 
     unicorn_service_t* service;
     unicorn_dispatch_t::response::increment result;
-    const unicorn::path_t path;
     unicorn::value_t total;
     std::weak_ptr<zookeeper::handler_scope_t> scope;
 };
@@ -285,7 +284,6 @@ struct distributed_lock_t::lock_action_t :
         unicorn::value_t _value,
         unicorn_dispatch_t::response::lock _result
     );
-
 
     /**
     * Childs subrequest handler
@@ -314,14 +312,26 @@ struct distributed_lock_t::lock_action_t :
     virtual void
     abort(int rc);
 
-    /**
-    * Yes here is a cycle reference, but we will break it after lock.
-    * We need this for handler to be alive when we need to release lock due to early client disconnection.
-    */
     std::shared_ptr<distributed_lock_t::lock_state_t> state;
     unicorn_dispatch_t::response::lock result;
     unicorn::path_t folder;
     std::string created_node_name;
 };
+
+/**
+* Handler for lock_release.
+*/
+struct distributed_lock_t::release_lock_action_t :
+    public zookeeper::void_handler_base_t
+{
+    release_lock_action_t(unicorn_service_t* _service);
+
+    virtual void
+        operator()(int rc);
+
+    unicorn_service_t* service;
+};
+
+
 
 }}
