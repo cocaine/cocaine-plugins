@@ -12,6 +12,7 @@ OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(GRAPHITE "Build Graphite Service plugin" ON)
+OPTION(UNICORN "Build Unified configuration service plugin" ON)
 
 ADD_DEFINITIONS(-DBLACKHOLE_HEADER_ONLY)
 
@@ -53,7 +54,8 @@ SET(PLUGINS
         ipvs
         mongo
         urlfetch
-        graphite)
+        graphite
+        unicorn)
 
 FOREACH(PLUGIN ${PLUGINS})
     STRING(TOUPPER ${PLUGIN} OPTION_NAME)
