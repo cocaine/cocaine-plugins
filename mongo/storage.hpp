@@ -31,8 +31,8 @@ class mongo_storage_t:
 {
     const std::unique_ptr<logging::log_t> m_log;
 
-    // Should be const, but is not constructible in initialization list due to stupid design.
-    std::unique_ptr<mongo::DBClientBase> m_client;
+    // Persistent DB connection. No idea if it's pooled or not.
+    const std::unique_ptr<mongo::DBClientBase> m_client;
 
 public:
     mongo_storage_t(context_t& context, const std::string& name, const dynamic_t& args);

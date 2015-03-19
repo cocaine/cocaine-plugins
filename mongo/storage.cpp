@@ -30,28 +30,36 @@ using namespace cocaine::storage;
 using namespace cocaine::logging;
 using namespace mongo;
 
-mongo_storage_t::mongo_storage_t(context_t& context, const std::string& name, const dynamic_t& args):
-    category_type(context, name, args),
-    m_log(context.log(name))
-{
+namespace {
+
+std::unique_ptr<DBClientBase>
+connect(const std::string& uri) {
     std::string error;
 
-    mongo::ConnectionString connection_string(
-        args.as_object().at("uri", "").to<std::string>(),
-        ConnectionString::SET
-    );
+    mongo::ConnectionString connection_string(uri, ConnectionString::SET);
+    mongo::DBClientBase* ptr = nullptr;
 
     try {
         // It will automatically determine the MongoDB cluster setup.
-        m_client.reset(connection_string.connect(error));
+        ptr = connection_string.connect(error);
 
-        if(!m_client) {
+        if(ptr == nullptr) {
             throw storage_error_t(error);
         }
     } catch(const DBException& e) {
         throw storage_error_t(e.what());
     }
+
+    return std::unique_ptr<DBClientBase>(ptr);
 }
+
+} // namespace
+
+mongo_storage_t::mongo_storage_t(context_t& context, const std::string& name, const dynamic_t& args):
+    category_type(context, name, args),
+    m_log(context.log(name)),
+    m_client(connect(args.as_object().at("uri", "").to<std::string>()))
+{ }
 
 std::string
 mongo_storage_t::read(const std::string& collection, const std::string& key) {
