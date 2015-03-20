@@ -28,9 +28,11 @@ using namespace cocaine::storage;
 extern "C" {
     void
     initialize(api::repository_t& repository) {
-        // Initialize the MongoDB client library.
-        // TODO: It should be teared down as well, but as of now, we don't have a place to do it.
-        mongo::client::initialize();
+        const auto status = mongo::client::initialize();
+
+        if(status != mongo::Status::OK()) {
+            throw cocaine::error_t("unable to initialize mongodb - %s", status.toString());
+        }
 
         repository.insert<mongo_storage_t>("mongodb");
     }
