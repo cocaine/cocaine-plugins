@@ -96,7 +96,7 @@ class ipvs_t::remote_t {
     std::multimap<std::string, ipvs_dest_t> backends;
 
 public:
-    remote_t(ipvs_t* parent, const std::string& name, unsigned int version, const graph_basis_t& graph);
+    remote_t(ipvs_t* parent, const std::string& name, unsigned int version, const graph_root_t& graph);
    ~remote_t();
 
     // Observers
@@ -118,7 +118,7 @@ private:
 };
 
 ipvs_t::remote_t::remote_t(ipvs_t *const parent_, const std::string& name_, unsigned int version,
-                           const graph_basis_t& graph)
+                           const graph_root_t& graph)
 :
     parent(parent_),
     info({name_, metadata_t({}, version, graph)})
@@ -436,7 +436,7 @@ ipvs_t::resolve(const std::string& name) const -> metadata_t {
 void
 ipvs_t::consume(const std::string& uuid, const std::string& name, const metadata_t& info) {
     auto endpoints = std::vector<tcp::endpoint>();
-    auto graph     = graph_basis_t();
+    auto graph     = graph_root_t();
     auto version   = 0;
 
     std::tie(endpoints, version, graph) = info;
