@@ -17,10 +17,6 @@
 #define COCAINE_UNICORN_SERVICE_HPP
 
 #include "cocaine/idl/unicorn.hpp"
-#include "cocaine/unicorn/path.hpp"
-#include "cocaine/unicorn/value.hpp"
-#include "cocaine/unicorn/writable.hpp"
-
 #include "cocaine/unicorn/api/zookeeper.hpp"
 
 #include "cocaine/zookeeper/connection.hpp"
@@ -28,10 +24,6 @@
 
 #include <cocaine/api/service.hpp>
 #include <cocaine/rpc/dispatch.hpp>
-
-#include <asio/ip/tcp.hpp>
-#include <asio/deadline_timer.hpp>
-#include <cocaine/unicorn/api.hpp>
 
 namespace cocaine { namespace service {
 
@@ -49,7 +41,6 @@ public:
     friend class distributed_lock_t;
     const std::string& get_name() const { return name; }
 private:
-    unicorn::zookeeper_api_t api;
     std::string name;
     zookeeper::session_t zk_session;
     zookeeper::connection_t zk;
@@ -84,8 +75,13 @@ public:
 
     template<class Event, class Method, class Response>
     friend class unicorn_slot_t;
+
+    virtual
+    void discard(const std::error_code& ec) const;
 private:
-    unicorn::zookeeper_api_t api;
+
+    //because discard is marked const
+    mutable unicorn::zookeeper_api_t api;
 };
 
 template<class Event, class Method, class Response>
@@ -109,7 +105,7 @@ public:
         std::shared_ptr<unicorn_dispatch_t> dispatch = std::make_shared<unicorn_dispatch_t>(service->get_name(), service);
         Response result;
         auto wptr = unicorn::make_writable(result);
-        auto callback = std::tuple_cat(std::make_tuple(dispatch->api, wptr), std::move(args));
+        auto callback = std::tuple_cat(std::make_tuple(&dispatch->api, wptr), std::move(args));
         tuple::invoke(std::mem_fn(method), std::move(callback));
         result.attach(std::move(upstream));
         return boost::make_optional<std::shared_ptr<const dispatch_type>>(dispatch);

@@ -108,7 +108,7 @@ private:
 
     void release(managed_handler_base_t* callback);
 
-    handler_dispatcher_t() {}
+    handler_dispatcher_t();
     handler_dispatcher_t(const handler_dispatcher_t& other) = delete;
     handler_dispatcher_t& operator=(const handler_dispatcher_t& other) = delete;
     std::mutex storage_lock;
@@ -201,7 +201,7 @@ class managed_string_handler_base_t :
 {
 public:
     virtual void
-    operator() (int rc, value_t value) = 0;
+    operator() (int rc, zookeeper::value_t value) = 0;
 
     managed_string_handler_base_t(const handler_tag& tag) :
         managed_handler_base_t(tag)

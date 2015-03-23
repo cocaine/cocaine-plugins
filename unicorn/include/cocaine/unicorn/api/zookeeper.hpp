@@ -28,6 +28,11 @@ zookeeper::cfg_t make_zk_config(const dynamic_t& args);
 class zookeeper_api_t : public api_t {
 public:
 
+    struct context_t {
+        cocaine::logging::log_t& log;
+        zookeeper::connection_t& zk;
+    };
+
     typedef std::shared_ptr <zookeeper::handler_scope_t> scope_ptr;
 
     /**
@@ -122,7 +127,7 @@ public:
         public std::enable_shared_from_this<lock_state_t>
     {
     public:
-        lock_state_t(zookeeper_api_t* service);
+        lock_state_t(const zookeeper_api_t::context_t& _ctx);
         ~lock_state_t();
         lock_state_t(const lock_state_t& other) = delete;
         lock_state_t& operator=(const lock_state_t& other) = delete;
@@ -148,7 +153,7 @@ public:
         void
         release_impl();
 
-        zookeeper_api_t* service;
+        zookeeper_api_t::context_t ctx;
         bool lock_created;
         bool lock_released;
         bool discarded;
@@ -161,8 +166,7 @@ public:
 private:
     std::shared_ptr<lock_state_t> lock_state;
     scope_ptr handler_scope;
-    cocaine::logging::log_t& log;
-    zookeeper::connection_t& zk;
+    context_t ctx;
 };
 }}
 

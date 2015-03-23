@@ -34,7 +34,7 @@ struct zookeeper_api_t::subscribe_action_t :
     subscribe_action_t(
         const zookeeper::handler_tag& tag,
         writable_helper<response::subscribe_result>::ptr _result,
-        zookeeper_api_t* _service,
+        const zookeeper_api_t::context_t& ctx,
         unicorn::path_t _path
     );
 
@@ -60,7 +60,7 @@ struct zookeeper_api_t::subscribe_action_t :
     operator()(int type, int state, zookeeper::path_t path);
 
     writable_helper<response::subscribe_result>::ptr result;
-    zookeeper_api_t* service;
+    zookeeper_api_t::context_t ctx;
     std::mutex write_lock;
     unicorn::version_t last_version;
     const unicorn::path_t path;
@@ -80,7 +80,7 @@ struct zookeeper_api_t::children_subscribe_action_t :
     children_subscribe_action_t(
         const zookeeper::handler_tag& tag,
         writable_helper<response::children_subscribe_result>::ptr _result,
-        zookeeper_api_t* _service,
+        const zookeeper_api_t::context_t& ctx,
         unicorn::path_t _path
     );
 
@@ -98,7 +98,7 @@ struct zookeeper_api_t::children_subscribe_action_t :
 
 
     writable_helper<response::children_subscribe_result>::ptr result;
-    zookeeper_api_t* service;
+    zookeeper_api_t::context_t ctx;
     std::mutex write_lock;
     unicorn::version_t last_version;
     const unicorn::path_t path;
@@ -112,7 +112,7 @@ struct zookeeper_api_t::put_action_t :
 
     put_action_t(
         const zookeeper::handler_tag& tag,
-        zookeeper_api_t* _service,
+        const zookeeper_api_t::context_t& ctx,
         writable_helper<response::put_result>::ptr _result,
         unicorn::path_t _path,
         unicorn::value_t _value,
@@ -131,7 +131,7 @@ struct zookeeper_api_t::put_action_t :
     virtual void
     operator()(int rc, zookeeper::value_t value, zookeeper::node_stat const& stat);
 
-    zookeeper_api_t* service;
+    zookeeper_api_t::context_t ctx;
     writable_helper<response::put_result>::ptr result;
     unicorn::path_t path;
     unicorn::value_t initial_value;
@@ -149,7 +149,7 @@ struct zookeeper_api_t::create_action_base_t :
 
     create_action_base_t(
         const zookeeper::handler_tag& tag,
-        zookeeper_api_t* _service,
+        const zookeeper_api_t::context_t& ctx,
         unicorn::path_t _path,
         unicorn::value_t _value,
         bool _ephemeral,
@@ -175,7 +175,7 @@ struct zookeeper_api_t::create_action_base_t :
     abort(int rc) = 0;
 
     int depth;
-    zookeeper_api_t* service;
+    zookeeper_api_t::context_t ctx;
     unicorn::path_t path;
     unicorn::value_t initial_value;
     zookeeper::value_t encoded_value;
@@ -191,7 +191,7 @@ struct zookeeper_api_t::create_action_t:
 {
     create_action_t(
         const zookeeper::handler_tag& tag,
-        zookeeper_api_t* _service,
+        const zookeeper_api_t::context_t& ctx,
         writable_helper<response::create_result>::ptr _result,
         unicorn::path_t _path,
         unicorn::value_t _value,
@@ -233,7 +233,7 @@ struct zookeeper_api_t::increment_action_t:
 
     increment_action_t(
         const zookeeper::handler_tag& tag,
-        zookeeper_api_t* _service,
+        const zookeeper_api_t::context_t& ctx,
         writable_helper<response::increment_result>::ptr _result,
         unicorn::path_t _path,
         unicorn::value_t _increment,
@@ -253,6 +253,13 @@ struct zookeeper_api_t::increment_action_t:
     operator() (int rc, zookeeper::value_t value, const zookeeper::node_stat& stat);
 
     /**
+    * Implicit call to base.
+    */
+    virtual void
+    operator()(int rc, zookeeper::value_t value) {
+        return create_action_base_t::operator()(rc, std::move(value));
+    }
+    /**
     * Create part of increment
     */
     virtual void
@@ -261,7 +268,7 @@ struct zookeeper_api_t::increment_action_t:
     virtual void
     abort(int rc);
 
-    zookeeper_api_t* service;
+    zookeeper_api_t::context_t ctx;
     writable_helper<response::increment_result>::ptr result;
     unicorn::value_t total;
     std::weak_ptr<zookeeper::handler_scope_t> scope;
@@ -280,7 +287,7 @@ struct zookeeper_api_t::lock_action_t :
 {
     lock_action_t(
         const zookeeper::handler_tag& tag,
-        zookeeper_api_t* service,
+        const zookeeper_api_t::context_t& ctx,
         std::shared_ptr<zookeeper_api_t::lock_state_t> state,
         unicorn::path_t _path,
         unicorn::path_t folder,
@@ -307,6 +314,14 @@ struct zookeeper_api_t::lock_action_t :
     virtual void operator()(int type, int state, unicorn::path_t path);
 
     /**
+    * Implicit call to base.
+    */
+    virtual void
+    operator()(int rc, zookeeper::value_t value) {
+        return create_action_base_t::operator()(rc, std::move(value));
+    }
+
+    /**
     * Lock creation handler.
     */
     virtual void
@@ -327,12 +342,12 @@ struct zookeeper_api_t::lock_action_t :
 struct zookeeper_api_t::release_lock_action_t :
     public zookeeper::void_handler_base_t
 {
-    release_lock_action_t(zookeeper_api_t* _service);
+    release_lock_action_t(const zookeeper_api_t::context_t& ctx);
 
     virtual void
         operator()(int rc);
 
-    zookeeper_api_t* service;
+    zookeeper_api_t::context_t ctx;
 };
 
 

@@ -102,6 +102,9 @@ public:
 
     virtual void
     close() = 0;
+
+    virtual
+    ~api_t() {}
 };
 }}
 

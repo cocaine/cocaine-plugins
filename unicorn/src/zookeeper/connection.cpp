@@ -52,8 +52,8 @@ cfg_t::endpoint_t::to_string() const {
 
 
 cfg_t::cfg_t(std::vector<cfg_t::endpoint_t> _endpoints, unsigned int _recv_timeout_ms):
-    endpoints(std::move(_endpoints)),
-    recv_timeout_ms(_recv_timeout_ms)
+    recv_timeout_ms(_recv_timeout_ms),
+    endpoints(std::move(_endpoints))
 {
 }
 
@@ -200,7 +200,7 @@ zhandle_t* connection_t::init() {
     return new_zhandle;
 }
 
-void connection_t::reconnect_action_t::operator()(int type, int state, path_t path) {
+void connection_t::reconnect_action_t::operator()(int type, int state, path_t /*path*/) {
     if(type == ZOO_SESSION_EVENT) {
         if(state == ZOO_EXPIRED_SESSION_STATE) {
             parent.session.reset();

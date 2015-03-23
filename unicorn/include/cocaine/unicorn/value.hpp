@@ -48,7 +48,7 @@ unserialize(const zookeeper::value_t& val);
 class versioned_value_t {
 public:
     versioned_value_t() = default;
-    versioned_value_t(const versioned_value_t& other) = default;
+    versioned_value_t(const versioned_value_t&) = default;
     versioned_value_t(value_t _value, version_t _version);
 
     template<class Stream>

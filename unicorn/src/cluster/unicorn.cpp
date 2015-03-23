@@ -35,7 +35,7 @@ struct dynamic_converter<asio::ip::tcp::endpoint> {
 
         asio::ip::tcp::endpoint result(
             asio::ip::address::from_string(from.as_array()[0].to<std::string>()),
-            from.as_array()[1].to<unsigned int>()
+            from.as_array()[1].to<unsigned short int>()
         );
         return result;
     }
@@ -78,7 +78,7 @@ unicorn_cluster_t::on_announce::on_announce(unicorn_cluster_t* _parent) :
 {}
 
 void
-unicorn_cluster_t::on_announce::write(unicorn::api_t::response::create_result&& result) {
+unicorn_cluster_t::on_announce::write(unicorn::api_t::response::create_result&& /*result*/) {
     COCAINE_LOG_INFO(parent->log, "Announced self in unicorn");
     parent->unicorn.subscribe(std::make_shared<on_update>(parent), parent->config.path + '/' + parent->locator.uuid());
 }
@@ -109,13 +109,13 @@ unicorn_cluster_t::on_update::write(unicorn::api_t::response::subscribe_result&&
 
 void
 unicorn_cluster_t::on_update::abort(int rc, const std::string& reason) {
-    COCAINE_LOG_ERROR(parent->log, "Announce dissappeared. Retrying.");
+    COCAINE_LOG_ERROR(parent->log, "Announce dissappeared(%i) : %s. Retrying.", rc, reason.c_str());
     parent->announce();
 }
 
-unicorn_cluster_t::on_fetch::on_fetch(std::string uuid, unicorn_cluster_t* _parent) :
-uuid(std::move(uuid)),
-parent(_parent)
+unicorn_cluster_t::on_fetch::on_fetch(std::string _uuid, unicorn_cluster_t* _parent) :
+    uuid(std::move(_uuid)),
+    parent(_parent)
 {}
 
 void
@@ -141,7 +141,8 @@ unicorn_cluster_t::on_fetch::write(unicorn::api_t::response::get_result&& result
 }
 
 void
-unicorn_cluster_t::on_fetch::abort(int ec, const std::string& reason) {
+unicorn_cluster_t::on_fetch::abort(int rc, const std::string& reason) {
+    COCAINE_LOG_WARNING(parent->log, "Error during fetch(%i): %s", rc, reason.c_str());
     auto storage = parent->registered_locators.synchronize();
     auto it = storage->find(uuid);
     bool drop = false;
@@ -182,8 +183,8 @@ unicorn_cluster_t::on_list_update::write(unicorn::api_t::response::children_subs
 }
 
 void
-unicorn_cluster_t::on_list_update::abort(int ec, const std::string& reason) {
-    COCAINE_LOG_WARNING(parent->log, "FAILURE during subscription: %s. Resubscribing.", reason.c_str());
+unicorn_cluster_t::on_list_update::abort(int rc, const std::string& reason) {
+    COCAINE_LOG_WARNING(parent->log, "FAILURE during subscription(%i): %s. Resubscribing.", rc, reason.c_str());
     parent->subscribe_timer.expires_from_now(boost::posix_time::seconds(retry_interval));
     parent->subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, parent, std::placeholders::_1));
 

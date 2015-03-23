@@ -14,8 +14,6 @@
 */
 
 #include "cocaine/unicorn.hpp"
-#include "cocaine/unicorn/api/zookeeper.hpp"
-
 #include <cocaine/context.hpp>
 
 using namespace cocaine::unicorn;
@@ -34,14 +32,14 @@ unicorn_service_t::unicorn_service_t(context_t& context, asio::io_service& _asio
     name(_name),
     zk_session(),
     zk(make_zk_config(args), zk_session),
-    log(context.log("unicorn")),
-    api(*log, zk)
+    log(context.log("unicorn"))
 {
     using namespace std::placeholders;
 
     on<io::unicorn::subscribe>         (std::make_shared<subscribe_slot_t>         (this, &unicorn::api_t::subscribe));
     on<io::unicorn::children_subscribe>(std::make_shared<children_subscribe_slot_t>(this, &unicorn::api_t::children_subscribe));
     on<io::unicorn::put>               (std::make_shared<put_slot_t>               (this, &unicorn::api_t::put));
+    on<io::unicorn::get>               (std::make_shared<get_slot_t>               (this, &unicorn::api_t::get));
     on<io::unicorn::create>            (std::make_shared<create_slot_t>            (this, &unicorn::api_t::create_default));
     on<io::unicorn::del>               (std::make_shared<del_slot_t>               (this, &unicorn::api_t::del));
     on<io::unicorn::increment>         (std::make_shared<increment_slot_t>         (this, &unicorn::api_t::increment));
@@ -49,10 +47,17 @@ unicorn_service_t::unicorn_service_t(context_t& context, asio::io_service& _asio
 
 }
 
-unicorn_dispatch_t::unicorn_dispatch_t(const std::string& name, unicorn_service_t* service) :
-    dispatch<io::unicorn_final_tag>(name),
-    api(new zookeeper_api_t(*service->log, service->zk))
+unicorn_dispatch_t::unicorn_dispatch_t(const std::string& _name, unicorn_service_t* service) :
+    dispatch<io::unicorn_final_tag>(_name),
+    api(*service->log, service->zk)
 {
+    on<io::unicorn::close>(std::bind(&unicorn_dispatch_t::discard, this, std::error_code()));
 }
+
+void
+unicorn_dispatch_t::discard(const std::error_code& /*ec*/) const {
+    api.close();
+}
+
 
 }}
