@@ -32,6 +32,9 @@ public:
         cfg_t(const dynamic_t& args);
 
         unicorn::path_t path;
+        size_t retry_interval;
+        size_t check_interval;
+
     };
     unicorn_cluster_t(context_t& context, interface& locator, const std::string& name, const dynamic_t& args);
 
@@ -96,9 +99,6 @@ public:
 private:
 
     void
-    init();
-
-    void
     announce();
 
     void
@@ -120,7 +120,6 @@ private:
     zookeeper::connection_t zk;
     unicorn::zookeeper_api_t unicorn;
     synchronized<std::set<std::string>> registered_locators;
-    static constexpr size_t retry_interval = 1;
 };
 
 }}

@@ -70,7 +70,9 @@ struct dynamic_constructor<asio::ip::tcp::endpoint> {
 namespace cluster {
 
 unicorn_cluster_t::cfg_t::cfg_t(const dynamic_t& args) :
-    path(args.as_object().at("path", "/cocaine/discovery").as_string())
+    path(args.as_object().at("path", "/cocaine/discovery").as_string()),
+    retry_interval(args.as_object().at("retry_interval", 1u).as_uint()),
+    check_interval(args.as_object().at("check_interval", 60u).as_uint())
 {}
 
 unicorn_cluster_t::on_announce::on_announce(unicorn_cluster_t* _parent) :
@@ -87,10 +89,11 @@ void
 unicorn_cluster_t::on_announce::abort(int rc, const std::string& reason) {
     //Ok for us.
     if(rc == ZNODEEXISTS) {
+        COCAINE_LOG_INFO(parent->log, "Announce checked");
         return;
     }
     COCAINE_LOG_ERROR(parent->log, "Could not announce local services: %s", reason.c_str());
-    parent->announce_timer.expires_from_now(boost::posix_time::seconds(retry_interval));
+    parent->announce_timer.expires_from_now(boost::posix_time::seconds(parent->config.retry_interval));
     parent->announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, parent, std::placeholders::_1));
 }
 
@@ -185,7 +188,7 @@ unicorn_cluster_t::on_list_update::write(unicorn::api_t::response::children_subs
 void
 unicorn_cluster_t::on_list_update::abort(int rc, const std::string& reason) {
     COCAINE_LOG_WARNING(parent->log, "FAILURE during subscription(%i): %s. Resubscribing.", rc, reason.c_str());
-    parent->subscribe_timer.expires_from_now(boost::posix_time::seconds(retry_interval));
+    parent->subscribe_timer.expires_from_now(boost::posix_time::seconds(parent->config.retry_interval));
     parent->subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, parent, std::placeholders::_1));
 
 }
@@ -207,13 +210,11 @@ unicorn_cluster_t::unicorn_cluster_t(
     zk(unicorn::make_zk_config(args), zk_session),
     unicorn(*log, zk)
 {
-    context.signals.ready.connect(std::bind(&unicorn_cluster_t::init, this));
-}
+    subscribe_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
+    subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, this, std::placeholders::_1));
 
-void
-unicorn_cluster_t::init() {
-    subscribe();
-    announce();
+    announce_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
+    announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
 }
 
 void
@@ -222,7 +223,8 @@ unicorn_cluster_t::announce() {
 
     if(!actor) {
         COCAINE_LOG_ERROR(log, "unable to announce local endpoints: locator is not available");
-        std::abort();
+        announce_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
+        announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
     }
 
     const auto endpoints = actor->endpoints();
@@ -236,10 +238,13 @@ unicorn_cluster_t::announce() {
             true,
             false
         );
+        announce_timer.expires_from_now(boost::posix_time::seconds(config.check_interval));
+        announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
+
     }
     catch(const zookeeper::exception& e) {
         COCAINE_LOG_ERROR(log, "FAILURE during subscription: %s", e.what());
-        announce_timer.expires_from_now(boost::posix_time::seconds(retry_interval));
+        announce_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
         announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
     }
 }
@@ -266,12 +271,14 @@ unicorn_cluster_t::subscribe() {
             std::make_shared<on_list_update>(this),
             config.path
         );
+        subscribe_timer.expires_from_now(boost::posix_time::seconds(config.check_interval));
+        subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, this, std::placeholders::_1));
         COCAINE_LOG_DEBUG(log, "Subscribed for updates on %s", config.path.c_str());
 
     }
     catch(const zookeeper::exception& e) {
         COCAINE_LOG_ERROR(log, "FAILURE during subscription: %s", e.what());
-        subscribe_timer.expires_from_now(boost::posix_time::seconds(retry_interval));
+        subscribe_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
         subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, this, std::placeholders::_1));
     }
 }

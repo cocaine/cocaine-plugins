@@ -137,6 +137,18 @@ public:
         return *handler;
     }
 
+    template<class T>
+    void
+    release_handler(T& handler) {
+        auto it = std::remove(registered_callbacks.begin(),registered_callbacks.end(), &handler);
+        if(it == registered_callbacks.end()) {
+            throw std::runtime_error("Specified callback not found in scope");
+        }
+        assert(it+1 == registered_callbacks.end());
+        registered_callbacks.resize(it - registered_callbacks.begin());
+        handler_dispatcher_t::instance().release(&handler);
+    }
+
 private:
     std::vector<managed_handler_base_t*> registered_callbacks;
 };
