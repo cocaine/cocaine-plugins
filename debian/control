@@ -92,3 +92,8 @@ Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core3 (>= 0.12.0.0)
 Description: Cocaine - Graphite Service
  Service for proxying metrics to graphite.
 
+Package: libcocaine-plugin-unicorn3
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core3 (>= 0.12.0.0)
+Description: Cocaine - Unicorn Service
+ Unified configuration service for cocaine.
