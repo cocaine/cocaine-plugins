@@ -110,22 +110,21 @@ mongo_storage_t::write(const std::string& collection, const std::string& key, co
 std::vector<std::string>
 mongo_storage_t::find(const std::string& collection, const std::vector<std::string>& tags) {
     std::vector<std::string> result;
+    std::vector<BSONObj> tag_queries;
+
+    for(auto tag = tags.begin(); tag != tags.end(); ++tag) {
+        tag_queries.push_back(BSONObjBuilder().append("tags", *tag).obj());
+    }
+
+    BSONObj object;
 
     try {
-        std::vector<BSONObj> tag_queries;
-
-        for (auto tag = tags.begin(); tag != tags.end(); ++tag) {
-            tag_queries.push_back(BSONObjBuilder().append("tags", *tag).obj());
-        }
-
         // Fetch all the keys which have all of the specified tags, i.e. the resulting query will be
         // something like this: {"$and": [{"tags": "tag_1"}, {"tags": "tag_2"}, {"tags": "tag_3"}]}.
         auto cursor = m_client->query("cocaine.meta." + collection, BSONObjBuilder()
             .append("$and", tag_queries)
             .obj()
         );
-
-        BSONObj object;
 
         while(cursor->more()) {
             object = cursor->nextSafe();
