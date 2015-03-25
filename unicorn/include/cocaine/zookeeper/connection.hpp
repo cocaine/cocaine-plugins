@@ -61,7 +61,8 @@ private:
 class connection_t {
 public:
     connection_t(const cfg_t& cfg, const session_t& session);
-
+    connection_t(const connection_t&) = delete;
+    connection_t& operator=(const connection_t&) = delete;
     ~connection_t();
 
     /**

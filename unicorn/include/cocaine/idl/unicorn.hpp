@@ -27,7 +27,6 @@ namespace cocaine { namespace io {
 
 struct unicorn_tag;
 struct unicorn_final_tag;
-struct unicorn_locked_tag;
 
 /**
 * Protocol starts with initial dispatch.
@@ -93,6 +92,30 @@ struct unicorn {
         */
         typedef option_of<
             bool,
+            cocaine::unicorn::versioned_value_t
+        >::tag upstream_type;
+
+        typedef unicorn_final_tag dispatch_type;
+    };
+
+    struct get {
+        typedef unicorn_tag tag;
+
+        static const char* alias() {
+            return "get";
+        }
+
+        /**
+        * subscribe for updates on path. Will send last update which version is greater than specified.
+        */
+        typedef boost::mpl::list<
+            cocaine::unicorn::path_t
+        > argument_type;
+
+        /**
+        * current version in ZK
+        */
+        typedef option_of<
             cocaine::unicorn::versioned_value_t
         >::tag upstream_type;
 
@@ -201,7 +224,7 @@ struct unicorn {
             return "lock";
         }
 
-        typedef unicorn_locked_tag dispatch_type;
+        typedef unicorn_final_tag dispatch_type;
 
         typedef boost::mpl::list<
             cocaine::unicorn::path_t
@@ -210,13 +233,6 @@ struct unicorn {
         typedef option_of <
             bool
         >::tag upstream_type;
-    };
-
-    struct unlock {
-        typedef unicorn_locked_tag tag;
-        static const char* alias() {
-            return "unlock";
-        }
     };
 
     struct close {
@@ -237,23 +253,11 @@ struct protocol<unicorn_tag> {
         unicorn::subscribe,
         unicorn::children_subscribe,
         unicorn::put,
+        unicorn::get,
         unicorn::create,
         unicorn::del,
         unicorn::increment,
         unicorn::lock
-    > messages;
-
-    typedef unicorn scope;
-};
-
-template<>
-struct protocol<unicorn_locked_tag> {
-    typedef boost::mpl::int_<
-        1
-    >::type version;
-
-    typedef boost::mpl::list<
-        unicorn::unlock
     > messages;
 
     typedef unicorn scope;

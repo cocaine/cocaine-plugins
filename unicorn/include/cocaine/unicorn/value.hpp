@@ -48,7 +48,7 @@ unserialize(const zookeeper::value_t& val);
 class versioned_value_t {
 public:
     versioned_value_t() = default;
-    versioned_value_t(const versioned_value_t& other) = default;
+    versioned_value_t(const versioned_value_t&) = default;
     versioned_value_t(value_t _value, version_t _version);
 
     template<class Stream>
@@ -58,6 +58,17 @@ public:
         cocaine::io::type_traits<value_t>::pack(packer, value);
         cocaine::io::type_traits<version_t>::pack(packer, version);
     }
+
+    const value_t&
+    get_value() const {
+        return value;
+    }
+
+    version_t
+    get_version() const {
+        return version;
+    }
+
 private:
     value_t value;
     version_t version;
