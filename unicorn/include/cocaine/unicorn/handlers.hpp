@@ -14,9 +14,10 @@
 */
 
 #include "cocaine/unicorn.hpp"
+#include "cocaine/unicorn/api/zookeeper.hpp"
 
 namespace cocaine {
-namespace service {
+namespace unicorn {
 
 /**
 * Action for handling get requests during subscription.
@@ -24,7 +25,7 @@ namespace service {
 * On each get completion we compare last sent verison to client with current and if current version is greater send update to client.
 * On each watch invoke we issue get command (to later process with this handler) with new watcher.
 */
-struct unicorn_dispatch_t::subscribe_action_t :
+struct zookeeper_api_t::subscribe_action_t :
     public zookeeper::managed_data_handler_base_t,
     public zookeeper::managed_watch_handler_base_t,
     public zookeeper::managed_stat_handler_base_t
@@ -32,8 +33,8 @@ struct unicorn_dispatch_t::subscribe_action_t :
 
     subscribe_action_t(
         const zookeeper::handler_tag& tag,
-        unicorn_dispatch_t::response::subscribe _result,
-        unicorn_service_t* _service,
+        writable_helper<response::subscribe_result>::ptr _result,
+        const zookeeper_api_t::context_t& ctx,
         unicorn::path_t _path
     );
 
@@ -58,8 +59,8 @@ struct unicorn_dispatch_t::subscribe_action_t :
     void
     operator()(int type, int state, zookeeper::path_t path);
 
-    unicorn_dispatch_t::response::subscribe result;
-    unicorn_service_t* service;
+    writable_helper<response::subscribe_result>::ptr result;
+    zookeeper_api_t::context_t ctx;
     std::mutex write_lock;
     unicorn::version_t last_version;
     const unicorn::path_t path;
@@ -71,15 +72,15 @@ struct unicorn_dispatch_t::subscribe_action_t :
 * On each get completion we compare last sent verison to client with current and if current version is greater send update to client.
 * On each watch invoke we issue child command (to later process with this handler) starting new watch.
 */
-struct unicorn_dispatch_t::children_subscribe_action_t :
+struct zookeeper_api_t::children_subscribe_action_t :
     public zookeeper::managed_strings_stat_handler_base_t,
     public zookeeper::managed_watch_handler_base_t
 {
 
     children_subscribe_action_t(
         const zookeeper::handler_tag& tag,
-        unicorn_dispatch_t::response::children_subscribe,
-        unicorn_service_t* _service,
+        writable_helper<response::children_subscribe_result>::ptr _result,
+        const zookeeper_api_t::context_t& ctx,
         unicorn::path_t _path
     );
 
@@ -96,23 +97,23 @@ struct unicorn_dispatch_t::children_subscribe_action_t :
     operator()(int type, int state, zookeeper::path_t path);
 
 
-    unicorn_dispatch_t::response::children_subscribe result;
-    unicorn_service_t* service;
+    writable_helper<response::children_subscribe_result>::ptr result;
+    zookeeper_api_t::context_t ctx;
     std::mutex write_lock;
     unicorn::version_t last_version;
     const unicorn::path_t path;
 };
 
 
-struct unicorn_dispatch_t::put_action_t :
+struct zookeeper_api_t::put_action_t :
     public zookeeper::managed_stat_handler_base_t,
     public zookeeper::managed_data_handler_base_t
 {
 
     put_action_t(
         const zookeeper::handler_tag& tag,
-        unicorn_service_t* _service,
-        unicorn_dispatch_t::response::put result,
+        const zookeeper_api_t::context_t& ctx,
+        writable_helper<response::put_result>::ptr _result,
         unicorn::path_t _path,
         unicorn::value_t _value,
         unicorn::version_t _version
@@ -130,8 +131,8 @@ struct unicorn_dispatch_t::put_action_t :
     virtual void
     operator()(int rc, zookeeper::value_t value, zookeeper::node_stat const& stat);
 
-    unicorn_service_t* service;
-    unicorn_dispatch_t::response::put result;
+    zookeeper_api_t::context_t ctx;
+    writable_helper<response::put_result>::ptr result;
     unicorn::path_t path;
     unicorn::value_t initial_value;
     zookeeper::value_t encoded_value;
@@ -142,13 +143,13 @@ struct unicorn_dispatch_t::put_action_t :
 /**
 * Base handler for node creation. Used in create, lock, increment requests
 */
-struct unicorn_dispatch_t::create_action_base_t :
+struct zookeeper_api_t::create_action_base_t :
     public zookeeper::managed_string_handler_base_t
 {
 
     create_action_base_t(
         const zookeeper::handler_tag& tag,
-        unicorn_service_t* _service,
+        const zookeeper_api_t::context_t& ctx,
         unicorn::path_t _path,
         unicorn::value_t _value,
         bool _ephemeral,
@@ -174,7 +175,7 @@ struct unicorn_dispatch_t::create_action_base_t :
     abort(int rc) = 0;
 
     int depth;
-    unicorn_service_t* service;
+    zookeeper_api_t::context_t ctx;
     unicorn::path_t path;
     unicorn::value_t initial_value;
     zookeeper::value_t encoded_value;
@@ -185,15 +186,17 @@ struct unicorn_dispatch_t::create_action_base_t :
 /**
 * Handler for simple node creation
 */
-struct unicorn_dispatch_t::create_action_t:
+struct zookeeper_api_t::create_action_t:
     public create_action_base_t
 {
     create_action_t(
         const zookeeper::handler_tag& tag,
-        unicorn_service_t* _service,
-        unicorn_dispatch_t::response::create result,
+        const zookeeper_api_t::context_t& ctx,
+        writable_helper<response::create_result>::ptr _result,
         unicorn::path_t _path,
-        unicorn::value_t _value
+        unicorn::value_t _value,
+        bool ephemeral,
+        bool sequence
     );
 
     virtual void
@@ -202,27 +205,27 @@ struct unicorn_dispatch_t::create_action_t:
     virtual void
     abort(int rc);
 
-    unicorn_dispatch_t::response::create result;
+    writable_helper<response::create_result>::ptr result;
 };
 
 /**
 * Handler for delete request to ZK.
 */
-struct unicorn_dispatch_t::del_action_t :
+struct zookeeper_api_t::del_action_t :
     public zookeeper::void_handler_base_t
 {
-    del_action_t(unicorn_dispatch_t::response::del _result);
+    del_action_t(writable_helper<response::del_result>::ptr _result);
 
     virtual void
     operator()(int rc);
 
-    unicorn_dispatch_t::response::del result;
+    writable_helper<response::del_result>::ptr result;
 };
 
 /**
 * Context for handling increment queries to service.
 */
-struct unicorn_dispatch_t::increment_action_t:
+struct zookeeper_api_t::increment_action_t:
     public create_action_base_t,
     public zookeeper::managed_stat_handler_base_t,
     public zookeeper::managed_data_handler_base_t
@@ -230,8 +233,8 @@ struct unicorn_dispatch_t::increment_action_t:
 
     increment_action_t(
         const zookeeper::handler_tag& tag,
-        unicorn_service_t* _service,
-        unicorn_dispatch_t::response::increment _result,
+        const zookeeper_api_t::context_t& ctx,
+        writable_helper<response::increment_result>::ptr _result,
         unicorn::path_t _path,
         unicorn::value_t _increment,
         const std::shared_ptr<zookeeper::handler_scope_t>& _scope
@@ -250,6 +253,13 @@ struct unicorn_dispatch_t::increment_action_t:
     operator() (int rc, zookeeper::value_t value, const zookeeper::node_stat& stat);
 
     /**
+    * Implicit call to base.
+    */
+    virtual void
+    operator()(int rc, zookeeper::value_t value) {
+        return create_action_base_t::operator()(rc, std::move(value));
+    }
+    /**
     * Create part of increment
     */
     virtual void
@@ -258,8 +268,8 @@ struct unicorn_dispatch_t::increment_action_t:
     virtual void
     abort(int rc);
 
-    unicorn_service_t* service;
-    unicorn_dispatch_t::response::increment result;
+    zookeeper_api_t::context_t ctx;
+    writable_helper<response::increment_result>::ptr result;
     unicorn::value_t total;
     std::weak_ptr<zookeeper::handler_scope_t> scope;
 };
@@ -268,8 +278,8 @@ struct unicorn_dispatch_t::increment_action_t:
 * Lock mechanism is described here:
 * http://zookeeper.apache.org/doc/r3.1.2/recipes.html#sc_recipes_Locks
 */
-struct distributed_lock_t::lock_action_t :
-    public unicorn_dispatch_t::create_action_base_t,
+struct zookeeper_api_t::lock_action_t :
+    public zookeeper_api_t::create_action_base_t,
     public zookeeper::managed_strings_stat_handler_base_t,
     public zookeeper::managed_stat_handler_base_t,
     public zookeeper::managed_watch_handler_base_t
@@ -277,12 +287,12 @@ struct distributed_lock_t::lock_action_t :
 {
     lock_action_t(
         const zookeeper::handler_tag& tag,
-        unicorn_service_t* service,
-        std::shared_ptr<distributed_lock_t::lock_state_t> state,
+        const zookeeper_api_t::context_t& ctx,
+        std::shared_ptr<zookeeper_api_t::lock_state_t> state,
         unicorn::path_t _path,
         unicorn::path_t folder,
         unicorn::value_t _value,
-        unicorn_dispatch_t::response::lock _result
+        writable_helper<response::lock_result>::ptr _result
     );
 
     /**
@@ -304,6 +314,14 @@ struct distributed_lock_t::lock_action_t :
     virtual void operator()(int type, int state, unicorn::path_t path);
 
     /**
+    * Implicit call to base.
+    */
+    virtual void
+    operator()(int rc, zookeeper::value_t value) {
+        return create_action_base_t::operator()(rc, std::move(value));
+    }
+
+    /**
     * Lock creation handler.
     */
     virtual void
@@ -312,8 +330,8 @@ struct distributed_lock_t::lock_action_t :
     virtual void
     abort(int rc);
 
-    std::shared_ptr<distributed_lock_t::lock_state_t> state;
-    unicorn_dispatch_t::response::lock result;
+    std::shared_ptr<zookeeper_api_t::lock_state_t> state;
+    writable_helper<response::lock_result>::ptr result;
     unicorn::path_t folder;
     std::string created_node_name;
 };
@@ -321,15 +339,15 @@ struct distributed_lock_t::lock_action_t :
 /**
 * Handler for lock_release.
 */
-struct distributed_lock_t::release_lock_action_t :
+struct zookeeper_api_t::release_lock_action_t :
     public zookeeper::void_handler_base_t
 {
-    release_lock_action_t(unicorn_service_t* _service);
+    release_lock_action_t(const zookeeper_api_t::context_t& ctx);
 
     virtual void
         operator()(int rc);
 
-    unicorn_service_t* service;
+    zookeeper_api_t::context_t ctx;
 };
 
 

@@ -39,8 +39,8 @@ bool session_t::valid() const {
     return zk_session.client_id != 0;
 }
 
-void session_t::assign(const clientid_t& native) {
-    zk_session.client_id = native.client_id;
-    std::copy(native.passwd, native.passwd+16, zk_session.passwd);
+void session_t::assign(const clientid_t& native_handle) {
+    zk_session.client_id = native_handle.client_id;
+    std::copy(native_handle.passwd, native_handle.passwd+16, zk_session.passwd);
 }
 }

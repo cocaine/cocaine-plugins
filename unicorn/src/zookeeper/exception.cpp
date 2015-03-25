@@ -17,15 +17,15 @@
 #include "cocaine/zookeeper/zookeeper.hpp"
 namespace zookeeper {
 exception::exception(std::string _message, int _zk_error_code) :
-    message(std::move(_message)),
-    zk_error_code(_zk_error_code)
+    zk_error_code(_zk_error_code),
+    message(std::move(_message))
 {
     message += "Zookeeper error(" + std::to_string(zk_error_code) + "): " + get_error_message(zk_error_code);
 }
 
 exception::exception(int _zk_error_code) :
-    message(),
-    zk_error_code(_zk_error_code)
+    zk_error_code(_zk_error_code),
+    message()
 {
     message += "Zookeeper error(" + std::to_string(zk_error_code) + "): " + get_error_message(zk_error_code);
 }

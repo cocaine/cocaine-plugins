@@ -13,11 +13,9 @@
 * GNU General Public License for more details.
 */
 
-#include <cocaine/unicorn.hpp>
+#include "cocaine/unicorn.hpp"
 
 using namespace cocaine;
-using namespace cocaine::service;
-
 extern "C" {
 auto
 validation() -> api::preconditions_t {
@@ -26,7 +24,7 @@ validation() -> api::preconditions_t {
 
 void
 initialize(api::repository_t& repository) {
-    repository.insert<unicorn_service_t>("unicorn");
+    repository.insert<service::unicorn_service_t>("unicorn");
 }
 
 }
