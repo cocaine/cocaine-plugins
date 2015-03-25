@@ -84,7 +84,7 @@ Description: Cocaine - Logstash Logger
 Package: libcocaine-plugin-urlfetch2
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core2 (>= 0.10.6), 
- libswarm2 (>= 0.7.0), libswarm2-urlfetcher
+ libswarm2 (>= 0.7.0), libswarm2-urlfetcher (>= 0.7.0)
 Description: Cocaine - URLFetch Service
  URLFetch service for Cocaine.
 
