@@ -32,8 +32,7 @@ using namespace mongo;
 
 namespace {
 
-std::unique_ptr<DBClientBase>
-connect(const std::string& uri) {
+std::unique_ptr<DBClientBase> connect(const std::string& uri) {
     std::string error;
 
     mongo::ConnectionString connection_string(uri, ConnectionString::SET);
@@ -58,7 +57,7 @@ connect(const std::string& uri) {
 mongo_storage_t::mongo_storage_t(context_t& context, const std::string& name, const dynamic_t& args):
     category_type(context, name, args),
     m_log(context.log(name)),
-    m_client(connect(args.as_object().at("uri", "").to<std::string>()))
+    m_client(connect(args.as_object().at("uri", "<unspecified>").to<std::string>()))
 { }
 
 std::string
@@ -67,7 +66,13 @@ mongo_storage_t::read(const std::string& collection, const std::string& key) {
 
     try {
         GridFS gridfs(*m_client, "cocaine", "fs." + collection);
-        GridFile file(gridfs.findFile(key));
+
+        // A better way to do this is to use the std::string overload for GridFS::findFile(), but as
+        // of legacy client version 1.0.0, this part of client API is broken.
+        GridFile file(gridfs.findFile(BSONObjBuilder()
+            .append("filename", key)
+            .obj()
+        ));
 
         if(!file.exists()) {
             throw storage_error_t("the specified object has not been found");
@@ -86,22 +91,17 @@ mongo_storage_t::write(const std::string& collection, const std::string& key, co
                        const std::vector<std::string>& tags)
 {
     try {
-        BSONObjBuilder meta;
         GridFS gridfs(*m_client, "cocaine", "fs." + collection);
 
-        meta.append("key", key);
-        meta.append("tags", tags);
-
-        // Store tags.
-        // Add object {"key": key, "tags": tags} to collection 'meta.collection' in 'cocaine' database.
-        m_client->insert("cocaine.meta." + collection, meta.done());
-
-        // Store the blob.
-        gridfs.storeFile(
-            static_cast<const char*>(blob.data()),
-            blob.size(),
-            key
+        // Store blob tags.
+        m_client->insert("cocaine.meta." + collection, BSONObjBuilder()
+            .append("key" , key )
+            .append("tags", tags)
+            .obj()
         );
+
+        // Store the blob itself.
+        gridfs.storeFile(static_cast<const char*>(blob.data()), blob.size(), key);
     } catch(const DBException& e) {
         throw storage_error_t(e.what());
     }
@@ -112,23 +112,20 @@ mongo_storage_t::find(const std::string& collection, const std::vector<std::stri
     std::vector<std::string> result;
 
     try {
-        // Build a query to mongodb: {"$and": [{"tags": "tag1"}, {"tags": "tag2"}, {"tags": "tag3"}]}.
         std::vector<BSONObj> tag_queries;
 
         for (auto tag = tags.begin(); tag != tags.end(); ++tag) {
-            BSONObjBuilder tag_query;
-
-            tag_query.append("tags", *tag);
-            tag_queries.push_back(tag_query.obj());
+            tag_queries.push_back(BSONObjBuilder().append("tags", *tag).obj());
         }
 
-        BSONObjBuilder query;
-        query.append("$and", tag_queries);
+        // Fetch all the keys which have all of the specified tags, i.e. the resulting query will be
+        // something like this: {"$and": [{"tags": "tag_1"}, {"tags": "tag_2"}, {"tags": "tag_3"}]}.
+        auto cursor = m_client->query("cocaine.meta." + collection, BSONObjBuilder()
+            .append("$and", tag_queries)
+            .obj()
+        );
 
         BSONObj object;
-
-        // Fetch keys.
-        std::unique_ptr<DBClientCursor> cursor = m_client->query("cocaine.meta." + collection, query.done());
 
         while(cursor->more()) {
             object = cursor->nextSafe();
@@ -144,13 +141,13 @@ mongo_storage_t::find(const std::string& collection, const std::vector<std::stri
 void
 mongo_storage_t::remove(const std::string& collection, const std::string& key) {
     try {
-        BSONObjBuilder meta;
         GridFS gridfs(*m_client, "cocaine", "fs." + collection);
 
-        meta.append("key", key);
-
         // Remove the information about tags.
-        m_client->remove("cocaine.meta." + collection, Query(meta.done()));
+        m_client->remove("cocaine.meta." + collection, BSONObjBuilder()
+            .append("key", key)
+            .obj()
+        );
 
         // Remove the blob.
         gridfs.removeFile(key);
