@@ -108,7 +108,7 @@ private:
 
     void release(managed_handler_base_t* callback);
 
-    handler_dispatcher_t() {}
+    handler_dispatcher_t();
     handler_dispatcher_t(const handler_dispatcher_t& other) = delete;
     handler_dispatcher_t& operator=(const handler_dispatcher_t& other) = delete;
     std::mutex storage_lock;
@@ -135,6 +135,18 @@ public:
         handler_dispatcher_t::instance().add(handler);
         registered_callbacks.push_back(handler);
         return *handler;
+    }
+
+    template<class T>
+    void
+    release_handler(T& handler) {
+        auto it = std::remove(registered_callbacks.begin(),registered_callbacks.end(), &handler);
+        if(it == registered_callbacks.end()) {
+            throw std::runtime_error("Specified callback not found in scope");
+        }
+        assert(it+1 == registered_callbacks.end());
+        registered_callbacks.resize(it - registered_callbacks.begin());
+        handler_dispatcher_t::instance().release(&handler);
     }
 
 private:
@@ -201,7 +213,7 @@ class managed_string_handler_base_t :
 {
 public:
     virtual void
-    operator() (int rc, value_t value) = 0;
+    operator() (int rc, zookeeper::value_t value) = 0;
 
     managed_string_handler_base_t(const handler_tag& tag) :
         managed_handler_base_t(tag)

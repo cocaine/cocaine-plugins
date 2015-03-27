@@ -24,13 +24,17 @@ Target* back_cast(const void* data) {
 }
 }
 
+handler_dispatcher_t::handler_dispatcher_t() :
+    storage_lock(),
+    callbacks()
+{}
 /**
 * All callback are called from C ZK client, convert previously passed void* to
 * matching callback and invoke it.
 */
 
 void
-handler_dispatcher_t::watcher_cb(zhandle_t* zh, int type, int state, const char* path, void* watcherCtx) {
+handler_dispatcher_t::watcher_cb(zhandle_t* /*zh*/, int type, int state, const char* path, void* watcherCtx) {
     if(!watcherCtx) {
         return;
     }

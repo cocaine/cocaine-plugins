@@ -14,8 +14,6 @@ OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(UNICORN "Build Unified configuration service plugin" ON)
 
-ADD_DEFINITIONS(-DBLACKHOLE_HEADER_ONLY)
-
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
@@ -31,12 +29,16 @@ FIND_PACKAGE(Boost 1.46.0
 LOCATE_LIBRARY(LIBCOCAINE "cocaine/context.hpp" "cocaine-core")
 LOCATE_LIBRARY(LIBMSGPACK "msgpack.hpp" "msgpack")
 
+# System is required to get rid of errors in foreign libs
 INCLUDE_DIRECTORIES(
+    SYSTEM
     ${Boost_INCLUDE_DIRS}
     ${LIBCOCAINE_INCLUDE_DIRS}
     ${LIBMSGPACK_INCLUDE_DIRS})
 
+# System is required to get rid of errors in foreign libs
 INCLUDE_DIRECTORIES(BEFORE
+    SYSTEM
     ${PROJECT_SOURCE_DIR}/foreign/asio/asio/include
     ${PROJECT_SOURCE_DIR}/foreign/blackhole/src
     ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include)
