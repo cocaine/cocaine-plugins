@@ -242,8 +242,10 @@ docker_t::spawn(const std::string& path, const api::string_map_t& args, const ap
         std::string socket_dir(fs::path(args.at("--endpoint")).remove_filename().string().c_str());
 #endif
 
+        std::string socket_path(socket_dir + ":" + m_runtime_path);
+
         binds_json.SetArray();
-        binds_json.PushBack((socket_dir + ":" + m_runtime_path).data(), m_json_allocator);
+        binds_json.PushBack(socket_path.data(), m_json_allocator);
 
         start_args.SetObject();
         start_args.AddMember("Binds", binds_json, m_json_allocator);
