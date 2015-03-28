@@ -26,7 +26,7 @@ validation() -> api::preconditions_t {
 void
 initialize(api::repository_t& repository) {
     repository.insert<service::unicorn_service_t>("unicorn");
-    repository.insert<cluster::unicorn_cluster_t>("unicorn_cluster");
+    repository.insert<cluster::unicorn_cluster_t>("unicorn");
 }
 
 }

@@ -3,6 +3,7 @@ INCLUDE_DIRECTORIES(
 
 ADD_LIBRARY(unicorn MODULE
     src/module.cpp
+    src/cluster/unicorn.cpp
     src/unicorn/api/zookeeper.cpp
     src/unicorn.cpp
     src/unicorn/value.cpp

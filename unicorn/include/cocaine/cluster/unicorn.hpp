@@ -20,12 +20,11 @@
 #include "cocaine/unicorn.hpp"
 
 #include <cocaine/context.hpp>
-#include <cocaine/api/cluster.hpp>
 
 namespace cocaine { namespace cluster {
 
 class unicorn_cluster_t:
-public api::cluster_t
+    public api::cluster_t
 {
 public:
     struct cfg_t {
@@ -34,13 +33,12 @@ public:
         unicorn::path_t path;
         size_t retry_interval;
         size_t check_interval;
-
     };
     unicorn_cluster_t(context_t& context, interface& locator, const std::string& name, const dynamic_t& args);
 
     struct on_announce:
     public unicorn::writable_adapter_base_t<unicorn::api_t::response::create_result>,
-    public std::enable_shared_from_this<on_announce>
+        public std::enable_shared_from_this<on_announce>
     {
         on_announce(unicorn_cluster_t* _parent);
 
@@ -55,7 +53,7 @@ public:
 
     struct on_update:
     public unicorn::writable_adapter_base_t<unicorn::api_t::response::subscribe_result>,
-    public std::enable_shared_from_this<on_update>
+        public std::enable_shared_from_this<on_update>
     {
         on_update(unicorn_cluster_t* _parent);
 
@@ -69,7 +67,7 @@ public:
     };
 
     struct on_fetch :
-    public unicorn::writable_adapter_base_t<unicorn::api_t::response::get_result>
+        public unicorn::writable_adapter_base_t<unicorn::api_t::response::get_result>
     {
         on_fetch(std::string uuid, unicorn_cluster_t* _parent);
 
@@ -84,7 +82,7 @@ public:
     };
 
     struct on_list_update :
-    public unicorn::writable_adapter_base_t<unicorn::api_t::response::children_subscribe_result>
+        public unicorn::writable_adapter_base_t<unicorn::api_t::response::children_subscribe_result>
     {
         on_list_update(unicorn_cluster_t* _parent);
 
@@ -96,8 +94,8 @@ public:
 
         unicorn_cluster_t* parent;
     };
-private:
 
+private:
     void
     announce();
 
