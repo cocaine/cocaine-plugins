@@ -1,4 +1,17 @@
 #!/usr/bin/make -f
 
-include /usr/share/cdbs/1/class/cmake.mk
-include /usr/share/cdbs/1/rules/debhelper.mk
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+export DEB_BUILD_OPTIONS=parallel=$(shell grep -c ^processor /proc/cpuinfo)
+
+override_dh_shlibdeps:
+	dh_shlibdeps
+	for plugin in `find debian -maxdepth 1 -type d | grep 'libcocaine.*3' | sed -e 's/^debian\///g'`; \
+	do \
+		file=`echo $$plugin | sed -e 's/.*-\(.*\)3/\1/'`; \
+		dpkg-shlibdeps -Tdebian/$${plugin}.substvars debian/$${plugin}/usr/lib/cocaine/*.cocaine-plugin; \
+	done \
+
+%:
+	dh $@ --parallel
