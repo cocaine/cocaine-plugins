@@ -37,7 +37,7 @@ public:
     unicorn_cluster_t(context_t& context, interface& locator, const std::string& name, const dynamic_t& args);
 
     struct on_announce:
-    public unicorn::writable_adapter_base_t<unicorn::api_t::response::create_result>,
+        public unicorn::writable_adapter_base_t<unicorn::api_t::response::create_result>,
         public std::enable_shared_from_this<on_announce>
     {
         on_announce(unicorn_cluster_t* _parent);
