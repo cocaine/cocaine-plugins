@@ -52,7 +52,7 @@ public:
     };
 
     struct on_update:
-    public unicorn::writable_adapter_base_t<unicorn::api_t::response::subscribe_result>,
+        public unicorn::writable_adapter_base_t<unicorn::api_t::response::subscribe_result>,
         public std::enable_shared_from_this<on_update>
     {
         on_update(unicorn_cluster_t* _parent);
