@@ -227,10 +227,16 @@ unicorn_cluster_t::announce() {
         announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
     }
 
-    const auto endpoints = actor->endpoints();
+    auto cur_endpoints = actor->endpoints();
 
     COCAINE_LOG_DEBUG(log, "going to announce self");
     try {
+        if(!endpoints.empty() && cur_endpoints != endpoints) {
+            // Drop all ephemeral nodes, so create will succeed.
+            // It's the easiest way to drop old announces as all clients will receive a notify on delete-create.
+            zk.reconnect();
+        }
+        endpoints.swap(cur_endpoints);
         unicorn.create(
             std::make_shared<on_announce>(this),
             config.path + '/' + locator.uuid(),

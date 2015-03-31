@@ -112,6 +112,7 @@ private:
     cfg_t config;
     cocaine::context_t& context;
     cluster_t::interface& locator;
+    std::vector<asio::ip::tcp::endpoint> endpoints;
     asio::deadline_timer announce_timer;
     asio::deadline_timer subscribe_timer;
     zookeeper::session_t zk_session;
