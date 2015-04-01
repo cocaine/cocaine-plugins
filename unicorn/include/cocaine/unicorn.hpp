@@ -106,7 +106,7 @@ public:
         Response result;
         auto wptr = unicorn::make_writable(result);
         auto callback = std::tuple_cat(std::make_tuple(&dispatch->api, wptr), std::move(args));
-        tuple::invoke(std::mem_fn(method), std::move(callback));
+        tuple::invoke(std::move(callback), std::mem_fn(method));
         result.attach(std::move(upstream));
         return boost::make_optional<std::shared_ptr<const dispatch_type>>(dispatch);
     }
