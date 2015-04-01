@@ -15,7 +15,7 @@
 
 #include "cocaine/cluster/unicorn.hpp"
 
-#include <cocaine/detail/actor.hpp>
+#include <cocaine/rpc/actor.hpp>
 #include <cocaine/context.hpp>
 
 namespace cocaine {

@@ -2,15 +2,16 @@ INCLUDE_DIRECTORIES(
     ${PROJECT_SOURCE_DIR}/unicorn/include)
 
 ADD_LIBRARY(unicorn MODULE
-    src/module.cpp
-    src/unicorn/api/zookeeper.cpp
+    src/cluster/unicorn.cpp
     src/unicorn.cpp
+    src/unicorn/api/zookeeper.cpp
     src/unicorn/value.cpp
     src/zookeeper/zookeeper.cpp
     src/zookeeper/exception.cpp
     src/zookeeper/session.cpp
     src/zookeeper/handler.cpp
     src/zookeeper/connection.cpp
+    src/module.cpp
 )
 
 TARGET_LINK_LIBRARIES(unicorn
