@@ -4,6 +4,9 @@ This plugin provides a service, which can be used:
   * To store any management data used by cocaine
   * To provide consistent publish-subscribe mechanism
   * To be used as distributed locking service
+  * To be used as discovery in locator.
+Currently it is implemented via zookeeper.
+
 == API ==
 Service defines following methods:
   * create(string path, variant value) -> error || bool.
@@ -22,3 +25,13 @@ Service defines following methods:
    Creates lock on specified path. Path SHOULD NOT be used for other purposes. If lock is  aquired by other app blocks until lock is released.
 
 After any call close method is defined, which can be used to cancel subscription or release lock or just close channel.
+
+Also this plugin provides cocaine::cluster::unicorn_cluster_t class which can be used as cluster interface in locator for discovery functionality.
+Discovery works in a following way:
+  * On locator announce it puts a node $prefix/$uuid with serialized endpoints as value. It checks announce
+
+== Configuration ==
+args section of service config in cocaine config has following parameters:
+  * endpoints -> array of objects with fields(non-optional)
+    * host -> zookeeper's host
+    * port -> zookeeper's port
