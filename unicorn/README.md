@@ -5,6 +5,8 @@ This plugin provides a service, which can be used:
   * To provide consistent publish-subscribe mechanism
   * To be used as distributed locking service
   * To be used as discovery in locator.
+
+This plugin is NOT intended to be used as database to store any non-service data.
 Currently it is implemented via zookeeper.
 
 == API ==
@@ -28,10 +30,17 @@ After any call close method is defined, which can be used to cancel subscription
 
 Also this plugin provides cocaine::cluster::unicorn_cluster_t class which can be used as cluster interface in locator for discovery functionality.
 Discovery works in a following way:
-  * On locator announce it puts a node $prefix/$uuid with serialized endpoints as value. It checks announce
+  * On locator announce it puts a node $prefix/$uuid with serialized endpoints as value. It checks announce every $check_interval seconds.
+  If something goes wrong it retries to announce every $retry_interval seconds.
+  * Each locator also subscribes for childs on $prefix. On each node addition/deletion it calls drop_node/link_node. It checks that list is valid every $check_interval seconds and retries in case of failure every $retry_interval seconds.
 
 == Configuration ==
 args section of service config in cocaine config has following parameters:
   * endpoints -> array of objects with fields(non-optional)
     * host -> zookeeper's host
     * port -> zookeeper's port
+    * If endpoints is empty or not present default ZK host port used (localhost:2181)
+args section of cluster config in cocaine config has following parameters:
+  * endpoints - the same as in service
+  * retry_interval - interval to retry in case of failure. Default 1s
+  * check_interval - check interval in case everything goes smooth. Default 60s
