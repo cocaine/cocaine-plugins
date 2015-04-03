@@ -1,7 +1,7 @@
-== What is it? ==
+## What is it?
  It's a service for sending metrics to graphite (http://graphite.wikidot.com/). It provides metrics aggregation and bulk send via text protocol.
 
-== API ==
+## API
   * send_one(string metric_name, double metric_value, optional uint metric_timestamp) - sends one metric.
   * send_bulk( array of (string metric_name, double metric_value, optional uint metric_timestamp) ) - sends pack of metrics.
   * Service returns nothing on both calls.
@@ -10,7 +10,7 @@
   * metric_value - double, metric value.
   * metric_timestamp - metric timestamp. If omitted - current timestamp will be used in cocaine.
 
-== Configuration ==
+## Configuration
     host - graphite host. Default 127.0.0.1
     port - graphite port. Default 2003
     flush_interval_ms - How often metrics are flushed to graphite (in ms).

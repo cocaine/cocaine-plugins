@@ -1,4 +1,4 @@
-== What is it? ==
+## What is it?
 This plugin provides a service, which can be used:
   * To store applications configurations
   * To store any management data used by cocaine
@@ -9,7 +9,7 @@ This plugin provides a service, which can be used:
 This plugin is NOT intended to be used as database to store any non-service data.
 Currently it is implemented via zookeeper.
 
-== API ==
+## API
 Service defines following methods:
   * create(string path, variant value) -> error || bool.
    Creates node with specified value if it does not exist. Returns error otherwise.
@@ -34,7 +34,7 @@ Discovery works in a following way:
   If something goes wrong it retries to announce every $retry_interval seconds.
   * Each locator also subscribes for childs on $prefix. On each node addition/deletion it calls drop_node/link_node. It checks that list is valid every $check_interval seconds and retries in case of failure every $retry_interval seconds.
 
-== Configuration ==
+## Configuration
 args section of service config in cocaine config has following parameters:
   * endpoints -> array of objects with fields(non-optional)
     * host -> zookeeper's host
