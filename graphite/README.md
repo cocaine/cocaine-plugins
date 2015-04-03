@@ -11,8 +11,8 @@
   * metric_timestamp - metric timestamp. If omitted - current timestamp will be used in cocaine.
 
 ## Configuration
-    host - graphite host. Default 127.0.0.1
-    port - graphite port. Default 2003
-    flush_interval_ms - How often metrics are flushed to graphite (in ms).
-    prefix - prefix added to metrics. Default "cocaine"
-    max_queue_size - Maximum number of elements in queue after which metrics are flushed. Default 1000
+  * host - graphite host. Default 127.0.0.1
+  * port - graphite port. Default 2003
+  * flush_interval_ms - How often metrics are flushed to graphite (in ms).
+  * prefix - prefix added to metrics. Default "cocaine"
+  * max_queue_size - Maximum number of elements in queue after which metrics are flushed. Default 1000
