@@ -31,20 +31,16 @@ zookeeper::value_t serialize(const value_t& val) {
 }
 
 value_t unserialize(const zookeeper::value_t& val) {
-    msgpack::object obj;
-    std::unique_ptr<msgpack::zone> z(new msgpack::zone());
+    msgpack::unpacked unpacked;
 
-    msgpack_unpack_return ret = msgpack_unpack(
-        val.c_str(), val.size(), nullptr, z.get(),
-        reinterpret_cast<msgpack_object*>(&obj)
-    );
-
-    //Only strict unparse.
-    if(static_cast<msgpack::unpack_return>(ret) != msgpack::UNPACK_SUCCESS) {
+    try {
+        unpacked = msgpack::unpack(val.c_str(), val.size());
+    } catch(const msgpack::unpack_error& e) {
         throw zookeeper::exception(zookeeper::ZOO_EXTRA_ERROR::INVALID_VALUE);
     }
+
     value_t target;
-    cocaine::io::type_traits<cocaine::dynamic_t>::unpack(obj, target);
+    cocaine::io::type_traits<cocaine::dynamic_t>::unpack(unpacked.get(), target);
     return target;
 }
 }}
