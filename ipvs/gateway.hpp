@@ -25,7 +25,8 @@
 
 namespace cocaine { namespace gateway {
 
-class ipvs_config_t {
+class ipvs_config_t
+{
 public:
     std::string  scheduler;
     unsigned int weight;
@@ -36,6 +37,8 @@ class ipvs_t:
 {
     class remote_t;
 
+    typedef std::map<partition_t, std::unique_ptr<remote_t>> remote_map_t;
+
     context_t& m_context;
 
     const std::unique_ptr<logging::log_t> m_log;
@@ -45,7 +48,7 @@ class ipvs_t:
     std::vector<asio::ip::address> m_endpoints;
 
     // Keeps track of IPVS configuration.
-    synchronized<std::map<std::string, std::unique_ptr<remote_t>>> m_remotes;
+    synchronized<remote_map_t> m_remotes;
 
 public:
     ipvs_t(context_t& context, const std::string& name, const dynamic_t& args);
@@ -55,15 +58,16 @@ public:
 
     virtual
     auto
-    resolve(const std::string& name) const -> metadata_t;
+    resolve(const partition_t& name) const -> std::vector<asio::ip::tcp::endpoint>;
 
     virtual
-    void
-    consume(const std::string& uuid, const std::string& name, const metadata_t& info);
+    size_t
+    consume(const std::string& uuid,
+            const partition_t& name, const std::vector<asio::ip::tcp::endpoint>& endpoints);
 
     virtual
-    void
-    cleanup(const std::string& uuid, const std::string& name);
+    size_t
+    cleanup(const std::string& uuid, const partition_t& name);
 };
 
 }} // namespace cocaine::gateway
