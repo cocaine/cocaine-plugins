@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.0.7) unstable; urgency=low
+
+  * Bugfix: compatibility with cocaine/cocaine-core#191.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 08 Apr 2015 18:51:27 +0400
+
 cocaine-plugins (0.12.0.6) unstable; urgency=low
 
   * [API] Adapt API changes.
