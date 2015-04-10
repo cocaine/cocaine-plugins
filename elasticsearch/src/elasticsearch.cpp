@@ -38,12 +38,12 @@
 #include "rest/index.hpp"
 #include "rest/search.hpp"
 
-using namespace std::placeholders;
-
 using namespace ioremap;
 
 using namespace cocaine::service;
 using namespace cocaine::service::rest;
+
+namespace ph = std::placeholders;
 
 class elasticsearch_t::impl_t {
 public:
@@ -124,10 +124,10 @@ elasticsearch_t::elasticsearch_t(cocaine::context_t& context,
     dispatch<io::elasticsearch_tag>(name),
     d(new impl_t(context, asio, name, args))
 {
-    on<io::elasticsearch::get>(std::bind(&elasticsearch_t::get, this, _1, _2, _3));
-    on<io::elasticsearch::index>(std::bind(&elasticsearch_t::index, this, _1, _2, _3, _4));
-    on<io::elasticsearch::search>(std::bind(&elasticsearch_t::search, this, _1, _2, _3, _4));
-    on<io::elasticsearch::delete_index>(std::bind(&elasticsearch_t::delete_index, this, _1, _2, _3));
+    on<io::elasticsearch::get>(std::bind(&elasticsearch_t::get, this, ph::_1, ph::_2, ph::_3));
+    on<io::elasticsearch::index>(std::bind(&elasticsearch_t::index, this, ph::_1, ph::_2, ph::_3, ph::_4));
+    on<io::elasticsearch::search>(std::bind(&elasticsearch_t::search, this, ph::_1, ph::_2, ph::_3, ph::_4));
+    on<io::elasticsearch::delete_index>(std::bind(&elasticsearch_t::delete_index, this, ph::_1, ph::_2, ph::_3));
 }
 
 elasticsearch_t::~elasticsearch_t() {

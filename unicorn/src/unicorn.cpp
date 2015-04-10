@@ -34,8 +34,6 @@ unicorn_service_t::unicorn_service_t(context_t& context, asio::io_service& _asio
     zk(make_zk_config(args), zk_session),
     log(context.log("unicorn"))
 {
-    using namespace std::placeholders;
-
     on<io::unicorn::subscribe>         (std::make_shared<subscribe_slot_t>         (this, &unicorn::api_t::subscribe));
     on<io::unicorn::children_subscribe>(std::make_shared<children_subscribe_slot_t>(this, &unicorn::api_t::children_subscribe));
     on<io::unicorn::put>               (std::make_shared<put_slot_t>               (this, &unicorn::api_t::put));
@@ -44,7 +42,6 @@ unicorn_service_t::unicorn_service_t(context_t& context, asio::io_service& _asio
     on<io::unicorn::del>               (std::make_shared<del_slot_t>               (this, &unicorn::api_t::del));
     on<io::unicorn::increment>         (std::make_shared<increment_slot_t>         (this, &unicorn::api_t::increment));
     on<io::unicorn::lock>              (std::make_shared<lock_slot_t>              (this, &unicorn::api_t::lock));
-
 }
 
 unicorn_dispatch_t::unicorn_dispatch_t(const std::string& _name, unicorn_service_t* service) :

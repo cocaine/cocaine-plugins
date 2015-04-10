@@ -17,6 +17,8 @@
 #include <cocaine/dynamic.hpp>
 #include <cocaine/context.hpp>
 
+namespace ph = std::placeholders;
+
 namespace cocaine { namespace service {
 
 class graphite_t::graphite_sender_t :
@@ -43,8 +45,7 @@ graphite_t::graphite_sender_t::graphite_sender_t(graphite_t* _parent, graphite_t
 }
 
 void graphite_t::graphite_sender_t::send() {
-    using namespace std::placeholders;
-    socket.async_connect(parent->config.endpoint, std::bind(&graphite_sender_t::on_connect, shared_from_this(), _1));
+    socket.async_connect(parent->config.endpoint, std::bind(&graphite_sender_t::on_connect, shared_from_this(), ph::_1));
 }
 
 void graphite_t::graphite_sender_t::on_connect(const asio::error_code& ec) {
@@ -61,8 +62,7 @@ void graphite_t::graphite_sender_t::on_connect(const asio::error_code& ec) {
         for(size_t i = 0; i < buffer.size(); i++) {
             s_buffer.append(buffer[i].format(parent->config.prefix));
         }
-        using namespace std::placeholders;
-        socket.async_send(asio::buffer(s_buffer), std::bind(&graphite_sender_t::on_send, shared_from_this(), _1));
+        socket.async_send(asio::buffer(s_buffer), std::bind(&graphite_sender_t::on_send, shared_from_this(), ph::_1));
     }
 }
 
@@ -98,9 +98,8 @@ graphite_t::graphite_t(context_t& context, asio::io_service& _asio, const std::s
     timer(asio),
     buffer()
 {
-    using namespace std::placeholders;
-    on<io::graphite::send_bulk>(std::bind(&graphite_t::on_send_bulk, this, _1));
-    on<io::graphite::send_one>(std::bind(&graphite_t::on_send_one, this, _1));
+    on<io::graphite::send_bulk>(std::bind(&graphite_t::on_send_bulk, this, ph::_1));
+    on<io::graphite::send_one>(std::bind(&graphite_t::on_send_one, this, ph::_1));
     reset_timer();
 }
 
@@ -154,7 +153,7 @@ void graphite_t::send() {
 void graphite_t::reset_timer() {
     auto ptr = timer.synchronize();
     ptr->expires_from_now(config.flush_interval_ms);
-    ptr->async_wait(std::bind(&graphite_t::send_by_timer, this, std::placeholders::_1));
+    ptr->async_wait(std::bind(&graphite_t::send_by_timer, this, ph::_1));
 }
 
 }}

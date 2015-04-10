@@ -26,7 +26,7 @@ using namespace cocaine;
 using namespace cocaine::io;
 using namespace cocaine::service;
 
-using namespace std::placeholders;
+namespace ph = std::placeholders;
 
 chrono_t::chrono_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args):
     service_t(context, asio, name, args),
@@ -34,10 +34,10 @@ chrono_t::chrono_t(context_t& context, asio::io_service& asio, const std::string
     log_(context.log(name)),
     asio_(asio)
 {
-    on<io::chrono::notify_after>(std::bind(&chrono_t::notify_after, this, _1, _2));
-    on<io::chrono::notify_every>(std::bind(&chrono_t::notify_every, this, _1, _2));
-    on<io::chrono::cancel>(std::bind(&chrono_t::cancel, this, _1));
-    on<io::chrono::restart>(std::bind(&chrono_t::restart, this, _1));
+    on<io::chrono::notify_after>(std::bind(&chrono_t::notify_after, this, ph::_1, ph::_2));
+    on<io::chrono::notify_every>(std::bind(&chrono_t::notify_every, this, ph::_1, ph::_2));
+    on<io::chrono::cancel>(std::bind(&chrono_t::cancel, this, ph::_1));
+    on<io::chrono::restart>(std::bind(&chrono_t::restart, this, ph::_1));
 }
 
 cocaine::streamed<io::timer_id_t>
@@ -71,7 +71,7 @@ chrono_t::set_timer_impl(double first, double repeat, bool send_id) {
         ptr->insert(std::make_pair(timer_id, desc));
 
         desc.timer_->expires_from_now(boost::posix_time::seconds(first));
-        desc.timer_->async_wait(std::bind(&chrono_t::on_timer, this, std::placeholders::_1, timer_id));
+        desc.timer_->async_wait(std::bind(&chrono_t::on_timer, this, ph::_1, timer_id));
 
         if (send_id) {
             desc.promise_.write(timer_id);
@@ -100,7 +100,7 @@ chrono_t::restart(io::timer_id_t timer_id) {
     timer_desc_t& timer_desc = timers_->at(timer_id);
 
     timer_desc.timer_->expires_from_now(boost::posix_time::seconds(timer_desc.interval_));
-    timer_desc.timer_->async_wait(std::bind(&chrono_t::on_timer, this, std::placeholders::_1, timer_id));
+    timer_desc.timer_->async_wait(std::bind(&chrono_t::on_timer, this, ph::_1, timer_id));
 }
 
 void

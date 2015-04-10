@@ -21,15 +21,15 @@
 using namespace cocaine;
 using namespace cocaine::service;
 
+namespace ph = std::placeholders;
+
 cache_t::cache_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args):
     service_t(context, asio, name, args),
     dispatch<io::cache_tag>(name),
     cache_(args.as_object().at("max-size", 1000000).to<size_t>())
 {
-    using namespace std::placeholders;
-
-    on<io::cache::get>(std::bind(&cache_t::get, this, _1));
-    on<io::cache::put>(std::bind(&cache_t::put, this, _1, _2));
+    on<io::cache::get>(std::bind(&cache_t::get, this, ph::_1));
+    on<io::cache::put>(std::bind(&cache_t::put, this, ph::_1, ph::_2));
 }
 
 void

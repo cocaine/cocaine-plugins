@@ -33,6 +33,8 @@ using namespace cocaine::service;
 
 using namespace ioremap;
 
+namespace ph = std::placeholders;
+
 class urlfetch_logger_interface : public swarm::logger_interface
 {
 public:
@@ -84,10 +86,8 @@ urlfetch_t::urlfetch_t(context_t& context,
     int connections_limits = args.as_object().at("connections-limit", 10).to<unsigned int>();;
     m_manager.set_total_limit(connections_limits);
 
-    using namespace std::placeholders;
-
-    on<io::urlfetch::get>(std::bind(&urlfetch_t::get, this, _1, _2, _3, _4, _5));
-    on<io::urlfetch::post>(std::bind(&urlfetch_t::post, this, _1, _2, _3, _4, _5, _6));
+    on<io::urlfetch::get>(std::bind(&urlfetch_t::get, this, ph::_1, ph::_2, ph::_3, ph::_4, ph::_5));
+    on<io::urlfetch::post>(std::bind(&urlfetch_t::post, this, ph::_1, ph::_2, ph::_3, ph::_4, ph::_5, ph::_6));
 
     m_thread = boost::thread(std::bind(&urlfetch_t::run_service, this));
 }
