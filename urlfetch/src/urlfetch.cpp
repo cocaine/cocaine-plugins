@@ -15,10 +15,15 @@
 
 #include "cocaine/services/urlfetch.hpp"
 #include <cocaine/logging.hpp>
+#include <cocaine/memory.hpp>
 #include <cocaine/traits/tuple.hpp>
 #include <boost/foreach.hpp>
 #include <boost/format.hpp>
 #include <swarm/urlfetcher/stream.hpp>
+
+#define BOOST_BIND_NO_PLACEHOLDERS
+#include <blackhole/formatter/string.hpp>
+#undef BOOST_BIND_NO_PLACEHOLDERS
 
 using namespace cocaine;
 using namespace cocaine::io;
@@ -26,41 +31,74 @@ using namespace cocaine::service;
 
 using namespace ioremap;
 
-class urlfetch_logger_interface : public swarm::logger_interface
+namespace
 {
-public:
-    urlfetch_logger_interface(const std::shared_ptr<logging::log_t> &log) : log_(log)
-    {
+  class log_adapter_impl_t : public blackhole::base_frontend_t
+  {
+    public:
+      log_adapter_impl_t(const std::shared_ptr<logging::log_t> &log);
+
+      virtual void handle(const blackhole::log::record_t &record);
+
+    private:
+      std::shared_ptr<logging::log_t> m_log;
+      blackhole::formatter::string_t m_formatter;
+  };
+
+  static cocaine::logging::priorities convert_verbosity(ioremap::swarm::log_level level)
+  {
+    switch (level) {
+      case SWARM_LOG_DEBUG:
+        return cocaine::logging::debug;
+      case SWARM_LOG_NOTICE:
+      case SWARM_LOG_INFO:
+        return cocaine::logging::info;
+      case SWARM_LOG_WARNING:
+        return cocaine::logging::warning;
+      case SWARM_LOG_ERROR:
+        return cocaine::logging::error;
+      default:
+        return cocaine::logging::ignore;
+    };
+  }
+
+  static ioremap::swarm::log_level convert_verbosity(cocaine::logging::priorities prio) {
+    switch (prio) {
+      case cocaine::logging::debug:
+        return SWARM_LOG_DEBUG;
+      case cocaine::logging::info:
+        return SWARM_LOG_INFO;
+      case cocaine::logging::warning:
+        return SWARM_LOG_WARNING;
+      case cocaine::logging::error:
+      default:
+        return SWARM_LOG_ERROR;
     }
+  }
 
-    virtual void log(int level, const char *msg)
-    {
-        logging::priorities verbosity = logging::priorities::debug;
-        switch (level) {
-        case swarm::SWARM_LOG_DATA:
-            verbosity = logging::priorities::ignore;
-        case swarm::SWARM_LOG_ERROR:
-            verbosity = logging::priorities::error;
-        case swarm::SWARM_LOG_INFO:
-            verbosity = logging::priorities::info;
-        case swarm::SWARM_LOG_NOTICE:
-            verbosity = logging::priorities::info;
-        case swarm::SWARM_LOG_DEBUG:
-        default:
-            verbosity = logging::priorities::debug;
-        }
+  log_adapter_impl_t::log_adapter_impl_t(const std::shared_ptr<logging::log_t> &log): m_log(log), m_formatter("%(message)s %(...L)s")
+  {
+  }
 
-        if (log_->verbosity() >= verbosity)
-            log_->emit(verbosity, msg);
-    }
-
-    virtual void reopen()
-    {
-    }
-
-private:
-    std::shared_ptr<logging::log_t> log_;
-};
+  void log_adapter_impl_t::handle(const blackhole::log::record_t &record)
+  {
+    swarm::log_level level = record.extract<swarm::log_level>(blackhole::keyword::severity<swarm::log_level>().name());
+    auto cocaine_level = convert_verbosity(level);
+    COCAINE_LOG(m_log, cocaine_level, "elliptics: %s", m_formatter.format(record));
+  }
+  
+  class log_adapter_t : public ioremap::swarm::logger_base
+  {
+    public:
+      log_adapter_t(const std::shared_ptr<logging::log_t> &log);
+  };
+  
+  log_adapter_t::log_adapter_t(const std::shared_ptr<logging::log_t> &log)
+  {
+    add_frontend(std::make_unique<log_adapter_impl_t>(log));
+    verbosity(convert_verbosity(log->verbosity()));
+  }
+}
 
 urlfetch_t::urlfetch_t(context_t& context,
                        reactor_t& reactor,
@@ -68,8 +106,9 @@ urlfetch_t::urlfetch_t(context_t& context,
                        const Json::Value& args):
     service_t(context, reactor, name, args),
     log_(new logging::log_t(context, name)),
-    m_logger(new urlfetch_logger_interface(log_), swarm::SWARM_LOG_DEBUG),
-    m_loop(m_service),
+    m_logger_base(new log_adapter_t(log_)),
+    m_logger(*m_logger_base, blackhole::log::attributes_t()),
+    m_loop(m_service, m_logger),
     m_manager(m_loop, m_logger),
     m_work(new boost::asio::io_service::work(m_service))
 {

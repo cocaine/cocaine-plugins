@@ -26,6 +26,7 @@
 
 #include <cocaine/traits/tuple.hpp>
 #include <cocaine/logging.hpp>
+#include <cocaine/memory.hpp>
 
 #include <swarm/urlfetcher/ev_event_loop.hpp>
 
@@ -37,25 +38,103 @@
 #include "rest/search.hpp"
 #include "rest/delete.hpp"
 
+#define BOOST_BIND_NO_PLACEHOLDERS
+#include <blackhole/formatter/string.hpp>
+#undef BOOST_BIND_NO_PLACEHOLDERS
+
+
 using namespace std::placeholders;
 
 using namespace ioremap;
 
+using namespace cocaine;
 using namespace cocaine::service;
 using namespace cocaine::service::rest;
+
+namespace
+{
+  class log_adapter_impl_t : public blackhole::base_frontend_t
+  {
+    public:
+      log_adapter_impl_t(const std::shared_ptr<logging::log_t> &log);
+
+      virtual void handle(const blackhole::log::record_t &record);
+
+    private:
+      std::shared_ptr<logging::log_t> m_log;
+      blackhole::formatter::string_t m_formatter;
+  };
+
+  static cocaine::logging::priorities convert_verbosity(ioremap::swarm::log_level level)
+  {
+    switch (level) {
+      case SWARM_LOG_DEBUG:
+        return cocaine::logging::debug;
+      case SWARM_LOG_NOTICE:
+      case SWARM_LOG_INFO:
+        return cocaine::logging::info;
+      case SWARM_LOG_WARNING:
+        return cocaine::logging::warning;
+      case SWARM_LOG_ERROR:
+        return cocaine::logging::error;
+      default:
+        return cocaine::logging::ignore;
+    };
+  }
+
+  static ioremap::swarm::log_level convert_verbosity(cocaine::logging::priorities prio) {
+    switch (prio) {
+      case cocaine::logging::debug:
+        return SWARM_LOG_DEBUG;
+      case cocaine::logging::info:
+        return SWARM_LOG_INFO;
+      case cocaine::logging::warning:
+        return SWARM_LOG_WARNING;
+      case cocaine::logging::error:
+      default:
+        return SWARM_LOG_ERROR;
+    }
+  }
+
+  log_adapter_impl_t::log_adapter_impl_t(const std::shared_ptr<logging::log_t> &log): m_log(log), m_formatter("%(message)s %(...L)s")
+  {
+  }
+
+  void log_adapter_impl_t::handle(const blackhole::log::record_t &record)
+  {
+    swarm::log_level level = record.extract<swarm::log_level>(blackhole::keyword::severity<swarm::log_level>().name());
+    auto cocaine_level = convert_verbosity(level);
+    COCAINE_LOG(m_log, cocaine_level, "elliptics: %s", m_formatter.format(record));
+  }
+  
+  class log_adapter_t : public ioremap::swarm::logger_base
+  {
+    public:
+      log_adapter_t(const std::shared_ptr<logging::log_t> &log);
+  };
+  
+  log_adapter_t::log_adapter_t(const std::shared_ptr<logging::log_t> &log)
+  {
+    add_frontend(std::make_unique<log_adapter_impl_t>(log));
+    verbosity(convert_verbosity(log->verbosity()));
+  }
+}
 
 class elasticsearch_t::impl_t {
 public:
     std::string m_url_prefix;
     swarm::ev_event_loop m_loop;
+    std::shared_ptr<logging::log_t> m_log;
+    log_adapter_t m_logger_base;
     swarm::logger m_logger;
     mutable swarm::url_fetcher m_manager; //@note: Why should I do this mutable to perform const operations?
-    std::shared_ptr<logging::log_t> m_log;
 
     impl_t(cocaine::context_t &context, cocaine::io::reactor_t &reactor, const std::string &name) :
-        m_loop(reactor.native()),
-        m_manager(m_loop, m_logger),
-        m_log(new logging::log_t(context, name))
+        m_log(new logging::log_t(context, name)),
+        m_logger_base(m_log),
+        m_logger(m_logger_base, blackhole::log::attributes_t()),
+        m_loop(reactor.native(), m_logger),
+        m_manager(m_loop, m_logger)
     {
     }
 
