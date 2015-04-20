@@ -1,7 +1,10 @@
 FIND_PACKAGE(MongoDB)
 
+
 IF(MongoDB_FOUND)
     LOCATE_LIBRARY(LIBMONGOCLIENT "dbclient.h" "mongoclient" "mongo" "mongo/client")
+
+    FIND_PACKAGE(Boost COMPONENTS regex REQUIRED)
 
     INCLUDE_DIRECTORIES(
         ${LIBMONGOCLIENT_INCLUDE_DIRS})
