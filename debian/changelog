@@ -1,3 +1,12 @@
+cocaine-plugins (0.12.0.8) unstable; urgency=low
+
+  * Misc: dropped 'using namespace std::placeholders' in favor of namespace
+    aliases.
+  * Misc: migrated to Blackhole v0.5.
+  * Debian: added libboost-dev to debian/control, because of Mongo Plugin.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 21 Apr 2015 18:28:10 +0300
+
 cocaine-plugins (0.12.0.7) unstable; urgency=low
 
   * Bugfix: compatibility with cocaine/cocaine-core#191.
