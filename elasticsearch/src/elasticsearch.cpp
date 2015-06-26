@@ -89,7 +89,7 @@ public:
         return do_rest<T>(url, handler, action);
 #else
         cocaine::deferred<response::delete_index> deferred;
-        deferred.abort(-1, "Delete operation is not supported");
+        deferred.abort(asio::error::operation_aborted, "Delete operation is not supported");
         return deferred;
 #endif
     }
@@ -158,7 +158,8 @@ elasticsearch_t::search(const std::string& index,
                         const std::string& query,
                         int size) const {
     if (size <= 0) {
-        throw cocaine::error_t("desired search size (%d) must be positive number", size);
+        throw std::system_error(std::make_error_code(std::errc::invalid_argument));
+        //throw cocaine::error_t("desired search size (%d) must be positive number", size);
     }
 
     const std::string& url = cocaine::format("%s/%s/%s/_search?q=%s&size=%d", d->m_endpoint, index, type, query, size);
