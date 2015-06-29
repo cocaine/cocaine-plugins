@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.1.2~nightly) unstable; urgency=low
+
+  * All plugins except unicorn support error categories.
+  * [Docker] Adapt docker::spool to async api.
+
+ -- Dmitry Unkovsky <diunko@yandex-team.ru>  Fri, 26 Jun 2015 17:20:47 +0300
+
 cocaine-plugins (0.12.0.8) unstable; urgency=low
 
   * Misc: dropped 'using namespace std::placeholders' in favor of namespace
