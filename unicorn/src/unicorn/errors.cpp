@@ -74,7 +74,7 @@ class unicorn_category_t:
             case INVALID_CONNECTION_ENDPOINT:
                 return "Invalid connection endpoint specified";
             default:
-                return "Unknow unicorn error";
+                return std::string("Unknow unicorn error - ") + std::to_string(code);
         }
     }
 };

@@ -28,20 +28,6 @@ typedef std::string value_t;
 typedef long version_t;
 
 /**
-* Get zookeper error message by error code (including extra codes ZOO_EXTRA_ERROR)
-*/
-//std::string
-//get_error_message(int rc);
-
-/**
-* Get zookeper error message by error code (including extra codes ZOO_EXTRA_ERROR)
-* and append exception message
-*/
-//std::string
-//get_error_message(int rc, const std::exception& e);
-
-
-/**
 * Get nth parent of path (starting from 1)
 * For path /A/B/C/D 1th parent is /A/B/C
 */

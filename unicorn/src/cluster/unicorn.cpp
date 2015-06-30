@@ -92,7 +92,7 @@ unicorn_cluster_t::on_announce::abort(const std::error_code& rc) {
         COCAINE_LOG_INFO(parent->log, "announce checked");
         return;
     }
-    COCAINE_LOG_ERROR(parent->log, "could not announce local services(%i): %s.", rc.value(), rc.message());
+    COCAINE_LOG_ERROR(parent->log, "could not announce local services(%i): %s", rc.value(), rc.message());
     parent->announce_timer.expires_from_now(boost::posix_time::seconds(parent->config.retry_interval));
     parent->announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, parent, std::placeholders::_1));
 }
@@ -187,7 +187,7 @@ unicorn_cluster_t::on_list_update::write(unicorn::api_t::response::children_subs
 
 void
 unicorn_cluster_t::on_list_update::abort(const std::error_code& rc) {
-    COCAINE_LOG_WARNING(parent->log, "failure during subscription(%i): %s, resubscribing.", rc.value(), rc.message().c_str());
+    COCAINE_LOG_WARNING(parent->log, "failure during subscription(%i): %s, resubscribing", rc.value(), rc.message().c_str());
     parent->subscribe_timer.expires_from_now(boost::posix_time::seconds(parent->config.retry_interval));
     parent->subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, parent, std::placeholders::_1));
 

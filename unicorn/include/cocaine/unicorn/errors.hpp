@@ -30,7 +30,7 @@ namespace cocaine { namespace error {
 typedef ZOO_ERRORS zookeeper_errors;
 
 /**
-* Extensions of zookeeper error used by cocaine. values greater than -1000 are reserved for zookeeper.
+* Unicorn errors related to artificial(non-zookeeper) restrictions of unicorn service.
 */
 enum unicorn_errors {
     CHILD_NOT_ALLOWED = 1,
