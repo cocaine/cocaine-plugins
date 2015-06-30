@@ -1,8 +1,8 @@
-cocaine-plugins (0.12.0.9) unstable; urgency=low
+cocaine-plugins (0.12.1.0~nightly) unstable; urgency=low
 
-  * Error category support.
+  * Error categories support.
 
- -- Anton Matveenko <antmat@me.com>  Tue, 30 Jun 2015 19:13:10 +0300
+ -- Dmitry Unkovsky <diunko@yandex-team.ru>  Fri, 30 Jun 2015 17:20:47 +0300
 
 cocaine-plugins (0.12.0.8) unstable; urgency=low
 
