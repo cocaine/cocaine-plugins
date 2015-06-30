@@ -45,7 +45,7 @@ public:
         virtual void
         write(unicorn::api_t::response::create_result&& result);
 
-         using unicorn::writable_adapter_base_t<unicorn::api_t::response::create_result>::abort;
+        using unicorn::writable_adapter_base_t<unicorn::api_t::response::create_result>::abort;
 
         virtual void
         abort(const std::error_code& ec);
