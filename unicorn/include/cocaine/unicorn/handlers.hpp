@@ -13,6 +13,9 @@
 * GNU General Public License for more details.
 */
 
+#ifndef COCAINE_UNICORN_HANDLERS_HPP
+#define COCAINE_UNICORN_HANDLERS_HPP
+
 #include "cocaine/unicorn.hpp"
 #include "cocaine/unicorn/api/zookeeper.hpp"
 
@@ -353,3 +356,5 @@ struct zookeeper_api_t::release_lock_action_t :
 
 
 }}
+
+#endif

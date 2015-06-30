@@ -15,24 +15,24 @@
 #ifndef ZOOKEEPER_EXCEPTION_HPP
 #define ZOOKEEPER_EXCEPTION_HPP
 
-#include <exception>
-#include <string>
+//#include <exception>
+//#include <string>
 
-namespace zookeeper {
-class exception :
-    public std::exception
-{
-public:
-    // You can specify some prefix.
-    // what() will return "$your_prefixZookeeper error($zk_error_code) : $description_of_zk_error_code"
-    exception(std::string message_prefix, int zk_error_code);
-    exception(int zk_error_code);
-    int code() const;
-    virtual const char* what() const noexcept;
-    virtual ~exception() noexcept {}
-private:
-    int zk_error_code;
-    std::string message;
-};
-}
+//namespace zookeeper {
+//class exception :
+//    public std::exception
+//{
+//public:
+//    // You can specify some prefix.
+//    // what() will return "$your_prefixZookeeper error($zk_error_code) : $description_of_zk_error_code"
+//    exception(std::string message_prefix, int zk_error_code);
+//    exception(int zk_error_code);
+//    int code() const;
+//    virtual const char* what() const noexcept;
+//    virtual ~exception() noexcept {}
+//private:
+//    int zk_error_code;
+//    std::string message;
+//};
+//}
 #endif

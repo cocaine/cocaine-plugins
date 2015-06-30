@@ -5,6 +5,7 @@ ADD_LIBRARY(unicorn MODULE
     src/cluster/unicorn.cpp
     src/unicorn.cpp
     src/unicorn/api/zookeeper.cpp
+    src/unicorn/errors.cpp
     src/unicorn/value.cpp
     src/zookeeper/zookeeper.cpp
     src/zookeeper/exception.cpp

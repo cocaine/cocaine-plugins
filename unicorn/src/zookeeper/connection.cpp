@@ -13,10 +13,13 @@
 * GNU General Public License for more details.
 */
 
+#include "cocaine/unicorn/errors.hpp"
+
 #include "cocaine/zookeeper/connection.hpp"
 #include "cocaine/zookeeper/session.hpp"
 #include "cocaine/zookeeper/handler.hpp"
 #include "cocaine/zookeeper/exception.hpp"
+
 #include <zookeeper/zookeeper.h>
 #include <stdexcept>
 #include <string>
@@ -44,7 +47,7 @@ cfg_t::endpoint_t::endpoint_t(std::string _hostname, unsigned int _port) :
 std::string
 cfg_t::endpoint_t::to_string() const {
     if(hostname.empty() || port == 0) {
-        throw zookeeper::exception(INVALID_CONNECTION_ENDPOINT);
+        throw std::system_error(cocaine::error::INVALID_CONNECTION_ENDPOINT);
     }
     //Zookeeper handles even ipv6 addresses correctly in this case
     return hostname + ':' + std::to_string(port);
@@ -160,7 +163,8 @@ void connection_t::check_connectivity() {
 }
 void connection_t::check_rc(int rc) const {
     if(rc != ZOK) {
-        throw exception("Zookeeper connection error. ", rc);
+        auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
+        throw std::system_error(code);
     }
 }
 
@@ -177,7 +181,7 @@ void connection_t::reconnect() {
             // Swap in any case.
             // Sometimes we really want to force reconnect even when zk is unavailable at all. For example on lock release.
             std::swap(new_zhandle, zhandle);
-            throw exception(ZOO_EXTRA_ERROR::COULD_NOT_CONNECT);
+            throw std::system_error(cocaine::error::COULD_NOT_CONNECT);
         }
     } else {
         if(!session.valid()) {
