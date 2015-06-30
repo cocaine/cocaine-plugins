@@ -12,7 +12,7 @@ OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(GRAPHITE "Build Graphite Service plugin" ON)
-OPTION(UNICORN "Build Unified configuration service plugin" OFF)
+OPTION(UNICORN "Build Unified configuration service plugin" ON)
 
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
