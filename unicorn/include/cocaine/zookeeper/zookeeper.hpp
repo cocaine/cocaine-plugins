@@ -23,39 +23,9 @@
 
 namespace zookeeper {
 
-/**
-* Extensions of zookeeper error used by cocaine. values greater than -1000 are reserved for zookeeper.
-*/
-enum ZOO_EXTRA_ERROR {
-    CHILD_NOT_ALLOWED = -1000,
-    INVALID_TYPE = -1001,
-    INVALID_VALUE = -1002,
-    COULD_NOT_CONNECT = -1003,
-    UNKNOWN_ERROR = -1004,
-    HANDLER_SCOPE_RELEASED = -1005,
-    INVALID_NODE_NAME = -1006,
-    INVALID_PATH = -1007,
-    VERSION_NOT_ALLOWED = -1008,
-    INVALID_CONNECTION_ENDPOINT = -1009
-};
-
 typedef std::string path_t;
 typedef std::string value_t;
 typedef long version_t;
-
-/**
-* Get zookeper error message by error code (including extra codes ZOO_EXTRA_ERROR)
-*/
-std::string
-get_error_message(int rc);
-
-/**
-* Get zookeper error message by error code (including extra codes ZOO_EXTRA_ERROR)
-* and append exception message
-*/
-std::string
-get_error_message(int rc, const std::exception& e);
-
 
 /**
 * Get nth parent of path (starting from 1)
