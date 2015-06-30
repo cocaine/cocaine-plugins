@@ -16,7 +16,6 @@
 #include "cocaine/unicorn/errors.hpp"
 
 #include "cocaine/zookeeper/zookeeper.hpp"
-#include "cocaine/zookeeper/exception.hpp"
 
 #include <stdexcept>
 #include <errno.h>

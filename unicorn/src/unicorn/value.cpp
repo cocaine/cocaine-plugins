@@ -15,7 +15,6 @@
 
 #include "cocaine/unicorn/value.hpp"
 #include "cocaine/unicorn/errors.hpp"
-#include "cocaine/zookeeper/exception.hpp"
 
 namespace cocaine { namespace unicorn {
 

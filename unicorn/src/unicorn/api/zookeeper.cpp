@@ -21,11 +21,9 @@
 #include "cocaine/unicorn/api/zookeeper.hpp"
 
 #include "cocaine/zookeeper/handler.hpp"
-#include "cocaine/zookeeper/exception.hpp"
 
 #include <cocaine/context.hpp>
 #include <asio/io_service.hpp>
-#include <cocaine/zookeeper/exception.hpp>
 
 #include <memory>
 

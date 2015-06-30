@@ -16,7 +16,6 @@
 #define ZOOKEEPER_HANDLER_HPP
 
 #include "cocaine/zookeeper/zookeeper.hpp"
-#include "cocaine/zookeeper/exception.hpp"
 
 #include <cocaine/locked_ptr.hpp>
 

@@ -18,7 +18,6 @@
 #include "cocaine/zookeeper/connection.hpp"
 #include "cocaine/zookeeper/session.hpp"
 #include "cocaine/zookeeper/handler.hpp"
-#include "cocaine/zookeeper/exception.hpp"
 
 #include <zookeeper/zookeeper.h>
 #include <stdexcept>
