@@ -59,7 +59,7 @@ public:
 
     virtual void
     abort(const std::error_code& code) {
-        w.abort(code);
+        w.abort(code, "");
     }
 
 private:
