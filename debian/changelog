@@ -1,4 +1,4 @@
-cocaine-plugins (0.12.1.0~nightly) unstable; urgency=low
+cocaine-plugins (0.12.1.0) unstable; urgency=low
 
   * Error categories support.
 
@@ -41,7 +41,7 @@ cocaine-plugins (0.12.0.4) unstable; urgency=low
 cocaine-plugins (0.12.0.3) unstable; urgency=low
 
   * [Docker] Port network_mode and capabilities from v0.11
-  * [Docker] Fix a possible corruption of a socket path 
+  * [Docker] Fix a possible corruption of a socket path
 
  -- Anton Tyurin <noxiouz@yandex.ru>  Wed, 18 Mar 2015 12:29:07 +0300
 
