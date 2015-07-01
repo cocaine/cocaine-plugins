@@ -104,13 +104,6 @@ private:
 
 } // namespace
 
-struct null_cancellation_t:
-    public api::cancellation_t
-{
-    void
-    cancel() {}
-};
-
 docker_t::docker_t(context_t& context, const std::string& name, const dynamic_t& args):
     category_type(context, name, args),
     m_log(context.log("app/" + name)),
@@ -194,21 +187,11 @@ docker_t::~docker_t() {
     // pass
 }
 
-std::unique_ptr<api::cancellation_t>
-docker_t::spool(callback_type cb) {
-    std::unique_ptr<api::cancellation_t> cancellation(new null_cancellation_t);
-	
-    try {
-        if(m_do_pool) {
-            m_docker_client.pull_image(m_image, m_tag);
-        }
-        cb(std::error_code());
-    } catch(const std::exception& e) {
-        COCAINE_LOG_ERROR(m_log, "Unable to spool a container: %s", e.what());
-        cb(std::error_code());
+void
+docker_t::spool() {
+    if(m_do_pool) {
+        m_docker_client.pull_image(m_image, m_tag);
     }
-
-    return cancellation;
 }
 
 std::unique_ptr<api::handle_t>

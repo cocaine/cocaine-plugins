@@ -39,12 +39,8 @@ public:
    ~docker_t();
 
     virtual
-    std::unique_ptr<api::cancellation_t>
-    spool(callback_type cb);
-
-    // virtual
-    // void
-    // spool();
+    void
+    spool();
 
     virtual
     std::unique_ptr<api::handle_t>
