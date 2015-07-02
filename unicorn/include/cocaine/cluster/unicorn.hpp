@@ -45,7 +45,7 @@ public:
         virtual void
         write(unicorn::api_t::response::create_result&& result);
 
-         using unicorn::writable_adapter_base_t<unicorn::api_t::response::create_result>::abort;
+        using unicorn::writable_adapter_base_t<unicorn::api_t::response::create_result>::abort;
 
         virtual void
         abort(const std::error_code& ec);
@@ -125,7 +125,7 @@ private:
     asio::deadline_timer subscribe_timer;
     zookeeper::session_t zk_session;
     zookeeper::connection_t zk;
-    unicorn::zookeeper_api_t unicorn;
+    synchronized<unicorn::zookeeper_api_t> unicorn;
     synchronized<std::set<std::string>> registered_locators;
 };
 
