@@ -125,7 +125,7 @@ private:
     asio::deadline_timer subscribe_timer;
     zookeeper::session_t zk_session;
     zookeeper::connection_t zk;
-    unicorn::zookeeper_api_t unicorn;
+    synchronized<unicorn::zookeeper_api_t> unicorn;
     synchronized<std::set<std::string>> registered_locators;
 };
 

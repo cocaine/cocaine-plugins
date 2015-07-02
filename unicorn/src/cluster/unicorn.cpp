@@ -82,7 +82,7 @@ unicorn_cluster_t::on_announce::on_announce(unicorn_cluster_t* _parent) :
 void
 unicorn_cluster_t::on_announce::write(unicorn::api_t::response::create_result&& /*result*/) {
     COCAINE_LOG_INFO(parent->log, "announced self in unicorn");
-    parent->unicorn.subscribe(std::make_shared<on_update>(parent), parent->config.path + '/' + parent->locator.uuid());
+    parent->unicorn->subscribe(std::make_shared<on_update>(parent), parent->config.path + '/' + parent->locator.uuid());
 }
 
 void
@@ -178,7 +178,7 @@ unicorn_cluster_t::on_list_update::write(unicorn::api_t::response::children_subs
         if(to_add[i] == parent->locator.uuid()) {
             continue;
         }
-        parent->unicorn.get(
+        parent->unicorn->get(
             std::make_shared<on_fetch>(to_add[i], parent),
             parent->config.path + '/' + to_add[i]
         );
@@ -234,10 +234,11 @@ unicorn_cluster_t::announce() {
         if(!endpoints.empty() && cur_endpoints != endpoints) {
             // Drop all ephemeral nodes, so create will succeed.
             // It's the easiest way to drop old announces as all clients will receive a notify on delete-create.
+            auto lock = unicorn.synchronize();
             zk.reconnect();
         }
         endpoints.swap(cur_endpoints);
-        unicorn.create(
+        unicorn->create(
             std::make_shared<on_announce>(this),
             config.path + '/' + locator.uuid(),
             endpoints,
@@ -249,9 +250,12 @@ unicorn_cluster_t::announce() {
 
     }
     catch(const std::system_error& e) {
-        COCAINE_LOG_ERROR(log, "failure during subscription(%i): %s", e.code().value(), e.what());
+        COCAINE_LOG_ERROR(log, "failure during announce(%i): %s", e.code().value(), e.what());
         announce_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
         announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
+        // Reconnect to prevent cases when is_unrecoverable returns false all the times, but we still get connection error.
+        auto lock = unicorn.synchronize();
+        zk.reconnect();
     }
 }
 
@@ -273,7 +277,7 @@ void unicorn_cluster_t::on_subscribe_timer(const std::error_code& ec) {
 void
 unicorn_cluster_t::subscribe() {
     try {
-        unicorn.children_subscribe(
+        unicorn->children_subscribe(
             std::make_shared<on_list_update>(this),
             config.path
         );
@@ -286,6 +290,9 @@ unicorn_cluster_t::subscribe() {
         COCAINE_LOG_ERROR(log, "failure during subscription(%i): %s", e.code().value(), e.what());
         subscribe_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
         subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, this, std::placeholders::_1));
+        // Reconnect to prevent cases when is_unrecoverable returns false all the times, but we still get connection error.
+        auto lock = unicorn.synchronize();
+        zk.reconnect();
     }
 }
 }}
