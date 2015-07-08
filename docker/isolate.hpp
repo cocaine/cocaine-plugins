@@ -33,7 +33,7 @@ class docker_t:
     COCAINE_DECLARE_NONCOPYABLE(docker_t)
 
 public:
-    docker_t(context_t& context, const std::string& name, const dynamic_t& args);
+    docker_t(context_t& context, asio::io_service& io_context, const std::string& name, const dynamic_t& args);
 
     virtual
    ~docker_t();
