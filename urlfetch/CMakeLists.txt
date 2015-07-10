@@ -19,7 +19,7 @@ TARGET_LINK_LIBRARIES(urlfetch
     cocaine-core
     swarm
     swarm_urlfetcher
-${Boost_LIBRARIES}
+    ${Boost_LIBRARIES}
 )
 
 SET_TARGET_PROPERTIES(urlfetch PROPERTIES
