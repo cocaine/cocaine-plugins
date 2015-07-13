@@ -13,6 +13,7 @@ OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(UNICORN "Build Unified configuration service plugin" ON)
+option(NODE "Build Node service plugin" ON)
 
 SET(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
@@ -48,15 +49,16 @@ LINK_DIRECTORIES(
     ${LIBMSGPACK_LIBRARY_DIRS})
 
 SET(PLUGINS
-        cache
-        chrono
-        docker
-        elasticsearch
-        ipvs
-        mongo
-        urlfetch
-        graphite
-        unicorn)
+    cache
+    chrono
+    docker
+    elasticsearch
+    graphite
+    ipvs
+    mongo
+    node
+    unicorn
+    urlfetch)
 
 FOREACH(PLUGIN ${PLUGINS})
     STRING(TOUPPER ${PLUGIN} OPTION_NAME)
