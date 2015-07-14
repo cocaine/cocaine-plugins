@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.2.1) unstable; urgency=low
+
+  * Node: moved from the core.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 08 Jul 2015 16:00:58 +0300
+
 cocaine-plugins (0.12.2.0) unstable; urgency=low
 
   * Docker: ability to implement asynchronous spooling/spawning using new isolate interface.
