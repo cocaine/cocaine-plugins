@@ -4,6 +4,9 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/node/include)
 
 add_library(node MODULE
+    src/isolate/process.cpp
+    src/isolate/process/archive.cpp
+    src/isolate/process/spooler.cpp
     src/module.cpp
     src/node.cpp
     src/node/app.cpp
@@ -35,7 +38,7 @@ target_link_libraries(node
 
 set_target_properties(node PROPERTIES
     PREFIX ""
-    SUFFIX ".2.cocaine-plugin"    
+    SUFFIX ".2.cocaine-plugin"
     COMPILE_FLAGS "-std=c++0x")
 
 install(TARGETS node

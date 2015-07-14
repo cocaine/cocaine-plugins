@@ -1,5 +1,7 @@
 #include "cocaine/service/node.hpp"
 
+#include "cocaine/detail/isolate/process.hpp"
+
 using namespace cocaine;
 using namespace cocaine::service;
 
@@ -11,6 +13,7 @@ extern "C" {
 
     void
     initialize(api::repository_t& repository) {
+        repository.insert<isolate::process_t>("process");
         repository.insert<node_t>("node::v2");
     }
 }
