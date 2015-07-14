@@ -3,6 +3,7 @@ Section: utils
 Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
 Build-Depends: cmake, debhelper (>= 7.0.13), libcocaine-dev (>= 0.12.0.0),
+ libarchive-dev, uuid-dev, libcgroup-dev,
  libboost-filesystem-dev, libboost-thread-dev,
  libswarm-dev (>= 0.6.1.0), libswarm-dev (<< 0.7),
  libnl-3-dev, libnl-genl-3-dev, libcurl4-openssl-dev (>= 7.22.0),
@@ -69,6 +70,19 @@ Description: Cocaine - IPVS Gateway
 # Replaces: cocaine-plugin-mongodb
 # Description: Cocaine - MongoDB Storage
 #  MongoDB storage support for Cocaine.
+
+Package: libcocaine-plugin-node3
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Cocaine - Node Service
+ Node service for Cocaine.
+
+Package: libcocaine-plugin-node-dev
+Architecture: any
+Section: libdevel
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-node3 (= ${binary:Version})
+Description: Cocaine - Node Service Development Headers
+ Cocaine development headers for the Node Service package.
 
 Package: libcocaine-plugin-urlfetch3
 Architecture: any
