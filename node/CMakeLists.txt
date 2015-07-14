@@ -1,4 +1,18 @@
-find_package(Boost COMPONENTS system thread REQUIRED)
+find_package(Boost 1.46 COMPONENTS filesystem system thread REQUIRED)
+find_package(LibArchive REQUIRED)
+
+if(NOT APPLE)
+    option(COCAINE_ALLOW_CGROUPS "Build CGroups support for Process Isolate" ON)
+else()
+    option(COCAINE_ALLOW_CGROUPS "Build CGroups support for Process Isolate" OFF)
+endif()
+
+if(COCAINE_ALLOW_CGROUPS)
+    locate_library(LIBCGROUP "libcgroup.h" "cgroup")
+
+    set(LIBCGROUP_LIBRARY "cgroup")
+    add_definitions(-DCOCAINE_ALLOW_CGROUPS=1)
+endif()
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/node/include)
@@ -33,6 +47,7 @@ add_library(node MODULE
 
 target_link_libraries(node
     ${Boost_LIBRARIES}
+    ${LibArchive_LIBRARIES}
     msgpack
     cocaine-core)
 
@@ -47,6 +62,8 @@ install(TARGETS node
 
 install(
     DIRECTORY
+        include/cocaine/api
         include/cocaine/idl
+        include/cocaine/service
     DESTINATION include/cocaine
     COMPONENT development)
