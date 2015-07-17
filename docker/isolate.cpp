@@ -196,13 +196,19 @@ docker_t::spool() {
 
 std::unique_ptr<api::handle_t>
 docker_t::spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment) {
+    std::unique_ptr<container_handle_t> handle;
     try {
+        // This is total bullshit, but we need to fully rework docker plugin.
+        std::lock_guard<std::mutex> guard(spawn_lock);
+
         // Prepare request to docker.
         auto& env = m_run_config["Env"];
         env.SetArray();
 
         // We should store here strings pushed to RapidJson array :(
         std::vector<std::string> environment_storage;
+
+
 
         for(auto it = environment.begin(); it != environment.end(); ++it) {
             environment_storage.emplace_back(it->first + "=" + it->second);
@@ -230,7 +236,7 @@ docker_t::spawn(const std::string& path, const api::string_map_t& args, const ap
         }
 
         // create container
-        std::unique_ptr<container_handle_t> handle(
+        handle.reset(
             new container_handle_t(m_docker_client.create_container(m_run_config))
         );
 
