@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.2.1) unstable; urgency=low
+
+  * Docker: a dumb attempt to make it thread-safe.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 20 Jul 2015 12:29:33 +0300
+
 cocaine-plugins (0.12.2.0) unstable; urgency=low
 
   * Docker: ability to implement asynchronous spooling/spawning using new isolate interface.
