@@ -156,7 +156,7 @@ private:
 class container_t {
 public:
     container_t(const std::string& id,
-                std::shared_ptr<client_impl_t> client,
+                std::shared_ptr<synchronized<client_impl_t>> client,
                 std::shared_ptr<logging::log_t> logger) :
         m_id(id),
         m_client(client),
@@ -188,7 +188,7 @@ public:
 private:
     std::string m_id;
 
-    std::shared_ptr<client_impl_t> m_client;
+    std::shared_ptr<synchronized<client_impl_t>> m_client;
     std::shared_ptr<logging::log_t> m_logger;
 };
 
@@ -197,7 +197,7 @@ class client_t
 public:
     client_t(const endpoint_t& endpoint,
              std::shared_ptr<logging::log_t> logger) :
-        m_client(new client_impl_t(endpoint)),
+        m_client(new synchronized<client_impl_t>(endpoint)),
         m_logger(logger)
     {
         // pass
@@ -215,7 +215,7 @@ public:
     create_container(const rapidjson::Value& args);
 
 private:
-    std::shared_ptr<client_impl_t> m_client;
+    std::shared_ptr<synchronized<client_impl_t>> m_client;
     std::shared_ptr<cocaine::logging::log_t> m_logger;
 };
 
