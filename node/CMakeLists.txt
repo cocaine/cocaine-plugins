@@ -8,9 +8,9 @@ else()
 endif()
 
 if(COCAINE_ALLOW_CGROUPS)
-    locate_library(LIBCGROUP "libcgroup.h" "cgroup")
+    locate_library(LibCGroup "libcgroup.h" "cgroup")
 
-    set(LIBCGROUP_LIBRARY "cgroup")
+    set(LibCGroup_LIBRARY "cgroup")
     add_definitions(-DCOCAINE_ALLOW_CGROUPS=1)
 endif()
 
@@ -48,6 +48,7 @@ add_library(node MODULE
 target_link_libraries(node
     ${Boost_LIBRARIES}
     ${LibArchive_LIBRARIES}
+    ${LibCGroup_LIBRARY}
     msgpack
     cocaine-core)
 
