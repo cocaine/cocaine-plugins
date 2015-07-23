@@ -175,7 +175,6 @@ docker_t::docker_t(context_t& context,  asio::io_service& io_context, const std:
         m_run_config.AddMember("Volumes", v5, m_json_allocator);
         rapidjson::Value empty_object(rapidjson::kObjectType);
         m_run_config["Volumes"].AddMember(m_runtime_path.c_str(), empty_object, m_json_allocator);
-        m_run_config.AddMember("VolumesFrom", "", m_json_allocator);
         m_run_config.AddMember("WorkingDir", "/", m_json_allocator);
         m_run_config.AddMember("NetworkMode", m_network_mode.data(), m_json_allocator);
     } catch(const std::exception& e) {
