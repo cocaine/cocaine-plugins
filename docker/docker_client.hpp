@@ -92,7 +92,8 @@ public:
     connection_t();
 
     connection_t(boost::asio::io_service& ioservice,
-                 const endpoint_t& endpoint);
+                 const endpoint_t& endpoint,
+                 std::shared_ptr<logging::log_t> logger);
 
     void
     connect(boost::asio::io_service& ioservice,
@@ -124,11 +125,12 @@ private:
             variant_t;
 
     mutable variant_t m_socket;
+    std::shared_ptr<logging::log_t> m_logger;
 };
 
 class client_impl_t {
 public:
-    client_impl_t(const endpoint_t& endpoint);
+    client_impl_t(const endpoint_t& endpoint, std::shared_ptr<logging::log_t> logger);
 
     ~client_impl_t();
 
@@ -148,6 +150,7 @@ public:
          const http_request_t& request);
 
 private:
+    std::shared_ptr<logging::log_t> m_logger;
     boost::asio::io_service m_ioservice;
     endpoint_t m_endpoint;
     CURL *m_curl;
@@ -197,7 +200,7 @@ class client_t
 public:
     client_t(const endpoint_t& endpoint,
              std::shared_ptr<logging::log_t> logger) :
-        m_client(new synchronized<client_impl_t>(endpoint)),
+        m_client(new synchronized<client_impl_t>(endpoint, logger)),
         m_logger(logger)
     {
         // pass
