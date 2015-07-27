@@ -15,9 +15,7 @@ OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(UNICORN "Build Unified configuration service plugin" ON)
 
-SET(CMAKE_MODULE_PATH
-    ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
-
+# Include our CMake libraries.
 INCLUDE(cmake/locate_library.cmake)
 
 FIND_PACKAGE(Boost 1.46.0
@@ -41,15 +39,12 @@ INCLUDE_DIRECTORIES(BEFORE
     SYSTEM
     ${PROJECT_SOURCE_DIR}/foreign/asio/asio/include
     ${PROJECT_SOURCE_DIR}/foreign/blackhole/src
-    ${PROJECT_SOURCE_DIR}/foreign/hpack-headers/include
     ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include)
 
 LINK_DIRECTORIES(
     ${Boost_LIBRARY_DIRS}
     ${LIBCOCAINE_LIBRARY_DIRS}
     ${LIBMSGPACK_LIBRARY_DIRS})
-
-ADD_SUBDIRECTORY(foreign/hpack-headers)
 
 SET(PLUGINS
     cache
