@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.3.0~rc1) unstable; urgency=low
+
+  * Compatibility with Core 0.12.3.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 27 Jul 2015 20:29:10 +0300
+
 cocaine-plugins (0.12.2.3) unstable; urgency=low
 
   * Node: moved from the core.
