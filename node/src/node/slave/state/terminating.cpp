@@ -25,6 +25,11 @@ terminating_t::~terminating_t() {
     COCAINE_LOG_TRACE(slave->log, "state '%s' has been destroyed", name());
 }
 
+bool
+terminating_t::terminating() const noexcept {
+    return true;
+}
+
 const char*
 terminating_t::name() const noexcept {
     return "terminating";
@@ -32,9 +37,13 @@ terminating_t::name() const noexcept {
 
 void
 terminating_t::cancel() {
+    COCAINE_LOG_TRACE(slave->log, "processing termination timer cancellation");
+
     try {
-        timer.cancel();
-    } catch (...) {
+        const auto cancelled = timer.cancel();
+        COCAINE_LOG_TRACE(slave->log, "processing termination timer cancellation: done (%d cancelled)", cancelled);
+    } catch (const std::system_error& err) {
+        COCAINE_LOG_WARNING(slave->log, "unable to cancel termination timer: %s", err.what());
     }
 }
 
@@ -48,16 +57,18 @@ void
 terminating_t::start(unsigned long timeout, const std::error_code& ec) {
     COCAINE_LOG_DEBUG(slave->log, "slave is terminating, timeout: %.2f ms", timeout);
 
-    control->terminate(ec);
-
     timer.expires_from_now(boost::posix_time::milliseconds(timeout));
     timer.async_wait(std::bind(&terminating_t::on_timeout, shared_from_this(), ph::_1));
+
+    // The following operation may fail if the session is already disconnected. In this case a slave
+    // shutdown operation will be triggered, which immediately stops the timer.
+    control->terminate(ec);
 }
 
 void
 terminating_t::on_timeout(const std::error_code& ec) {
     if (ec) {
-        COCAINE_LOG_TRACE(slave->log, "unable to terminate slave: cancelled");
+        COCAINE_LOG_TRACE(slave->log, "termination timer has called its completion handler: cancelled");
     } else {
         COCAINE_LOG_ERROR(slave->log, "unable to terminate slave: timeout");
 

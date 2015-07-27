@@ -20,18 +20,20 @@
 
 #include "cocaine/service/node.hpp"
 
-#include <cocaine/api/storage.hpp>
+#include "cocaine/api/storage.hpp"
 
-#include <cocaine/context.hpp>
-#include <cocaine/logging.hpp>
+#include "cocaine/context.hpp"
+#include "cocaine/logging.hpp"
 
-#include <cocaine/traits/dynamic.hpp>
-#include <cocaine/traits/endpoint.hpp>
-#include <cocaine/traits/graph.hpp>
-#include <cocaine/traits/tuple.hpp>
-#include <cocaine/traits/vector.hpp>
+#include "cocaine/traits/dynamic.hpp"
+#include "cocaine/traits/endpoint.hpp"
+#include "cocaine/traits/graph.hpp"
+#include "cocaine/traits/tuple.hpp"
+#include "cocaine/traits/vector.hpp"
 
-#include <cocaine/tuple.hpp>
+#include "cocaine/tuple.hpp"
+
+#include "cocaine/detail/service/node/app.hpp"
 
 #include <blackhole/scoped_attributes.hpp>
 
@@ -39,8 +41,6 @@
 #include <boost/spirit/include/karma_generate.hpp>
 #include <boost/spirit/include/karma_list.hpp>
 #include <boost/spirit/include/karma_string.hpp>
-
-#include "cocaine/detail/service/node/app.hpp"
 
 using namespace cocaine;
 using namespace cocaine::service;
@@ -104,11 +104,16 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
     on<io::node::start_app>(std::bind(&node_t::start_app, this, ph::_1, ph::_2));
     on<io::node::pause_app>(std::bind(&node_t::pause_app, this, ph::_1));
     on<io::node::list>     (std::bind(&node_t::list, this));
-    on<io::node::info>     (std::bind(&node_t::info, this, ph::_1));
+    on<io::node::info>     (std::bind(&node_t::info, this, ph::_1, ph::_2));
+
+    // Context signal/slot.
+    signal = std::make_shared<dispatch<io::context_tag>>(name);
+    signal->on<io::context::shutdown>(std::bind(&node_t::on_context_shutdown, this));
 
     const auto runname = args.as_object().at("runlist", "").as_string();
 
     if(runname.empty()) {
+        context.listen(signal, asio);
         return;
     }
 
@@ -126,6 +131,7 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
     }
 
     if(runlist.empty()) {
+        context.listen(signal, asio);
         return;
     }
 
@@ -153,9 +159,6 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
         COCAINE_LOG_WARNING(log, "couldn't start %d app(s): %s", errored.size(), stream.str());
     }
 
-    // Context signal/slot.
-    signal = std::make_shared<dispatch<io::context_tag>>(name);
-    signal->on<io::context::shutdown>(std::bind(&node_t::on_context_shutdown, this));
     context.listen(signal, asio);
 }
 
@@ -168,6 +171,8 @@ node_t::prototype() const -> const io::basic_dispatch_t&{
 
 void
 node_t::on_context_shutdown() {
+    // TODO: In fact this method may not be invoked during context shutdown - race - node service
+    // can be terminated earlier than this completion handler be invoked.
     COCAINE_LOG_DEBUG(log, "shutting down apps");
 
     apps->clear();
@@ -186,7 +191,7 @@ node_t::start_app(const std::string& name, const std::string& profile) {
 
         if(it != apps.end()) {
             // TODO: Handling app state by parsing strings seems to be not the best idea.
-            const auto info = it->second->info();
+            const auto info = it->second->info(io::node::info::brief);
             const auto state = info.as_object()["state"].as_string();
 
             if (state == "stopped") {
@@ -233,7 +238,7 @@ node_t::list() const -> dynamic_t {
 }
 
 dynamic_t
-node_t::info(const std::string& name) const {
+node_t::info(const std::string& name, io::node::info::flags_t flags) const {
     auto app = apps.apply([&](const std::map<std::string, std::shared_ptr<node::app_t>>& apps) -> std::shared_ptr<node::app_t> {
         auto it = apps.find(name);
 
@@ -248,5 +253,5 @@ node_t::info(const std::string& name) const {
         throw cocaine::error_t("app '%s' is not running", name);
     }
 
-    return app->info();
+    return app->info(flags);
 }

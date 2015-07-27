@@ -15,7 +15,17 @@ handshaking_t::handshaking_t(std::shared_ptr<state_machine_t> slave_, std::uniqu
     handle(std::move(handle_)),
     birthtime(std::chrono::high_resolution_clock::now())
 {
-    slave->fetcher->assign(handle->stdout());
+    COCAINE_LOG_TRACE(slave->log, "slave is attaching the standard output handler");
+
+    slave->fetcher.apply([&](std::shared_ptr<fetcher_t>& fetcher) {
+        // If there is no fetcher already - it only means, that the slave has been shutted down
+        // externally.
+        if (fetcher) {
+            fetcher->assign(handle->stdout());
+        } else {
+            throw std::system_error(error::overseer_shutdowning, "slave is shutdowning");
+        }
+    });
 }
 
 const char*
@@ -24,10 +34,13 @@ handshaking_t::name() const noexcept {
 }
 
 void handshaking_t::cancel() {
+    COCAINE_LOG_TRACE(slave->log, "processing activation timer cancellation");
+
     try {
-        timer->cancel();
-    } catch (...) {
-        // We don't care.
+        const auto cancelled = timer->cancel();
+        COCAINE_LOG_TRACE(slave->log, "processing activation timer cancellation: done (%d cancelled)", cancelled);
+    } catch (const std::system_error& err) {
+        COCAINE_LOG_WARNING(slave->log, "unable to cancel activation timer: %s", err.what());
     }
 }
 
@@ -70,7 +83,7 @@ void
 handshaking_t::start(unsigned long timeout) {
     COCAINE_LOG_DEBUG(slave->log, "slave is waiting for handshake, timeout: %.2f ms", timeout);
 
-    timer.apply([&](asio::deadline_timer& timer){
+    timer.apply([&](asio::deadline_timer& timer) {
         timer.expires_from_now(boost::posix_time::milliseconds(timeout));
         timer.async_wait(std::bind(&handshaking_t::on_timeout, shared_from_this(), ph::_1));
     });
@@ -78,7 +91,9 @@ handshaking_t::start(unsigned long timeout) {
 
 void
 handshaking_t::on_timeout(const std::error_code& ec) {
-    if (!ec) {
+    if (ec) {
+        COCAINE_LOG_TRACE(slave->log, "activation timer has called its completion handler: cancelled");
+    } else {
         COCAINE_LOG_ERROR(slave->log, "unable to activate slave: timeout");
 
         slave->shutdown(error::activate_timeout);

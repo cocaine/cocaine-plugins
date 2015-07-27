@@ -4,7 +4,7 @@ using namespace cocaine;
 
 worker_rpc_dispatch_t::worker_rpc_dispatch_t(upstream<outcoming_tag>& stream_, callback_type callback):
     dispatch<incoming_tag>("W2C"),
-    stream(std::move(stream_)),
+    stream(stream_), // NOTE: Intentionally copy here to provide exception-safety guarantee.
     state(state_t::open),
     callback(callback)
 {
@@ -33,6 +33,25 @@ worker_rpc_dispatch_t::worker_rpc_dispatch_t(upstream<outcoming_tag>& stream_, c
             finalize(asio::error::connection_aborted);
         }
     });
+}
+
+void
+worker_rpc_dispatch_t::discard(const std::error_code& ec) const {
+    // TODO: Consider something less weird.
+    const_cast<worker_rpc_dispatch_t*>(this)->discard(ec);
+}
+
+void
+worker_rpc_dispatch_t::discard(const std::error_code& ec) {
+    if (ec) {
+        try {
+            stream.send<protocol::error>(ec, "slave has been discarded");
+        } catch (const std::exception&) {
+            // Eat.
+        }
+
+        finalize();
+    }
 }
 
 void

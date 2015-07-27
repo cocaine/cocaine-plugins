@@ -1,29 +1,27 @@
 #include "cocaine/detail/service/node/app.hpp"
 
-#include <cocaine/api/isolate.hpp>
-
-#include <cocaine/context.hpp>
-#include <cocaine/errors.hpp>
-#include <cocaine/locked_ptr.hpp>
-
-#include <cocaine/rpc/actor.hpp>
-#include <cocaine/rpc/actor_unix.hpp>
-#include <cocaine/traits/dynamic.hpp>
-
-#include "cocaine/detail/service/node/manifest.hpp"
-#include "cocaine/detail/service/node/profile.hpp"
+#include "cocaine/api/isolate.hpp"
+#include "cocaine/context.hpp"
+#include "cocaine/errors.hpp"
+#include "cocaine/idl/node.hpp"
+#include "cocaine/locked_ptr.hpp"
+#include "cocaine/rpc/actor.hpp"
+#include "cocaine/rpc/actor_unix.hpp"
+#include "cocaine/traits/dynamic.hpp"
 
 #include "cocaine/detail/service/node/balancing/load.hpp"
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 #include "cocaine/detail/service/node/dispatch/handshaker.hpp"
 #include "cocaine/detail/service/node/dispatch/hostess.hpp"
+#include "cocaine/detail/service/node/manifest.hpp"
 #include "cocaine/detail/service/node/overseer.hpp"
+#include "cocaine/detail/service/node/profile.hpp"
+
+namespace ph = std::placeholders;
 
 using namespace cocaine;
 using namespace cocaine::service;
 using namespace cocaine::service::node;
-
-namespace ph = std::placeholders;
 
 /// App dispatch, manages incoming enqueue requests. Adds them to the queue.
 class app_dispatch_t:
@@ -58,25 +56,38 @@ private:
     on_enqueue(slot_type::upstream_type&& upstream , const std::string& event, const std::string& id) {
         COCAINE_LOG_DEBUG(log, "processing enqueue '%s' event", event);
 
-        if (auto overseer = this->overseer.lock()) {
-            if (id.empty()) {
-                return overseer->enqueue(std::move(upstream), event, boost::none);
-            } else {
-                return overseer->enqueue(std::move(upstream), event, service::node::slave::id_t(id));
-            }
-        } else {
-            upstream.send<
-                io::protocol<io::event_traits<io::app::enqueue>::dispatch_type>::scope::error
-            >(std::make_error_code(std::errc::broken_pipe), std::string("the application has been stopped"));
+        typedef io::protocol<io::event_traits<io::app::enqueue>::dispatch_type>::scope protocol;
 
-            return nullptr;
+        try {
+            if (auto overseer = this->overseer.lock()) {
+                if (id.empty()) {
+                    return overseer->enqueue(upstream, event, boost::none);
+                } else {
+                    return overseer->enqueue(upstream, event, service::node::slave::id_t(id));
+                }
+            } else {
+                // We shouldn't close the connection here, because there possibly can be events
+                // processing.
+                throw std::system_error(std::make_error_code(std::errc::broken_pipe), "the application has been stopped");
+            }
+        } catch (const std::system_error& err) {
+            COCAINE_LOG_ERROR(log, "unable to enqueue '%s' event: %s", event, err.what());
+
+            upstream.send<protocol::error>(err.code(), err.what());
         }
+
+        return std::make_shared<client_rpc_dispatch_t>(name());
     }
 
     dynamic_t
     on_info() const {
         if (auto overseer = this->overseer.lock()) {
-            return overseer->info();
+            // TODO: Forward flags.
+            io::node::info::flags_t flags;
+            flags = static_cast<io::node::info::flags_t>(
+                  io::node::info::overseer_report);
+
+            return overseer->info(flags);
         }
 
         throw std::system_error(std::make_error_code(std::errc::broken_pipe), "the application has been stopped");
@@ -99,7 +110,7 @@ public:
 
     virtual
     dynamic_t::object_t
-    info(app_t::info_policy_t policy) const = 0;
+    info(io::node::info::flags_t flags) const = 0;
 };
 
 /// The application is stopped either normally or abnormally.
@@ -126,7 +137,7 @@ public:
 
     virtual
     dynamic_t::object_t
-    info(app_t::info_policy_t) const {
+    info(io::node::info::flags_t) const {
         dynamic_t::object_t info;
         info["state"] = "stopped";
         info["cause"] = cause;
@@ -156,12 +167,13 @@ public:
     }
 
     ~spooling_t() {
+        // TODO: Check lifetimes.
         spooler->cancel();
     }
 
     virtual
     dynamic_t::object_t
-    info(app_t::info_policy_t) const {
+    info(io::node::info::flags_t) const {
         dynamic_t::object_t info;
         info["state"] = "spooling";
         return info;
@@ -174,23 +186,28 @@ class running_t:
 {
     const logging::log_t* log;
 
+    context_t& context;
+
+    std::string name;
+
     std::unique_ptr<unix_actor_t> engine;
     std::shared_ptr<overseer_t> overseer;
 
 public:
-    running_t(context_t& context,
+    running_t(context_t& context_,
               const manifest_t& manifest,
               const profile_t& profile,
               const logging::log_t* log,
               std::shared_ptr<asio::io_service> loop):
-        log(log)
+        log(log),
+        context(context_),
+        name(manifest.name)
     {
         // Create the Overseer - slave spawner/despawner plus the event queue dispatcher.
         overseer.reset(new overseer_t(context, manifest, profile, loop));
 
         // Create the event balancer.
-        // TODO: Rename method.
-        overseer->balance(std::make_unique<load_balancer_t>(overseer));
+        overseer->set_balancer(std::make_shared<load_balancer_t>(overseer));
 
         // Create a TCP server and publish it.
         COCAINE_LOG_TRACE(log, "publishing application service with the context");
@@ -218,21 +235,41 @@ public:
     ~running_t() {
         COCAINE_LOG_TRACE(log, "removing application service from the context");
 
+        try {
+            // NOTE: It can throw if someone has removed the service from the context, it's valid.
+            //
+            // Moreover if the context was unable to bootstrap itself it removes all services from
+            // the service list (including child services). It can be that this app has been removed
+            // earlier during bootstrap failure.
+            context.remove(name);
+        } catch (const std::exception& err) {
+            COCAINE_LOG_WARNING(log, "unable to remove application service from the context: %s", err.what());
+        }
+
         engine->terminate();
         overseer->terminate();
     }
 
     virtual
     dynamic_t::object_t
-    info(app_t::info_policy_t policy) const {
+    info(io::node::info::flags_t flags) const {
         dynamic_t::object_t info;
 
-        if (policy == app_t::info_policy_t::verbose) {
-            info = overseer->info();
+        if (is_overseer_report_required(flags)) {
+            info = overseer->info(flags);
+        } else {
+            info["uptime"] = overseer->uptime().count();
         }
 
         info["state"] = "running";
         return info;
+    }
+
+private:
+    static
+    bool
+    is_overseer_report_required(io::node::info::flags_t flags) {
+        return flags & io::node::info::overseer_report;
     }
 };
 
@@ -296,8 +333,8 @@ public:
     }
 
     dynamic_t
-    info(app_t::info_policy_t policy) const {
-        return (*state.synchronize())->info(policy);
+    info(io::node::info::flags_t flags) const {
+        return (*state.synchronize())->info(flags);
     }
 
     void
@@ -370,22 +407,13 @@ app_t::app_t(context_t& context,
              const std::string& manifest,
              const std::string& profile,
              cocaine::deferred<void> deferred):
-    context(context),
     state(std::make_shared<app_state_t>(context, manifest_t(context, manifest), profile_t(context, profile), deferred))
 {
     state->spool();
 }
 
 app_t::~app_t() {
-    if (state) {
-        state->cancel();
-
-        try {
-            context.remove(name());
-        } catch (...) {
-            // Ignore.
-        }
-    }
+    state->cancel();
 }
 
 std::string
@@ -394,6 +422,6 @@ app_t::name() const {
 }
 
 dynamic_t
-app_t::info(info_policy_t policy) const {
-    return state->info(policy);
+app_t::info(io::node::info::flags_t flags) const {
+    return state->info(flags);
 }

@@ -40,3 +40,4 @@ manifest_t::manifest_t(context_t& context, const std::string& name_):
         throw cocaine::error_t("runnable object has not been specified");
     }
 }
+

@@ -83,15 +83,21 @@ struct channel_t {
     io::streaming_slot<io::app::enqueue>::upstream_type downstream;
 };
 
-struct slave_stats_t {
+struct stats_t {
+    /// Current state name.
+    std::string state;
+
     std::uint64_t tx;
     std::uint64_t rx;
     std::uint64_t load;
     std::uint64_t total;
+
     boost::optional<std::chrono::high_resolution_clock::time_point> age;
+
+    stats_t();
 };
 
-}
+} // namespace slave
 
 struct slave_context {
     context_t&  context;
@@ -143,7 +149,7 @@ private:
     cleanup_handler cleanup;
 
     splitter_t splitter;
-    std::shared_ptr<fetcher_t> fetcher;
+    synchronized<std::shared_ptr<fetcher_t>> fetcher;
     boost::circular_buffer<std::string> lines;
 
     std::atomic<bool> shutdowned;
@@ -168,6 +174,8 @@ public:
 
     ~state_machine_t();
 
+    // Observers.
+
     /// Returns true is the slave is in active state.
     bool
     active() const noexcept;
@@ -175,8 +183,13 @@ public:
     std::uint64_t
     load() const;
 
-    slave::slave_stats_t
+    slave::stats_t
     stats() const;
+
+    const profile_t&
+    profile() const;
+
+    // Modifiers.
 
     std::shared_ptr<control_t>
     activate(std::shared_ptr<session_t> session, upstream<io::worker::control_tag> stream);
@@ -247,6 +260,8 @@ public:
     slave_t& operator=(const slave_t& other) = delete;
     slave_t& operator=(slave_t&&) = default;
 
+    // Observers.
+
     const std::string&
     id() const noexcept;
 
@@ -256,11 +271,17 @@ public:
     std::uint64_t
     load() const;
 
-    slave::slave_stats_t
+    slave::stats_t
     stats() const;
 
     bool
     active() const noexcept;
+
+    /// Returns the profile attached.
+    profile_t
+    profile() const;
+
+    // Modifiers.
 
     std::shared_ptr<control_t>
     activate(std::shared_ptr<session_t> session, upstream<io::worker::control_tag> stream);
@@ -278,4 +299,4 @@ public:
     terminate(std::error_code ec);
 };
 
-}
+} // namespace cocaine

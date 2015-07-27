@@ -24,6 +24,14 @@ namespace ph = std::placeholders;
 
 using namespace cocaine;
 
+slave::stats_t::stats_t():
+     tx{},
+     rx{},
+     load{},
+     total{},
+     age{boost::none}
+{}
+
 std::shared_ptr<state_machine_t>
 state_machine_t::create(slave_context context, asio::io_service& loop, cleanup_handler cleanup) {
     auto machine = std::make_shared<state_machine_t>(lock_t(), context, loop, cleanup);
@@ -55,13 +63,19 @@ state_machine_t::start() {
 
     COCAINE_LOG_TRACE(log, "slave state machine is starting");
 
-    fetcher = std::make_shared<fetcher_t>(shared_from_this());
+    fetcher.apply([&](std::shared_ptr<fetcher_t>& fetcher) {
+        fetcher = std::make_shared<fetcher_t>(shared_from_this());
+    });
 
     auto spawning = std::make_shared<spawning_t>(shared_from_this());
     migrate(spawning);
 
-    // This call can perform state machine shutdowning on any error occurred.
-    spawning->spawn(context.profile.timeout.spawn);
+    // NOTE: Slave spawning involves starting timers and posting completion handlers callbacks with
+    // the event loop.
+    loop.post([=]() {
+        // This call can perform state machine shutdowning on any error occurred.
+        spawning->spawn(context.profile.timeout.spawn);
+    });
 }
 
 bool
@@ -77,9 +91,11 @@ state_machine_t::load() const {
     return data.channels->size();
 }
 
-slave::slave_stats_t
+slave::stats_t
 state_machine_t::stats() const {
-    slave::slave_stats_t result { 0, 0, 0, 0, boost::none };
+    slave::stats_t result;
+
+    result.state = (*state.synchronize())->name();
 
     data.channels.apply([&](const channels_map_t& channels) {
         for (const auto& channel : channels) {
@@ -110,6 +126,11 @@ state_machine_t::stats() const {
     });
 
     return result;
+}
+
+const profile_t&
+state_machine_t::profile() const {
+    return context.profile;
 }
 
 std::shared_ptr<control_t>
@@ -219,14 +240,20 @@ state_machine_t::shutdown(std::error_code ec) {
         return;
     }
 
-    COCAINE_LOG_TRACE(log, "slave is shutdowning: %s", ec.message());
-
     auto state = *this->state.synchronize();
+    COCAINE_LOG_TRACE(log, "slave is shutting down from state %s: %s", state->name(), ec.message());
+
     state->cancel();
+    if(state->terminating()) {
+        // We don't consider any reason for termination in "terminating" state as an error
+        ec.clear();
+    }
     migrate(std::make_shared<stopped_t>(ec));
 
-    fetcher->close();
-    fetcher.reset();
+    fetcher.apply([&](std::shared_ptr<fetcher_t>& fetcher) {
+        fetcher->close();
+        fetcher.reset();
+    });
 
     if (ec && ec != error::overseer_shutdowning) {
         dump();
@@ -237,11 +264,21 @@ state_machine_t::shutdown(std::error_code ec) {
         return;
     }
 
-    try {
-        cleanup(ec);
-    } catch (...) {
-        // Just eat an exception, we don't care why the cleanup handler failed to do its job.
-    }
+    data.channels.apply([&](const channels_map_t& channels) {
+        COCAINE_LOG_WARNING(log, "slave is dropping %d sessions", channels.size());
+    });
+
+    // NOTE: To prevent deadlock between session.channels and overseer.pool. Consider some
+    // other solution.
+    const auto cleanup_handler = cleanup;
+    loop.post([=]() {
+        try {
+            cleanup_handler(ec);
+        } catch (const std::exception& err) {
+            // Just eat an exception, we don't care why the cleanup handler failed to do its job.
+            COCAINE_LOG_WARNING(log, "unable to cleanup after slave's death: %s", err.what());
+        }
+    });
 }
 
 void
@@ -339,9 +376,8 @@ slave_t::load() const {
     return machine->load();
 }
 
-slave::slave_stats_t
+slave::stats_t
 slave_t::stats() const {
-    BOOST_ASSERT(machine);
     return machine->stats();
 }
 
@@ -350,6 +386,11 @@ slave_t::active() const noexcept {
     BOOST_ASSERT(machine);
 
     return machine->active();
+}
+
+profile_t
+slave_t::profile() const {
+    return machine->profile();
 }
 
 std::shared_ptr<control_t>

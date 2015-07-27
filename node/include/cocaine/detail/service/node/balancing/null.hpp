@@ -20,7 +20,7 @@ public:
 
     slave_info
     on_request(const std::string&, const std::string&) {
-        return slave_info{};
+        return {};
     }
 
     void

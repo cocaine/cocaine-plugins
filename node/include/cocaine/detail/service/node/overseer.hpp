@@ -50,11 +50,11 @@ private:
 
     context_t& context;
 
-    /// Time point, when the application was created.
-    const std::chrono::high_resolution_clock::time_point birthstamp;
+    /// Time point, when the overseer was created.
+    const std::chrono::system_clock::time_point birthstamp;
 
     /// The application manifest.
-    const manifest_t manifest;
+    const manifest_t manifest_;
 
     /// The application profile.
     synchronized<profile_t> profile_;
@@ -81,11 +81,23 @@ public:
                std::shared_ptr<asio::io_service> loop);
     ~overseer_t();
 
+    std::shared_ptr<asio::io_service>
+    io_context() const;
+
     /// \todo not sure about this method necessity, consider passing a shared logger pointer to the
     /// balancer.
     const logging::log_t&
     logger() const {
         return *log;
+    }
+
+    /// Returns a const reference to the application's manifest.
+    ///
+    /// Application's manifest is considered constant during all app's lifetime and can be
+    /// changed only through restarting.
+    const manifest_t&
+    manifest() const {
+        return manifest_;
     }
 
     /// Returns copy of the current profile, which is used to spawn new slaves.
@@ -103,10 +115,16 @@ public:
 
     /// Returns the complete info about how the application works.
     dynamic_t::object_t
-    info() const;
+    info(io::node::info::flags_t flags) const;
+
+    /// Returns application total uptime in seconds.
+    std::chrono::seconds
+    uptime() const;
+
+    // Modifiers.
 
     void
-    balance(std::unique_ptr<balancer_t> balancer = nullptr);
+    set_balancer(std::shared_ptr<balancer_t> balancer);
 
     /// Enqueues the new event into the most appropriate slave.
     ///
@@ -122,7 +140,7 @@ public:
     ///
     /// \todo consult with E. guys about deadline policy.
     std::shared_ptr<client_rpc_dispatch_t>
-    enqueue(io::streaming_slot<io::app::enqueue>::upstream_type&& downstream,
+    enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstream,
             app::event_t event,
             boost::optional<service::node::slave::id_t> id);
 

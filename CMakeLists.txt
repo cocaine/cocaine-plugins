@@ -10,7 +10,7 @@ OPTION(DOCKER "Build Docker Isolation plugin" ON)
 OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
-OPTION(NODE "Build Node service plugin" OFF)
+OPTION(NODE "Build Node service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(UNICORN "Build Unified configuration service plugin" ON)
@@ -41,12 +41,15 @@ INCLUDE_DIRECTORIES(BEFORE
     SYSTEM
     ${PROJECT_SOURCE_DIR}/foreign/asio/asio/include
     ${PROJECT_SOURCE_DIR}/foreign/blackhole/src
+    ${PROJECT_SOURCE_DIR}/foreign/hpack-headers/include
     ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include)
 
 LINK_DIRECTORIES(
     ${Boost_LIBRARY_DIRS}
     ${LIBCOCAINE_LIBRARY_DIRS}
     ${LIBMSGPACK_LIBRARY_DIRS})
+
+ADD_SUBDIRECTORY(foreign/hpack-headers)
 
 SET(PLUGINS
     cache

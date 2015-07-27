@@ -40,9 +40,6 @@ struct profile_t:
     bool log_output;
 
     // Timeouts.
-    float heartbeat_timeout;
-    float idle_timeout;
-
     struct {
         unsigned long spawn;
         unsigned long handshake;

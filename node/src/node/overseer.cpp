@@ -1,8 +1,11 @@
 #include "cocaine/detail/service/node/overseer.hpp"
 
+#include <boost/range/adaptors.hpp>
+#include <boost/range/algorithm.hpp>
+
 #include <blackhole/scoped_attributes.hpp>
 
-#include <cocaine/context.hpp>
+#include "cocaine/context.hpp"
 
 #include "cocaine/detail/service/node/manifest.hpp"
 #include "cocaine/detail/service/node/profile.hpp"
@@ -46,8 +49,8 @@ overseer_t::overseer_t(context_t& context,
                        std::shared_ptr<asio::io_service> loop):
     log(context.log(format("%s/overseer", manifest.name))),
     context(context),
-    birthstamp(std::chrono::high_resolution_clock::now()),
-    manifest(std::move(manifest)),
+    birthstamp(std::chrono::system_clock::now()),
+    manifest_(std::move(manifest)),
     profile_(profile),
     loop(loop),
     stats{}
@@ -57,6 +60,11 @@ overseer_t::overseer_t(context_t& context,
 
 overseer_t::~overseer_t() {
     COCAINE_LOG_TRACE(log, "overseer has been destroyed");
+}
+
+std::shared_ptr<asio::io_service>
+overseer_t::io_context() const {
+    return loop;
 }
 
 profile_t
@@ -74,124 +82,213 @@ overseer_t::get_queue() {
     return queue.synchronize();
 }
 
+namespace {
+
+// Helper tagged struct.
+struct queue_t {
+    unsigned long capacity;
+
+    const synchronized<overseer_t::queue_type>* queue;
+};
+
+// Helper tagged struct.
+struct pool_t {
+    unsigned long capacity;
+
+    std::uint64_t spawned;
+    std::uint64_t crashed;
+
+    const synchronized<overseer_t::pool_type>* pool;
+};
+
+class info_visitor_t {
+    const io::node::info::flags_t flags;
+
+    dynamic_t::object_t& result;
+
+public:
+    info_visitor_t(io::node::info::flags_t flags, dynamic_t::object_t* result):
+        flags(flags),
+        result(*result)
+    {}
+
+    void
+    visit(const manifest_t& value) {
+        if (flags & io::node::info::expand_manifest) {
+            result["manifest"] = value.object();
+        }
+    }
+
+    void
+    visit(const profile_t& value) {
+        dynamic_t::object_t info;
+
+        // Useful when you want to edit the profile.
+        info["name"] = value.name;
+
+        if (flags & io::node::info::expand_profile) {
+            info["data"] = value.object();
+        }
+
+        result["profile"] = info;
+    }
+
+    // Incoming requests.
+    void
+    visit(std::uint64_t accepted, std::uint64_t rejected) {
+        dynamic_t::object_t info;
+
+        info["accepted"] = accepted;
+        info["rejected"] = rejected;
+
+        result["requests"] = info;
+    }
+
+    // Pending events queue.
+    void
+    visit(const queue_t& value) {
+        dynamic_t::object_t info;
+
+        info["capacity"] = value.capacity;
+
+        const auto now = std::chrono::high_resolution_clock::now();
+
+        value.queue->apply([&](const overseer_t::queue_type& queue) {
+            info["depth"] = queue.size();
+
+            typedef overseer_t::queue_type::value_type value_type;
+
+            if (queue.empty()) {
+                info["oldest_event_age"] = 0;
+            } else {
+                const auto min = *boost::min_element(queue |
+                    boost::adaptors::transformed(+[](const value_type& cur) {
+                        return cur.event.birthstamp;
+                    })
+                );
+
+                const auto duration = std::chrono::duration_cast<
+                    std::chrono::milliseconds
+                >(now - min).count();
+
+                info["oldest_event_age"] = duration;
+            }
+        });
+
+        result["queue"] = info;
+    }
+
+    // Response time quantiles over all events.
+    void
+    visit(const std::vector<stats_t::quantile_t>& value) {
+        dynamic_t::object_t info;
+
+        std::array<char, 16> buf;
+        for (const auto& quantile : value) {
+            if (std::snprintf(buf.data(), buf.size(), "%.2f%%", quantile.probability)) {
+                info[buf.data()] = quantile.value;
+            }
+        }
+
+        result["timings"] = info;
+    }
+
+    void
+    visit(const pool_t& value) {
+        const auto now = std::chrono::high_resolution_clock::now();
+
+        value.pool->apply([&](const overseer_t::pool_type& pool) {
+            collector_t collector(pool);
+
+            // Cumulative load on the app over all the slaves.
+            result["load"] = collector.cumload;
+
+            dynamic_t::object_t slaves;
+            for (const auto& kv : pool) {
+                const auto& name = kv.first;
+                const auto& slave = kv.second;
+
+                const auto stats = slave.stats();
+
+                dynamic_t::object_t stat;
+                stat["accepted"]   = stats.total;
+                stat["load:tx"]    = stats.tx;
+                stat["load:rx"]    = stats.rx;
+                stat["load:total"] = stats.load;
+                stat["state"]      = stats.state;
+                stat["uptime"]     = slave.uptime();
+
+                // NOTE: Collects profile info.
+                const auto profile = slave.profile();
+
+                dynamic_t::object_t profile_info;
+                profile_info["name"] = profile.name;
+                if (flags & io::node::info::expand_profile) {
+                    profile_info["data"] = profile.object();
+                }
+
+                stat["profile"] = profile_info;
+
+                if (stats.age) {
+                    const auto duration = std::chrono::duration_cast<
+                        std::chrono::milliseconds
+                    >(now - *stats.age).count();
+                    stat["oldest_channel_age"] = duration;
+                } else {
+                    stat["oldest_channel_age"] = 0;
+                }
+
+                slaves[name] = stat;
+            }
+
+            dynamic_t::object_t pinfo;
+            pinfo["active"]   = collector.active;
+            pinfo["idle"]     = pool.size() - collector.active;
+            pinfo["capacity"] = value.capacity;
+            pinfo["slaves"]   = slaves;
+            pinfo["total:spawned"] = value.spawned;
+            pinfo["total:crashed"] = value.crashed;
+
+            result["pool"] = pinfo;
+        });
+    }
+};
+
+} // namespace
+
 dynamic_t::object_t
-overseer_t::info() const {
+overseer_t::info(io::node::info::flags_t flags) const {
     dynamic_t::object_t result;
 
-    const auto now = std::chrono::high_resolution_clock::now();
+    result["uptime"] = uptime().count();
 
-    // Application total uptime in seconds.
-    result["uptime"] = std::chrono::duration_cast<
-        std::chrono::seconds
-    >(now - birthstamp).count();
-
-    {
-        // Incoming requests.
-        dynamic_t::object_t ichannels;
-        ichannels["accepted"] = stats.accepted.load();
-        ichannels["rejected"] = stats.rejected.load();
-
-        result["channels"] = ichannels;
-    }
-
-    {
-        // Pending events queue.
-        dynamic_t::object_t iqueue;
-        iqueue["capacity"] = profile().queue_limit;
-        queue.apply([&](const queue_type& queue) {
-            typedef queue_type::value_type value_type;
-
-            const auto it = std::min_element(queue.begin(), queue.end(),
-                [&](const value_type& current, const value_type& first) -> bool {
-                    return current.event.birthstamp < first.event.birthstamp;
-                }
-            );
-
-            if (it != queue.end()) {
-                const auto age = std::chrono::duration<
-                    double,
-                    std::chrono::milliseconds::period
-                >(now - it->event.birthstamp).count();
-
-                iqueue["age"] = age;
-            } else {
-                iqueue["age"] = 0;
-            }
-
-            iqueue["depth"] = queue.size();
-        });
-
-        result["queue"] = iqueue;
-    }
-
-    {
-        // Response time quantiles over all events.
-        dynamic_t::object_t iquantiles;
-
-        char buf[16];
-        for (const auto& quantile : stats.quantiles()) {
-            if (std::snprintf(buf, sizeof(buf) / sizeof(char), "%.2f%%", quantile.probability)) {
-                iquantiles[buf] = quantile.value;
-            }
-        }
-
-        result["timings"] = iquantiles;
-    }
-
-    pool.apply([&](const pool_type& pool) {
-        collector_t collector(pool);
-
-        dynamic_t::object_t slaves;
-        for (auto it = pool.begin(); it != pool.end(); ++it) {
-            const auto slave_stats = it->second.stats();
-
-            dynamic_t::object_t stat = {
-                { "uptime", it->second.uptime() },
-                { "load", slave_stats.load },
-                { "tx",   slave_stats.tx },
-                { "rx",   slave_stats.rx },
-                { "total", slave_stats.total },
-            };
-
-            if (slave_stats.age) {
-                const auto age = std::chrono::duration<
-                    double,
-                    std::chrono::milliseconds::period
-                >(now - *slave_stats.age).count();
-                stat["age"] = age;
-            } else {
-                stat["age"] = dynamic_t::null;
-            }
-
-            slaves[it->first] = stat;
-        }
-
-        result["pool"] = dynamic_t::object_t({
-            { "active",   collector.active },
-            { "idle",     pool.size() - collector.active },
-            { "capacity", profile().pool_limit },
-            { "slaves", slaves }
-        });
-
-        // Cumulative load on the app over all the slaves.
-        result["load"] = collector.cumload;
-    });
-
+    info_visitor_t visitor(flags, &result);
+    visitor.visit(manifest());
+    visitor.visit(profile());
+    visitor.visit(stats.requests.accepted.load(), stats.requests.rejected.load());
+    visitor.visit({ profile().queue_limit, &queue });
+    visitor.visit(stats.quantiles());
+    visitor.visit({ profile().pool_limit, stats.slaves.spawned, stats.slaves.crashed, &pool });
 
     return result;
 }
 
+std::chrono::seconds
+overseer_t::uptime() const {
+    const auto now = std::chrono::system_clock::now();
+
+    return std::chrono::duration_cast<std::chrono::seconds>(now - birthstamp);
+}
+
 void
-overseer_t::balance(std::unique_ptr<balancer_t> balancer) {
-    if (balancer) {
-        this->balancer = std::move(balancer);
-    } else {
-        this->balancer.reset(new null_balancer_t);
-    }
+overseer_t::set_balancer(std::shared_ptr<balancer_t> balancer) {
+    BOOST_ASSERT(balancer);
+
+    this->balancer = std::move(balancer);
 }
 
 std::shared_ptr<client_rpc_dispatch_t>
-overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type&& downstream,
+overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstream,
                     app::event_t event,
                     boost::optional<service::node::slave::id_t> /*id*/)
 {
@@ -201,12 +298,12 @@ overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type&& downst
         const auto limit = profile().queue_limit;
 
         if (queue.size() >= limit && limit > 0) {
-            ++stats.rejected;
+            ++stats.requests.rejected;
             throw std::system_error(error::queue_is_full);
         }
     });
 
-    auto dispatch = std::make_shared<client_rpc_dispatch_t>(manifest.name);
+    auto dispatch = std::make_shared<client_rpc_dispatch_t>(manifest().name);
 
     queue->push_back({
         std::move(event),
@@ -214,7 +311,7 @@ overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type&& downst
         std::move(downstream),
     });
 
-    ++stats.accepted;
+    ++stats.requests.accepted;
     balancer->on_queue();
 
     return dispatch;
@@ -223,7 +320,7 @@ overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type&& downst
 io::dispatch_ptr_t
 overseer_t::prototype() {
     return std::make_shared<const handshaker_t>(
-        manifest.name,
+        manifest().name,
         std::bind(&overseer_t::on_handshake, shared_from_this(), ph::_1, ph::_2, ph::_3)
     );
 }
@@ -237,7 +334,7 @@ void
 overseer_t::spawn(locked_ptr<pool_type>& pool) {
     COCAINE_LOG_INFO(log, "enlarging the slaves pool to %d", pool->size() + 1);
 
-    slave_context ctx(context, manifest, profile());
+    slave_context ctx(context, manifest(), profile());
 
     // It is guaranteed that the cleanup handler will not be invoked from within the slave's
     // constructor.
@@ -246,6 +343,8 @@ overseer_t::spawn(locked_ptr<pool_type>& pool) {
         uuid,
         slave_t(std::move(ctx), *loop, std::bind(&overseer_t::on_slave_death, shared_from_this(), ph::_1, uuid))
     ));
+
+    ++stats.slaves.spawned;
 }
 
 void
@@ -302,7 +401,7 @@ void
 overseer_t::terminate() {
     COCAINE_LOG_DEBUG(log, "overseer is processing terminate request");
 
-    balance();
+    set_balancer(std::make_shared<null_balancer_t>());
     pool->clear();
 }
 
@@ -348,6 +447,7 @@ void
 overseer_t::on_slave_death(const std::error_code& ec, std::string uuid) {
     if (ec) {
         COCAINE_LOG_DEBUG(log, "slave has removed itself from the pool: %s", ec.message());
+        ++stats.slaves.crashed;
     } else {
         COCAINE_LOG_DEBUG(log, "slave has removed itself from the pool");
     }

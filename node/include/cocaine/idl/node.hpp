@@ -74,18 +74,6 @@ struct info {
     >::tag upstream_type;
 };
 
-struct test {
-    typedef app_tag tag;
-
-    static const char* alias() {
-        return "test";
-    }
-
-    typedef boost::mpl::list<
-        std::string
-    >::type argument_type;
-};
-
 }; // struct app
 
 template<>
@@ -96,8 +84,7 @@ struct protocol<app_tag> {
 
     typedef boost::mpl::list<
         app::enqueue,
-        app::info,
-        app::test
+        app::info
     >::type messages;
 
     typedef app scope;
@@ -138,13 +125,28 @@ struct pause_app {
 struct info {
     typedef node_tag tag;
 
+    enum flags_t: std::uint32_t {
+        // On none flags set only application state will be reported.
+        brief           = 0x00,
+        // Collect overseer info.
+        overseer_report = 0x01,
+        // Expand manifest struct. Useful when the manifest was changed while there are active
+        // applications.
+        expand_manifest = 0x02,
+        // Expand current app's profile struct, otherwise only the current profile name will be
+        // reported.
+        expand_profile  = 0x04,
+    };
+
     static const char* alias() {
         return "info";
     }
 
     typedef boost::mpl::list<
      /* Application name. */
-        std::string
+        std::string,
+     /* Optional flags. */
+        optional<flags_t>
     >::type argument_type;
 
     typedef option_of<

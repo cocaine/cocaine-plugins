@@ -21,22 +21,22 @@
 #ifndef COCAINE_NODE_SERVICE_HPP
 #define COCAINE_NODE_SERVICE_HPP
 
-#include <cocaine/api/service.hpp>
-#include <cocaine/idl/context.hpp>
-#include <cocaine/idl/node.hpp>
-#include <cocaine/locked_ptr.hpp>
-#include <cocaine/rpc/dispatch.hpp>
+#include "cocaine/api/service.hpp"
 
-namespace cocaine { namespace service { namespace node {
-    class app_t;
-}}} // namespace cocaine::service::node
+#include "cocaine/idl/context.hpp"
+#include "cocaine/idl/node.hpp"
 
-namespace cocaine { namespace error {
+#include "cocaine/locked_ptr.hpp"
 
-const std::error_category&
-node_category();
+#include "cocaine/rpc/dispatch.hpp"
 
-}} // namespace cocaine::error
+namespace cocaine {
+    namespace service {
+        namespace node {
+            class app_t;
+        }
+    }
+}
 
 namespace cocaine { namespace service {
 
@@ -77,9 +77,16 @@ private:
     list() const -> dynamic_t;
 
     dynamic_t
-    info(const std::string& name) const;
+    info(const std::string& name, io::node::info::flags_t flags) const;
 };
 
 }} // namespace cocaine::service
+
+namespace cocaine { namespace error {
+
+auto
+node_category() -> const std::error_category&;
+
+}} // namespace cocaine::error
 
 #endif
