@@ -1,12 +1,12 @@
 #include "cocaine/detail/service/node/slave.hpp"
 
-#include <cocaine/api/isolate.hpp>
 #include <cocaine/context.hpp>
 #include <cocaine/rpc/actor.hpp>
 
+#include "cocaine/api/isolate.hpp"
+
 #include "cocaine/detail/service/node/manifest.hpp"
 #include "cocaine/detail/service/node/profile.hpp"
-
 #include "cocaine/detail/service/node/slave/channel.hpp"
 #include "cocaine/detail/service/node/slave/control.hpp"
 #include "cocaine/detail/service/node/slave/fetcher.hpp"

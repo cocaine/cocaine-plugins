@@ -11,11 +11,10 @@
 #include <asio/deadline_timer.hpp>
 #include <asio/posix/stream_descriptor.hpp>
 
-#include <cocaine/api/isolate.hpp>
-
 #include <cocaine/logging.hpp>
 #include <cocaine/unique_id.hpp>
 
+#include "cocaine/api/isolate.hpp"
 #include "cocaine/idl/rpc.hpp"
 #include "cocaine/idl/node.hpp"
 

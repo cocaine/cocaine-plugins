@@ -21,7 +21,7 @@
 #ifndef COCAINE_PROCESS_ISOLATE_HPP
 #define COCAINE_PROCESS_ISOLATE_HPP
 
-#include <cocaine/api/isolate.hpp>
+#include "cocaine/api/isolate.hpp"
 
 #include <boost/filesystem/path.hpp>
 
