@@ -140,7 +140,8 @@ connection_t::connection_t() {
 }
 
 connection_t::connection_t(boost::asio::io_service& ioservice,
-                           const endpoint_t& endpoint)
+                           const endpoint_t& endpoint,
+                           std::shared_ptr<logging::log_t> logger): m_logger(std::move(logger))
 {
     connect(ioservice, endpoint);
 }
@@ -149,23 +150,30 @@ namespace {
 
     void
     timeout_handler(const boost::system::error_code& error,
+                    const std::shared_ptr<cocaine::logging::log_t>& logger,
                     bool& exit_with_timeout,
                     boost::asio::io_service& ioservice)
     {
         if(!error) {
+            COCAINE_LOG_DEBUG(logger, "connection timeout.");
             exit_with_timeout = true;
             ioservice.stop();
+        } else {
+            COCAINE_LOG_DEBUG(logger, "connection timer was cancelled: %s.", error.message());
         }
     }
 
     void
     local_connection_handler(const boost::system::error_code& error,
+                             const std::shared_ptr<cocaine::logging::log_t>& logger,
                              boost::system::error_code& result,
                              boost::asio::io_service& ioservice)
     {
         if(error == boost::asio::error::operation_aborted) {
+            COCAINE_LOG_DEBUG(logger, "connection to unix socket aborted.");
             return;
         } else if(error) {
+            COCAINE_LOG_DEBUG(logger, "connection to unix socket failed: %s.", error.message().c_str());
             result = error;
         }
 
@@ -175,40 +183,54 @@ namespace {
     struct tcp_connector {
         void
         resolve_handler(const boost::system::error_code& error,
+                        const std::shared_ptr<cocaine::logging::log_t>& logger,
                         boost::asio::ip::tcp::resolver::iterator endpoint)
         {
             this->error = error;
 
             if(error == boost::asio::error::operation_aborted) {
+                COCAINE_LOG_DEBUG(logger, "resolve of tcp address aborted.");
                 return;
-            } else if(error || endpoint == boost::asio::ip::tcp::resolver::iterator()) {
+            } else if(error) {
+                COCAINE_LOG_DEBUG(logger, "resolve of tcp address failed: %s.", error.message().c_str());
+                this->ioservice.stop();
+            } else if (endpoint == boost::asio::ip::tcp::resolver::iterator()) {
+                COCAINE_LOG_DEBUG(logger, "resolve of tcp address failed: last endpoint reached");
                 this->ioservice.stop();
             } else {
                 endpoints.assign(endpoint, boost::asio::ip::tcp::resolver::iterator());
                 socket = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
+                COCAINE_LOG_TRACE(logger, "going to connect socket.");
                 socket->async_connect(*endpoint,
                                       std::bind(&tcp_connector::handler,
                                                 this,
                                                 std::placeholders::_1,
+                                                logger,
                                                 1));
             }
         }
         void
         handler(const boost::system::error_code& error,
+                const std::shared_ptr<cocaine::logging::log_t>& logger,
                 size_t next_endpoint)
         {
             if(error == boost::asio::error::operation_aborted) {
+                COCAINE_LOG_DEBUG(logger, "connect to tcp address aborted.");
                 return;
             } else if(!error) {
+                COCAINE_LOG_DEBUG(logger, "connect to tcp address succeeded");
                 this->ioservice.stop();
             } else if(next_endpoint < endpoints.size()) {
+                COCAINE_LOG_DEBUG(logger, "connect to tcp address failed: %s, trying next endpoint", error.message().c_str());
                 socket = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
                 socket->async_connect(endpoints[next_endpoint],
                                       std::bind(&tcp_connector::handler,
                                                 this,
                                                 std::placeholders::_1,
+                                                logger,
                                                 next_endpoint + 1));
             } else {
+                COCAINE_LOG_DEBUG(logger, "connect to tcp address failed: %s.", error.message().c_str());
                 this->error = error;
                 this->socket.reset();
                 this->ioservice.stop();
@@ -234,9 +256,11 @@ connection_t::connect(boost::asio::io_service& ioservice,
     if(endpoint.is_unix()) {
         auto s = std::make_shared<boost::asio::local::stream_protocol::socket>(ioservice);
         boost::system::error_code error;
+        COCAINE_LOG_TRACE(m_logger, "Creating a connection to %s", endpoint.get_path());
         s->async_connect(boost::asio::local::stream_protocol::endpoint(endpoint.get_path()),
                          std::bind(&local_connection_handler,
                                    std::placeholders::_1,
+                                   m_logger,
                                    std::ref(error),
                                    std::ref(ioservice)));
 
@@ -265,6 +289,7 @@ connection_t::connect(boost::asio::io_service& ioservice,
             std::bind(&tcp_connector::resolve_handler,
                       &conn,
                       std::placeholders::_1,
+                      m_logger,
                       std::placeholders::_2)
         );
 
@@ -288,6 +313,7 @@ connection_t::run_with_timeout(boost::asio::io_service& ioservice,
     timer.expires_from_now(boost::posix_time::milliseconds(timeout));
     timer.async_wait(std::bind(&timeout_handler,
                                std::placeholders::_1,
+                               m_logger,
                                std::ref(exited_with_timeout),
                                std::ref(ioservice)));
 
@@ -423,12 +449,16 @@ namespace {
     }
 }
 
-client_impl_t::client_impl_t(const endpoint_t& endpoint) :
+client_impl_t::client_impl_t(const endpoint_t& endpoint, std::shared_ptr<logging::log_t> logger) :
+    m_logger(std::move(logger)),
     m_endpoint(endpoint),
     m_curl(curl_easy_init())
 {
     if(m_curl) {
         curl_easy_setopt(m_curl, CURLOPT_NOSIGNAL, 1L);
+        // This is a magic number similar to connection timeout in .hpp
+        // TODO: Move it somewhere out.
+        curl_easy_setopt(m_curl, CURLOPT_TIMEOUT_MS, 10000);
         curl_easy_setopt(m_curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
         curl_easy_setopt(m_curl, CURLOPT_FORBID_REUSE, 1L);
 
@@ -454,7 +484,7 @@ connection_t
 client_impl_t::get(http_response_t& response,
                    const http_request_t& request)
 {
-    connection_t socket(m_ioservice, m_endpoint);
+    connection_t socket(m_ioservice, m_endpoint, m_logger);
 
     std::string url;
     if(m_endpoint.is_tcp()) {
@@ -514,7 +544,7 @@ connection_t
 client_impl_t::post(http_response_t& response,
                     const http_request_t& request)
 {
-    connection_t socket(m_ioservice, m_endpoint);
+    connection_t socket(m_ioservice, m_endpoint, m_logger);
 
     std::string url;
     if(m_endpoint.is_tcp()) {
@@ -576,7 +606,7 @@ connection_t
 client_impl_t::head(http_response_t& response,
                     const http_request_t& request)
 {
-    connection_t socket(m_ioservice, m_endpoint);
+    connection_t socket(m_ioservice, m_endpoint, m_logger);
 
     std::string url;
     if(m_endpoint.is_tcp()) {
@@ -671,7 +701,8 @@ namespace {
 void
 container_t::start(const rapidjson::Value& args) {
     http_response_t resp;
-    m_client->post(resp, make_post(api_version + cocaine::format("/containers/%s/start", id()), args));
+
+    m_client->synchronize()->post(resp, make_post(api_version + cocaine::format("/containers/%s/start", id()), args));
 
     if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
@@ -686,7 +717,7 @@ container_t::start(const rapidjson::Value& args) {
 void
 container_t::kill() {
     http_response_t resp;
-    m_client->post(resp, make_post(api_version + cocaine::format("/containers/%s/kill", id())));
+    m_client->synchronize()->post(resp, make_post(api_version + cocaine::format("/containers/%s/kill", id())));
 
     if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
@@ -701,7 +732,7 @@ container_t::kill() {
 void
 container_t::stop(unsigned int timeout) {
     http_response_t resp;
-    m_client->post(resp, make_post(api_version + cocaine::format("/containers/%s/stop?t=%d", id(), timeout)));
+    m_client->synchronize()->post(resp, make_post(api_version + cocaine::format("/containers/%s/stop?t=%d", id(), timeout)));
 
     if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
@@ -716,7 +747,7 @@ container_t::stop(unsigned int timeout) {
 void
 container_t::remove(bool volumes) {
     http_response_t resp;
-    m_client->get(resp, make_del(api_version + cocaine::format("/containers/%s?v=%d", id(), volumes?1:0)));
+    m_client->synchronize()->get(resp, make_del(api_version + cocaine::format("/containers/%s?v=%d", id(), volumes?1:0)));
 
     if(!(resp.code() >= 200 && resp.code() < 300)) {
         COCAINE_LOG_WARNING(m_logger,
@@ -737,7 +768,7 @@ container_t::remove(bool volumes) {
 connection_t
 container_t::attach() {
     http_response_t resp;
-    auto conn = m_client->head(
+    auto conn = m_client->synchronize()->head(
         resp,
         make_post(api_version + cocaine::format("/containers/%s/attach?logs=1&stream=1&stdout=1&stderr=1", id()))
     );
@@ -759,7 +790,7 @@ client_t::inspect_image(rapidjson::Document& result,
                         const std::string& image)
 {
     http_response_t resp;
-    m_client->get(resp, make_get(api_version + cocaine::format("/images/%s/json", image)));
+    m_client->synchronize()->get(resp, make_get(api_version + cocaine::format("/images/%s/json", image)));
 
     if(resp.code() >= 200 && resp.code() < 300) {
         result.SetNull();
@@ -799,7 +830,7 @@ client_t::pull_image(const std::string& image,
     }
 
     http_response_t resp;
-    m_client->post(resp, make_post(api_version + request));
+    m_client->synchronize()->post(resp, make_post(api_version + request));
 
     if(resp.code() >= 200 && resp.code() < 300) {
         rapidjson::GenericStringStream<rapidjson::UTF8<>> stream(resp.body().data());
@@ -828,7 +859,7 @@ client_t::pull_image(const std::string& image,
 container_t
 client_t::create_container(const rapidjson::Value& args) {
     http_response_t resp;
-    m_client->post(resp, make_post(api_version + "/containers/create", args));
+    m_client->synchronize()->post(resp, make_post(api_version + "/containers/create", args));
 
     if(resp.code() >= 200 && resp.code() < 300) {
         rapidjson::Document answer;

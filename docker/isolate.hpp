@@ -25,6 +25,7 @@
 
 #include <cocaine/api/isolate.hpp>
 
+#include <mutex>
 namespace cocaine { namespace isolate {
 
 class docker_t:
@@ -48,6 +49,8 @@ public:
 
 private:
     std::shared_ptr<cocaine::logging::log_t> m_log;
+
+    std::mutex spawn_lock;
 
     std::string m_runtime_path;
     std::string m_image;

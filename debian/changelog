@@ -1,14 +1,21 @@
+cocaine-plugins (0.12.2.3) unstable; urgency=low
+
+  * Node: moved from the core.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 27 Jul 2015 16:50:56 +0300
+
 cocaine-plugins (0.12.2.2) unstable; urgency=low
+
+  * Docker: more logs added.
+  * Docker: fixed compatibility with Docker 1.7.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 23 Jul 2015 19:50:09 +0300
+
+cocaine-plugins (0.12.2.1) unstable; urgency=low
 
   * Docker: a dumb attempt to make it thread-safe.
 
  -- Evgeny Safronov <division494@gmail.com>  Mon, 20 Jul 2015 12:29:33 +0300
-
-cocaine-plugins (0.12.2.1) unstable; urgency=low
-
-  * Node: moved from the core.
-
- -- Evgeny Safronov <division494@gmail.com>  Wed, 08 Jul 2015 16:00:58 +0300
 
 cocaine-plugins (0.12.2.0) unstable; urgency=low
 
