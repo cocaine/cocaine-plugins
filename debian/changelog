@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.3.0~rc2) unstable; urgency=low
+
+  * Compatibility with Core 0.12.3 with Zipkin.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 30 Jul 2015 16:58:35 +0300
+
 cocaine-plugins (0.12.3.0~rc1) unstable; urgency=low
 
   * Compatibility with Core 0.12.3.
