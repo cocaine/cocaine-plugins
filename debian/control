@@ -71,18 +71,18 @@ Description: Cocaine - IPVS Gateway
 # Description: Cocaine - MongoDB Storage
 #  MongoDB storage support for Cocaine.
 
-#Package: libcocaine-plugin-node3
-#Architecture: any
-#Depends: ${shlibs:Depends}, ${misc:Depends}
-#Description: Cocaine - Node Service
-# Node service for Cocaine.
-#
-#Package: libcocaine-plugin-node-dev
-#Architecture: any
-#Section: libdevel
-#Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-node3 (= ${binary:Version})
-#Description: Cocaine - Node Service Development Headers
-# Cocaine development headers for the Node Service package.
+Package: libcocaine-plugin-node3
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Cocaine - Node Service
+ Node service for Cocaine.
+
+Package: libcocaine-plugin-node-dev
+Architecture: any
+Section: libdevel
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-plugin-node3 (= ${binary:Version})
+Description: Cocaine - Node Service Development Headers
+ Cocaine development headers for the Node Service package.
 
 Package: libcocaine-plugin-urlfetch3
 Architecture: any
