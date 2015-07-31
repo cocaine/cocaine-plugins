@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.3.0~rc3) unstable; urgency=low
+
+  * Node: enable debialization.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 31 Jul 2015 15:19:00 +0300
+
 cocaine-plugins (0.12.3.0~rc2) unstable; urgency=low
 
   * Compatibility with Core 0.12.3 with Zipkin.
