@@ -43,7 +43,7 @@ Description: Cocaine - Chrono Service Development Headers
 
 Package: libcocaine-plugin-docker3
 Architecture: any
-Pre-Depends: docker-engine
+Pre-Depends: docker-engine | lxc-docker
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Cocaine - Docker Isolation
  Support of Docker for Cocaine.
