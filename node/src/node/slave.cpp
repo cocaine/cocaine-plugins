@@ -265,7 +265,9 @@ state_machine_t::shutdown(std::error_code ec) {
     }
 
     data.channels.apply([&](const channels_map_t& channels) {
-        COCAINE_LOG_WARNING(log, "slave is dropping %d sessions", channels.size());
+        if (!channels.empty()) {
+            COCAINE_LOG_WARNING(log, "slave is dropping %d sessions", channels.size());
+        }
     });
 
     // NOTE: To prevent deadlock between session.channels and overseer.pool. Consider some
