@@ -32,20 +32,21 @@ using namespace cocaine::docker;
 
 namespace {
 
-/*
-    This magic is intended to run curl_global_init during static initialization in single-threaded environment.
-    See http://curl.haxx.se/libcurl/c/curl_global_init.html
- */
+// This magic is intended to run curl_global_init during static initialization in single-threaded
+// environment. See http://curl.haxx.se/libcurl/c/curl_global_init.html for details.
 int
 curl_init() {
     if(curl_global_init(CURL_GLOBAL_ALL) != CURLE_OK) {
-        std::cout << "Curl initialization failed. Aborting execution." << std::endl;
+        std::cout << "curl initialization failed - aborting execution" << std::endl;
         std::terminate();
     }
+
     return 42;
 }
+
 int curl_init_placeholder = curl_init();
-}
+
+} // namespace
 
 endpoint_t::endpoint_t() {
     // pass
@@ -75,16 +76,16 @@ endpoint_t::from_string(const std::string& endpoint) {
                     boost::lexical_cast<uint16_t>(endpoint.substr(delim + 1))
                 ));
             } catch (...) {
-                throw std::runtime_error("Bad format of tcp endpoint.");
+                throw std::runtime_error("Bad format of tcp endpoint");
             }
 
         } else {
-            throw std::runtime_error("Bad format of tcp endpoint.");
+            throw std::runtime_error("Bad format of tcp endpoint");
         }
     } else if(endpoint.compare(0, 7, "unix://") == 0) {
         return endpoint_t(endpoint.substr(7));
     } else {
-        throw std::runtime_error("Bad format of tcp endpoint.");
+        throw std::runtime_error("Bad format of tcp endpoint");
     }
 }
 
@@ -155,11 +156,11 @@ namespace {
                     boost::asio::io_service& ioservice)
     {
         if(!error) {
-            COCAINE_LOG_DEBUG(logger, "connection timeout.");
+            COCAINE_LOG_DEBUG(logger, "connection timeout");
             exit_with_timeout = true;
             ioservice.stop();
         } else {
-            COCAINE_LOG_DEBUG(logger, "connection timer was cancelled: %s.", error.message());
+            COCAINE_LOG_DEBUG(logger, "connection timer was cancelled: %s", error.message());
         }
     }
 
@@ -170,10 +171,10 @@ namespace {
                              boost::asio::io_service& ioservice)
     {
         if(error == boost::asio::error::operation_aborted) {
-            COCAINE_LOG_DEBUG(logger, "connection to unix socket aborted.");
+            COCAINE_LOG_DEBUG(logger, "connection to unix socket aborted");
             return;
         } else if(error) {
-            COCAINE_LOG_DEBUG(logger, "connection to unix socket failed: %s.", error.message().c_str());
+            COCAINE_LOG_DEBUG(logger, "connection to unix socket failed: %s", error.message().c_str());
             result = error;
         }
 
@@ -189,10 +190,10 @@ namespace {
             this->error = error;
 
             if(error == boost::asio::error::operation_aborted) {
-                COCAINE_LOG_DEBUG(logger, "resolve of tcp address aborted.");
+                COCAINE_LOG_DEBUG(logger, "resolve of tcp address aborted");
                 return;
             } else if(error) {
-                COCAINE_LOG_DEBUG(logger, "resolve of tcp address failed: %s.", error.message().c_str());
+                COCAINE_LOG_DEBUG(logger, "resolve of tcp address failed: %s", error.message().c_str());
                 this->ioservice.stop();
             } else if (endpoint == boost::asio::ip::tcp::resolver::iterator()) {
                 COCAINE_LOG_DEBUG(logger, "resolve of tcp address failed: last endpoint reached");
@@ -200,7 +201,7 @@ namespace {
             } else {
                 endpoints.assign(endpoint, boost::asio::ip::tcp::resolver::iterator());
                 socket = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
-                COCAINE_LOG_TRACE(logger, "going to connect socket.");
+                COCAINE_LOG_TRACE(logger, "connecting the socket");
                 socket->async_connect(*endpoint,
                                       std::bind(&tcp_connector::handler,
                                                 this,
@@ -215,7 +216,7 @@ namespace {
                 size_t next_endpoint)
         {
             if(error == boost::asio::error::operation_aborted) {
-                COCAINE_LOG_DEBUG(logger, "connect to tcp address aborted.");
+                COCAINE_LOG_DEBUG(logger, "connect to tcp address aborted");
                 return;
             } else if(!error) {
                 COCAINE_LOG_DEBUG(logger, "connect to tcp address succeeded");
@@ -230,7 +231,7 @@ namespace {
                                                 logger,
                                                 next_endpoint + 1));
             } else {
-                COCAINE_LOG_DEBUG(logger, "connect to tcp address failed: %s.", error.message().c_str());
+                COCAINE_LOG_DEBUG(logger, "connect to tcp address failed: %s", error.message().c_str());
                 this->error = error;
                 this->socket.reset();
                 this->ioservice.stop();
@@ -256,7 +257,8 @@ connection_t::connect(boost::asio::io_service& ioservice,
     if(endpoint.is_unix()) {
         auto s = std::make_shared<boost::asio::local::stream_protocol::socket>(ioservice);
         boost::system::error_code error;
-        COCAINE_LOG_TRACE(m_logger, "Creating a connection to %s", endpoint.get_path());
+        COCAINE_LOG_TRACE(m_logger, "creating a connection to %s", endpoint.get_path());
+
         s->async_connect(boost::asio::local::stream_protocol::endpoint(endpoint.get_path()),
                          std::bind(&local_connection_handler,
                                    std::placeholders::_1,
@@ -350,7 +352,7 @@ namespace {
         int
         operator()(const std::shared_ptr<connection_t::unix_socket_t>& s) const {
             if(!s) {
-                throw std::runtime_error("Not connected.");
+                throw std::runtime_error("Not connected");
             }
             return s->native();
         }
@@ -358,7 +360,7 @@ namespace {
         int
         operator()(const std::shared_ptr<connection_t::tcp_socket_t>& s) const {
             if(!s) {
-                throw std::runtime_error("Not connected.");
+                throw std::runtime_error("Not connected");
             }
             return s->native();
         }
@@ -470,7 +472,7 @@ client_impl_t::client_impl_t(const endpoint_t& endpoint, std::shared_ptr<logging
 
         curl_easy_setopt(m_curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
     } else {
-        throw std::runtime_error("Unable to initialize libcurl.");
+        throw std::runtime_error("Unable to initialize libcurl");
     }
 }
 
@@ -733,11 +735,11 @@ container_t::start(const rapidjson::Value& args) {
 
     if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
-                            "Unable to start container %s. Docker replied with code %d and body '%s'.",
+                            "unable to start container %s: Docker replied with code %d and body '%s'",
                             id(),
                             resp.code(),
                             resp.body());
-        throw std::runtime_error("Unable to start container " + id() + ".");
+        throw std::runtime_error("Unable to start container " + id());
     }
 }
 
@@ -748,11 +750,11 @@ container_t::kill() {
 
     if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
-                            "Unable to kill container %s. Docker replied with code %d and body '%s'.",
+                            "unable to kill container %s: Docker replied with code %d and body '%s'",
                             id(),
                             resp.code(),
                             resp.body());
-        throw std::runtime_error("Unable to kill container " + id() + ".");
+        throw std::runtime_error("Unable to kill container " + id());
     }
 }
 
@@ -763,11 +765,11 @@ container_t::stop(unsigned int timeout) {
 
     if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
-                            "Unable to stop container %s. Docker replied with code %d and body '%s'.",
+                            "unable to stop container %s: Docker replied with code %d and body '%s'",
                             id(),
                             resp.code(),
                             resp.body());
-        throw std::runtime_error("Unable to stop container " + id() + ".");
+        throw std::runtime_error("Unable to stop container " + id());
     }
 }
 
@@ -778,15 +780,15 @@ container_t::remove(bool volumes) {
 
     if(!(resp.code() >= 200 && resp.code() < 300)) {
         COCAINE_LOG_WARNING(m_logger,
-                            "Unable to remove container %s. Docker replied with code %d and body '%s'.",
+                            "Unable to remove container %s. Docker replied with code %d and body '%s'",
                             id(),
                             resp.code(),
                             resp.body());
-        throw std::runtime_error("Unable to remove container " + id() + ".");
+        throw std::runtime_error("Unable to remove container " + id());
     }
 
     COCAINE_LOG_DEBUG(m_logger,
-                      "Container %s has been deleted. Docker replied with code %d and body '%s'.",
+                      "container %s has been deleted: Docker replied with code %d and body '%s'",
                       id(),
                       resp.code(),
                       resp.body());
@@ -802,11 +804,11 @@ container_t::attach() {
 
     if(!(resp.code() >= 200 && resp.code() < 300)) {
         COCAINE_LOG_WARNING(m_logger,
-                            "Unable to attach container %s. Docker replied with code %d and body '%s'.",
+                            "Unable to attach container %s. Docker replied with code %d and body '%s'",
                             id(),
                             resp.code(),
                             resp.body());
-        throw std::runtime_error("Unable to attach container " + id() + ".");
+        throw std::runtime_error("Unable to attach container " + id());
     }
 
     return conn;
@@ -826,10 +828,10 @@ client_t::inspect_image(rapidjson::Document& result,
         result.SetNull();
     } else {
         COCAINE_LOG_WARNING(m_logger,
-                            "Unable to inspect an image. Docker replied with code %d and body '%s'.",
+                            "unable to inspect an image: Docker replied with code %d and body '%s'",
                             resp.code(),
                             resp.body());
-        throw std::runtime_error("Unable to inspect an image.");
+        throw std::runtime_error("Unable to inspect an image");
     }
 }
 
@@ -868,18 +870,18 @@ client_t::pull_image(const std::string& image,
 
             if(status.HasParseError() || (status.IsObject() && status.HasMember("error"))) {
                 COCAINE_LOG_WARNING(m_logger,
-                                    "Unable to create an image. Docker replied with body: '%s'.",
+                                    "unable to create an image: Docker replied with body: '%s'",
                                     resp.body());
 
-                throw std::runtime_error("Unable to create an image.");
+                throw std::runtime_error("Unable to create an image");
             }
         }
     } else {
         COCAINE_LOG_ERROR(m_logger,
-                          "Unable to create an image. Docker replied with code %d and body '%s'.",
+                          "unable to create an image: Docker replied with code %d and body '%s'",
                           resp.code(),
                           resp.body());
-        throw std::runtime_error("Unable to create an image.");
+        throw std::runtime_error("Unable to create an image");
     }
 }
 
@@ -894,27 +896,25 @@ client_t::create_container(const rapidjson::Value& args) {
 
         if(!answer.HasMember("Id")) {
             COCAINE_LOG_WARNING(m_logger,
-                                "Unable to create a container. Id not found in reply from the docker: '%s'.",
+                                "unable to create a container: id not found in reply from the docker: '%s'",
                                 resp.body());
-            throw std::runtime_error("Unable to create a container.");
+            throw std::runtime_error("Unable to create a container");
         }
 
         if(answer.HasMember("Warnings") && answer["Warnings"].IsArray()) {
             auto& warnings = answer["Warnings"];
 
             for(auto it = warnings.Begin(); it != warnings.End(); ++it) {
-                COCAINE_LOG_WARNING(m_logger,
-                                    "Warning from docker: '%s'.",
-                                    it->GetString());
+                COCAINE_LOG_WARNING(m_logger, "warning from docker: '%s'", it->GetString());
             }
         }
 
         return container_t(answer["Id"].GetString(), m_client, m_logger);
     } else {
         COCAINE_LOG_WARNING(m_logger,
-                            "Unable to create a container. Docker replied with code %d and body '%s'.",
+                            "unable to create a container: Docker replied with code %d and body '%s'",
                             resp.code(),
                             resp.body());
-        throw std::runtime_error("Unable to create a container.");
+        throw std::runtime_error("Unable to create a container");
     }
 }

@@ -126,7 +126,7 @@ docker_t::docker_t(context_t& context,  asio::io_service& io_context, const std:
                 m_image += config["registry"].as_string() + "/";
             }
         } else {
-            COCAINE_LOG_WARNING(m_log, "Docker registry is not specified. Only local images will be used.");
+            COCAINE_LOG_WARNING(m_log, "docker registry is not specified - only local images will be used");
         }
 
         if(config.count("repository") > 0) {
