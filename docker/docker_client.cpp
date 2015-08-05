@@ -458,7 +458,7 @@ client_impl_t::client_impl_t(const endpoint_t& endpoint, std::shared_ptr<logging
         curl_easy_setopt(m_curl, CURLOPT_NOSIGNAL, 1L);
         // This is a magic number similar to connection timeout in .hpp
         // TODO: Move it somewhere out.
-        curl_easy_setopt(m_curl, CURLOPT_TIMEOUT_MS, 10000);
+        curl_easy_setopt(m_curl, CURLOPT_TIMEOUT_MS, 100000);
         curl_easy_setopt(m_curl, CURLOPT_PROTOCOLS, CURLPROTO_HTTP);
         curl_easy_setopt(m_curl, CURLOPT_FORBID_REUSE, 1L);
 
