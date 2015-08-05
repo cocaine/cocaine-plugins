@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.3.1) unstable; urgency=low
+
+  * Node: smart notification about channels dropping.
+  * Node: strict erasing.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 05 Aug 2015 20:18:18 +0500
+
 cocaine-plugins (0.12.3.0~rc4) unstable; urgency=low
 
   * Docker: changed dependency from lxc-docker to docker-engine (Docker 1.7.1)
