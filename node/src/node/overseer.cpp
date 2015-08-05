@@ -453,11 +453,8 @@ overseer_t::on_slave_death(const std::error_code& ec, std::string uuid) {
     }
 
     pool.apply([&](pool_type& pool) {
-        auto it = pool.find(uuid);
-        if (it != pool.end()) {
-            it->second.terminate(ec);
-            pool.erase(it);
-        }
+        pool.at(uuid).terminate(ec);
+        pool.erase(uuid);
     });
     balancer->on_slave_death(uuid);
 }
