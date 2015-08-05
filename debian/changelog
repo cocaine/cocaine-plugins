@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.3.2) unstable; urgency=low
+
+  * Docker: added cURL error category.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 05 Aug 2015 21:26:15 +0500
+
 cocaine-plugins (0.12.3.1) unstable; urgency=low
 
   * Docker: increased cURL timeout.
