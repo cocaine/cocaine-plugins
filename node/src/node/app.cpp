@@ -120,7 +120,7 @@ class stopped_t:
     std::error_code ec;
 
 public:
-    stopped_t() noexcept = default;
+    stopped_t() noexcept {}
 
     explicit
     stopped_t(std::error_code ec) noexcept:

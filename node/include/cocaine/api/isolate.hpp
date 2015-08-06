@@ -34,7 +34,9 @@ namespace cocaine { namespace api {
 
 struct handle_t {
     virtual
-   ~handle_t() = default;
+   ~handle_t() {
+        // Empty.
+    }
 
     virtual
     void
@@ -50,7 +52,9 @@ typedef std::map<std::string, std::string> string_map_t;
 // Cancellation token.
 struct cancellation_t {
     virtual
-   ~cancellation_t() = default;
+   ~cancellation_t() {
+        // Empty.
+    }
 
     virtual
     void
@@ -61,7 +65,9 @@ struct isolate_t {
     typedef isolate_t category_type;
 
     virtual
-   ~isolate_t() = default;
+   ~isolate_t() {
+        // Empty.
+    }
 
     virtual
     void
