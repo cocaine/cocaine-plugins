@@ -402,25 +402,28 @@ private:
 
     void
     publish() {
+        std::error_code ec;
+
         try {
             state.synchronize()->reset(
                 new state::running_t(context, manifest(), profile, log.get(), loop)
             );
         } catch (const std::system_error& err) {
             COCAINE_LOG_ERROR(log, "unable to publish app: [%d] %s", err.code().value(), err.code().message());
-            cancel(err.code());
-            deferred.abort(err.code(), err.code().message());
-            return;
+            ec = err.code();
         } catch (const std::exception& err) {
             COCAINE_LOG_ERROR(log, "unable to publish app: %s", err.what());
-            cancel(error::uncaught_publish_error);
-            deferred.abort(error::uncaught_publish_error);
-            return;
+            ec = error::uncaught_publish_error;
         }
 
         // Attempt to finish node service's request.
         try {
-            deferred.close();
+            if (ec) {
+                cancel(ec);
+                deferred.abort(ec, ec.message());
+            } else {
+                deferred.close();
+            }
         } catch (const std::exception&) {
             // Ignore if the client has been disconnected.
         }
