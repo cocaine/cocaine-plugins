@@ -193,11 +193,25 @@ namespace cocaine { namespace error {
 enum node_errors {
     deadline_error = 1,
     resource_error,
-    timeout_error
+    timeout_error,
+
+    /// App has been already started.
+    already_started,
+
+    /// App is not running.
+    not_running,
+
+    /// The isolate plugin has failed its contract and has thrown non `system_error` exception.
+    /// Checking logs may help to determine what was happened.
+    uncaught_spool_error,
+    uncaught_publish_error,
 };
 
-auto
-make_error_code(node_errors code) -> std::error_code;
+const std::error_category&
+node_category();
+
+std::error_code
+make_error_code(node_errors code);
 
 }} // namespace cocaine::error
 
@@ -206,7 +220,7 @@ namespace std {
 template<>
 struct is_error_code_enum<cocaine::error::node_errors>:
     public true_type
-{ };
+{};
 
 } // namespace std
 
