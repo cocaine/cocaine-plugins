@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.3.4) unstable; urgency=low
+
+  * Node: Zipkin support.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 07 Aug 2015 16:01:52 +0300
+
 cocaine-plugins (0.12.3.3) unstable; urgency=low
 
   * Node: error categories and its notification review.
