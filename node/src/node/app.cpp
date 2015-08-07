@@ -117,16 +117,14 @@ public:
 class stopped_t:
     public base_t
 {
-    std::string cause;
+    std::error_code ec;
 
 public:
-    stopped_t() noexcept:
-        cause("uninitialized")
-    {}
+    stopped_t() noexcept {}
 
     explicit
-    stopped_t(std::string cause) noexcept:
-        cause(std::move(cause))
+    stopped_t(std::error_code ec) noexcept:
+        ec(std::move(ec))
     {}
 
     virtual
@@ -139,8 +137,10 @@ public:
     dynamic_t::object_t
     info(io::node::info::flags_t) const {
         dynamic_t::object_t info;
-        info["state"] = "stopped";
-        info["cause"] = cause;
+        info["state"] = ec ? std::string("broken") : "stopped";
+        info["error"] = ec.value();
+        info["cause"] = ec ? ec.message() : "manually stopped";
+
         return info;
     }
 };
@@ -154,7 +154,13 @@ class spooling_t:
 
 public:
     template<class F>
-    spooling_t(context_t& context, asio::io_service& loop, const manifest_t& manifest, const profile_t& profile, F cb) {
+    spooling_t(context_t& context,
+               asio::io_service& loop,
+               const manifest_t& manifest,
+               const profile_t& profile,
+               const logging::log_t* log,
+               F handler)
+    {
         isolate = context.get<api::isolate_t>(
             profile.isolate.type,
             context,
@@ -163,12 +169,24 @@ public:
             profile.isolate.args
         );
 
-        spooler = isolate->async_spool(std::move(cb));
+        try {
+            // NOTE: Regardless of whether the asynchronous operation completes immediately or not,
+            // the handler will not be invoked from within this call. Invocation of the handler
+            // will be performed in a manner equivalent to using `boost::asio::io_service::post()`.
+            spooler = isolate->async_spool(handler);
+        } catch (const std::system_error& err) {
+            COCAINE_LOG_ERROR(log, "uncaught spool exception: [%d] %s", err.code().value(), err.code().message());
+            handler(err.code());
+        } catch (const std::exception& err) {
+            COCAINE_LOG_ERROR(log, "uncaught spool exception: %s", err.what());
+            handler(error::uncaught_spool_error);
+        }
     }
 
     ~spooling_t() {
-        // TODO: Check lifetimes.
-        spooler->cancel();
+        if (spooler) {
+            spooler->cancel();
+        }
     }
 
     virtual
@@ -350,53 +368,62 @@ public:
                 *loop,
                 manifest(),
                 profile,
-                std::bind(&app_state_t::on_spool, shared_from_this(), ph::_1, ph::_2)
+                log.get(),
+                std::bind(&app_state_t::on_spool, shared_from_this(), ph::_1)
             ));
         });
     }
 
     void
-    cancel(std::string cause = "manually stopped") {
-        state.synchronize()->reset(new state::stopped_t(std::move(cause)));
+    cancel(std::error_code ec) {
+        state.synchronize()->reset(new state::stopped_t(std::move(ec)));
     }
 
 private:
     void
-    on_spool(const std::error_code& ec, const std::string& what) {
+    on_spool(const std::error_code& ec) {
         if (ec) {
-            const auto reason = what.empty() ? ec.message() : what;
+            COCAINE_LOG_ERROR(log, "unable to spool app - [%d] %s", ec.value(), ec.message());
 
-            COCAINE_LOG_ERROR(log, "unable to spool app - [%d] %s", ec.value(), reason);
-
-            loop->dispatch(std::bind(&app_state_t::cancel, shared_from_this(), reason));
+            loop->dispatch(std::bind(&app_state_t::cancel, shared_from_this(), ec));
 
             // Attempt to finish node service's request.
             try {
-                deferred.abort(ec, reason);
+                deferred.abort(ec, ec.message());
             } catch (const std::exception&) {
                 // Ignore if the client has been disconnected.
             }
         } else {
             // Dispatch the completion handler to be sure it will be called in a I/O thread to
-            // avoid possible deadlocks (which ones?).
+            // avoid possible deadlocks.
             loop->dispatch(std::bind(&app_state_t::publish, shared_from_this()));
         }
     }
 
     void
     publish() {
+        std::error_code ec;
+
         try {
             state.synchronize()->reset(
                 new state::running_t(context, manifest(), profile, log.get(), loop)
             );
+        } catch (const std::system_error& err) {
+            COCAINE_LOG_ERROR(log, "unable to publish app: [%d] %s", err.code().value(), err.code().message());
+            ec = err.code();
         } catch (const std::exception& err) {
             COCAINE_LOG_ERROR(log, "unable to publish app: %s", err.what());
-            cancel(err.what());
+            ec = error::uncaught_publish_error;
         }
 
         // Attempt to finish node service's request.
         try {
-            deferred.close();
+            if (ec) {
+                cancel(ec);
+                deferred.abort(ec, ec.message());
+            } else {
+                deferred.close();
+            }
         } catch (const std::exception&) {
             // Ignore if the client has been disconnected.
         }
@@ -413,7 +440,7 @@ app_t::app_t(context_t& context,
 }
 
 app_t::~app_t() {
-    state->cancel();
+    state->cancel(std::error_code());
 }
 
 std::string

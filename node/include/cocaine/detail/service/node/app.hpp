@@ -6,13 +6,9 @@
 #include "cocaine/idl/node.hpp"
 #include "cocaine/rpc/slot/deferred.hpp"
 
-namespace cocaine {
-    namespace service {
-        namespace node {
-            class app_state_t;
-        } // namespace node
-    } // namespace service
-} // namespace cocaine
+namespace cocaine { namespace service { namespace node {
+    class app_state_t;
+}}} // namespace cocaine::service::node
 
 namespace cocaine { namespace service { namespace node {
 
@@ -32,7 +28,6 @@ public:
     std::string
     name() const;
 
-    // WARNING: Unstable - just added.
     dynamic_t
     info(io::node::info::flags_t flags) const;
 };

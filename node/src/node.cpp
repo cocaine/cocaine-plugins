@@ -47,54 +47,6 @@ using namespace cocaine::service;
 
 namespace ph = std::placeholders;
 
-namespace {
-
-// Node Service errors
-
-struct node_category_t:
-    public std::error_category
-{
-    virtual
-    auto
-    name() const throw() -> const char* {
-        return "cocaine.service.node";
-    }
-
-    virtual
-    std::string
-    message(int code) const {
-        switch (code) {
-        case error::node_errors::deadline_error:
-            return "invocation deadline has passed";
-        case error::node_errors::resource_error:
-            return "no resources available to complete invocation";
-        case error::node_errors::timeout_error:
-            return "invocation has timed out";
-        default:
-            break;
-        }
-
-        return cocaine::format("unknown node error %d", code);
-    }
-};
-
-} // namespace
-
-namespace cocaine { namespace error {
-
-auto
-node_category() -> const std::error_category& {
-    static node_category_t instance;
-    return instance;
-}
-
-auto
-make_error_code(node_errors code) -> std::error_code {
-    return std::error_code(static_cast<int>(code), node_category());
-}
-
-}} // namespace cocaine::error
-
 node_t::node_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args):
     category_type(context, asio, name, args),
     dispatch<io::node_tag>(name),
@@ -190,18 +142,9 @@ node_t::start_app(const std::string& name, const std::string& profile) {
         auto it = apps.find(name);
 
         if(it != apps.end()) {
-            // TODO: Handling app state by parsing strings seems to be not the best idea.
-            const auto info = it->second->info(io::node::info::brief);
-            const auto state = info.as_object()["state"].as_string();
-
-            if (state == "stopped") {
-                const auto reason = info.as_object()["cause"].as_string();
-                throw cocaine::error_t("app '%s' is stopped, reason: %s", name, reason);
-            } else if (state == "spooling") {
-                throw cocaine::error_t("app '%s' is spooling");
-            }
-
-            throw cocaine::error_t("app '%s' is already running", name);
+            const auto info = it->second->info(io::node::info::brief).as_object();
+            throw std::system_error(error::already_started,
+                cocaine::format("app '%s' is %s", name, info["state"].as_string()));
         }
 
         apps.insert({ name, std::make_shared<node::app_t>(context, name, profile, deferred) });
@@ -218,7 +161,8 @@ node_t::pause_app(const std::string& name) {
         auto it = apps.find(name);
 
         if(it == apps.end()) {
-            throw cocaine::error_t("app '%s' is not running", name);
+            throw std::system_error(error::not_running,
+                cocaine::format("app '%s' is not running", name));
         }
 
         apps.erase(it);

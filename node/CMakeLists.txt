@@ -28,6 +28,7 @@ add_library(node MODULE
     src/node/balancing/load.cpp
     src/node/dispatch/client.cpp
     src/node/dispatch/worker.cpp
+    src/node/error.cpp
     src/node/manifest.cpp
     src/node/overseer.cpp
     src/node/profile.cpp

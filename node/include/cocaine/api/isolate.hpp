@@ -52,7 +52,9 @@ typedef std::map<std::string, std::string> string_map_t;
 // Cancellation token.
 struct cancellation_t {
     virtual
-   ~cancellation_t() {}
+   ~cancellation_t() {
+        // Empty.
+    }
 
     virtual
     void
@@ -61,8 +63,6 @@ struct cancellation_t {
 
 struct isolate_t {
     typedef isolate_t category_type;
-
-    typedef std::function<void(const std::error_code&, const std::string&)> callback_type;
 
     virtual
    ~isolate_t() {
@@ -76,32 +76,28 @@ struct isolate_t {
     // Default implementation delegates the control flow into the blocking spool method.
     virtual
     std::unique_ptr<cancellation_t>
-    async_spool(callback_type cb) {
-        std::unique_ptr<cancellation_t> cancellation(new cancellation_t());
-
-        try {
-            spool();
-        } catch(const std::system_error& err) {
-            cb(err.code(), err.what());
-            return cancellation;
-        } catch(...) {
-            cb(std::make_error_code(std::errc::io_error), "Unknown");
-            return cancellation;
-        }
-
-        cb(std::error_code(), "");
-
-        return cancellation;
+    async_spool(std::function<void(const std::error_code&)> handler) {
+        spool();
+        get_io_service().post(std::bind(handler, std::error_code()));
+        return std::make_unique<cancellation_t>();
     }
 
     virtual
     std::unique_ptr<handle_t>
     spawn(const std::string& path, const string_map_t& args, const string_map_t& environment) = 0;
 
-protected:
-    isolate_t(context_t&, asio::io_service&, const std::string& /* name */, const dynamic_t& /* args */) {
-        // Empty.
+    asio::io_service&
+    get_io_service() {
+        return io_service;
     }
+
+protected:
+    isolate_t(context_t&, asio::io_service& io_service, const std::string&, const dynamic_t& /* args */):
+        io_service(io_service)
+    {}
+
+private:
+    asio::io_service& io_service;
 };
 
 template<>
