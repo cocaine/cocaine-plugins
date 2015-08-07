@@ -8,9 +8,12 @@ cocaine-plugins (0.12.3.3) unstable; urgency=low
 
   * Node: error categories and its notification review.
   * Now applications should keep an error code if they are in broken state.
-  * More logging added to be able to determine what's going on within isolation methods.
-  * Exceptions are now caught for cases where `async_spool` method fails immediately.
-  * Also isolate API now provides a method which gives reference to its event loop.
+  * More logging added to be able to determine what's going on within isolation
+    methods.
+  * Exceptions are now caught for cases where `async_spool` method fails
+    immediately.
+  * Also isolate API now provides a method which gives reference to its event
+    loop.
 
  -- Evgeny Safronov <division494@gmail.com>  Wed, 05 Aug 2015 22:47:54 +0500
 
