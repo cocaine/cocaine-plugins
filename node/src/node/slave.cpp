@@ -72,10 +72,10 @@ state_machine_t::start() {
 
     // NOTE: Slave spawning involves starting timers and posting completion handlers callbacks with
     // the event loop.
-    loop.post([=]() {
+    loop.post(trace_t::bind([=]() {
         // This call can perform state machine shutdowning on any error occurred.
         spawning->spawn(context.profile.timeout.spawn);
-    });
+    }));
 }
 
 bool
