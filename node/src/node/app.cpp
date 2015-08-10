@@ -34,15 +34,21 @@ class control_slot_t:
         typedef io::event_traits<io::app::control>::dispatch_type dispatch_type;
         typedef io::protocol<dispatch_type>::scope protocol;
 
-        const control_slot_t* p;
+        control_slot_t* p;
 
-        controlling_slot_t(const control_slot_t* p_):
+        controlling_slot_t(control_slot_t* p_):
             p(p_),
             super("controlling")
         {
             on<protocol::chunk>([&](const std::size_t& size) {
                 p->overseer->keep_alive(size);
             });
+
+            p->locked.store(true);
+        }
+
+        ~controlling_slot_t() {
+            p->locked.store(false);
         }
 
         virtual
@@ -56,11 +62,13 @@ class control_slot_t:
     typedef std::shared_ptr<const io::basic_slot<io::app::control>::dispatch_type> result_type;
 
     const std::unique_ptr<logging::log_t> log;
+    std::atomic<bool> locked;
     std::shared_ptr<overseer_t> overseer;
 
 public:
     control_slot_t(std::shared_ptr<overseer_t> overseer_, std::unique_ptr<logging::log_t> log_):
         log(std::move(log_)),
+        locked(false),
         overseer(overseer_)
     {
         COCAINE_LOG_DEBUG(log, "control slot has been created");
@@ -72,10 +80,13 @@ public:
 
     boost::optional<result_type>
     operator()(tuple_type&& args, upstream_type&& upstream) {
-        // TODO: Throw an error if the app is disconnected.
-        // TODO: Throw an error if the control has already been taken.
+        typedef io::protocol<io::event_traits<io::app::control>::upstream_type>::scope protocol;
 
         const auto dispatch = tuple::invoke(std::move(args), [&]() -> result_type {
+            if (locked) {
+                upstream.send<protocol::error>(std::make_error_code(std::errc::resource_unavailable_try_again));
+                return nullptr;
+            }
             return std::make_shared<controlling_slot_t>(this);
         });
 
