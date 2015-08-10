@@ -15,6 +15,7 @@
 #include "cocaine/detail/service/node/dispatch/worker.hpp"
 #include "cocaine/detail/service/node/slave/control.hpp"
 #include "cocaine/detail/service/node/slot.hpp"
+#include "cocaine/detail/service/node/util.hpp"
 
 #include <boost/accumulators/statistics/extended_p_square.hpp>
 
@@ -51,6 +52,7 @@ overseer_t::overseer_t(context_t& context,
     manifest_(std::move(manifest)),
     profile_(profile),
     loop(loop),
+    pool_target{},
     stats{}
 {
     COCAINE_LOG_DEBUG(log, "overseer has been initialized");
@@ -447,61 +449,12 @@ overseer_t::on_slave_death(const std::error_code& ec, std::string uuid) {
     loop->post(std::bind(&overseer_t::rebalance_slaves, shared_from_this()));
 }
 
-namespace {
-
-// Replace with http://www.boost.org/doc/libs/1_42_0/libs/algorithm/minmax/ :f Why no min/max_element_if?
-template<class It, class Compare, class Predicate>
-inline
-It
-min_element_if(It first, It last, Compare compare, Predicate predicate) {
-    while(first != last && !predicate(*first)) {
-        ++first;
-    }
-
-    if(first == last) {
-        return last;
-    }
-
-    It result = first;
-
-    while(++first != last) {
-        if(predicate(*first) && compare(*first, *result)) {
-            result = first;
-        }
-    }
-
-    return result;
-}
-
-struct load {
-    template<class T>
-    bool
-    operator()(const T& lhs, const T& rhs) const {
-        return lhs.second.load() < rhs.second.load();
-    }
-};
-
-struct available {
-    template<class T>
-    bool
-    operator()(const T& it) const {
-        return it.second.active() && it.second.load() < max;
-    }
-
-    const size_t max;
-};
-
-template<typename T>
-inline constexpr
-const T&
-bound(const T& min, const T& value, const T& max) {
-    return std::max(min, std::min(value, max));
-}
-
-} // namespace
-
 void
 overseer_t::rebalance_events() {
+    using boost::adaptors::filtered;
+
+    const auto concurrency = profile().concurrency;
+
     pool.apply([&](pool_type& pool) {
         if (pool.empty()) {
             return;
@@ -509,21 +462,29 @@ overseer_t::rebalance_events() {
 
         queue.apply([&](queue_type& queue) {
             while (!queue.empty()) {
-                auto it = ::min_element_if(pool.begin(), pool.end(), load(), available {
-                    profile().concurrency
+                // Find an active slave with minimal load, which is not overloaded.
+                const auto filter = std::function<bool(const slave_t&)>([&](const slave_t& slave) -> bool {
+                    return slave.active() && slave.load() < concurrency;
                 });
 
-                if(it == pool.end()) {
+                const auto range = pool | boost::adaptors::map_values | filtered(filter);
+
+                auto slave = boost::min_element(range, +[](const slave_t& lhs, const slave_t& rhs) -> bool {
+                    return lhs.load() < rhs.load();
+                });
+
+                // No free slaves found.
+                if(slave == boost::end(range)) {
                     return;
                 }
 
                 auto& payload = queue.front();
 
                 try {
-                    assign(it->second, payload);
-                    // The slave may become invalid and reject the assignment (or reject for any other
-                    // reasons). We pop the channel only on successful assignment to achieve strong
-                    // exception guarantee.
+                    assign(*slave, payload);
+                    // The slave may become invalid and reject the assignment (or reject for any
+                    // other reasons). We pop the channel only on successful assignment to achieve
+                    // strong exception guarantee.
                     queue.pop_front();
                 } catch (const std::exception& err) {
                     COCAINE_LOG_DEBUG(log, "slave has rejected assignment: %s", err.what());
@@ -535,43 +496,53 @@ overseer_t::rebalance_events() {
 
 void
 overseer_t::rebalance_slaves() {
+    using boost::adaptors::filtered;
+
     const auto load = queue->size();
     const auto profile = this->profile();
 
+    const auto pool_target = this->pool_target.load();
+
+    // Bound current pool target between [1; limit].
+    const auto target = detail::bound(
+        1UL,
+        pool_target ? pool_target : load / profile.grow_threshold,
+        profile.pool_limit
+    );
+
     pool.apply([&](pool_type& pool) {
-        if (pool_target > 0) {
+        if (pool_target) {
             COCAINE_LOG_DEBUG(log, "attempting to rebalance slaves using direct policy")(
-                "load", load, "slaves", pool.size()
+                "load", load, "slaves", pool.size(), "target", target
             );
 
-            const auto target = ::bound(1UL, pool_target, profile.pool_limit);
-
             if (target <= pool.size()) {
-                std::size_t active_slaves_count = 0;
+                auto active = boost::count_if(pool | boost::adaptors::map_values, +[](const slave_t& slave) -> bool {
+                    return slave.active();
+                });
 
-                for (const auto& p : pool) {
-                    if (p.second.active()) {
-                        active_slaves_count++;
-                    }
-                }
+                COCAINE_LOG_DEBUG(log, "sealing up to %d active slaves", active);
 
-                COCAINE_LOG_DEBUG(log, "a1 %d", active_slaves_count);
-
-                while (active_slaves_count-- > target) {
-                    // find active slave with minimal load
-                    auto it = ::min_element_if(pool.begin(), pool.end(), ::load(), available {
-                        profile.concurrency + 1
+                while (active-- > target) {
+                    // Find active slave with minimal load.
+                    const auto range = pool | boost::adaptors::map_values | filtered(+[](const slave_t& slave) -> bool {
+                        return slave.active();
                     });
 
-                    if(it == pool.end()) {
+                    auto slave = boost::min_element(range, +[](const slave_t& lhs, const slave_t& rhs) -> bool {
+                        return lhs.load() < rhs.load();
+                    });
+
+                    // All slaves are now inactive by some external conditions.
+                    if (slave == boost::end(range)) {
                         break;
                     }
 
-                    // seal
                     try {
-                        it->second.seal();
+                        COCAINE_LOG_DEBUG(log, "sealing slave")("uuid", slave->id());
+                        slave->seal();
                     } catch (const std::exception& err) {
-                        // Possibly already sealed or terminated.
+                        COCAINE_LOG_WARNING(log, "unable to seal slave: %s", err.what());
                     }
                 }
             } else {
@@ -581,14 +552,12 @@ overseer_t::rebalance_slaves() {
             }
         } else {
             COCAINE_LOG_DEBUG(log, "attempting to rebalance slaves using automatic policy")(
-                "load", load, "slaves", pool.size()
+                "load", load, "slaves", pool.size(), "target", target
             );
 
             if (pool.size() >= profile.pool_limit || pool.size() * profile.grow_threshold >= load) {
                 return;
             }
-
-            const auto target = ::bound(1UL, load / profile.grow_threshold, profile.pool_limit);
 
             while(pool.size() < target) {
                 spawn(pool);

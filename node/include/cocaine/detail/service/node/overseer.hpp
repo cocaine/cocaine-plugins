@@ -3,12 +3,10 @@
 #include <deque>
 #include <string>
 
-#include <cocaine/logging.hpp>
-
 #include <cocaine/rpc/dispatch.hpp>
 
-#include "cocaine/idl/rpc.hpp"
 #include "cocaine/idl/node.hpp"
+#include "cocaine/idl/rpc.hpp"
 
 #include "cocaine/detail/service/node/app/stats.hpp"
 #include "cocaine/detail/service/node/event.hpp"
@@ -17,10 +15,10 @@
 
 namespace cocaine {
     class balancer_t;
-    class unix_actor_t;
-    class slave_t;
-    class control_t;
     class client_rpc_dispatch_t;
+    class control_t;
+    class slave_t;
+    class unix_actor_t;
 } // namespace cocaine
 
 namespace cocaine {
@@ -61,8 +59,8 @@ private:
     std::shared_ptr<asio::io_service> loop;
 
     /// Slave pool.
-    std::size_t pool_target = 0;
     synchronized<pool_type> pool;
+    std::atomic<int> pool_target;
 
     /// Pending queue.
     synchronized<queue_type> queue;

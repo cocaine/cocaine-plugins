@@ -32,4 +32,11 @@ move_handler(T&& t) -> move_wrapper<typename std::decay<T>::type> {
     return std::move(t);
 }
 
+template<typename T>
+inline constexpr
+const T&
+bound(const T& min, const T& value, const T& max) {
+    return std::max(min, std::min(value, max));
+}
+
 }} // namespace cocaine::detail
