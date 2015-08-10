@@ -63,6 +63,7 @@ private:
     std::shared_ptr<asio::io_service> loop;
 
     /// Slave pool.
+    std::size_t pool_target = 0;
     synchronized<pool_type> pool;
 
     /// Pending queue.
@@ -79,17 +80,8 @@ public:
                manifest_t manifest,
                profile_t profile,
                std::shared_ptr<asio::io_service> loop);
+
     ~overseer_t();
-
-    std::shared_ptr<asio::io_service>
-    io_context() const;
-
-    /// \todo not sure about this method necessity, consider passing a shared logger pointer to the
-    /// balancer.
-    const logging::log_t&
-    logger() const {
-        return *log;
-    }
 
     /// Returns a const reference to the application's manifest.
     ///
@@ -107,12 +99,6 @@ public:
     profile_t
     profile() const;
 
-    locked_ptr<pool_type>
-    get_pool();
-
-    locked_ptr<queue_type>
-    get_queue();
-
     /// Returns the complete info about how the application works.
     dynamic_t::object_t
     info(io::node::info::flags_t flags) const;
@@ -125,6 +111,10 @@ public:
 
     void
     set_balancer(std::shared_ptr<balancer_t> balancer);
+
+    /// Tries to keep alive at least `count` workers no matter what.
+    void
+    keep_alive(std::size_t count);
 
     /// Enqueues the new event into the most appropriate slave.
     ///
@@ -163,15 +153,7 @@ public:
 
     /// Spawns a new slave using current manifest and profile.
     void
-    spawn();
-
-    /// \overload
-    void
-    spawn(locked_ptr<pool_type>& pool);
-
-    /// \overload
-    void
-    spawn(locked_ptr<pool_type>&& pool);
+    spawn(pool_type& pool);
 
     /// \warning must be called under the pool lock.
     void
@@ -195,6 +177,12 @@ private:
 
     void
     on_slave_death(const std::error_code& ec, std::string uuid);
+
+    void
+    rebalance_events();
+
+    void
+    rebalance_slaves();
 };
 
 }

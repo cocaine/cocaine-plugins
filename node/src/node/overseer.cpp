@@ -10,8 +10,6 @@
 #include "cocaine/detail/service/node/manifest.hpp"
 #include "cocaine/detail/service/node/profile.hpp"
 
-#include "cocaine/detail/service/node/balancing/base.hpp"
-#include "cocaine/detail/service/node/balancing/null.hpp"
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 #include "cocaine/detail/service/node/dispatch/handshaker.hpp"
 #include "cocaine/detail/service/node/dispatch/worker.hpp"
@@ -62,24 +60,9 @@ overseer_t::~overseer_t() {
     COCAINE_LOG_DEBUG(log, "overseer has been destroyed");
 }
 
-std::shared_ptr<asio::io_service>
-overseer_t::io_context() const {
-    return loop;
-}
-
 profile_t
 overseer_t::profile() const {
     return *profile_.synchronize();
-}
-
-locked_ptr<overseer_t::pool_type>
-overseer_t::get_pool() {
-    return pool.synchronize();
-}
-
-locked_ptr<overseer_t::queue_type>
-overseer_t::get_queue() {
-    return queue.synchronize();
 }
 
 namespace {
@@ -281,10 +264,9 @@ overseer_t::uptime() const {
 }
 
 void
-overseer_t::set_balancer(std::shared_ptr<balancer_t> balancer) {
-    BOOST_ASSERT(balancer);
-
-    this->balancer = std::move(balancer);
+overseer_t::keep_alive(std::size_t count) {
+    pool_target = count;
+    rebalance_slaves();
 }
 
 std::shared_ptr<client_rpc_dispatch_t>
@@ -312,7 +294,8 @@ overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstre
     });
 
     ++stats.requests.accepted;
-    balancer->on_queue();
+    rebalance_events();
+    rebalance_slaves();
 
     return dispatch;
 }
@@ -326,30 +309,20 @@ overseer_t::prototype() {
 }
 
 void
-overseer_t::spawn() {
-    spawn(pool.synchronize());
-}
-
-void
-overseer_t::spawn(locked_ptr<pool_type>& pool) {
-    COCAINE_LOG_INFO(log, "enlarging the slaves pool to %d", pool->size() + 1);
+overseer_t::spawn(pool_type& pool) {
+    COCAINE_LOG_INFO(log, "enlarging the slaves pool to %d", pool.size() + 1);
 
     slave_context ctx(context, manifest(), profile());
 
     // It is guaranteed that the cleanup handler will not be invoked from within the slave's
     // constructor.
     const auto uuid = ctx.id;
-    pool->insert(std::make_pair(
+    pool.insert(std::make_pair(
         uuid,
         slave_t(std::move(ctx), *loop, std::bind(&overseer_t::on_slave_death, shared_from_this(), ph::_1, uuid))
     ));
 
     ++stats.slaves.spawned;
-}
-
-void
-overseer_t::spawn(locked_ptr<pool_type>&& pool) {
-    spawn(pool);
 }
 
 void
@@ -371,10 +344,11 @@ overseer_t::assign(slave_t& slave, slave::channel_t& payload) {
         });
 
         // TODO: Hack, but at least it saves from the deadlock.
-        loop->post(std::bind(&balancer_t::on_channel_finished, balancer, id, channel));
+        // TODO: Notify watcher about channel finish.
+        loop->post(std::bind(&overseer_t::rebalance_events, shared_from_this()));
     });
 
-    balancer->on_channel_started(id, channel);
+    // TODO: Notify watcher about channel started.
 }
 
 void
@@ -388,7 +362,8 @@ overseer_t::despawn(const std::string& id, despawn_policy_t policy) {
                 break;
             case despawn_policy_t::force:
                 pool.erase(it);
-                balancer->on_slave_death(id);
+                // TODO: Notify watcher about slave death.
+                loop->post(std::bind(&overseer_t::rebalance_slaves, shared_from_this()));
                 break;
             default:
                 BOOST_ASSERT(false);
@@ -400,8 +375,6 @@ overseer_t::despawn(const std::string& id, despawn_policy_t policy) {
 void
 overseer_t::terminate() {
     COCAINE_LOG_DEBUG(log, "overseer is processing terminate request");
-
-    set_balancer(std::make_shared<null_balancer_t>());
     pool->clear();
 }
 
@@ -437,7 +410,8 @@ overseer_t::on_handshake(const std::string& id,
     });
 
     if (control) {
-        balancer->on_slave_spawn(id);
+        // TODO: Notify watcher about slave spawn.
+        loop->post(std::bind(&overseer_t::rebalance_events, shared_from_this()));
     }
 
     return control;
@@ -459,5 +433,143 @@ overseer_t::on_slave_death(const std::error_code& ec, std::string uuid) {
             pool.erase(it);
         }
     });
-    balancer->on_slave_death(uuid);
+
+    // TODO: Notify watcher about slave death.
+    loop->post(std::bind(&overseer_t::rebalance_slaves, shared_from_this()));
+}
+
+namespace {
+
+// Replace with http://www.boost.org/doc/libs/1_42_0/libs/algorithm/minmax/ :f Why no min/max_element_if?
+template<class It, class Compare, class Predicate>
+inline
+It
+min_element_if(It first, It last, Compare compare, Predicate predicate) {
+    while(first != last && !predicate(*first)) {
+        ++first;
+    }
+
+    if(first == last) {
+        return last;
+    }
+
+    It result = first;
+
+    while(++first != last) {
+        if(predicate(*first) && compare(*first, *result)) {
+            result = first;
+        }
+    }
+
+    return result;
+}
+
+struct load {
+    template<class T>
+    bool
+    operator()(const T& lhs, const T& rhs) const {
+        return lhs.second.load() < rhs.second.load();
+    }
+};
+
+struct available {
+    template<class T>
+    bool
+    operator()(const T& it) const {
+        return it.second.active() && it.second.load() < max;
+    }
+
+    const size_t max;
+};
+
+template<typename T>
+inline constexpr
+const T&
+bound(const T& min, const T& value, const T& max) {
+    return std::max(min, std::min(value, max));
+}
+
+} // namespace
+
+void
+overseer_t::rebalance_events() {
+    pool.apply([&](pool_type& pool) {
+        if (pool.empty()) {
+            return;
+        }
+
+        queue.apply([&](queue_type& queue) {
+            while (!queue.empty()) {
+                auto it = ::min_element_if(pool.begin(), pool.end(), load(), available {
+                    profile().concurrency
+                });
+
+                if(it == pool.end()) {
+                    return;
+                }
+
+                auto& payload = queue.front();
+
+                try {
+                    assign(it->second, payload);
+                    // The slave may become invalid and reject the assignment (or reject for any other
+                    // reasons). We pop the channel only on successful assignment to achieve strong
+                    // exception guarantee.
+                    queue.pop_front();
+                } catch (const std::exception& err) {
+                    COCAINE_LOG_DEBUG(log, "slave has rejected assignment: %s", err.what());
+                }
+            }
+        });
+    });
+}
+
+void
+overseer_t::rebalance_slaves() {
+    const auto load = queue->size();
+    const auto profile = this->profile();
+
+    pool.apply([&](pool_type& pool) {
+        if (pool.size() >= profile.pool_limit || pool.size() * profile.grow_threshold >= load) {
+            return;
+        }
+
+        const auto target = pool_target > 0 ?
+            ::bound(1UL, pool_target, profile.pool_limit) :
+            ::bound(1UL, load / profile.grow_threshold, profile.pool_limit);
+
+        if (target <= pool.size()) {
+            std::size_t active_slaves_count = 0;
+
+            for (const auto& p : pool) {
+                if (p.second.active()) {
+                    active_slaves_count++;
+                }
+            }
+
+            auto t = target;
+            while (t-- > active_slaves_count) {
+                // find active slave with minimal load
+                auto it = ::min_element_if(pool.begin(), pool.end(), ::load(), available {
+                    profile.concurrency + 1
+                });
+
+                if(it == pool.end()) {
+                    break;
+                }
+
+                // seal
+                try {
+                    it->second.seal();
+                } catch (const std::exception& err) {
+                    // Possibly already sealed or terminated.
+                }
+            }
+            return;
+        }
+
+        while(pool.size() < target) {
+            spawn(pool);
+        }
+    });
 }

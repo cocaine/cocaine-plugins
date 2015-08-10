@@ -9,7 +9,6 @@
 #include "cocaine/rpc/actor_unix.hpp"
 #include "cocaine/traits/dynamic.hpp"
 
-#include "cocaine/detail/service/node/balancing/load.hpp"
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 #include "cocaine/detail/service/node/dispatch/handshaker.hpp"
 #include "cocaine/detail/service/node/dispatch/hostess.hpp"
@@ -223,9 +222,6 @@ public:
     {
         // Create the Overseer - slave spawner/despawner plus the event queue dispatcher.
         overseer.reset(new overseer_t(context, manifest, profile, loop));
-
-        // Create the event balancer.
-        overseer->set_balancer(std::make_shared<load_balancer_t>(overseer));
 
         // Create a TCP server and publish it.
         COCAINE_LOG_DEBUG(log, "publishing application service with the context");
