@@ -69,9 +69,6 @@ private:
     /// Pending queue.
     synchronized<queue_type> queue;
 
-    /// The application balancing policy.
-    std::shared_ptr<balancer_t> balancer;
-
     /// Statistics.
     stats_t stats;
 
@@ -83,14 +80,12 @@ public:
 
     ~overseer_t();
 
-    /// Returns a const reference to the application's manifest.
+    /// Returns copy of the current manifest.
     ///
     /// Application's manifest is considered constant during all app's lifetime and can be
     /// changed only through restarting.
-    const manifest_t&
-    manifest() const {
-        return manifest_;
-    }
+    manifest_t
+    manifest() const;
 
     /// Returns copy of the current profile, which is used to spawn new slaves.
     ///
@@ -108,9 +103,6 @@ public:
     uptime() const;
 
     // Modifiers.
-
-    void
-    set_balancer(std::shared_ptr<balancer_t> balancer);
 
     /// Tries to keep alive at least `count` workers no matter what.
     void

@@ -60,6 +60,11 @@ overseer_t::~overseer_t() {
     COCAINE_LOG_DEBUG(log, "overseer has been destroyed");
 }
 
+manifest_t
+overseer_t::manifest() const {
+    return manifest_;
+}
+
 profile_t
 overseer_t::profile() const {
     return *profile_.synchronize();
@@ -265,6 +270,8 @@ overseer_t::uptime() const {
 
 void
 overseer_t::keep_alive(std::size_t count) {
+    COCAINE_LOG_DEBUG(log, "changed keep-alive slave count to %d", count);
+
     pool_target = count;
     rebalance_slaves();
 }
@@ -375,6 +382,7 @@ overseer_t::despawn(const std::string& id, despawn_policy_t policy) {
 void
 overseer_t::terminate() {
     COCAINE_LOG_DEBUG(log, "overseer is processing terminate request");
+    keep_alive(0);
     pool->clear();
 }
 
@@ -530,46 +538,60 @@ overseer_t::rebalance_slaves() {
     const auto profile = this->profile();
 
     pool.apply([&](pool_type& pool) {
-        if (pool.size() >= profile.pool_limit || pool.size() * profile.grow_threshold >= load) {
-            return;
-        }
+        if (pool_target > 0) {
+            COCAINE_LOG_DEBUG(log, "attempting to rebalance slaves using direct policy")(
+                "load", load, "slaves", pool.size()
+            );
 
-        const auto target = pool_target > 0 ?
-            ::bound(1UL, pool_target, profile.pool_limit) :
-            ::bound(1UL, load / profile.grow_threshold, profile.pool_limit);
+            const auto target = ::bound(1UL, pool_target, profile.pool_limit);
 
-        if (target <= pool.size()) {
-            std::size_t active_slaves_count = 0;
+            if (target <= pool.size()) {
+                std::size_t active_slaves_count = 0;
 
-            for (const auto& p : pool) {
-                if (p.second.active()) {
-                    active_slaves_count++;
+                for (const auto& p : pool) {
+                    if (p.second.active()) {
+                        active_slaves_count++;
+                    }
+                }
+
+                COCAINE_LOG_DEBUG(log, "a1 %d", active_slaves_count);
+
+                while (active_slaves_count-- > target) {
+                    // find active slave with minimal load
+                    auto it = ::min_element_if(pool.begin(), pool.end(), ::load(), available {
+                        profile.concurrency + 1
+                    });
+
+                    if(it == pool.end()) {
+                        break;
+                    }
+
+                    // seal
+                    try {
+                        it->second.seal();
+                    } catch (const std::exception& err) {
+                        // Possibly already sealed or terminated.
+                    }
+                }
+            } else {
+                while(pool.size() < target) {
+                    spawn(pool);
                 }
             }
+        } else {
+            COCAINE_LOG_DEBUG(log, "attempting to rebalance slaves using automatic policy")(
+                "load", load, "slaves", pool.size()
+            );
 
-            auto t = target;
-            while (t-- > active_slaves_count) {
-                // find active slave with minimal load
-                auto it = ::min_element_if(pool.begin(), pool.end(), ::load(), available {
-                    profile.concurrency + 1
-                });
-
-                if(it == pool.end()) {
-                    break;
-                }
-
-                // seal
-                try {
-                    it->second.seal();
-                } catch (const std::exception& err) {
-                    // Possibly already sealed or terminated.
-                }
+            if (pool.size() >= profile.pool_limit || pool.size() * profile.grow_threshold >= load) {
+                return;
             }
-            return;
-        }
 
-        while(pool.size() < target) {
-            spawn(pool);
+            const auto target = ::bound(1UL, load / profile.grow_threshold, profile.pool_limit);
+
+            while(pool.size() < target) {
+                spawn(pool);
+            }
         }
     });
 }

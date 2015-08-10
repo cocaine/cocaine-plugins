@@ -74,6 +74,14 @@ struct info {
     >::tag upstream_type;
 };
 
+struct control {
+    typedef app_tag tag;
+
+    static const char* alias() { return "control"; }
+
+    typedef stream_of<std::size_t>::tag dispatch_type;
+};
+
 }; // struct app
 
 template<>
@@ -84,7 +92,8 @@ struct protocol<app_tag> {
 
     typedef boost::mpl::list<
         app::enqueue,
-        app::info
+        app::info,
+        app::control
     >::type messages;
 
     typedef app scope;

@@ -22,6 +22,67 @@ using namespace cocaine;
 using namespace cocaine::service;
 using namespace cocaine::service::node;
 
+// While the client is connected it's okay, balance on numbers depending on received.
+class control_slot_t:
+    public io::basic_slot<io::app::control>
+{
+    struct controlling_slot_t:
+        public io::basic_slot<io::app::control>::dispatch_type
+    {
+        typedef io::basic_slot<io::app::control>::dispatch_type super;
+
+        typedef io::event_traits<io::app::control>::dispatch_type dispatch_type;
+        typedef io::protocol<dispatch_type>::scope protocol;
+
+        const control_slot_t* p;
+
+        controlling_slot_t(const control_slot_t* p_):
+            p(p_),
+            super("controlling")
+        {
+            on<protocol::chunk>([&](const std::size_t& size) {
+                p->overseer->keep_alive(size);
+            });
+        }
+
+        virtual
+        void
+        discard(const std::error_code& ec) const {
+            COCAINE_LOG_DEBUG(p->log, "client has been disappeared, assuming direct control");
+            p->overseer->keep_alive(0);
+        }
+    };
+
+    typedef std::shared_ptr<const io::basic_slot<io::app::control>::dispatch_type> result_type;
+
+    const std::unique_ptr<logging::log_t> log;
+    std::shared_ptr<overseer_t> overseer;
+
+public:
+    control_slot_t(std::shared_ptr<overseer_t> overseer_, std::unique_ptr<logging::log_t> log_):
+        log(std::move(log_)),
+        overseer(overseer_)
+    {
+        COCAINE_LOG_DEBUG(log, "control slot has been created");
+    }
+
+    ~control_slot_t() {
+        COCAINE_LOG_DEBUG(log, "control slot has been destroyed");
+    }
+
+    boost::optional<result_type>
+    operator()(tuple_type&& args, upstream_type&& upstream) {
+        // TODO: Throw an error if the app is disconnected.
+        // TODO: Throw an error if the control has already been taken.
+
+        const auto dispatch = tuple::invoke(std::move(args), [&]() -> result_type {
+            return std::make_shared<controlling_slot_t>(this);
+        });
+
+        return boost::make_optional(dispatch);
+    }
+};
+
 /// App dispatch, manages incoming enqueue requests. Adds them to the queue.
 class app_dispatch_t:
     public dispatch<io::app_tag>
@@ -37,13 +98,15 @@ public:
     app_dispatch_t(context_t& context, const std::string& name, std::shared_ptr<overseer_t> overseer_) :
         dispatch<io::app_tag>(name),
         log(context.log(format("%s/dispatch", name))),
-        overseer(std::move(overseer_))
+        overseer(overseer_)
     {
         on<io::app::enqueue>(std::make_shared<slot_type>(
             std::bind(&app_dispatch_t::on_enqueue, this, ph::_1, ph::_2, ph::_3)
         ));
 
         on<io::app::info>(std::bind(&app_dispatch_t::on_info, this));
+
+        on<io::app::control>(std::make_shared<control_slot_t>(overseer_, context.log(format("%s/control", name))));
     }
 
     ~app_dispatch_t() {
