@@ -16,13 +16,11 @@
 #include "cocaine/detail/service/node/slot.hpp"
 
 namespace cocaine {
-
-class balancer_t;
-class unix_actor_t;
-class slave_t;
-class control_t;
-class client_rpc_dispatch_t;
-
+    class balancer_t;
+    class unix_actor_t;
+    class slave_t;
+    class control_t;
+    class client_rpc_dispatch_t;
 } // namespace cocaine
 
 namespace cocaine {
@@ -94,19 +92,15 @@ public:
     profile_t
     profile() const;
 
-    /// Returns the complete info about how the application works.
-    dynamic_t::object_t
-    info(io::node::info::flags_t flags) const;
-
     /// Returns application total uptime in seconds.
     std::chrono::seconds
     uptime() const;
 
-    // Modifiers.
+    /// Returns the complete info about how the application works using json-like object.
+    dynamic_t::object_t
+    info(io::node::info::flags_t flags) const;
 
-    /// Tries to keep alive at least `count` workers no matter what.
-    void
-    keep_alive(std::size_t count);
+    // Modifiers.
 
     /// Enqueues the new event into the most appropriate slave.
     ///
@@ -126,8 +120,9 @@ public:
             app::event_t event,
             boost::optional<service::node::slave::id_t> id);
 
-    //std::shared_ptr<stream_t>
-    //enqueue(std::shared_ptr<stream_t>&& downstream, app::event_t event, boost::optional<service::node::slave::id_t> id);
+    /// Tries to keep alive at least `count` workers no matter what.
+    void
+    keep_alive(std::size_t count);
 
     /// Creates a new handshake dispatch, which will be consumed after a new incoming connection
     /// attached.
@@ -143,6 +138,11 @@ public:
     io::dispatch_ptr_t
     prototype();
 
+    /// Cancels all asynchronous pending operations, preparing for destruction.
+    void
+    cancel();
+
+private:
     /// Spawns a new slave using current manifest and profile.
     void
     spawn(pool_type& pool);
@@ -158,10 +158,6 @@ public:
     void
     despawn(const std::string& id, despawn_policy_t policy);
 
-    void
-    terminate();
-
-private:
     std::shared_ptr<control_t>
     on_handshake(const std::string& id,
                  std::shared_ptr<session_t> session,

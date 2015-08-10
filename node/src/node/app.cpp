@@ -324,7 +324,7 @@ public:
         }
 
         engine->terminate();
-        overseer->terminate();
+        overseer->cancel();
     }
 
     virtual

@@ -380,8 +380,9 @@ overseer_t::despawn(const std::string& id, despawn_policy_t policy) {
 }
 
 void
-overseer_t::terminate() {
+overseer_t::cancel() {
     COCAINE_LOG_DEBUG(log, "overseer is processing terminate request");
+
     keep_alive(0);
     pool->clear();
 }
