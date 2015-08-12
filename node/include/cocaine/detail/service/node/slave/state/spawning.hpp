@@ -6,7 +6,10 @@
 
 namespace cocaine {
 
-namespace api { class handle_t; }
+namespace api {
+    class handle_t;
+    class cancellation_t;
+}
 
 class state_machine_t;
 
@@ -15,9 +18,9 @@ class spawning_t:
     public std::enable_shared_from_this<spawning_t>
 {
     std::shared_ptr<state_machine_t> slave;
+    std::unique_ptr<api::cancellation_t> cancellation;
 
     asio::deadline_timer timer;
-    std::unique_ptr<api::handle_t> handle;
 
 public:
     explicit
@@ -40,7 +43,7 @@ public:
 
 private:
     void
-    on_spawn(std::chrono::high_resolution_clock::time_point start);
+    on_spawn(std::chrono::high_resolution_clock::time_point start, const std::error_code& err, std::unique_ptr<api::handle_t>& handle);
 
     void
     on_timeout(const std::error_code& ec);

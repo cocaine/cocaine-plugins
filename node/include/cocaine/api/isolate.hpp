@@ -48,6 +48,7 @@ struct handle_t {
 };
 
 typedef std::map<std::string, std::string> string_map_t;
+typedef std::function<void(const std::error_code&, std::unique_ptr<handle_t>&)> spawn_handler_t;
 
 // Cancellation token.
 struct cancellation_t {
@@ -83,8 +84,8 @@ struct isolate_t {
     }
 
     virtual
-    std::unique_ptr<handle_t>
-    spawn(const std::string& path, const string_map_t& args, const string_map_t& environment) = 0;
+    std::unique_ptr<cancellation_t>
+    spawn(const std::string& path, const string_map_t& args, const string_map_t& environment, spawn_handler_t handler) = 0;
 
     asio::io_service&
     get_io_service() {

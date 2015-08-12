@@ -19,6 +19,7 @@
 */
 
 #include "cocaine/detail/isolate/process.hpp"
+#include "cocaine/detail/service/node/util.hpp"
 
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
@@ -399,12 +400,19 @@ process_t::~process_t() {
     extern char** environ;
 #endif
 
-std::unique_ptr<api::handle_t>
-process_t::spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment) {
+std::unique_ptr<api::cancellation_t>
+process_t::spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment, api::spawn_handler_t handler) {
     std::array<int, 2> pipes;
 
     if(::pipe(pipes.data()) != 0) {
-        throw std::system_error(errno, std::system_category(), "unable to create an output pipe");
+        auto err = errno;
+        COCAINE_LOG_ERROR(m_log, "unable to create an output pipe: %d", err);
+
+        get_io_service().post(std::bind(handler,
+            std::error_code(errno, std::system_category()),
+            std::unique_ptr<api::handle_t>())
+        );
+        return std::make_unique<api::cancellation_t>();
     }
 
     for(auto it = pipes.begin(); it != pipes.end(); ++it) {
@@ -414,21 +422,34 @@ process_t::spawn(const std::string& path, const api::string_map_t& args, const a
     const pid_t pid = ::fork();
 
     if(pid < 0) {
+        auto err = errno;
+
         std::for_each(pipes.begin(), pipes.end(), ::close);
 
-        throw std::system_error(errno, std::system_category(), "unable to fork");
+        COCAINE_LOG_ERROR(m_log, "unable to fork: %d", err);
+
+        get_io_service().post(std::bind(handler,
+            std::error_code(errno, std::system_category()),
+            std::unique_ptr<api::handle_t>())
+        );
+        return std::make_unique<api::cancellation_t>();
     }
 
     ::close(pipes[pid > 0]);
 
     if(pid > 0) {
-        return std::make_unique<process_handle_t>(
-            pid,
-            pipes[0],
-            m_kill_timeout,
-            m_context.log(format("%s/process", m_name), {{ "pid", blackhole::attribute::value_t(pid) }}),
-            io_context
+        auto pr_handle = std::unique_ptr<api::handle_t>(
+            new process_handle_t(
+                pid,
+                pipes[0],
+                m_kill_timeout,
+                m_context.log(format("%s/process", m_name), {{ "pid", blackhole::attribute::value_t(pid) }}),
+                io_context
+            )
         );
+
+        get_io_service().post(std::bind(handler, std::error_code(), std::move(pr_handle)));
+        return std::make_unique<api::cancellation_t>();
     }
 
     // Child initialization

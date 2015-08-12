@@ -4,7 +4,6 @@
 
 #include "cocaine/detail/service/node/slave.hpp"
 #include "cocaine/detail/service/node/slave/state/handshaking.hpp"
-#include "cocaine/detail/service/node/util.hpp"
 
 namespace ph = std::placeholders;
 
@@ -25,6 +24,7 @@ spawning_t::cancel() {
     COCAINE_LOG_TRACE(slave->log, "processing spawn timer cancellation");
 
     try {
+        cancellation->cancel();
         const auto cancelled = timer.cancel();
         COCAINE_LOG_TRACE(slave->log, "processing spawn timer cancellation: done (%d cancelled)", cancelled);
     } catch (const std::system_error& err) {
@@ -86,21 +86,16 @@ spawning_t::spawn(unsigned long timeout) {
         COCAINE_LOG_TRACE(slave->log, "spawning");
 
         timer.expires_from_now(boost::posix_time::milliseconds(timeout));
-        timer.async_wait(trace_t::bind(&spawning_t::on_timeout, shared_from_this(), ph::_1));
 
-        handle = isolate->spawn(
+        cancellation = isolate->spawn(
             slave->context.manifest.executable,
             args,
-            slave->context.manifest.environment
+            slave->context.manifest.environment,
+            trace_t::bind(&spawning_t::on_spawn, shared_from_this(), std::chrono::high_resolution_clock::now(),
+                ph::_1, ph::_2)
         );
 
-        // Currently we spawn all slaves synchronously, but here is the right place to provide
-        // a callback function to the Isolate.
-        // NOTE: The callback must be called from the event loop thread, otherwise the behavior
-        // is undefined.
-        slave->loop.post(detail::move_handler(trace_t::bind(
-            &spawning_t::on_spawn, shared_from_this(), std::chrono::high_resolution_clock::now()
-        )));
+        timer.async_wait(trace_t::bind(&spawning_t::on_timeout, shared_from_this(), ph::_1));
     } catch(const std::system_error& err) {
         COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: %s", err.code().message());
 
@@ -111,9 +106,15 @@ spawning_t::spawn(unsigned long timeout) {
 }
 
 void
-spawning_t::on_spawn(std::chrono::high_resolution_clock::time_point start) {
+spawning_t::on_spawn(std::chrono::high_resolution_clock::time_point start, const std::error_code& err, std::unique_ptr<api::handle_t>& handle) {
     std::error_code ec;
     const size_t cancelled = timer.cancel(ec);
+
+    if (err) {
+        COCAINE_LOG_WARNING(slave->log, "failed to spawn a slave %s", err.message());
+        return;
+    }
+
     if (ec || cancelled == 0) {
         // If we are here, then the spawn timer has been triggered and the slave has been
         // shutdowned with a spawn timeout error.
@@ -144,7 +145,7 @@ spawning_t::on_timeout(const std::error_code& ec) {
         COCAINE_LOG_TRACE(slave->log, "spawn timer has called its completion handler: cancelled");
     } else {
         COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: timeout");
-
+        cancellation->cancel();
         slave->shutdown(error::spawn_timeout);
     }
 }

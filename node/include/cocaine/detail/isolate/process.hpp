@@ -58,8 +58,8 @@ public:
     spool();
 
     virtual
-    std::unique_ptr<api::handle_t>
-    spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment);
+    std::unique_ptr<api::cancellation_t>
+    spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment, api::spawn_handler_t handler);
 };
 
 }} // namespace cocaine::isolate
