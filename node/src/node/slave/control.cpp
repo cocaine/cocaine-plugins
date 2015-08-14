@@ -23,12 +23,12 @@ control_t::control_t(std::shared_ptr<state_machine_t> slave_, upstream<io::worke
 }
 
 control_t::~control_t() {
-    COCAINE_LOG_TRACE(slave->log, "control channel has been destroyed");
+    COCAINE_LOG_DEBUG(slave->log, "control channel has been destroyed");
 }
 
 void
 control_t::start() {
-    COCAINE_LOG_TRACE(slave->log, "heartbeat timer has been started");
+    COCAINE_LOG_DEBUG(slave->log, "heartbeat timer has been started");
 
     timer.expires_from_now(boost::posix_time::milliseconds(slave->context.profile.timeout.heartbeat));
     timer.async_wait(std::bind(&control_t::on_timeout, shared_from_this(), ph::_1));
@@ -38,7 +38,7 @@ void
 control_t::terminate(const std::error_code& ec) {
     BOOST_ASSERT(ec);
 
-    COCAINE_LOG_TRACE(slave->log, "sending terminate message");
+    COCAINE_LOG_DEBUG(slave->log, "sending terminate message");
 
     try {
         stream = stream.send<io::worker::terminate>(ec.value(), ec.message());
@@ -73,9 +73,9 @@ control_t::on_heartbeat() {
     COCAINE_LOG_DEBUG(slave->log, "processing heartbeat message");
 
     if (closed) {
-        COCAINE_LOG_TRACE(slave->log, "heartbeat message has been dropped: control is closed");
+        COCAINE_LOG_DEBUG(slave->log, "heartbeat message has been dropped: control is closed");
     } else {
-        COCAINE_LOG_TRACE(slave->log, "heartbeat timer has been restarted");
+        COCAINE_LOG_DEBUG(slave->log, "heartbeat timer has been restarted");
 
         timer.expires_from_now(boost::posix_time::milliseconds(slave->context.profile.timeout.heartbeat));
         timer.async_wait(std::bind(&control_t::on_timeout, shared_from_this(), ph::_1));
@@ -97,9 +97,9 @@ control_t::on_timeout(const std::error_code& ec) {
     // message at least once in profile.timeout.heartbeat milliseconds.
     // In this case we should terminate it.
     if (ec) {
-        COCAINE_LOG_TRACE(slave->log, "heartbeat timer has called its completion handler: cancelled");
+        COCAINE_LOG_DEBUG(slave->log, "heartbeat timer has called its completion handler: cancelled");
     } else {
-        COCAINE_LOG_TRACE(slave->log, "heartbeat timer has called its completion handler: timeout");
+        COCAINE_LOG_DEBUG(slave->log, "heartbeat timer has called its completion handler: timeout");
         slave->shutdown(error::heartbeat_timeout);
     }
 }

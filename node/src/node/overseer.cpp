@@ -55,11 +55,11 @@ overseer_t::overseer_t(context_t& context,
     loop(loop),
     stats{}
 {
-    COCAINE_LOG_TRACE(log, "overseer has been initialized");
+    COCAINE_LOG_DEBUG(log, "overseer has been initialized");
 }
 
 overseer_t::~overseer_t() {
-    COCAINE_LOG_TRACE(log, "overseer has been destroyed");
+    COCAINE_LOG_DEBUG(log, "overseer has been destroyed");
 }
 
 std::shared_ptr<asio::io_service>

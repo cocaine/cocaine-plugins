@@ -50,18 +50,18 @@ state_machine_t::state_machine_t(lock_t, slave_context context, asio::io_service
     shutdowned(false),
     counter{}
 {
-    COCAINE_LOG_TRACE(log, "slave state machine has been initialized");
+    COCAINE_LOG_DEBUG(log, "slave state machine has been initialized");
 }
 
 state_machine_t::~state_machine_t() {
-    COCAINE_LOG_TRACE(log, "slave state machine has been destroyed");
+    COCAINE_LOG_DEBUG(log, "slave state machine has been destroyed");
 }
 
 void
 state_machine_t::start() {
     BOOST_ASSERT(*state.synchronize() == nullptr);
 
-    COCAINE_LOG_TRACE(log, "slave state machine is starting");
+    COCAINE_LOG_DEBUG(log, "slave state machine is starting");
 
     fetcher.apply([&](std::shared_ptr<fetcher_t>& fetcher) {
         fetcher = std::make_shared<fetcher_t>(shared_from_this());
@@ -172,7 +172,7 @@ state_machine_t::inject(slave::channel_t& data, channel_handler handler) {
     });
 
     COCAINE_LOG_DEBUG(log, "slave has started processing %d channel", id);
-    COCAINE_LOG_TRACE(log, "slave has increased its load to %d", load)("channel", id);
+    COCAINE_LOG_DEBUG(log, "slave has increased its load to %d", load)("channel", id);
 
     // C2W dispatch.
     data.dispatch->attach(upstream, [=](const std::error_code& ec) {
@@ -203,7 +203,7 @@ state_machine_t::terminate(std::error_code ec) {
         return;
     }
 
-    COCAINE_LOG_TRACE(log, "slave state machine is terminating: %s", ec.message());
+    COCAINE_LOG_DEBUG(log, "slave state machine is terminating: %s", ec.message());
 
     auto state = *this->state.synchronize();
     state->terminate(ec);
@@ -241,7 +241,7 @@ state_machine_t::shutdown(std::error_code ec) {
     }
 
     auto state = *this->state.synchronize();
-    COCAINE_LOG_TRACE(log, "slave is shutting down from state %s: %s", state->name(), ec.message());
+    COCAINE_LOG_DEBUG(log, "slave is shutting down from state %s: %s", state->name(), ec.message());
 
     state->cancel();
     if(state->terminating()) {
@@ -288,7 +288,7 @@ state_machine_t::revoke(std::uint64_t id, channel_handler handler) {
         return channels.size();
     });
 
-    COCAINE_LOG_TRACE(log, "slave has decreased its load to %d", load)("channel", id);
+    COCAINE_LOG_DEBUG(log, "slave has decreased its load to %d", load)("channel", id);
     COCAINE_LOG_DEBUG(log, "slave has closed its %d channel", id);
 
     // Terminate the state machine if the current state is sealing and there are no more channels

@@ -77,7 +77,7 @@ public:
     }
 
     ~process_terminator_t() {
-        COCAINE_LOG_TRACE(log, "process terminator is destroying");
+        COCAINE_LOG_DEBUG(log, "process terminator is destroying");
 
         if (pid) {
             int status = 0;
@@ -95,7 +95,7 @@ public:
                 // resort to prevent zombies.
                 if (::kill(pid, SIGKILL) == 0) {
                     if (::waitpid(pid, &status, 0) > 0) {
-                        COCAINE_LOG_TRACE(log, "child has been killed: %d", status);
+                        COCAINE_LOG_DEBUG(log, "child has been killed: %d", status);
                     } else {
                         const int ec = errno;
 
@@ -109,7 +109,7 @@ public:
                 }
                 break;
             default:
-                COCAINE_LOG_TRACE(log, "child has been collected: %d", status);
+                COCAINE_LOG_DEBUG(log, "child has been collected: %d", status);
             }
         }
     }
@@ -128,7 +128,7 @@ public:
         }
         case 0: {
             // The child is not finished yet, send SIGTERM and try to collect it later after.
-            COCAINE_LOG_TRACE(log, "unable to terminate child right now (not ready), sending SIGTERM")(
+            COCAINE_LOG_DEBUG(log, "unable to terminate child right now (not ready), sending SIGTERM")(
                 "timeout", timeout.kill
             );
 
@@ -140,7 +140,7 @@ public:
             break;
         }
         default:
-            COCAINE_LOG_TRACE(log, "child has been stopped: %d", status);
+            COCAINE_LOG_DEBUG(log, "child has been stopped: %d", status);
 
             pid = 0;
         }
@@ -150,10 +150,10 @@ private:
     void
     on_kill_timer(const std::error_code& ec) {
         if(ec == asio::error::operation_aborted) {
-            COCAINE_LOG_TRACE(log, "process kill timer has called its completion handler: cancelled");
+            COCAINE_LOG_DEBUG(log, "process kill timer has called its completion handler: cancelled");
             return;
         } else {
-            COCAINE_LOG_TRACE(log, "process kill timer has called its completion handler");
+            COCAINE_LOG_DEBUG(log, "process kill timer has called its completion handler");
         }
 
         int status = 0;
@@ -166,7 +166,7 @@ private:
             break;
         }
         case 0: {
-            COCAINE_LOG_TRACE(log, "killing the child, resuming after 5 sec");
+            COCAINE_LOG_DEBUG(log, "killing the child, resuming after 5 sec");
 
             // Ignore return code here too.
             ::kill(pid, SIGKILL);
@@ -176,7 +176,7 @@ private:
             break;
         }
         default:
-            COCAINE_LOG_TRACE(log, "child has been terminated: %d", status);
+            COCAINE_LOG_DEBUG(log, "child has been terminated: %d", status);
 
             pid = 0;
         }
@@ -185,10 +185,10 @@ private:
     void
     on_gc_action(const std::error_code& ec) {
         if(ec == asio::error::operation_aborted) {
-            COCAINE_LOG_TRACE(log, "process GC timer has called its completion handler: cancelled");
+            COCAINE_LOG_DEBUG(log, "process GC timer has called its completion handler: cancelled");
             return;
         } else {
-            COCAINE_LOG_TRACE(log, "process GC timer has called its completion handler");
+            COCAINE_LOG_DEBUG(log, "process GC timer has called its completion handler");
         }
 
         int status = 0;
@@ -201,14 +201,14 @@ private:
             break;
         }
         case 0: {
-            COCAINE_LOG_TRACE(log, "child has not been killed, resuming after 5 sec");
+            COCAINE_LOG_DEBUG(log, "child has not been killed, resuming after 5 sec");
 
             timer.expires_from_now(boost::posix_time::seconds(timeout.gc));
             timer.async_wait(std::bind(&process_terminator_t::on_gc_action, shared_from_this(), ph::_1));
             break;
         }
         default:
-            COCAINE_LOG_TRACE(log, "child has been killed: %d", status);
+            COCAINE_LOG_DEBUG(log, "child has been killed: %d", status);
 
             pid = 0;
         }
@@ -232,12 +232,12 @@ public:
         terminator(std::make_shared<process_terminator_t>(pid, kill_timeout, std::move(log), loop)),
         m_stdout(stdout)
     {
-        COCAINE_LOG_TRACE(terminator->log, "process handle has been created");
+        COCAINE_LOG_DEBUG(terminator->log, "process handle has been created");
     }
 
     ~process_handle_t() {
         terminate();
-        COCAINE_LOG_TRACE(terminator->log, "process handle has been destroyed");
+        COCAINE_LOG_DEBUG(terminator->log, "process handle has been destroyed");
     }
 
     virtual

@@ -48,7 +48,7 @@ public:
     }
 
     ~app_dispatch_t() {
-        COCAINE_LOG_TRACE(log, "app dispatch has been destroyed");
+        COCAINE_LOG_DEBUG(log, "app dispatch has been destroyed");
     }
 
 private:
@@ -228,7 +228,7 @@ public:
         overseer->set_balancer(std::make_shared<load_balancer_t>(overseer));
 
         // Create a TCP server and publish it.
-        COCAINE_LOG_TRACE(log, "publishing application service with the context");
+        COCAINE_LOG_DEBUG(log, "publishing application service with the context");
         context.insert(manifest.name, std::make_unique<actor_t>(
             context,
             std::make_shared<asio::io_service>(),
@@ -236,7 +236,7 @@ public:
         ));
 
         // Create an unix actor and bind to {manifest->name}.{pid} unix-socket.
-        COCAINE_LOG_TRACE(log, "publishing worker service with the context");
+        COCAINE_LOG_DEBUG(log, "publishing worker service with the context");
         engine.reset(new unix_actor_t(
             context,
             manifest.endpoint,
@@ -251,7 +251,7 @@ public:
     }
 
     ~running_t() {
-        COCAINE_LOG_TRACE(log, "removing application service from the context");
+        COCAINE_LOG_DEBUG(log, "removing application service from the context");
 
         try {
             // NOTE: It can throw if someone has removed the service from the context, it's valid.
@@ -329,7 +329,7 @@ public:
         loop(std::make_shared<asio::io_service>()),
         work(std::make_unique<asio::io_service::work>(*loop))
     {
-        COCAINE_LOG_TRACE(log, "application has initialized its internal state");
+        COCAINE_LOG_DEBUG(log, "application has initialized its internal state");
 
         thread = boost::thread([=] {
             loop->run();
@@ -337,12 +337,12 @@ public:
     }
 
     ~app_state_t() {
-        COCAINE_LOG_TRACE(log, "application is destroying its internal state");
+        COCAINE_LOG_DEBUG(log, "application is destroying its internal state");
 
         work.reset();
         thread.join();
 
-        COCAINE_LOG_TRACE(log, "application has destroyed its internal state");
+        COCAINE_LOG_DEBUG(log, "application has destroyed its internal state");
     }
 
     const manifest_t&
@@ -362,7 +362,7 @@ public:
                 throw std::logic_error("invalid state");
             }
 
-            COCAINE_LOG_TRACE(log, "app is spooling");
+            COCAINE_LOG_DEBUG(log, "app is spooling");
             state.reset(new state::spooling_t(
                 context,
                 *loop,

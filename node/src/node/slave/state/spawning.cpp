@@ -22,11 +22,11 @@ spawning_t::name() const noexcept {
 
 void
 spawning_t::cancel() {
-    COCAINE_LOG_TRACE(slave->log, "processing spawn timer cancellation");
+    COCAINE_LOG_DEBUG(slave->log, "processing spawn timer cancellation");
 
     try {
         const auto cancelled = timer.cancel();
-        COCAINE_LOG_TRACE(slave->log, "processing spawn timer cancellation: done (%d cancelled)", cancelled);
+        COCAINE_LOG_DEBUG(slave->log, "processing spawn timer cancellation: done (%d cancelled)", cancelled);
     } catch (const std::system_error& err) {
         // If we are here, then something weird occurs with the timer.
         COCAINE_LOG_WARNING(slave->log, "unable to cancel spawn timer: %s", err.what());
@@ -44,7 +44,7 @@ spawning_t::spawn(unsigned long timeout) {
     COCAINE_LOG_DEBUG(slave->log, "slave is spawning using '%s', timeout: %.2f ms",
                       slave->context.manifest.executable, timeout);
 
-    COCAINE_LOG_TRACE(slave->log, "locating the Locator endpoint list");
+    COCAINE_LOG_DEBUG(slave->log, "locating the Locator endpoint list");
     auto locator = slave->context.context.locate("locator");
     if (!locator || locator->endpoints().empty()) {
         COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: failed to determine the Locator endpoint");
@@ -65,7 +65,7 @@ spawning_t::spawn(unsigned long timeout) {
     }
 
     // Prepare command line arguments for worker instance.
-    COCAINE_LOG_TRACE(slave->log, "preparing command line arguments");
+    COCAINE_LOG_DEBUG(slave->log, "preparing command line arguments");
     std::map<std::string, std::string> args;
     args["--uuid"]     = slave->context.id;
     args["--app"]      = slave->context.manifest.name;
@@ -83,7 +83,7 @@ spawning_t::spawn(unsigned long timeout) {
             slave->context.profile.isolate.args
         );
 
-        COCAINE_LOG_TRACE(slave->log, "spawning");
+        COCAINE_LOG_DEBUG(slave->log, "spawning");
 
         timer.expires_from_now(boost::posix_time::milliseconds(timeout));
         timer.async_wait(trace_t::bind(&spawning_t::on_timeout, shared_from_this(), ph::_1));
@@ -141,7 +141,7 @@ spawning_t::on_spawn(std::chrono::high_resolution_clock::time_point start) {
 void
 spawning_t::on_timeout(const std::error_code& ec) {
     if (ec) {
-        COCAINE_LOG_TRACE(slave->log, "spawn timer has called its completion handler: cancelled");
+        COCAINE_LOG_DEBUG(slave->log, "spawn timer has called its completion handler: cancelled");
     } else {
         COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: timeout");
 

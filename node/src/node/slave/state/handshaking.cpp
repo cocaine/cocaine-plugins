@@ -15,7 +15,7 @@ handshaking_t::handshaking_t(std::shared_ptr<state_machine_t> slave_, std::uniqu
     handle(std::move(handle_)),
     birthtime(std::chrono::high_resolution_clock::now())
 {
-    COCAINE_LOG_TRACE(slave->log, "slave is attaching the standard output handler");
+    COCAINE_LOG_DEBUG(slave->log, "slave is attaching the standard output handler");
 
     slave->fetcher.apply([&](std::shared_ptr<fetcher_t>& fetcher) {
         // If there is no fetcher already - it only means, that the slave has been shutted down
@@ -34,11 +34,11 @@ handshaking_t::name() const noexcept {
 }
 
 void handshaking_t::cancel() {
-    COCAINE_LOG_TRACE(slave->log, "processing activation timer cancellation");
+    COCAINE_LOG_DEBUG(slave->log, "processing activation timer cancellation");
 
     try {
         const auto cancelled = timer->cancel();
-        COCAINE_LOG_TRACE(slave->log, "processing activation timer cancellation: done (%d cancelled)", cancelled);
+        COCAINE_LOG_DEBUG(slave->log, "processing activation timer cancellation: done (%d cancelled)", cancelled);
     } catch (const std::system_error& err) {
         COCAINE_LOG_WARNING(slave->log, "unable to cancel activation timer: %s", err.what());
     }
@@ -92,7 +92,7 @@ handshaking_t::start(unsigned long timeout) {
 void
 handshaking_t::on_timeout(const std::error_code& ec) {
     if (ec) {
-        COCAINE_LOG_TRACE(slave->log, "activation timer has called its completion handler: cancelled");
+        COCAINE_LOG_DEBUG(slave->log, "activation timer has called its completion handler: cancelled");
     } else {
         COCAINE_LOG_ERROR(slave->log, "unable to activate slave: timeout");
 
