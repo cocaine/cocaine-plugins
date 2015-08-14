@@ -201,7 +201,7 @@ namespace {
             } else {
                 endpoints.assign(endpoint, boost::asio::ip::tcp::resolver::iterator());
                 socket = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
-                COCAINE_LOG_TRACE(logger, "connecting the socket");
+                COCAINE_LOG_DEBUG(logger, "connecting the socket");
                 socket->async_connect(*endpoint,
                                       std::bind(&tcp_connector::handler,
                                                 this,
@@ -257,7 +257,7 @@ connection_t::connect(boost::asio::io_service& ioservice,
     if(endpoint.is_unix()) {
         auto s = std::make_shared<boost::asio::local::stream_protocol::socket>(ioservice);
         boost::system::error_code error;
-        COCAINE_LOG_TRACE(m_logger, "creating a connection to %s", endpoint.get_path());
+        COCAINE_LOG_DEBUG(m_logger, "creating a connection to %s", endpoint.get_path());
 
         s->async_connect(boost::asio::local::stream_protocol::endpoint(endpoint.get_path()),
                          std::bind(&local_connection_handler,
