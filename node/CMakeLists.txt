@@ -25,7 +25,6 @@ add_library(node MODULE
     src/node.cpp
     src/node/app.cpp
     src/node/app/stats.cpp
-    src/node/balancing/load.cpp
     src/node/dispatch/client.cpp
     src/node/dispatch/worker.cpp
     src/node/error.cpp

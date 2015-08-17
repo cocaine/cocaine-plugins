@@ -9,7 +9,6 @@
 #include "cocaine/rpc/actor_unix.hpp"
 #include "cocaine/traits/dynamic.hpp"
 
-#include "cocaine/detail/service/node/balancing/load.hpp"
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 #include "cocaine/detail/service/node/dispatch/handshaker.hpp"
 #include "cocaine/detail/service/node/dispatch/hostess.hpp"
@@ -22,6 +21,78 @@ namespace ph = std::placeholders;
 using namespace cocaine;
 using namespace cocaine::service;
 using namespace cocaine::service::node;
+
+// While the client is connected it's okay, balance on numbers depending on received.
+class control_slot_t:
+    public io::basic_slot<io::app::control>
+{
+    struct controlling_slot_t:
+        public io::basic_slot<io::app::control>::dispatch_type
+    {
+        typedef io::basic_slot<io::app::control>::dispatch_type super;
+
+        typedef io::event_traits<io::app::control>::dispatch_type dispatch_type;
+        typedef io::protocol<dispatch_type>::scope protocol;
+
+        control_slot_t* p;
+
+        controlling_slot_t(control_slot_t* p_):
+            p(p_),
+            super("controlling")
+        {
+            on<protocol::chunk>([&](const std::size_t& size) {
+                p->overseer->keep_alive(size);
+            });
+
+            p->locked.store(true);
+        }
+
+        ~controlling_slot_t() {
+            p->locked.store(false);
+        }
+
+        virtual
+        void
+        discard(const std::error_code& ec) const {
+            COCAINE_LOG_DEBUG(p->log, "client has been disappeared, assuming direct control");
+            p->overseer->keep_alive(0);
+        }
+    };
+
+    typedef std::shared_ptr<const io::basic_slot<io::app::control>::dispatch_type> result_type;
+
+    const std::unique_ptr<logging::log_t> log;
+    std::atomic<bool> locked;
+    std::shared_ptr<overseer_t> overseer;
+
+public:
+    control_slot_t(std::shared_ptr<overseer_t> overseer_, std::unique_ptr<logging::log_t> log_):
+        log(std::move(log_)),
+        locked(false),
+        overseer(overseer_)
+    {
+        COCAINE_LOG_DEBUG(log, "control slot has been created");
+    }
+
+    ~control_slot_t() {
+        COCAINE_LOG_DEBUG(log, "control slot has been destroyed");
+    }
+
+    boost::optional<result_type>
+    operator()(tuple_type&& args, upstream_type&& upstream) {
+        typedef io::protocol<io::event_traits<io::app::control>::upstream_type>::scope protocol;
+
+        const auto dispatch = tuple::invoke(std::move(args), [&]() -> result_type {
+            if (locked) {
+                upstream.send<protocol::error>(std::make_error_code(std::errc::resource_unavailable_try_again));
+                return nullptr;
+            }
+            return std::make_shared<controlling_slot_t>(this);
+        });
+
+        return boost::make_optional(dispatch);
+    }
+};
 
 /// App dispatch, manages incoming enqueue requests. Adds them to the queue.
 class app_dispatch_t:
@@ -38,13 +109,15 @@ public:
     app_dispatch_t(context_t& context, const std::string& name, std::shared_ptr<overseer_t> overseer_) :
         dispatch<io::app_tag>(name),
         log(context.log(format("%s/dispatch", name))),
-        overseer(std::move(overseer_))
+        overseer(overseer_)
     {
         on<io::app::enqueue>(std::make_shared<slot_type>(
             std::bind(&app_dispatch_t::on_enqueue, this, ph::_1, ph::_2, ph::_3)
         ));
 
         on<io::app::info>(std::bind(&app_dispatch_t::on_info, this));
+
+        on<io::app::control>(std::make_shared<control_slot_t>(overseer_, context.log(format("%s/control", name))));
     }
 
     ~app_dispatch_t() {
@@ -224,9 +297,6 @@ public:
         // Create the Overseer - slave spawner/despawner plus the event queue dispatcher.
         overseer.reset(new overseer_t(context, manifest, profile, loop));
 
-        // Create the event balancer.
-        overseer->set_balancer(std::make_shared<load_balancer_t>(overseer));
-
         // Create a TCP server and publish it.
         COCAINE_LOG_DEBUG(log, "publishing application service with the context");
         context.insert(manifest.name, std::make_unique<actor_t>(
@@ -265,7 +335,7 @@ public:
         }
 
         engine->terminate();
-        overseer->terminate();
+        overseer->cancel();
     }
 
     virtual

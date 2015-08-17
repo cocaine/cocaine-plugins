@@ -74,6 +74,20 @@ struct info {
     >::tag upstream_type;
 };
 
+struct control {
+    typedef app_tag tag;
+
+    static const char* alias() noexcept {
+        return "control";
+    }
+
+    typedef stream_of<
+     /* Number of workers we want the App to be kept alive. Non-positive values means rolling back
+        to the default logic. */
+        int
+    >::tag dispatch_type;
+};
+
 }; // struct app
 
 template<>
@@ -84,7 +98,8 @@ struct protocol<app_tag> {
 
     typedef boost::mpl::list<
         app::enqueue,
-        app::info
+        app::info,
+        app::control
     >::type messages;
 
     typedef app scope;

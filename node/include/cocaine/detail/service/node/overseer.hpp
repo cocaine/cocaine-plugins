@@ -3,12 +3,10 @@
 #include <deque>
 #include <string>
 
-#include <cocaine/logging.hpp>
-
 #include <cocaine/rpc/dispatch.hpp>
 
-#include "cocaine/idl/rpc.hpp"
 #include "cocaine/idl/node.hpp"
+#include "cocaine/idl/rpc.hpp"
 
 #include "cocaine/detail/service/node/app/stats.hpp"
 #include "cocaine/detail/service/node/event.hpp"
@@ -16,13 +14,11 @@
 #include "cocaine/detail/service/node/slot.hpp"
 
 namespace cocaine {
-
-class balancer_t;
-class unix_actor_t;
-class slave_t;
-class control_t;
-class client_rpc_dispatch_t;
-
+    class balancer_t;
+    class client_rpc_dispatch_t;
+    class control_t;
+    class slave_t;
+    class unix_actor_t;
 } // namespace cocaine
 
 namespace cocaine {
@@ -64,12 +60,10 @@ private:
 
     /// Slave pool.
     synchronized<pool_type> pool;
+    std::atomic<int> pool_target;
 
     /// Pending queue.
     synchronized<queue_type> queue;
-
-    /// The application balancing policy.
-    std::shared_ptr<balancer_t> balancer;
 
     /// Statistics.
     stats_t stats;
@@ -79,26 +73,15 @@ public:
                manifest_t manifest,
                profile_t profile,
                std::shared_ptr<asio::io_service> loop);
+
     ~overseer_t();
 
-    std::shared_ptr<asio::io_service>
-    io_context() const;
-
-    /// \todo not sure about this method necessity, consider passing a shared logger pointer to the
-    /// balancer.
-    const logging::log_t&
-    logger() const {
-        return *log;
-    }
-
-    /// Returns a const reference to the application's manifest.
+    /// Returns copy of the current manifest.
     ///
     /// Application's manifest is considered constant during all app's lifetime and can be
     /// changed only through restarting.
-    const manifest_t&
-    manifest() const {
-        return manifest_;
-    }
+    manifest_t
+    manifest() const;
 
     /// Returns copy of the current profile, which is used to spawn new slaves.
     ///
@@ -107,24 +90,15 @@ public:
     profile_t
     profile() const;
 
-    locked_ptr<pool_type>
-    get_pool();
-
-    locked_ptr<queue_type>
-    get_queue();
-
-    /// Returns the complete info about how the application works.
-    dynamic_t::object_t
-    info(io::node::info::flags_t flags) const;
-
     /// Returns application total uptime in seconds.
     std::chrono::seconds
     uptime() const;
 
-    // Modifiers.
+    /// Returns the complete info about how the application works using json-like object.
+    dynamic_t::object_t
+    info(io::node::info::flags_t flags) const;
 
-    void
-    set_balancer(std::shared_ptr<balancer_t> balancer);
+    // Modifiers.
 
     /// Enqueues the new event into the most appropriate slave.
     ///
@@ -144,8 +118,11 @@ public:
             app::event_t event,
             boost::optional<service::node::slave::id_t> id);
 
-    //std::shared_ptr<stream_t>
-    //enqueue(std::shared_ptr<stream_t>&& downstream, app::event_t event, boost::optional<service::node::slave::id_t> id);
+    /// Tries to keep alive at least `count` workers no matter what.
+    ///
+    /// Zero value is allowed and means not to spawn workers
+    void
+    keep_alive(int count);
 
     /// Creates a new handshake dispatch, which will be consumed after a new incoming connection
     /// attached.
@@ -161,17 +138,14 @@ public:
     io::dispatch_ptr_t
     prototype();
 
+    /// Cancels all asynchronous pending operations, preparing for destruction.
+    void
+    cancel();
+
+private:
     /// Spawns a new slave using current manifest and profile.
     void
-    spawn();
-
-    /// \overload
-    void
-    spawn(locked_ptr<pool_type>& pool);
-
-    /// \overload
-    void
-    spawn(locked_ptr<pool_type>&& pool);
+    spawn(pool_type& pool);
 
     /// \warning must be called under the pool lock.
     void
@@ -184,10 +158,6 @@ public:
     void
     despawn(const std::string& id, despawn_policy_t policy);
 
-    void
-    terminate();
-
-private:
     std::shared_ptr<control_t>
     on_handshake(const std::string& id,
                  std::shared_ptr<session_t> session,
@@ -195,6 +165,12 @@ private:
 
     void
     on_slave_death(const std::error_code& ec, std::string uuid);
+
+    void
+    rebalance_events();
+
+    void
+    rebalance_slaves();
 };
 
 }
