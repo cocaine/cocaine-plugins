@@ -271,7 +271,8 @@ overseer_t::uptime() const {
 }
 
 void
-overseer_t::keep_alive(std::size_t count) {
+overseer_t::keep_alive(int count) {
+    count = std::max(0, count);
     COCAINE_LOG_DEBUG(log, "changed keep-alive slave count to %d", count);
 
     pool_target = count;

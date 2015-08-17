@@ -77,9 +77,15 @@ struct info {
 struct control {
     typedef app_tag tag;
 
-    static const char* alias() { return "control"; }
+    static const char* alias() noexcept {
+        return "control";
+    }
 
-    typedef stream_of<std::size_t>::tag dispatch_type;
+    typedef stream_of<
+     /* Number of workers we want the App to be kept alive. Non-positive values means rolling back
+        to the default logic. */
+        int
+    >::tag dispatch_type;
 };
 
 }; // struct app

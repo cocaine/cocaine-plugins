@@ -119,8 +119,10 @@ public:
             boost::optional<service::node::slave::id_t> id);
 
     /// Tries to keep alive at least `count` workers no matter what.
+    ///
+    /// Zero value is allowed and means not to spawn workers
     void
-    keep_alive(std::size_t count);
+    keep_alive(int count);
 
     /// Creates a new handshake dispatch, which will be consumed after a new incoming connection
     /// attached.
