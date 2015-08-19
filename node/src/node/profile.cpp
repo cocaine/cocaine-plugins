@@ -32,19 +32,19 @@ profile_t::profile_t(context_t& context, const std::string& name_):
 {
     const auto& config = as_object();
 
-    log_output = as_object().at("log-output", defaults::log_output).as_bool();
+    log_output = as_object().at("log-output", false).as_bool();
 
     timeout.spawn     = 1000 * config.at("spawn-timeout", 1.0).to<double>();
     timeout.handshake = 1000 * config.at("handshake-timeout", 5.0).to<double>();
-    timeout.heartbeat = 1000 * config.at("heartbeat-timeout", defaults::heartbeat_timeout).to<double>();
+    timeout.heartbeat = 1000 * config.at("heartbeat-timeout", 30.0f).to<double>();
     timeout.seal      = 1000 * config.at("seal-timeout", 60.0).to<double>();
     timeout.terminate = 1000 * config.at("terminate-timeout", 10.0).to<double>();
-    timeout.idle      = 1000 * config.at("idle-timeout", defaults::idle_timeout).to<double>();
+    timeout.idle      = 1000 * config.at("idle-timeout", 600.0f).to<double>();
 
-    concurrency         = as_object().at("concurrency", defaults::concurrency).to<uint64_t>();
-    crashlog_limit      = as_object().at("crashlog-limit", defaults::crashlog_limit).to<uint64_t>();
-    pool_limit          = as_object().at("pool-limit", defaults::pool_limit).to<uint64_t>();
-    queue_limit         = as_object().at("queue-limit", defaults::queue_limit).to<uint64_t>();
+    concurrency         = as_object().at("concurrency", 10L).to<uint64_t>();
+    crashlog_limit      = as_object().at("crashlog-limit", 50L).to<uint64_t>();
+    pool_limit          = as_object().at("pool-limit", 10L).to<uint64_t>();
+    queue_limit         = as_object().at("queue-limit", 100L).to<uint64_t>();
 
     unsigned long default_threshold = std::max(1UL, queue_limit / pool_limit / 2);
 
