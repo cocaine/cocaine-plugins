@@ -48,7 +48,7 @@ state_machine_t::state_machine_t(lock_t, slave_context context, asio::io_service
     cleanup(std::move(cleanup)),
     lines(context.profile.crashlog_limit),
     shutdowned(false),
-    counter{}
+    counter{1}
 {
     COCAINE_LOG_DEBUG(log, "slave state machine has been initialized");
 }
