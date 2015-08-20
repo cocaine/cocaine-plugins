@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.3.10) unstable; urgency=low
+
+  * Node: store traces in the event queue to restore just right before
+    processing.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 20 Aug 2015 20:07:34 +0300
+
 cocaine-plugins (0.12.3.9) unstable; urgency=low
 
   * Node: the spool dir belongs to Node::V2, so its creation is moved
