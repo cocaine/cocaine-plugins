@@ -98,9 +98,9 @@ spawning_t::spawn(unsigned long timeout) {
         // a callback function to the Isolate.
         // NOTE: The callback must be called from the event loop thread, otherwise the behavior
         // is undefined.
-        slave->loop.post(detail::move_handler(trace_t::bind(
+        slave->loop.post(trace_t::bind(
             &spawning_t::on_spawn, shared_from_this(), std::chrono::high_resolution_clock::now()
-        )));
+        ));
     } catch(const std::system_error& err) {
         COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: %s", err.code().message());
 
