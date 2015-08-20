@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -e
+
+case $1 in
+    configure)
+        # Set the correct permissions on the cocaine
+        # runtime resources directory
+        chown -R cocaine /var/spool/cocaine
+        ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+
+    *)
+        echo "postinst called with an unknown argument \`$1'" >&2
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0
+
