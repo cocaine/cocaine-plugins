@@ -37,8 +37,33 @@ public:
         slave_t
     > pool_type;
 
+    struct channel_wrapper_t {
+        slave::channel_t channel;
+        trace_t trace;
+
+        slave::channel_t&
+        operator*() {
+            return channel;
+        }
+
+        const slave::channel_t&
+        operator*() const {
+            return channel;
+        }
+
+        slave::channel_t*
+        operator->() {
+            return &channel;
+        }
+
+        const slave::channel_t*
+        operator->() const {
+            return &channel;
+        }
+    };
+
     typedef std::deque<
-        slave::channel_t
+        channel_wrapper_t
     > queue_type;
 
 private:

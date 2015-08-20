@@ -153,7 +153,7 @@ public:
             } else {
                 const auto min = *boost::min_element(queue |
                     boost::adaptors::transformed(+[](const value_type& cur) {
-                        return cur.event.birthstamp;
+                        return cur->event.birthstamp;
                     })
                 );
 
@@ -298,9 +298,12 @@ overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstre
     auto dispatch = std::make_shared<client_rpc_dispatch_t>(manifest().name);
 
     queue->push_back({
-        std::move(event),
-        dispatch,
-        std::move(downstream),
+        {
+            std::move(event),
+            dispatch,
+            std::move(downstream)
+        },
+        trace_t::current()
     });
 
     ++stats.requests.accepted;
@@ -482,7 +485,8 @@ overseer_t::rebalance_events() {
                 auto& payload = queue.front();
 
                 try {
-                    assign(*slave, payload);
+                    trace_t::restore_scope_t scope(payload.trace);
+                    assign(*slave, *payload);
                     // The slave may become invalid and reject the assignment (or reject for any
                     // other reasons). We pop the channel only on successful assignment to achieve
                     // strong exception guarantee.
