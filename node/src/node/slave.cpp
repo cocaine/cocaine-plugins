@@ -109,7 +109,7 @@ state_machine_t::stats() const {
         }
 
         result.load = channels.size();
-        result.total = counter;
+        result.total = counter - 1;
 
         auto it = std::min_element(
             channels.begin(),
