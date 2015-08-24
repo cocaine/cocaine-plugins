@@ -130,7 +130,7 @@ struct urlfetch_get_handler {
 
             if (reply.code() == 0) {
                 // Socket-only error, no valid http response
-                promise.abort(error.value(),
+                promise.abort(std::make_error_code(static_cast<std::errc>(error.value())),
                               cocaine::format("Unable to download %s, error %s",
                                               reply.request().url().to_string(),
                                               error.message()));

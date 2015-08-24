@@ -1,3 +1,140 @@
+cocaine-plugins (0.12.3.10) unstable; urgency=low
+
+  * Node: store traces in the event queue to restore just right before
+    processing.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 20 Aug 2015 20:07:34 +0300
+
+cocaine-plugins (0.12.3.9) unstable; urgency=low
+
+  * Node: the spool dir belongs to Node::V2, so its creation is moved
+    to Node plugin package
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 20 Aug 2015 19:24:36 +0300
+
+cocaine-plugins (0.12.3.8) unstable; urgency=low
+
+  * Hot fix: adapt core hot fix to prevent possible old inlined code.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 19 Aug 2015 21:30:17 +0300
+
+cocaine-plugins (0.12.3.7) unstable; urgency=low
+
+  * Node: increased start counter for slave channels
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 19 Aug 2015 17:10:42 +0300
+
+cocaine-plugins (0.12.3.6) unstable; urgency=low
+
+  * Node: external orchestration support.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 17 Aug 2015 19:11:03 +0300
+
+cocaine-plugins (0.12.3.5) unstable; urgency=low
+
+  * Logging: s/trace/debug for logs to match Core changes.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 14 Aug 2015 10:07:45 +0300
+
+cocaine-plugins (0.12.3.4) unstable; urgency=low
+
+  * Node: Zipkin support.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 07 Aug 2015 16:01:52 +0300
+
+cocaine-plugins (0.12.3.3) unstable; urgency=low
+
+  * Node: error categories and its notification review.
+  * Now applications should keep an error code if they are in broken state.
+  * More logging added to be able to determine what's going on within isolation
+    methods.
+  * Exceptions are now caught for cases where `async_spool` method fails
+    immediately.
+  * Also isolate API now provides a method which gives reference to its event
+    loop.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 05 Aug 2015 22:47:54 +0500
+
+cocaine-plugins (0.12.3.2) unstable; urgency=low
+
+  * Docker: added cURL error category.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 05 Aug 2015 21:26:15 +0500
+
+cocaine-plugins (0.12.3.1) unstable; urgency=low
+
+  * Docker: increased cURL timeout.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 05 Aug 2015 21:15:05 +0500
+
+cocaine-plugins (0.12.3.0~rc4) unstable; urgency=low
+
+  * Docker: changed dependency from lxc-docker to docker-engine (Docker 1.7.1)
+
+ -- Mikhail Kazantsev <kazan417@mail.ru>  Wed, 05 Aug 2015 00:35:12 +0700
+
+cocaine-plugins (0.12.3.0~rc3) unstable; urgency=low
+
+  * Node: enable debialization.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 31 Jul 2015 15:19:00 +0300
+
+cocaine-plugins (0.12.3.0~rc2) unstable; urgency=low
+
+  * Compatibility with Core 0.12.3 with Zipkin.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 30 Jul 2015 16:58:35 +0300
+
+cocaine-plugins (0.12.3.0~rc1) unstable; urgency=low
+
+  * Compatibility with Core 0.12.3.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 27 Jul 2015 20:29:10 +0300
+
+cocaine-plugins (0.12.2.3) unstable; urgency=low
+
+  * Node: moved from the core.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 27 Jul 2015 16:50:56 +0300
+
+cocaine-plugins (0.12.2.2) unstable; urgency=low
+
+  * Docker: more logs added.
+  * Docker: fixed compatibility with Docker 1.7.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 23 Jul 2015 19:50:09 +0300
+
+cocaine-plugins (0.12.2.1) unstable; urgency=low
+
+  * Docker: a dumb attempt to make it thread-safe.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 20 Jul 2015 12:29:33 +0300
+
+cocaine-plugins (0.12.2.0) unstable; urgency=low
+
+  * Docker: ability to implement asynchronous spooling/spawning using new isolate
+    interface.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 08 Jul 2015 16:00:58 +0300
+
+cocaine-plugins (0.12.1.2) unstable; urgency=low
+
+  * Compatibility with Core 0.12.1.6 to prevent accidental inlining.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 02 Jul 2015 16:45:44 +0300
+
+cocaine-plugins (0.12.1.1) unstable; urgency=low
+
+  * Bug fix: unicorn discovery is not thread safe.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 02 Jul 2015 16:45:44 +0300
+
+cocaine-plugins (0.12.1.0) unstable; urgency=low
+
+  * Error categories support.
+
+ -- Dmitry Unkovsky <diunko@yandex-team.ru>  Fri, 30 Jun 2015 17:20:47 +0300
+
 cocaine-plugins (0.12.0.8) unstable; urgency=low
 
   * Misc: dropped 'using namespace std::placeholders' in favor of namespace
@@ -35,7 +172,7 @@ cocaine-plugins (0.12.0.4) unstable; urgency=low
 cocaine-plugins (0.12.0.3) unstable; urgency=low
 
   * [Docker] Port network_mode and capabilities from v0.11
-  * [Docker] Fix a possible corruption of a socket path 
+  * [Docker] Fix a possible corruption of a socket path
 
  -- Anton Tyurin <noxiouz@yandex.ru>  Wed, 18 Mar 2015 12:29:07 +0300
 
