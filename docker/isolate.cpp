@@ -104,9 +104,9 @@ private:
 
 } // namespace
 
-docker_t::docker_t(context_t& context, const std::string& name, const dynamic_t& args):
-    category_type(context, name, args),
-    m_log(context.log("app/" + name)),
+docker_t::docker_t(context_t& context,  asio::io_service& io_context, const std::string& name, const dynamic_t& args):
+    category_type(context, io_context, name, args),
+    m_log(context.log("app/" + name, {{"isolate", "docker"}})),
     m_do_pool(false),
     m_docker_client(
         docker::endpoint_t::from_string(args.as_object().at("endpoint", "unix:///var/run/docker.sock").as_string()),
@@ -126,7 +126,7 @@ docker_t::docker_t(context_t& context, const std::string& name, const dynamic_t&
                 m_image += config["registry"].as_string() + "/";
             }
         } else {
-            COCAINE_LOG_WARNING(m_log, "Docker registry is not specified. Only local images will be used.");
+            COCAINE_LOG_WARNING(m_log, "docker registry is not specified - only local images will be used");
         }
 
         if(config.count("repository") > 0) {
@@ -175,7 +175,6 @@ docker_t::docker_t(context_t& context, const std::string& name, const dynamic_t&
         m_run_config.AddMember("Volumes", v5, m_json_allocator);
         rapidjson::Value empty_object(rapidjson::kObjectType);
         m_run_config["Volumes"].AddMember(m_runtime_path.c_str(), empty_object, m_json_allocator);
-        m_run_config.AddMember("VolumesFrom", "", m_json_allocator);
         m_run_config.AddMember("WorkingDir", "/", m_json_allocator);
         m_run_config.AddMember("NetworkMode", m_network_mode.data(), m_json_allocator);
     } catch(const std::exception& e) {
@@ -189,24 +188,26 @@ docker_t::~docker_t() {
 
 void
 docker_t::spool() {
-    try {
-        if(m_do_pool) {
-            m_docker_client.pull_image(m_image, m_tag);
-        }
-    } catch(const std::exception& e) {
-        throw cocaine::error_t("%s", e.what());
+    if(m_do_pool) {
+        m_docker_client.pull_image(m_image, m_tag);
     }
 }
 
 std::unique_ptr<api::handle_t>
 docker_t::spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment) {
+    std::unique_ptr<container_handle_t> handle;
     try {
+        // This is total bullshit, but we need to fully rework docker plugin.
+        std::lock_guard<std::mutex> guard(spawn_lock);
+
         // Prepare request to docker.
         auto& env = m_run_config["Env"];
         env.SetArray();
 
         // We should store here strings pushed to RapidJson array :(
         std::vector<std::string> environment_storage;
+
+
 
         for(auto it = environment.begin(); it != environment.end(); ++it) {
             environment_storage.emplace_back(it->first + "=" + it->second);
@@ -234,7 +235,7 @@ docker_t::spawn(const std::string& path, const api::string_map_t& args, const ap
         }
 
         // create container
-        std::unique_ptr<container_handle_t> handle(
+        handle.reset(
             new container_handle_t(m_docker_client.create_container(m_run_config))
         );
 

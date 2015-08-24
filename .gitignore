@@ -15,3 +15,8 @@ nbproject
 
 # Build directory
 build/*
+cocaine-plugins.config
+cocaine-plugins.creator
+cocaine-plugins.creator.user
+cocaine-plugins.files
+cocaine-plugins.includes

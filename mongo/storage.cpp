@@ -20,6 +20,8 @@
 
 #include "storage.hpp"
 
+#include <cerrno>
+
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
@@ -43,10 +45,10 @@ std::unique_ptr<DBClientBase> connect(const std::string& uri) {
         ptr = connection_string.connect(error);
 
         if(ptr == nullptr) {
-            throw storage_error_t(error);
+            throw std::system_error(std::error_code(-100, std::generic_category()), error);
         }
     } catch(const DBException& e) {
-        throw storage_error_t(e.what());
+        throw std::system_error(std::error_code(-100, std::generic_category()), e.what());
     }
 
     return std::unique_ptr<DBClientBase>(ptr);
@@ -75,12 +77,12 @@ mongo_storage_t::read(const std::string& collection, const std::string& key) {
         ));
 
         if(!file.exists()) {
-            throw storage_error_t("the specified object has not been found");
+            throw std::system_error(std::error_code(-ENOENT, std::system_category()), "the specified object has not been found");
         }
 
         file.write(buffer);
     } catch(const DBException& e) {
-        throw storage_error_t(e.what());
+        throw std::system_error(std::error_code(-100, std::generic_category()), e.what());
     }
 
     return buffer.str();
@@ -103,7 +105,7 @@ mongo_storage_t::write(const std::string& collection, const std::string& key, co
         // Store the blob itself.
         gridfs.storeFile(static_cast<const char*>(blob.data()), blob.size(), key);
     } catch(const DBException& e) {
-        throw storage_error_t(e.what());
+        throw std::system_error(std::error_code(-100, std::generic_category()), e.what());
     }
 }
 
@@ -131,7 +133,7 @@ mongo_storage_t::find(const std::string& collection, const std::vector<std::stri
             result.push_back(object["key"].String());
         }
     } catch(const DBException& e) {
-        throw storage_error_t(e.what());
+        throw std::system_error(std::error_code(-100, std::generic_category()), e.what());
     }
 
     return result;
@@ -151,7 +153,7 @@ mongo_storage_t::remove(const std::string& collection, const std::string& key) {
         // Remove the blob.
         gridfs.removeFile(key);
     } catch(const DBException& e) {
-        throw storage_error_t(e.what());
+        throw std::system_error(std::error_code(-100, std::generic_category()), e.what());
     }
 }
 

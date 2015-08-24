@@ -25,6 +25,7 @@
 
 #include <cocaine/api/isolate.hpp>
 
+#include <mutex>
 namespace cocaine { namespace isolate {
 
 class docker_t:
@@ -33,7 +34,7 @@ class docker_t:
     COCAINE_DECLARE_NONCOPYABLE(docker_t)
 
 public:
-    docker_t(context_t& context, const std::string& name, const dynamic_t& args);
+    docker_t(context_t& context, asio::io_service& io_context, const std::string& name, const dynamic_t& args);
 
     virtual
    ~docker_t();
@@ -48,6 +49,8 @@ public:
 
 private:
     std::shared_ptr<cocaine::logging::log_t> m_log;
+
+    std::mutex spawn_lock;
 
     std::string m_runtime_path;
     std::string m_image;

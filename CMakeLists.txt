@@ -10,13 +10,12 @@ OPTION(DOCKER "Build Docker Isolation plugin" ON)
 OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
+OPTION(NODE "Build Node service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(UNICORN "Build Unified configuration service plugin" ON)
 
-SET(CMAKE_MODULE_PATH
-    ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
-
+# Include our CMake libraries.
 INCLUDE(cmake/locate_library.cmake)
 
 FIND_PACKAGE(Boost 1.46.0
@@ -48,15 +47,16 @@ LINK_DIRECTORIES(
     ${LIBMSGPACK_LIBRARY_DIRS})
 
 SET(PLUGINS
-        cache
-        chrono
-        docker
-        elasticsearch
-        ipvs
-        mongo
-        urlfetch
-        graphite
-        unicorn)
+    cache
+    chrono
+    docker
+    elasticsearch
+    graphite
+    ipvs
+    mongo
+    node
+    unicorn
+    urlfetch)
 
 FOREACH(PLUGIN ${PLUGINS})
     STRING(TOUPPER ${PLUGIN} OPTION_NAME)

@@ -1,0 +1,4 @@
+usr/include/cocaine/api/isolate.hpp
+usr/include/cocaine/idl/node.hpp
+usr/include/cocaine/idl/rpc.hpp
+usr/include/cocaine/service/node.hpp
