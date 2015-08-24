@@ -207,7 +207,7 @@ zookeeper_api_t::put_action_t::operator()(int rc, zookeeper::node_stat const& st
             result->write(std::make_tuple(true, versioned_value_t(initial_value, stat.version)));
         }
     } catch (const std::system_error& e) {
-        COCAINE_LOG_WARNING(ctx.log, "failure during put action(%i): %s", e.code().value(), e.what());
+        COCAINE_LOG_WARNING(ctx.log, "failure during put action: [%i] %s - %s", e.code().value(), e.code().message(), e.what());
     }
 }
 
