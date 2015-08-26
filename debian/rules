@@ -2,16 +2,15 @@
 
 # Uncomment this to turn on verbose mode.
 #export DH_VERBOSE=1
-
 export DEB_BUILD_OPTIONS=parallel=$(shell grep -c ^processor /proc/cpuinfo)
 
-override_dh_shlibdeps:
-	dh_shlibdeps
+override_dh_strip:
 	for plugin in `find debian -maxdepth 1 -type d | grep 'libcocaine.*3' | sed -e 's/^debian\///g'`; \
 	do \
-		file=`echo $$plugin | sed -e 's/.*-\(.*\)3/\1/'`; \
-		dpkg-shlibdeps -Tdebian/$${plugin}.substvars debian/$${plugin}/usr/lib/cocaine/*.cocaine-plugin; \
-	done \
+        dbg_package=`echo $${plugin} | sed -e 's/3$$/-dbg/'`; \
+        echo "dh_strip -p$${plugin} --dbg-package=$${dbg_package};"; \
+        dh_strip -p$${plugin} --dbg-package=$${dbg_package}; \
+    done;
 
 %:
 	dh $@ --parallel
