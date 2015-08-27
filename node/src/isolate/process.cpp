@@ -341,10 +341,6 @@ process_t::process_t(context_t& context, asio::io_service& io_context, const std
 #ifdef COCAINE_ALLOW_CGROUPS
     int rv = 0;
 
-    if((rv = cgroup_init()) != 0) {
-        throw std::system_error(rv, error::cgroup_category(), "unable to initialize cgroups");
-    }
-
     m_cgroup = cgroup_new_cgroup(m_name.c_str());
 
     // NOTE: Looks like if this is not done, then libcgroup will chown everything as root.

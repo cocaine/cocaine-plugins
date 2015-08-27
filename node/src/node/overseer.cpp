@@ -5,7 +5,9 @@
 
 #include <blackhole/scoped_attributes.hpp>
 
-#include "cocaine/context.hpp"
+#include <cocaine/context.hpp>
+
+#include <cocaine/trace/trace.hpp>
 
 #include "cocaine/detail/service/node/manifest.hpp"
 #include "cocaine/detail/service/node/profile.hpp"
@@ -345,7 +347,7 @@ overseer_t::assign(slave_t& slave, slave::channel_t& payload) {
     const auto timestamp = payload.event.birthstamp;
 
     // TODO: Race possible.
-    overseer = shared_from_this();
+    auto overseer = shared_from_this();
     const auto channel = slave.inject(payload, [=](std::uint64_t channel) {
         const auto now = std::chrono::high_resolution_clock::now();
         const auto elapsed = std::chrono::duration<
