@@ -23,8 +23,7 @@ Description: Cocaine - Cache Service
 Package: libcocaine-plugin-cache-dev
 Architecture: any
 Section: libdevel
-Depends: ${misc:Depends}, libcocaine-plugin-cache3 (= ${binary:Version}),
- cocaine-framework-native (>= 0.12.0.0)
+Depends: ${misc:Depends}, libcocaine-plugin-cache3 (= ${binary:Version})
 Description: Cocaine - Cache Service (development headers)
  LRU Cache service for Cocaine. Development headers.
 
@@ -45,8 +44,7 @@ Description: Cocaine - Chrono Service
 Package: libcocaine-plugin-chrono-dev
 Architecture: any
 Section: libdevel
-Depends: ${misc:Depends}, libcocaine-plugin-chrono3 (= ${binary:Version}),
- cocaine-framework-native (>= 0.12.0.0)
+Depends: ${misc:Depends}, libcocaine-plugin-chrono3 (= ${binary:Version})
 Description: Cocaine - Chrono Service (development headers)
  Timer service for Cocaine. Development headers.
 
@@ -152,7 +150,6 @@ Package: libcocaine-plugin-urlfetch-dev
 Architecture: any
 Section: libdevel
 Depends: ${misc:Depends}, libcocaine-plugin-urlfetch3 (= ${binary:Version}),
- cocaine-framework-native (>= 0.12.0.0),
  libswarm-dev (>= 0.6.1.0), libswarm-dev (<< 0.7)
 Description: Cocaine - URLFetch Service (development headers)
  URLFetch service for Cocaine. Development headers.
