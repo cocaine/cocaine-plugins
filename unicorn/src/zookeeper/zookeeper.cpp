@@ -22,40 +22,6 @@
 
 namespace zookeeper {
 
-/*
-std::string
-get_error_message(int rc) {
-    switch (rc) {
-        case CHILD_NOT_ALLOWED :
-            return "Can not get value of a node with childs";
-        case INVALID_TYPE :
-            return "Invalid type of value stored for requested operation";
-        case INVALID_VALUE :
-            return "Could not unserialize value stored in zookeeper";
-        case COULD_NOT_CONNECT:
-            return "Could not reconnect to zookeper. Current errno:" + std::to_string(errno);
-        case UNKNOWN_ERROR:
-            return "Unknown zookeeper error";
-        case HANDLER_SCOPE_RELEASED:
-            return "Handler scope was released";
-        case INVALID_NODE_NAME:
-            return "Inavlid node name specified";
-        case INVALID_PATH:
-            return "Inavlid path specified";
-        case VERSION_NOT_ALLOWED:
-            return "Specified version is not allowed for command";
-        case INVALID_CONNECTION_ENDPOINT:
-            return "Invalid connection endpoint specified";
-        default:
-            return zerror(rc);
-    }
-}
-
-std::string get_error_message(int rc, const std::exception& e) {
-    return get_error_message(rc) + ", exception: " + e.what();
-}
-*/
-
 path_t
 path_parent(const path_t& path, unsigned int depth) {
     if(depth == 0) {
