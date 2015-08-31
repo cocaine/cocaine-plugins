@@ -170,7 +170,7 @@ void connection_t::check_rc(int rc) const {
 void connection_t::reconnect() {
 
     zhandle_t* new_zhandle = init();
-    if(!new_zhandle) {
+    if(!new_zhandle || is_unrecoverable(new_zhandle)) {
         if(session.valid()) {
             //Try to reset session before second attempt
             session.reset();
@@ -206,8 +206,13 @@ zhandle_t* connection_t::init() {
 void connection_t::reconnect_action_t::operator()(int type, int state, path_t /*path*/) {
     if(type == ZOO_SESSION_EVENT) {
         if(state == ZOO_EXPIRED_SESSION_STATE) {
-            parent.session.reset();
-            parent.reconnect();
+            try {
+                parent.session.reset();
+                parent.reconnect();
+            } catch (const std::system_error& e) {
+                // Swallow it and leave connection in disconnected state.
+                // That's all we can do if ZK is unavailable.
+            }
         }
     }
 }
