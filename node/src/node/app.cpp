@@ -41,7 +41,9 @@ class control_slot_t:
             super("controlling")
         {
             on<protocol::chunk>([&](const std::size_t& size) {
-                p->overseer->keep_alive(size);
+                if (auto overseer = p->overseer.lock()) {
+                    overseer->keep_alive(size);
+                }
             });
 
             p->locked.store(true);
@@ -55,7 +57,9 @@ class control_slot_t:
         void
         discard(const std::error_code& ec) const {
             COCAINE_LOG_DEBUG(p->log, "client has been disappeared, assuming direct control");
-            p->overseer->keep_alive(0);
+            if (auto overseer = p->overseer.lock()) {
+                overseer->keep_alive(0);
+            }
         }
     };
 
@@ -63,7 +67,7 @@ class control_slot_t:
 
     const std::unique_ptr<logging::log_t> log;
     std::atomic<bool> locked;
-    std::shared_ptr<overseer_t> overseer;
+    std::weak_ptr<overseer_t> overseer;
 
 public:
     control_slot_t(std::shared_ptr<overseer_t> overseer_, std::unique_ptr<logging::log_t> log_):
