@@ -465,6 +465,7 @@ overseer_t::rebalance_events() {
             return;
         }
 
+        COCAINE_LOG_DEBUG(log, "rebalancing events queue");
         queue.apply([&](queue_type& queue) {
             while (!queue.empty()) {
                 // Find an active slave with minimal load, which is not overloaded.
