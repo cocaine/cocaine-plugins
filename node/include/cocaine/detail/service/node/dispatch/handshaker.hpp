@@ -50,11 +50,13 @@ public:
 
     /// Here we need that shitty const cast, because `io::dispatch_ptr_t` is a shared pointer over
     /// constant dispatch.
-    void bind(std::shared_ptr<session_t> session) const {
+    void
+    bind(std::shared_ptr<session_t> session) const {
         const_cast<handshaker_t*>(this)->bind(std::move(session));
     }
 
-    void bind(std::shared_ptr<session_t> session) {
+    void
+    bind(std::shared_ptr<session_t> session) {
         std::unique_lock<std::mutex> lock(mutex);
         this->session = std::move(session);
         lock.unlock();
@@ -62,4 +64,4 @@ public:
     }
 };
 
-}
+} // namespace cocaine
