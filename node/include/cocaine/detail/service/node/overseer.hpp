@@ -5,6 +5,8 @@
 
 #include <cocaine/rpc/dispatch.hpp>
 
+#include <cocaine/trace/trace.hpp>
+
 #include "cocaine/idl/node.hpp"
 #include "cocaine/idl/rpc.hpp"
 

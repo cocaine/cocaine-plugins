@@ -3,6 +3,8 @@
 #include <cocaine/context.hpp>
 #include <cocaine/rpc/actor.hpp>
 
+#include <cocaine/trace/trace.hpp>
+
 #include "cocaine/api/isolate.hpp"
 
 #include "cocaine/detail/service/node/manifest.hpp"

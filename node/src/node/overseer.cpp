@@ -5,7 +5,9 @@
 
 #include <blackhole/scoped_attributes.hpp>
 
-#include "cocaine/context.hpp"
+#include <cocaine/context.hpp>
+
+#include <cocaine/trace/trace.hpp>
 
 #include "cocaine/detail/service/node/manifest.hpp"
 #include "cocaine/detail/service/node/profile.hpp"
@@ -345,6 +347,7 @@ overseer_t::assign(slave_t& slave, slave::channel_t& payload) {
     const auto timestamp = payload.event.birthstamp;
 
     // TODO: Race possible.
+    auto overseer = shared_from_this();
     const auto channel = slave.inject(payload, [=](std::uint64_t channel) {
         const auto now = std::chrono::high_resolution_clock::now();
         const auto elapsed = std::chrono::duration<
@@ -358,7 +361,7 @@ overseer_t::assign(slave_t& slave, slave::channel_t& payload) {
 
         // TODO: Hack, but at least it saves from the deadlock.
         // TODO: Notify watcher about channel finish.
-        loop->post(std::bind(&overseer_t::rebalance_events, shared_from_this()));
+        loop->post(std::bind(&overseer_t::rebalance_events, overseer));
     });
 
     // TODO: Notify watcher about channel started.
