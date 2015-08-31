@@ -29,8 +29,8 @@ fetcher_t::close() {
 
             try {
                 watcher.close();
-            } catch (const std::system_error&) {
-                // Eat.
+            } catch (const std::system_error& err) {
+                COCAINE_LOG_WARNING(slave->log, "unable to close standard output watcher: %s", err.what());
             }
         }
     });
