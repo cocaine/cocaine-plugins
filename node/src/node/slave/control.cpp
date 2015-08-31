@@ -64,7 +64,9 @@ control_t::discard(const std::error_code& ec) const {
     if (ec && !closed) {
         COCAINE_LOG_DEBUG(slave->log, "control channel has been discarded: %s", ec.message());
 
-        slave->shutdown(error::conrol_ipc_error);
+        slave->loop.post([=](){
+            slave->shutdown(error::conrol_ipc_error);
+        });
     }
 }
 
