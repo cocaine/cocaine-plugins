@@ -24,6 +24,11 @@ using namespace cocaine::service::node;
 
 struct overseer_proxy_t {
     std::shared_ptr<overseer_t> o;
+
+    explicit
+    overseer_proxy_t(std::shared_ptr<overseer_t> o):
+        o(std::move(o))
+    {}
 };
 
 // While the client is connected it's okay, balance on numbers depending on received.
@@ -305,7 +310,9 @@ public:
         name(manifest.name)
     {
         // Create the Overseer - slave spawner/despawner plus the event queue dispatcher.
-        overseer.reset(new overseer_proxy_t { std::make_shared<overseer_t>(context, manifest, profile, loop) });
+        overseer = std::make_shared<overseer_proxy_t>(
+            std::make_shared<overseer_t>(context, manifest, profile, loop)
+        );
 
         // Create a TCP server and publish it.
         COCAINE_LOG_DEBUG(log, "publishing application service with the context");
