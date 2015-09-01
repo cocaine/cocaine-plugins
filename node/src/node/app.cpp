@@ -22,6 +22,10 @@ using namespace cocaine;
 using namespace cocaine::service;
 using namespace cocaine::service::node;
 
+struct overseer_proxy_t {
+    std::shared_ptr<overseer_t> o;
+};
+
 // While the client is connected it's okay, balance on numbers depending on received.
 class control_slot_t:
     public io::basic_slot<io::app::control>
@@ -42,7 +46,7 @@ class control_slot_t:
         {
             on<protocol::chunk>([&](const std::size_t& size) {
                 if (auto overseer = p->overseer.lock()) {
-                    overseer->keep_alive(size);
+                    overseer->o->keep_alive(size);
                 }
             });
 
@@ -58,7 +62,7 @@ class control_slot_t:
         discard(const std::error_code& ec) const {
             COCAINE_LOG_DEBUG(p->log, "client has been disappeared, assuming direct control");
             if (auto overseer = p->overseer.lock()) {
-                overseer->keep_alive(0);
+                overseer->o->keep_alive(0);
             }
         }
     };
@@ -67,10 +71,10 @@ class control_slot_t:
 
     const std::unique_ptr<logging::log_t> log;
     std::atomic<bool> locked;
-    std::weak_ptr<overseer_t> overseer;
+    std::weak_ptr<overseer_proxy_t> overseer;
 
 public:
-    control_slot_t(std::shared_ptr<overseer_t> overseer_, std::unique_ptr<logging::log_t> log_):
+    control_slot_t(std::shared_ptr<overseer_proxy_t> overseer_, std::unique_ptr<logging::log_t> log_):
         log(std::move(log_)),
         locked(false),
         overseer(overseer_)
@@ -99,6 +103,8 @@ public:
 };
 
 /// App dispatch, manages incoming enqueue requests. Adds them to the queue.
+///
+/// \note lives until at least one connection left after actor has been destroyed.
 class app_dispatch_t:
     public dispatch<io::app_tag>
 {
@@ -107,10 +113,10 @@ class app_dispatch_t:
     const std::unique_ptr<logging::log_t> log;
 
     // Yes, weak pointer here indicates about application destruction.
-    std::weak_ptr<overseer_t> overseer;
+    std::weak_ptr<overseer_proxy_t> overseer;
 
 public:
-    app_dispatch_t(context_t& context, const std::string& name, std::shared_ptr<overseer_t> overseer_) :
+    app_dispatch_t(context_t& context, const std::string& name, std::shared_ptr<overseer_proxy_t> overseer_) :
         dispatch<io::app_tag>(name),
         log(context.log(format("%s/dispatch", name))),
         overseer(overseer_)
@@ -138,9 +144,9 @@ private:
         try {
             if (auto overseer = this->overseer.lock()) {
                 if (id.empty()) {
-                    return overseer->enqueue(upstream, event, boost::none);
+                    return overseer->o->enqueue(upstream, event, boost::none);
                 } else {
-                    return overseer->enqueue(upstream, event, service::node::slave::id_t(id));
+                    return overseer->o->enqueue(upstream, event, service::node::slave::id_t(id));
                 }
             } else {
                 // We shouldn't close the connection here, because there possibly can be events
@@ -164,7 +170,7 @@ private:
             flags = static_cast<io::node::info::flags_t>(
                   io::node::info::overseer_report);
 
-            return overseer->info(flags);
+            return overseer->o->info(flags);
         }
 
         throw std::system_error(std::make_error_code(std::errc::broken_pipe), "the application has been stopped");
@@ -286,7 +292,7 @@ class running_t:
     std::string name;
 
     std::unique_ptr<unix_actor_t> engine;
-    std::shared_ptr<overseer_t> overseer;
+    std::shared_ptr<overseer_proxy_t> overseer;
 
 public:
     running_t(context_t& context_,
@@ -299,7 +305,7 @@ public:
         name(manifest.name)
     {
         // Create the Overseer - slave spawner/despawner plus the event queue dispatcher.
-        overseer.reset(new overseer_t(context, manifest, profile, loop));
+        overseer.reset(new overseer_proxy_t { std::make_shared<overseer_t>(context, manifest, profile, loop) });
 
         // Create a TCP server and publish it.
         COCAINE_LOG_DEBUG(log, "publishing application service with the context");
@@ -314,7 +320,7 @@ public:
         engine.reset(new unix_actor_t(
             context,
             manifest.endpoint,
-            std::bind(&overseer_t::prototype, overseer),
+            std::bind(&overseer_t::prototype, overseer->o),
             [](io::dispatch_ptr_t handshaker, std::shared_ptr<session_t> session) {
                 std::static_pointer_cast<const handshaker_t>(handshaker)->bind(session);
             },
@@ -339,7 +345,7 @@ public:
         }
 
         engine->terminate();
-        overseer->cancel();
+        overseer->o->cancel();
     }
 
     virtual
@@ -348,9 +354,9 @@ public:
         dynamic_t::object_t info;
 
         if (is_overseer_report_required(flags)) {
-            info = overseer->info(flags);
+            info = overseer->o->info(flags);
         } else {
-            info["uptime"] = overseer->uptime().count();
+            info["uptime"] = overseer->o->uptime().count();
         }
 
         info["state"] = "running";
