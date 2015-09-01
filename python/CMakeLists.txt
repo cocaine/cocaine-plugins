@@ -29,7 +29,8 @@ TARGET_LINK_LIBRARIES(python
 SET_TARGET_PROPERTIES(python PROPERTIES
     COMPILE_FLAGS "${PYTHON_CFLAGS} -fno-strict-aliasing -std=c++0x"
     PREFIX ""
-    SUFFIX ".cocaine-plugin")
+    SUFFIX "${COCAINE_PLUGIN_SUFFIX}"
+)
 
 INSTALL(TARGETS python
     LIBRARY DESTINATION lib/cocaine

@@ -23,7 +23,7 @@ IF(MongoDB_FOUND)
 
     SET_TARGET_PROPERTIES(mongodb PROPERTIES
         PREFIX ""
-        SUFFIX ".cocaine-plugin"
+        SUFFIX "${COCAINE_PLUGIN_SUFFIX}"
         COMPILE_FLAGS "-std=c++0x")
 
     INSTALL(TARGETS mongodb

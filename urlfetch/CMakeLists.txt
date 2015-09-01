@@ -24,7 +24,7 @@ TARGET_LINK_LIBRARIES(urlfetch
 
 SET_TARGET_PROPERTIES(urlfetch PROPERTIES
     PREFIX ""
-    SUFFIX ".cocaine-plugin"
+    SUFFIX "${COCAINE_PLUGIN_SUFFIX}"
     COMPILE_FLAGS "-std=c++0x")
 
 INSTALL(TARGETS urlfetch
