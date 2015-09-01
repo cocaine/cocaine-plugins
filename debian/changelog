@@ -1,3 +1,14 @@
+cocaine-plugins (0.12.3.11) unstable; urgency=low
+
+  * Node, bug fix: make sure overseer is not dead on slave process.
+  * Node: reduced default kill timeout for process isolate.
+  * Node: added more warning logs.
+  * Node, bug fix: always notify both sides about termination.
+  * Node, bug fix: smart overseer lifetime tracking.
+  * Unicorn, bug fix: catch exception in watcher. Remove dead commented code.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 01 Sep 2015 17:58:09 +0300
+
 cocaine-plugins (0.12.3.10) unstable; urgency=low
 
   * Node: store traces in the event queue to restore just right before
