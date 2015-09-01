@@ -161,6 +161,8 @@ state_machine_t::inject(slave::channel_t& data, channel_handler handler) {
             }
         }
     );
+    channel->into_worker = data.dispatch;
+    channel->from_worker = dispatch;
 
     auto state = *this->state.synchronize();
     auto upstream = state->inject(dispatch);
@@ -259,14 +261,26 @@ state_machine_t::shutdown(std::error_code ec) {
         dump();
     }
 
+    data.channels.apply([&](channels_map_t& channels) {
+        const auto size = channels.size();
+        if (size > 0) {
+            COCAINE_LOG_WARNING(log, "slave is dropping %d sessions", size);
+        }
+
+        for (auto& channel : channels) {
+            loop.post([=]() {
+                channel.second->into_worker->discard(std::error_code(100, std::system_category()));
+                channel.second->from_worker->discard(std::error_code(100, std::system_category()));
+            });
+        }
+
+        channels.clear();
+    });
+
     // Check if the slave has been terminated externally. If so, do not call the cleanup callback.
     if (closed) {
         return;
     }
-
-    data.channels.apply([&](const channels_map_t& channels) {
-        COCAINE_LOG_WARNING(log, "slave is dropping %d sessions", channels.size());
-    });
 
     // NOTE: To prevent deadlock between session.channels and overseer.pool. Consider some
     // other solution.

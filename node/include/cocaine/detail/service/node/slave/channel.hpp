@@ -8,6 +8,9 @@
 
 namespace cocaine {
 
+class client_rpc_dispatch_t;
+class worker_rpc_dispatch_t;
+
 class channel_t:
     public std::enable_shared_from_this<channel_t>
 {
@@ -30,6 +33,10 @@ private:
     std::atomic<int> state;
     bool watched;
     std::mutex mutex;
+
+public:
+    std::shared_ptr<const client_rpc_dispatch_t> into_worker;
+    std::shared_ptr<const worker_rpc_dispatch_t> from_worker;
 
 public:
     channel_t(std::uint64_t id, time_point birthstamp, callback_type callback);
