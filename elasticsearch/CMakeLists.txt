@@ -21,7 +21,7 @@ TARGET_LINK_LIBRARIES(elasticsearch
 
 SET_TARGET_PROPERTIES(elasticsearch PROPERTIES
     PREFIX ""
-    SUFFIX ".cocaine-plugin"
+    SUFFIX "${COCAINE_PLUGIN_SUFFIX}"
     COMPILE_FLAGS "-std=c++0x")
 
 INSTALL(TARGETS elasticsearch

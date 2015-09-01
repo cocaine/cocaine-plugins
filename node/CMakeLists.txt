@@ -54,7 +54,7 @@ target_link_libraries(node
 
 set_target_properties(node PROPERTIES
     PREFIX ""
-    SUFFIX ".2.cocaine-plugin"
+    SUFFIX ".2${COCAINE_PLUGIN_SUFFIX}"
     COMPILE_FLAGS "-std=c++0x")
 
 install(TARGETS node

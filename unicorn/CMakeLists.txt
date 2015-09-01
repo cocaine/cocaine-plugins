@@ -22,9 +22,16 @@ TARGET_LINK_LIBRARIES(unicorn
 
 SET_TARGET_PROPERTIES(unicorn PROPERTIES
     PREFIX ""
-    SUFFIX ".cocaine-plugin"
+    SUFFIX "${COCAINE_PLUGIN_SUFFIX}"
     COMPILE_FLAGS "-std=c++0x -Wall -Werror -Wextra -pedantic -Winit-self -Wold-style-cast -Woverloaded-virtual -Wshadow -Wctor-dtor-privacy -Wnon-virtual-dtor")
 
 INSTALL(TARGETS unicorn
     LIBRARY DESTINATION lib/cocaine
     COMPONENT runtime)
+
+INSTALL(
+    DIRECTORY
+        include/cocaine/idl
+    DESTINATION include/cocaine
+    COMPONENT development)
+
