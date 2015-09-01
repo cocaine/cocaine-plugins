@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.3.12) unstable; urgency=low
+
+  * All: use platform dependent extension for modules.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 01 Sep 2015 22:12:09 +0300
+
 cocaine-plugins (0.12.3.11) unstable; urgency=low
 
   * Node, bug fix: make sure overseer is not dead on slave process.
