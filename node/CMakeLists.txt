@@ -12,6 +12,8 @@ if(COCAINE_ALLOW_CGROUPS)
 
     set(LibCGroup_LIBRARY "cgroup")
     add_definitions(-DCOCAINE_ALLOW_CGROUPS=1)
+else()
+    message(STATUS "  Node service will be built without CGroups support")
 endif()
 
 include_directories(
