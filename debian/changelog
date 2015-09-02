@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.3.14) unstable; urgency=low
+
+  * Node: no longer possible to add event in overloaded queue.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 02 Sep 2015 18:01:46 +0300
+
 cocaine-plugins (0.12.3.13) unstable; urgency=low
 
   * Node: build without cgroups support
