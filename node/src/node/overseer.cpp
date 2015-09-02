@@ -286,6 +286,8 @@ overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstre
 {
     // TODO: Handle id parameter somehow.
 
+    std::shared_ptr<client_rpc_dispatch_t> dispatch;
+
     queue.apply([&](queue_type& queue) {
         const auto limit = profile().queue_limit;
 
@@ -293,17 +295,17 @@ overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstre
             ++stats.requests.rejected;
             throw std::system_error(error::queue_is_full);
         }
-    });
 
-    auto dispatch = std::make_shared<client_rpc_dispatch_t>(manifest().name);
+        dispatch = std::make_shared<client_rpc_dispatch_t>(manifest().name);
 
-    queue->push_back({
-        {
-            std::move(event),
-            dispatch,
-            std::move(downstream)
-        },
-        trace_t::current()
+        queue.push_back({
+            {
+                std::move(event),
+                dispatch,
+                std::move(downstream)
+            },
+            trace_t::current()
+        });
     });
 
     ++stats.requests.accepted;
