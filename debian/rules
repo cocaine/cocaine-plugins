@@ -5,7 +5,7 @@
 export DEB_BUILD_OPTIONS=parallel=$(shell grep -c ^processor /proc/cpuinfo)
 
 override_dh_auto_configure:
-	dh_auto_configure -- -DCOCAINE_ALLOW_CGROUPS=OFF
+	dh_auto_configure -- -DCOCAINE_ALLOW_CGROUPS=OFF -DCMAKE_BUILD_TYPE="RelWithDebInfo" -DCMAKE_CXX_FLAGS="-g -O2 -fstack-protector --param=ssp-buffer-size=4 -Wformat -Werror=format-security"
 
 override_dh_strip:
 	for plugin in `find debian -maxdepth 1 -type d | grep 'libcocaine.*3' | sed -e 's/^debian\///g'`; \
