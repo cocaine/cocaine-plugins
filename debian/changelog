@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.3.18) unstable; urgency=low
+
+  * Node, bug fix: immediate update broken slaves status to prevent infinite
+    looping on events rebalancing.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 03 Sep 2015 17:56:48 +0300
+
 cocaine-plugins (0.12.3.17) unstable; urgency=low
 
   * Debian: restore proper build type and flags on Ubuntu Trusty.
