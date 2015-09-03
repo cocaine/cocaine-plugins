@@ -28,6 +28,12 @@ handler_dispatcher_t::handler_dispatcher_t() :
     storage_lock(),
     callbacks()
 {}
+
+handler_dispatcher_t::~handler_dispatcher_t() {
+    std::lock_guard<std::mutex> lock(storage_lock);
+    callbacks.clear();
+}
+
 /**
 * All callback are called from C ZK client, convert previously passed void* to
 * matching callback and invoke it.

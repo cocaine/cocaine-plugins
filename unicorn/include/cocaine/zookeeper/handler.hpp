@@ -108,6 +108,7 @@ private:
     void release(managed_handler_base_t* callback);
 
     handler_dispatcher_t();
+    ~handler_dispatcher_t();
     handler_dispatcher_t(const handler_dispatcher_t& other) = delete;
     handler_dispatcher_t& operator=(const handler_dispatcher_t& other) = delete;
     std::mutex storage_lock;
