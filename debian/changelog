@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.3.19) unstable; urgency=low
+
+  * Node: fix potential memory leak when unable to fork the session.
+    Also channels are reset their dispatches during finalizing.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 03 Sep 2015 19:58:50 +0300
+
 cocaine-plugins (0.12.3.18) unstable; urgency=low
 
   * Node, bug fix: immediate update broken slaves status to prevent infinite
