@@ -22,21 +22,21 @@ void
 channel_t::close_send() {
     std::lock_guard<std::mutex> lock(mutex);
     state &= ~side_t::tx;
-    maybe_notify();
+    maybe_notify(lock);
 }
 
 void
 channel_t::close_recv() {
     std::lock_guard<std::mutex> lock(mutex);
     state &= ~side_t::rx;
-    maybe_notify();
+    maybe_notify(lock);
 }
 
 void
 channel_t::close_both() {
     std::lock_guard<std::mutex> lock(mutex);
     state &= ~(side_t::tx | side_t::rx);
-    maybe_notify();
+    maybe_notify(lock);
 }
 
 bool
@@ -58,14 +58,14 @@ void
 channel_t::watch() {
     std::lock_guard<std::mutex> lock(mutex);
     watched = true;
-    if (closed()) {
-        callback();
-    }
+    maybe_notify(lock);
 }
 
 void
-channel_t::maybe_notify() {
+channel_t::maybe_notify(std::lock_guard<std::mutex>& lock) {
     if (closed() && watched) {
         callback();
+        from_worker.reset();
+        into_worker.reset();
     }
 }

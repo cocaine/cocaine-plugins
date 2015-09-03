@@ -67,7 +67,7 @@ public:
 
 private:
     void
-    maybe_notify();
+    maybe_notify(std::lock_guard<std::mutex>& lock);
 };
 
 }
