@@ -46,8 +46,10 @@ spawning_t::spawn(unsigned long timeout) {
 
     COCAINE_LOG_DEBUG(slave->log, "locating the Locator endpoint list");
     auto locator = slave->context.context.locate("locator");
-    if (!locator || locator->endpoints().empty()) {
-        COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: failed to determine the Locator endpoint");
+    const auto endpoints = locator->endpoints();
+
+    if (!locator || endpoints.empty()) {
+        COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: failed to determine the Locator endpoints");
 
         slave->shutdown(error::locator_not_found);
         return;
@@ -55,7 +57,6 @@ spawning_t::spawn(unsigned long timeout) {
 
     // Fill Locator's endpoint list.
     std::ostringstream stream;
-    const auto& endpoints = locator->endpoints();
     auto it = endpoints.begin();
     stream << *it;
     ++it;
