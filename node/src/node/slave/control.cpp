@@ -64,9 +64,9 @@ control_t::discard(const std::error_code& ec) const {
     if (ec && !closed) {
         COCAINE_LOG_DEBUG(slave->log, "control channel has been discarded: %s", ec.message());
 
-        slave->loop.post([=](){
-            slave->shutdown(error::conrol_ipc_error);
-        });
+        // NOTE: It should be called synchronously, because state machine's status should be updated
+        // immediately to prevent infinite looping on events rebalancing.
+        slave->shutdown(error::conrol_ipc_error);
     }
 }
 
