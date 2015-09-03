@@ -41,14 +41,16 @@ spawning_t::terminate(const std::error_code& ec) {
 
 void
 spawning_t::spawn(unsigned long timeout) {
+    using asio::ip::tcp;
+
     COCAINE_LOG_DEBUG(slave->log, "slave is spawning using '%s', timeout: %.2f ms",
                       slave->context.manifest.executable, timeout);
 
     COCAINE_LOG_DEBUG(slave->log, "locating the Locator endpoint list");
-    auto locator = slave->context.context.locate("locator");
-    const auto endpoints = locator->endpoints();
+    const auto locator = slave->context.context.locate("locator");
+    const auto endpoints = locator ? locator->endpoints() : std::vector<tcp::endpoint>();
 
-    if (!locator || endpoints.empty()) {
+    if (endpoints.empty()) {
         COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: failed to determine the Locator endpoints");
 
         slave->shutdown(error::locator_not_found);
