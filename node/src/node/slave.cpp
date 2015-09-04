@@ -270,10 +270,13 @@ state_machine_t::shutdown(std::error_code ec) {
 
         for (auto& channel : channels) {
             loop.post([=]() {
-                channel.second->into_worker->discard(std::error_code(100, std::system_category()));
-                channel.second->from_worker->discard(std::error_code(100, std::system_category()));
-                channel.second->into_worker.reset();
-                channel.second->from_worker.reset();
+                if (channel.second->into_worker) {
+                    channel.second->into_worker->discard(std::error_code(100, std::system_category()));
+                }
+
+                if (channel.second->from_worker) {
+                    channel.second->from_worker->discard(std::error_code(100, std::system_category()));
+                }
             });
         }
 
