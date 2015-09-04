@@ -46,8 +46,8 @@ class control_slot_t:
         control_slot_t* p;
 
         controlling_slot_t(control_slot_t* p_):
-            p(p_),
-            super("controlling")
+            super("controlling"),
+            p(p_)
         {
             on<protocol::chunk>([&](const std::size_t& size) {
                 if (auto overseer = p->overseer.lock()) {
