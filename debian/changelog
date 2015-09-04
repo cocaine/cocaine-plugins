@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.3.20) unstable; urgency=low
+
+  * Node, bug fix: fixed using dispatch after freeing.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 04 Sep 2015 13:39:22 +0300
+
 cocaine-plugins (0.12.3.19) unstable; urgency=low
 
   * Node: fix potential memory leak when unable to fork the session.
