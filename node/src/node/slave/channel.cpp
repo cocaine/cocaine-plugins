@@ -65,7 +65,5 @@ void
 channel_t::maybe_notify(std::lock_guard<std::mutex>& lock) {
     if (closed() && watched) {
         callback();
-        from_worker.reset();
-        into_worker.reset();
     }
 }

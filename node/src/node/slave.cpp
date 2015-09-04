@@ -272,6 +272,8 @@ state_machine_t::shutdown(std::error_code ec) {
             loop.post([=]() {
                 channel.second->into_worker->discard(std::error_code(100, std::system_category()));
                 channel.second->from_worker->discard(std::error_code(100, std::system_category()));
+                channel.second->into_worker.reset();
+                channel.second->from_worker.reset();
             });
         }
 
