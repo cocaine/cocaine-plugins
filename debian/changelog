@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.3.21) unstable; urgency=low
+
+  * Node, bug fix: correctly drop cyclic references to prevent memory 
+    leaking.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 04 Sep 2015 17:25:21 +0300
+
 cocaine-plugins (0.12.3.20) unstable; urgency=low
 
   * Node, bug fix: fixed using dispatch after freeing.
