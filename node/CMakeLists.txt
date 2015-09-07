@@ -19,7 +19,7 @@ endif()
 include_directories(
     ${PROJECT_SOURCE_DIR}/node/include)
 
-add_library(node MODULE
+add_library(node SHARED
     src/isolate/process.cpp
     src/isolate/process/archive.cpp
     src/isolate/process/spooler.cpp
@@ -57,7 +57,8 @@ target_link_libraries(node
 set_target_properties(node PROPERTIES
     PREFIX ""
     SUFFIX ".2${COCAINE_PLUGIN_SUFFIX}"
-    COMPILE_FLAGS "-std=c++0x")
+    COMPILE_FLAGS "-std=c++0x"
+)
 
 install(TARGETS node
     LIBRARY DESTINATION lib/cocaine
@@ -70,3 +71,44 @@ install(
         include/cocaine/service
     DESTINATION include/cocaine
     COMPONENT development)
+
+option(WITH_TESTS "Build the library with tests" ON)
+
+if (WITH_TESTS)
+    list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/foreign/modules")
+
+    # Prepare testing infrastructure.
+    include(DownloadGoogleTesting)
+
+    download_google_testing()
+
+    include_directories(
+        SYSTEM ${GTEST_INCLUDE_DIR}
+        SYSTEM ${GMOCK_INCLUDE_DIR}
+    )
+
+    link_directories(${GTEST_BINARY_DIR} ${GMOCK_BINARY_DIR})
+
+    include_directories(
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/node/include
+        SYSTEM ${CMAKE_SOURCE_DIR}/foreign/asio/asio/include
+    )
+
+    set(SOURCES
+        tests/slave
+    )
+
+    add_executable(node-tests ${SOURCES})
+    add_dependencies(node-tests googlemock)
+    target_link_libraries(node-tests
+        node
+        gmock
+        gmock_main
+        gtest
+    )
+
+    # TODO: Turn on all the warnigns while building Node service. There are lot of warnings.
+    set_target_properties(node-tests PROPERTIES
+        COMPILE_FLAGS "-std=c++0x -Wall -Wextra -Winit-self -Wconversion -Wno-sign-conversion -Wold-style-cast -Woverloaded-virtual -Wctor-dtor-privacy -Wnon-virtual-dtor -Wunreachable-code -pedantic -pedantic-errors")
+endif()
