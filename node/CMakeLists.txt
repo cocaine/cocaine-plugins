@@ -19,7 +19,7 @@ endif()
 include_directories(
     ${PROJECT_SOURCE_DIR}/node/include)
 
-add_library(node SHARED
+add_library(node MODULE
     src/isolate/process.cpp
     src/isolate/process/archive.cpp
     src/isolate/process/spooler.cpp
@@ -72,7 +72,7 @@ install(
     DESTINATION include/cocaine
     COMPONENT development)
 
-option(WITH_TESTS "Build the library with tests" ON)
+option(WITH_TESTS "Build the library with tests" OFF)
 
 if (WITH_TESTS)
     list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/foreign/modules")
