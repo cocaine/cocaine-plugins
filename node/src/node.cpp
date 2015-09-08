@@ -74,8 +74,9 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
     typedef std::map<std::string, std::string> runlist_t;
     runlist_t runlist;
 
+    const auto storage = api::storage(context, "core");
+
     try {
-        const auto storage = api::storage(context, "core");
         // TODO: Perform request to a special service, like "storage->runlist(runname)".
         runlist = storage->get<runlist_t>("runlists", runname);
     } catch(const std::system_error& err) {
