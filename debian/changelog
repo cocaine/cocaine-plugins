@@ -1,3 +1,15 @@
+cocaine-plugins (0.12.3.23) unstable; urgency=low
+
+  * Fix(Node): Keep storage service alive during Node service 
+    construction.
+    This change reduces amout of temporary storage service
+    construction/destruction by 3 * N times, where N - applications
+    count.
+    This can dramatically increase startup time when using Elliptics
+    storage.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 08 Sep 2015 16:41:21 +0300
+
 cocaine-plugins (0.12.3.22) unstable; urgency=low
 
   * Node(bug fix): fixed race while closing channels.
