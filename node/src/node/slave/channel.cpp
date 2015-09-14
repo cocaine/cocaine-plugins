@@ -6,12 +6,17 @@
 using namespace cocaine;
 
 channel_t::channel_t(std::uint64_t id, time_point birthstamp, callback_type callback):
-    id(id),
+    id_(id),
     birthstamp_(birthstamp),
     callback(std::move(callback)),
     state(both),
     watched(false)
 {}
+
+std::uint64_t
+channel_t::id() const noexcept {
+    return id_;
+}
 
 channel_t::time_point
 channel_t::birthstamp() const {
