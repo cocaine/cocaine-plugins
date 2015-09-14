@@ -190,7 +190,7 @@ archive_t::deploy(const std::string& prefix_) {
 
 void
 archive_t::extract(archive* source, archive* target) {
-    int rv = ARCHIVE_OK;
+    ssize_t rv = ARCHIVE_OK;
 
     const void* buffer = nullptr;
     size_t size = 0;
