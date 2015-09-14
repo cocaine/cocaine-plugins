@@ -9,7 +9,7 @@ class state_machine_t;
 }
 
 namespace cocaine { namespace api {
-class handle_t;
+struct handle_t;
 }}
 
 namespace cocaine { namespace service { namespace node { namespace slave { namespace state {

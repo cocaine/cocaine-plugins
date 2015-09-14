@@ -4,7 +4,9 @@
 
 namespace cocaine {
 
-namespace api { class handle_t; }
+namespace api {
+    struct handle_t;
+} // namespace api
 
 class state_machine_t;
 
