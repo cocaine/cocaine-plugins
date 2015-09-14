@@ -348,7 +348,7 @@ overseer_t::assign(slave_t& slave, slave::channel_t& payload) {
 
     // TODO: Race possible.
     auto self = shared_from_this();
-    const auto channel = slave.inject(payload, [=](std::uint64_t channel) {
+    slave.inject(payload, [=](std::uint64_t) {
         const auto now = std::chrono::high_resolution_clock::now();
         const auto elapsed = std::chrono::duration<
             double,
