@@ -34,12 +34,12 @@ profile_t::profile_t(context_t& context, const std::string& name_):
 
     log_output = as_object().at("log-output", false).as_bool();
 
-    timeout.spawn     = 1000 * config.at("spawn-timeout", 1.0).to<double>();
-    timeout.handshake = 1000 * config.at("handshake-timeout", 5.0).to<double>();
-    timeout.heartbeat = 1000 * config.at("heartbeat-timeout", 30.0f).to<double>();
-    timeout.seal      = 1000 * config.at("seal-timeout", 60.0).to<double>();
-    timeout.terminate = 1000 * config.at("terminate-timeout", 10.0).to<double>();
-    timeout.idle      = 1000 * config.at("idle-timeout", 600.0f).to<double>();
+    timeout.spawn     = 1000 * static_cast<uint64_t>(config.at("spawn-timeout", 1.0).to<double>());
+    timeout.handshake = 1000 * static_cast<uint64_t>(config.at("handshake-timeout", 5.0).to<double>());
+    timeout.heartbeat = 1000 * static_cast<uint64_t>(config.at("heartbeat-timeout", 30.0f).to<double>());
+    timeout.seal      = 1000 * static_cast<uint64_t>(config.at("seal-timeout", 60.0).to<double>());
+    timeout.terminate = 1000 * static_cast<uint64_t>(config.at("terminate-timeout", 10.0).to<double>());
+    timeout.idle      = 1000 * static_cast<uint64_t>(config.at("idle-timeout", 600.0f).to<double>());
 
     concurrency         = as_object().at("concurrency", 10L).to<uint64_t>();
     crashlog_limit      = as_object().at("crashlog-limit", 50L).to<uint64_t>();
