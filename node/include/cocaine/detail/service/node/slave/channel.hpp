@@ -26,7 +26,7 @@ private:
         both = tx | rx
     };
 
-    const std::uint64_t id;
+    const std::uint64_t id_;
     const time_point birthstamp_;
     const callback_type callback;
 
@@ -40,6 +40,8 @@ public:
 
 public:
     channel_t(std::uint64_t id, time_point birthstamp, callback_type callback);
+
+    std::uint64_t id() const noexcept;
 
     time_point
     birthstamp() const;

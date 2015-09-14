@@ -348,7 +348,7 @@ overseer_t::assign(slave_t& slave, slave::channel_t& payload) {
 
     // TODO: Race possible.
     auto self = shared_from_this();
-    const auto channel = slave.inject(payload, [=](std::uint64_t channel) {
+    slave.inject(payload, [=](std::uint64_t) {
         const auto now = std::chrono::high_resolution_clock::now();
         const auto elapsed = std::chrono::duration<
             double,
@@ -526,7 +526,7 @@ overseer_t::rebalance_slaves() {
             );
 
             if (target <= pool.size()) {
-                auto active = boost::count_if(pool | boost::adaptors::map_values, +[](const slave_t& slave) -> bool {
+                unsigned long active = boost::count_if(pool | boost::adaptors::map_values, +[](const slave_t& slave) -> bool {
                     return slave.active();
                 });
 

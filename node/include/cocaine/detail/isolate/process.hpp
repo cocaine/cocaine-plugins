@@ -23,6 +23,8 @@
 
 #include "cocaine/api/isolate.hpp"
 
+#include <cstdint>
+
 #include <boost/filesystem/path.hpp>
 
 #ifdef COCAINE_ALLOW_CGROUPS
@@ -41,7 +43,7 @@ class process_t:
 
     const std::string m_name;
     const boost::filesystem::path m_working_directory;
-    const uint m_kill_timeout;
+    const uint64_t m_kill_timeout;
 
 #ifdef COCAINE_ALLOW_CGROUPS
     cgroup* m_cgroup;
