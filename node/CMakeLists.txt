@@ -57,7 +57,7 @@ target_link_libraries(node
 set_target_properties(node PROPERTIES
     PREFIX ""
     SUFFIX ".2${COCAINE_PLUGIN_SUFFIX}"
-    COMPILE_FLAGS "-std=c++0x"
+    COMPILE_FLAGS "-std=c++0x -Wall -Wextra -Winit-self -Wconversion -Wno-sign-conversion -Wold-style-cast -Woverloaded-virtual -Wctor-dtor-privacy -Wnon-virtual-dtor -Wunreachable-code -pedantic -pedantic-errors"
 )
 
 install(TARGETS node
