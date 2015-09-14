@@ -336,7 +336,7 @@ process_t::process_t(context_t& context, asio::io_service& io_context, const std
     m_log(context.log(name)),
     m_name(name),
     m_working_directory(fs::path(args.as_object().at("spool", "/var/spool/cocaine").as_string()) / name),
-    m_kill_timeout(args.as_object().at("kill_timeout", 5u).as_uint())
+    m_kill_timeout(args.as_object().at("kill_timeout", 5ULL).as_uint())
 {
 #ifdef COCAINE_ALLOW_CGROUPS
     int rv = 0;
