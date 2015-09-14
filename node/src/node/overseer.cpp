@@ -526,7 +526,7 @@ overseer_t::rebalance_slaves() {
             );
 
             if (target <= pool.size()) {
-                auto active = boost::count_if(pool | boost::adaptors::map_values, +[](const slave_t& slave) -> bool {
+                unsigned long active = boost::count_if(pool | boost::adaptors::map_values, +[](const slave_t& slave) -> bool {
                     return slave.active();
                 });
 
