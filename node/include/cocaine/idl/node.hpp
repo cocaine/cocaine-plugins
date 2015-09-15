@@ -219,7 +219,7 @@ enum node_errors {
     /// The isolate plugin has failed its contract and has thrown non `system_error` exception.
     /// Checking logs may help to determine what was happened.
     uncaught_spool_error,
-    uncaught_publish_error,
+    uncaught_publish_error
 };
 
 const std::error_category&
