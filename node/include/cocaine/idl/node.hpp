@@ -150,7 +150,7 @@ struct info {
         expand_manifest = 0x02,
         // Expand current app's profile struct, otherwise only the current profile name will be
         // reported.
-        expand_profile  = 0x04,
+        expand_profile  = 0x04
     };
 
     static const char* alias() {
