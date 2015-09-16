@@ -1,4 +1,4 @@
-cocaine-plugins (0.12.3.24) UNRELEASED; urgency=low
+cocaine-plugins (0.12.3.24) unstable; urgency=low
 
   * Fix(node): print unparsed stdout/stderr with the parsed one while
     writing crashlogs.
