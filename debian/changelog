@@ -1,6 +1,13 @@
+cocaine-plugins (0.12.3.24) UNRELEASED; urgency=low
+
+  * Fix(node): print unparsed stdout/stderr with the parsed one while
+    writing crashlogs.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 16 Sep 2015 19:28:07 +0300
+
 cocaine-plugins (0.12.3.23) unstable; urgency=low
 
-  * Fix(Node): Keep storage service alive during Node service 
+  * Fix(Node): Keep storage service alive during Node service
     construction.
     This change reduces amout of temporary storage service
     construction/destruction by 3 * N times, where N - applications
@@ -18,7 +25,7 @@ cocaine-plugins (0.12.3.22) unstable; urgency=low
 
 cocaine-plugins (0.12.3.21) unstable; urgency=low
 
-  * Node, bug fix: correctly drop cyclic references to prevent memory 
+  * Node, bug fix: correctly drop cyclic references to prevent memory
     leaking.
 
  -- Evgeny Safronov <division494@gmail.com>  Fri, 04 Sep 2015 17:25:21 +0300
