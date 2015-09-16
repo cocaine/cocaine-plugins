@@ -320,13 +320,17 @@ state_machine_t::revoke(std::uint64_t id, channel_handler handler) {
 
 void
 state_machine_t::dump() {
-    if (lines.empty()) {
+    if (lines.empty() && splitter.unparsed.empty()) {
         COCAINE_LOG_WARNING(log, "slave has died in silence");
         return;
     }
 
     std::vector<std::string> dump;
     std::copy(lines.begin(), lines.end(), std::back_inserter(dump));
+
+    if (!splitter.unparsed.empty()) {
+        dump.emplace_back(splitter.unparsed);
+    }
 
     const auto now = std::chrono::system_clock::now().time_since_epoch();
 
