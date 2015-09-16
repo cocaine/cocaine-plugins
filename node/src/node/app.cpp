@@ -352,7 +352,10 @@ public:
         }
 
         engine->terminate();
-        overseer->o->cancel();
+        auto overseer = this->overseer->o;
+        this->overseer.reset();
+
+        overseer->cancel();
     }
 
     virtual
