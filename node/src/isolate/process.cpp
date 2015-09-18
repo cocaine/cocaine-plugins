@@ -244,8 +244,6 @@ public:
     void
     terminate() {
         terminator->start();
-
-        ::close(m_stdout);
     }
 
     virtual
