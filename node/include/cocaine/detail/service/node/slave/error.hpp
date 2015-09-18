@@ -12,7 +12,7 @@ enum overseer_errors {
     /// The queue is full.
     queue_is_full = 1,
 
-    /// Unable to spawn more tagged slaves, because it is full.
+    /// Unable to spawn more tagged slaves, because the pool is full.
     pool_is_full
 };
 
