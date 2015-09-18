@@ -1,6 +1,10 @@
-cocaine-plugins (0.12.3.25) UNRELEASED; urgency=low
+cocaine-plugins (0.12.3.25) unstable; urgency=low
 
   * Misc(node): error code for empty endpoints.
+  * Fix(node): drop explicit closing stdout fd.
+    This change fixes double close race, which potentially (and practical)
+    may lead to undefined behavior. The process stdout fd becomes manageable
+    by boost's stream descriptor, which closes it automatically.
 
  -- Evgeny Safronov <division494@gmail.com>  Fri, 18 Sep 2015 16:59:47 +0300
 
