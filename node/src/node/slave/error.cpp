@@ -42,6 +42,8 @@ public:
             return "timed out while spawning";
         case error::locator_not_found:
             return "locator not found";
+        case error::empty_locator_endpoints:
+            return "locator endpoints set is empty";
         case error::activate_timeout:
             return "timed out while activating";
         case error::unknown_activate_error:

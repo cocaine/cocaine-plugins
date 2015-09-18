@@ -23,6 +23,9 @@ enum slave_errors {
     /// The slave has unable to locate the Locator service from the core.
     locator_not_found,
 
+    /// Locator has returned empty endpoints list.
+    empty_locator_endpoints,
+
     /// The slave has failed to activate for a timeout.activate ms.
     ///
     /// A slave is considered active when is sends a handshake message and the runtime receives it.
