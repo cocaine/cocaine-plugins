@@ -26,6 +26,9 @@ public:
     spawning_t(std::shared_ptr<state_machine_t> slave);
 
     virtual
+    ~spawning_t();
+
+    virtual
     const char*
     name() const noexcept;
 

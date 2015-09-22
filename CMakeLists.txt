@@ -4,16 +4,17 @@ PROJECT(COCAINE-PLUGINS)
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-OPTION(CACHE "Build LRU Cache plugin" ON)
-OPTION(CHRONO "Build Chrono Service plugin" ON)
-OPTION(DOCKER "Build Docker Isolation plugin" ON)
-OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
-OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
+OPTION(CACHE "Build LRU Cache plugin" OFF)
+OPTION(CHRONO "Build Chrono Service plugin" OFF)
+OPTION(DOCKER "Build Docker Isolation plugin" OFF)
+OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" OFF)
+OPTION(IPVS "Build IPVS Gateway Service plugin" OFF)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(NODE "Build Node service plugin" ON)
-OPTION(URLFETCH "Build URLFetch Service plugin" ON)
-OPTION(GRAPHITE "Build Graphite Service plugin" ON)
-OPTION(UNICORN "Build Unified configuration service plugin" ON)
+OPTION(URLFETCH "Build URLFetch Service plugin" OFF)
+OPTION(GRAPHITE "Build Graphite Service plugin" OFF)
+OPTION(UNICORN "Build Unified configuration service plugin" OFF)
+OPTION(CONDUCTOR "Build Conductor isolation plugin and service" ON)
 
 # Include our CMake libraries.
 INCLUDE(cmake/locate_library.cmake)
@@ -49,6 +50,7 @@ LINK_DIRECTORIES(
 SET(PLUGINS
     cache
     chrono
+    conductor
     docker
     elasticsearch
     graphite

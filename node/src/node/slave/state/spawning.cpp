@@ -15,6 +15,10 @@ spawning_t::spawning_t(std::shared_ptr<state_machine_t> slave_) :
     timer(slave->loop)
 {}
 
+spawning_t::~spawning_t() {
+    COCAINE_LOG_DEBUG(slave->log, "spawning_t is being destroyed");
+}
+
 const char*
 spawning_t::name() const noexcept {
     return "spawning";
@@ -84,7 +88,7 @@ spawning_t::spawn(unsigned long timeout) {
 
     // Spawn a worker instance and start reading standard outputs of it.
     try {
-        auto isolate = slave->context.context.get<api::isolate_t>(
+        std::shared_ptr<api::isolate_t> isolate = slave->context.context.get<api::isolate_t>(
             slave->context.profile.isolate.type,
             slave->context.context,
             slave->loop,
@@ -97,19 +101,77 @@ spawning_t::spawn(unsigned long timeout) {
         timer.expires_from_now(boost::posix_time::milliseconds(timeout));
         timer.async_wait(trace_t::bind(&spawning_t::on_timeout, shared_from_this(), ph::_1));
 
-        handle = isolate->spawn(
+        //auto on_spawn_handler = trace_t::bind(&spawning_t::on_spawn, shared_from_this(), std::chrono::high_resolution_clock::now());
+        auto on_spawn_handler = std::bind(&spawning_t::on_spawn, shared_from_this(), std::chrono::high_resolution_clock::now());
+
+        //int i = 0;
+
+        isolate->async_spawn(
             slave->context.manifest.executable,
             args,
-            slave->context.manifest.environment
+            slave->context.manifest.environment,
+            [=] (const std::error_code& ec, std::unique_ptr<api::handle_t>& handle_){
+
+                COCAINE_LOG_DEBUG(slave->log, "async spawn callback here");
+
+                //[&] (const std::error_code& ec){
+
+                // do something with ec
+                if (ec){
+                    //i++;
+                    //throw new std::system_error::system_error(ec.value(), "spawn failed");
+                }
+
+                isolate->spool(); // it's empty
+
+                handle = std::move(handle_);
+                slave->loop.post(on_spawn_handler);
+            }
+
+            // [this, &i, self, isolate, on_spawn_handler] (const std::error_code& ec, std::unique_ptr<api::handle_t>& handle_){
+
+            //     COCAINE_LOG_DEBUG(slave->log, "async spawn callback here");
+
+            //     //[&] (const std::error_code& ec){
+
+            //     // do something with ec
+            //     if (ec){
+            //         i++;
+            //         //throw new std::system_error::system_error(ec.value(), "spawn failed");
+            //     }
+
+            //     isolate->spool(); // it's empty
+
+            //     handle = std::move(handle_);
+            //     slave->loop.post(on_spawn_handler);
+            // }
         );
+
+        // slave->loop.post(on_spawn_handler);
+
+        // [&] (std::unique_ptr<api::handle_t> handle_, const std::error_code& ec){
+
+        //     // do something with ec
+
+        //     handle = std::move(handle_);
+        //     slave->loop.post(on_spawn_handler);
+        // }
+
+
+        // handle = isolate->spawn(
+        //     slave->context.manifest.executable,
+        //     args,
+        //     slave->context.manifest.environment
+        // );
 
         // Currently we spawn all slaves synchronously, but here is the right place to provide
         // a callback function to the Isolate.
         // NOTE: The callback must be called from the event loop thread, otherwise the behavior
         // is undefined.
-        slave->loop.post(trace_t::bind(
-            &spawning_t::on_spawn, shared_from_this(), std::chrono::high_resolution_clock::now()
-        ));
+        // slave->loop.post(trace_t::bind(
+        //     &spawning_t::on_spawn, shared_from_this(), std::chrono::high_resolution_clock::now()
+        // ));
+
     } catch(const std::system_error& err) {
         COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: %s", err.code().message());
 
@@ -117,6 +179,9 @@ spawning_t::spawn(unsigned long timeout) {
             slave->shutdown(err.code());
         });
     }
+    
+    COCAINE_LOG_DEBUG (slave->log, "async spawn call end");
+
 }
 
 void
