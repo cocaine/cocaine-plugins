@@ -38,6 +38,10 @@
 
 #include <sys/wait.h>
 
+#ifdef __linux__
+    #include <sys/prctl.h>
+#endif
+
 namespace ph = std::placeholders;
 
 using namespace cocaine;
@@ -433,6 +437,10 @@ process_t::spawn(const std::string& path, const api::string_map_t& args, const a
 
     ::dup2(pipes[1], STDOUT_FILENO);
     ::dup2(pipes[1], STDERR_FILENO);
+
+#ifdef __linux__
+    ::prctl(PR_SET_PDEATHSIG, SIGTERM);
+#endif
 
 #ifdef COCAINE_ALLOW_CGROUPS
     // Attach to the control group
