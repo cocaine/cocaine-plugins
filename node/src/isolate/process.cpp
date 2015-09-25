@@ -28,7 +28,9 @@
 
 #include <csignal>
 
+#include <boost/filesystem.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/range/iterator_range.hpp>
 #include <boost/system/system_error.hpp>
 
 #ifdef COCAINE_ALLOW_CGROUPS
@@ -397,66 +399,50 @@ process_t::~process_t() {
     extern char** environ;
 #endif
 
-#include <dirent.h>
+static void
+closefrom_dir(boost::filesystem::path path) {
+    if (!boost::filesystem::is_directory(path)) {
+        throw cocaine::error_t("procfs entry must be a directory");
+    }
 
-static int
-closefrom_dir(const char* dirname) {
-    const auto cleanup = [](DIR* dir) {
-        ::closedir(dir);
-    };
+    std::vector<int> fds;
 
-    const std::unique_ptr<DIR, decltype(cleanup)> dir(::opendir(dirname), cleanup);
+    const boost::filesystem::directory_iterator end;
+    for (const auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(path), end)) {
+        const auto filename = entry.path().filename().native();
 
-    if (dir) {
-        struct dirent* entry;
-
-        while ((entry = ::readdir(dir.get()))) {
-            if (entry->d_name[0] == '.') {
-                continue;
-            }
-
-            // To distinguish success/failure after call.
-            errno = 0;
-            char* end = nullptr;
-
-            int fd = static_cast<int>(std::strtol(entry->d_name, &end, 10));
-
-            if (errno || entry->d_name == end) {
-                // Unable to parse. Not sure it's possible.
-                continue;
-            }
+        try {
+            int fd = boost::lexical_cast<int>(filename);
 
             if (fd < 3) {
                 // Do not close STDIN, STDOUT and STDERR.
                 continue;
             }
 
-            if (fd == ::dirfd(dir.get())) {
-                continue;
-            }
-
-            if (::close(fd) < 0) {
-                // Ignore.
-            }
+            fds.push_back(fd);
+        } catch (const boost::bad_lexical_cast&) {
+            // Unable to parse. Not sure it's possible.
         }
     }
 
-    return 0;
+    for (int fd : fds) {
+        if (::close(fd) < 0) {
+            // Ignore.
+        }
+    }
 }
 
-static
-int
+static void
 close_all() {
     // FreeBSD has `closefrom` syscall, but we don't. The only effective solution is to iterate over
     // procfs entries.
 
 #if defined(__linux__)
-    return closefrom_dir("/proc/self/fd/");
+    closefrom_dir("/proc/self/fd/");
 #elif defined(__APPLE__)
-    return closefrom_dir("/dev/fd");
+    closefrom_dir("/dev/fd");
 #else
-    errno = ENOTSUP;
-    return -1;
+    throw std::system_error(ENOTSUP, std::system_category());
 #endif
 }
 
@@ -497,7 +483,11 @@ process_t::spawn(const std::string& path, const api::string_map_t& args, const a
     ::dup2(pipes[1], STDOUT_FILENO);
     ::dup2(pipes[1], STDERR_FILENO);
 
-    ::close_all();
+    try {
+        ::close_all();
+    } catch (const std::exception& e) {
+        std::cerr << format("unable to close all file descriptors: %s", e.what()) << std::endl;
+    }
 
 #ifdef COCAINE_ALLOW_CGROUPS
     // Attach to the control group
