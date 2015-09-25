@@ -397,6 +397,69 @@ process_t::~process_t() {
     extern char** environ;
 #endif
 
+#include <dirent.h>
+
+static int
+closefrom_dir(const char* dirname) {
+    const auto cleanup = [](DIR* dir) {
+        ::closedir(dir);
+    };
+
+    const std::unique_ptr<DIR, decltype(cleanup)> dir(::opendir(dirname), cleanup);
+
+    if (dir) {
+        struct dirent* entry;
+
+        while ((entry = ::readdir(dir.get()))) {
+            if (entry->d_name[0] == '.') {
+                continue;
+            }
+
+            // To distinguish success/failure after call.
+            errno = 0;
+            char* end = nullptr;
+
+            int fd = static_cast<int>(std::strtol(entry->d_name, &end, 10));
+
+            if (errno || entry->d_name == end) {
+                // Unable to parse. Not sure it's possible.
+                continue;
+            }
+
+            if (fd < 3) {
+                // Do not close STDIN, STDOUT and STDERR.
+                continue;
+            }
+
+            if (fd == ::dirfd(dir.get())) {
+                continue;
+            }
+
+            if (::close(fd) < 0) {
+                // Ignore.
+            }
+        }
+    }
+
+    return 0;
+}
+
+static
+int
+close_all() {
+    // FreeBSD has `closefrom` syscall, but we don't. The only effective solution is to iterate over
+    // procfs entries.
+
+#if defined(__linux__)
+    return closefrom_dir("/proc/self/fd/");
+#elif defined(__APPLE__)
+    return closefrom_dir("/dev/fd");
+#else
+    errno = ENOTSUP;
+    return -1;
+#endif
+}
+
 std::unique_ptr<api::handle_t>
 process_t::spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment) {
     std::array<int, 2> pipes;
@@ -433,6 +496,8 @@ process_t::spawn(const std::string& path, const api::string_map_t& args, const a
 
     ::dup2(pipes[1], STDOUT_FILENO);
     ::dup2(pipes[1], STDERR_FILENO);
+
+    ::close_all();
 
 #ifdef COCAINE_ALLOW_CGROUPS
     // Attach to the control group
