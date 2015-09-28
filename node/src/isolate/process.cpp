@@ -434,8 +434,8 @@ closefrom_dir(boost::filesystem::path path) {
 
 static void
 close_all() {
-    // FreeBSD has `closefrom` syscall, but we don't. The only effective solution is to iterate over
-    // procfs entries.
+    // FreeBSD has `closefrom` syscall, but we haven't. The only effective solution is to iterate
+    // over procfs entries.
 
 #if defined(__linux__)
     closefrom_dir("/proc/self/fd/");
