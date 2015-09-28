@@ -97,7 +97,7 @@ chrono_t::cancel(io::timer_id_t timer_id) {
 
 void
 chrono_t::restart(io::timer_id_t timer_id) {
-    timer_desc_t& timer_desc = timers_->at(timer_id);
+    timer_desc_t& timer_desc = timers_.unsafe().at(timer_id);
 
     timer_desc.timer_->expires_from_now(boost::posix_time::seconds(timer_desc.interval_));
     timer_desc.timer_->async_wait(std::bind(&chrono_t::on_timer, this, ph::_1, timer_id));
