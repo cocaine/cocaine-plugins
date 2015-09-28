@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.3.26) unstable; urgency=low
+
+  * Fix(chrono): fixed deadlock.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 28 Sep 2015 18:40:03 +0300
+
 cocaine-plugins (0.12.3.25) unstable; urgency=low
 
   * Misc(node): error code for empty endpoints.
