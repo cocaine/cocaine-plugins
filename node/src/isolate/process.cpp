@@ -28,7 +28,9 @@
 
 #include <csignal>
 
+#include <boost/filesystem.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/range/iterator_range.hpp>
 #include <boost/system/system_error.hpp>
 
 #ifdef COCAINE_ALLOW_CGROUPS
@@ -397,6 +399,56 @@ process_t::~process_t() {
     extern char** environ;
 #endif
 
+static void
+closefrom_dir(boost::filesystem::path path) {
+    if (!boost::filesystem::is_directory(path)) {
+        throw cocaine::error_t("procfs entry must be a directory");
+    }
+
+    std::vector<int> fds;
+
+    // Allocate at lease PAGE_SIZE bytes to prevent frequent reallocations.
+    fds.reserve(::getpagesize());
+
+    const boost::filesystem::directory_iterator end;
+    for (const auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(path), end)) {
+        const auto filename = entry.path().filename().native();
+
+        try {
+            int fd = boost::lexical_cast<int>(filename);
+
+            if (fd < 3) {
+                // Do not close STDIN, STDOUT and STDERR.
+                continue;
+            }
+
+            fds.push_back(fd);
+        } catch (const boost::bad_lexical_cast&) {
+            // Unable to parse. Not sure it's possible.
+        }
+    }
+
+    for (int fd : fds) {
+        if (::close(fd) < 0) {
+            // Ignore.
+        }
+    }
+}
+
+static void
+close_all() {
+    // FreeBSD has `closefrom` syscall, but we haven't. The only effective solution is to iterate
+    // over procfs entries.
+
+#if defined(__linux__)
+    closefrom_dir("/proc/self/fd/");
+#elif defined(__APPLE__)
+    closefrom_dir("/dev/fd");
+#else
+    throw std::system_error(ENOTSUP, std::system_category());
+#endif
+}
+
 std::unique_ptr<api::handle_t>
 process_t::spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment) {
     std::array<int, 2> pipes;
@@ -433,6 +485,12 @@ process_t::spawn(const std::string& path, const api::string_map_t& args, const a
 
     ::dup2(pipes[1], STDOUT_FILENO);
     ::dup2(pipes[1], STDERR_FILENO);
+
+    try {
+        ::close_all();
+    } catch (const std::exception& e) {
+        std::cerr << format("unable to close all file descriptors: %s", e.what()) << std::endl;
+    }
 
 #ifdef COCAINE_ALLOW_CGROUPS
     // Attach to the control group
