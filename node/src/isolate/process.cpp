@@ -407,6 +407,9 @@ closefrom_dir(boost::filesystem::path path) {
 
     std::vector<int> fds;
 
+    // Allocate at lease PAGE_SIZE bytes to prevent frequent reallocations.
+    fds.reserve(::getpagesize());
+
     const boost::filesystem::directory_iterator end;
     for (const auto& entry : boost::make_iterator_range(boost::filesystem::directory_iterator(path), end)) {
         const auto filename = entry.path().filename().native();
