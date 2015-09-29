@@ -19,7 +19,7 @@ def create_volume(registry, image, tag="latest"):
     layers = fetch_layers(registry, image, tag)
 
     for _id in reversed(layers):
-        import_layer_wporto(_id)
+        import_layer_whands(_id)
 
     volume_path = "/place/cocaine_volumes/%s:%s"%(image,tag)
     sh.mkdir("-p", volume_path)

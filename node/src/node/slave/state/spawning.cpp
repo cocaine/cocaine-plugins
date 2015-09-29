@@ -88,7 +88,7 @@ spawning_t::spawn(unsigned long timeout) {
 
     // Spawn a worker instance and start reading standard outputs of it.
     try {
-        std::shared_ptr<api::isolate_t> isolate = slave->context.context.get<api::isolate_t>(
+        auto isolate = slave->context.context.get<api::isolate_t>(
             slave->context.profile.isolate.type,
             slave->context.context,
             slave->loop,

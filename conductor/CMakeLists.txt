@@ -17,7 +17,7 @@ TARGET_LINK_LIBRARIES(conductor
 SET_TARGET_PROPERTIES(conductor PROPERTIES
     PREFIX ""
     SUFFIX "${COCAINE_PLUGIN_SUFFIX}"
-    COMPILE_FLAGS "-std=c++0x")
+    COMPILE_FLAGS "-std=c++0x -Wall -Werror -Wextra -pedantic -Winit-self -Wold-style-cast -Woverloaded-virtual -Wshadow -Wctor-dtor-privacy -Wnon-virtual-dtor")
 
 INSTALL(TARGETS conductor
     LIBRARY DESTINATION lib/cocaine

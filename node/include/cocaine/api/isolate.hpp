@@ -118,8 +118,8 @@ struct isolate_t {
     }
 
 protected:
-    isolate_t(context_t&, asio::io_service& io_service, const std::string&, const dynamic_t& /* args */):
-        io_service(io_service)
+    isolate_t(context_t&, asio::io_service& asio_, const std::string&, const dynamic_t& /* args */):
+        io_service(asio_)
     {}
 
 private:

@@ -53,9 +53,10 @@ public:
 
     virtual
     std::unique_ptr<api::handle_t>
-    spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment) {
-        // Empty
-    }
+    spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment);
+    // {
+    //     return std::unique_ptr<api::handle_t>();
+    // }
 
     virtual
     void

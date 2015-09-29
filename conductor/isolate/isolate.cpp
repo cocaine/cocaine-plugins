@@ -80,7 +80,7 @@ struct container_handle_t:
     }
 
     void attach(){
-        std::array<int, 2> pipes;
+        //std::array<int, 2> pipes;
 
         COCAINE_LOG_DEBUG(m_parent->m_log, "attaching container stdout at fifo %s", m_stdout_pipe_path);
 
@@ -171,7 +171,7 @@ rpc_isolate_t::async_spool(std::function<void(const std::error_code&)> handler) 
 
             COCAINE_LOG_DEBUG(m_log, "isolate: spool done");
 
-            handler(std::error_code());
+            handler(std::error_code(ec));
             //get_io_service().post(std::bind(handler, std::error_code(errno, std::system_category())));
             //get_io_service().post(std::bind(handler, std::error_code()));
 

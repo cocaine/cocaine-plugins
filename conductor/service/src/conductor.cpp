@@ -27,9 +27,9 @@ using namespace blackhole;
 namespace cocaine { namespace service {
 
 
-conductor_t::conductor_t(context_t& context, asio::io_service& _asio, const std::string& name, const dynamic_t& args) :
-    category_type(context, _asio, name, args),
-    dispatch<io::conductor_tag>(name),
+conductor_t::conductor_t(context_t& context, asio::io_service& _asio, const std::string& _name, const dynamic_t& args) :
+    category_type(context, _asio, _name, args),
+    dispatch<io::conductor_tag>(_name),
     log(context.log("conductor")),
     m_request_id(123)
 {
@@ -43,13 +43,13 @@ conductor_t::conductor_t(context_t& context, asio::io_service& _asio, const std:
 void
 conductor_t::on_spool_done(uint64_t request_id, const std::error_code& ec, const std::string& error_message)
 {
-    COCAINE_LOG_DEBUG(log, "spool done: (id: %d, ec: %s)", request_id, ec.message());
+    COCAINE_LOG_DEBUG(log, "spool done: (id: %d, ec: %s)[%s]", request_id, ec.message(), error_message);
 }
 
 void
 conductor_t::on_spawn_done(uint64_t request_id, const std::error_code& ec, const std::string& error_message)
 {
-    COCAINE_LOG_DEBUG(log, "spawn_done: (id: %d, ec: %s)", request_id, ec.message());
+    COCAINE_LOG_DEBUG(log, "spawn_done: (id: %d, ec: %s)[%s]", request_id, ec.message(), error_message);
     m_actions_waiting[request_id]->handler(std::error_code());
     COCAINE_LOG_DEBUG(log, "spawn_done end: (id: %d, ec: %s)", request_id, ec.message());
 }
@@ -67,10 +67,6 @@ conductor_t::on_subscribe(uint64_t client_id) -> streamed<subscribe_result_t> {
     }
 
     mapping->insert({client_id, stream});
-
-
-    requests_map_t::iterator it;
-
 
     for(auto it = m_requests_pending.begin(); it != m_requests_pending.end();){
 
