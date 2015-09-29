@@ -29,10 +29,6 @@ typedef struct {
     std::string request_id;
 } spool_action_t;
 
-typedef struct {
-    std::map<std::string, std::string> args;
-    std::string request_id;
-} spawn_action_t;
 
 }
 
@@ -45,6 +41,19 @@ class conductor_t:
 
 public:
 
+    class spawn_action_t {
+    public:
+
+        uint64_t request_id;
+        std::function<void(const std::error_code&)> handler;
+
+        spawn_action_t(uint64_t rq_id, std::function<void(const std::error_code&)> handler_):
+            request_id (rq_id),
+            handler(handler_)
+        {}
+        
+    } ;
+
     typedef result_of<io::conductor::subscribe>::type subscribe_result_t;
     typedef std::map<uint64_t, streamed<subscribe_result_t>> remote_map_t;
 
@@ -54,6 +63,7 @@ public:
     
     typedef std::map<uint64_t, request_ptr_t> requests_map_t;
 
+    typedef std::map<uint64_t, std::unique_ptr<spawn_action_t>> waiting_map_t;
 
     conductor_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
 
@@ -89,6 +99,8 @@ private:
 
     requests_map_t m_requests_pending;
     requests_map_t m_requests_waiting;
+
+    waiting_map_t m_actions_waiting;
 
     uint64_t m_request_id;
     

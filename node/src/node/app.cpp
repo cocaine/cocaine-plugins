@@ -261,6 +261,9 @@ public:
             // NOTE: Regardless of whether the asynchronous operation completes immediately or not,
             // the handler will not be invoked from within this call. Invocation of the handler
             // will be performed in a manner equivalent to using `boost::asio::io_service::post()`.
+
+            COCAINE_LOG_DEBUG(log, "spooling_t is calling async_spool");
+
             spooler = isolate->async_spool(handler);
         } catch (const std::system_error& err) {
             COCAINE_LOG_ERROR(log, "uncaught spool exception: [%d] %s", err.code().value(), err.code().message());
@@ -483,12 +486,16 @@ private:
         } else {
             // Dispatch the completion handler to be sure it will be called in a I/O thread to
             // avoid possible deadlocks.
+            COCAINE_LOG_DEBUG(log, "spool reported ok, let's publish app");
             loop->dispatch(std::bind(&app_state_t::publish, shared_from_this()));
         }
     }
 
     void
     publish() {
+
+        COCAINE_LOG_DEBUG(log, "publishing app");
+
         std::error_code ec;
 
         try {

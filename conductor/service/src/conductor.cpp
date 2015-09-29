@@ -37,7 +37,7 @@ conductor_t::conductor_t(context_t& context, asio::io_service& _asio, const std:
     //on<io::cache::get>(std::bind(&cache_t::get, this, ph::_1));
     on<io::conductor::subscribe>(std::bind(&conductor_t::on_subscribe, this, ph::_1));
     on<io::conductor::spool_done>(std::bind(&conductor_t::on_spool_done, this, ph::_1, ph::_2, ph::_3));
-    //on<io::conductor::spawn_done>(std::bind(&conductor_t::on_spawn_done, this, ph::_1, ph::_2, ph::_3));
+    on<io::conductor::spawn_done>(std::bind(&conductor_t::on_spawn_done, this, ph::_1, ph::_2, ph::_3));
 }
 
 void
@@ -49,7 +49,9 @@ conductor_t::on_spool_done(uint64_t request_id, const std::error_code& ec, const
 void
 conductor_t::on_spawn_done(uint64_t request_id, const std::error_code& ec, const std::string& error_message)
 {
-    COCAINE_LOG_DEBUG(log, "spawn done: (id: %d, ec: %s)", request_id, ec.message());
+    COCAINE_LOG_DEBUG(log, "spawn_done: (id: %d, ec: %s)", request_id, ec.message());
+    m_actions_waiting[request_id]->handler(std::error_code());
+    COCAINE_LOG_DEBUG(log, "spawn_done end: (id: %d, ec: %s)", request_id, ec.message());
 }
 
 auto
@@ -164,7 +166,9 @@ conductor_t::spawn(std::string image,
         it = mapping->erase(it);
     }
 
-    handler(std::error_code());
+    m_actions_waiting[rq_id] = std::make_unique<spawn_action_t>(rq_id, handler);
+
+    //handler(std::error_code());
 }
 
 }}

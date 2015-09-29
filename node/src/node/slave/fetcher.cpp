@@ -50,6 +50,9 @@ fetcher_t::watch() {
 
 void
 fetcher_t::on_read(const std::error_code& ec, size_t len) {
+    if (0 < len){
+        COCAINE_LOG_DEBUG(slave->log, "got slave output of %d bytes", len);
+    }
     switch (ec.value()) {
     case 0:
         COCAINE_LOG_DEBUG(slave->log, "slave has received %d bytes of output", len);

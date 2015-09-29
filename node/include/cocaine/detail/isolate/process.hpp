@@ -34,7 +34,8 @@ struct cgroup;
 namespace cocaine { namespace isolate {
 
 class process_t:
-    public api::isolate_t
+    public api::isolate_t,
+    public std::enable_shared_from_this<process_t>
 {
     context_t& m_context;
     asio::io_service& io_context;
@@ -58,6 +59,28 @@ public:
     virtual
     void
     spool();
+
+    virtual
+    void
+    async_spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment, api::spawn_handler_t handler) {
+
+        auto self = shared_from_this();
+
+        get_io_service().post([&, self, handler, path, args, environment] {
+
+            //std::unique_ptr<api::handle_t> handle_;
+            auto handle_ = self->spawn(path, args, environment);
+                
+            handler(std::error_code(errno, std::system_category()), handle_);
+            
+        });
+
+        //async_spawn(const std::string& path, const string_map_t& args, const string_map_t& environment, std::function<void(const std::error_code&)> handler) {
+        // auto handle_ = spawn(path, args, environment);
+        // get_io_service().post(std::bind(handler, std::error_code(), handle_));
+        //get_io_service().post(std::bind(handler, std::error_code()));
+    }
+
 
     virtual
     std::unique_ptr<api::handle_t>

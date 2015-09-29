@@ -37,6 +37,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <cocaine/rpc/actor.hpp>
 
@@ -54,10 +55,11 @@ struct container_handle_t:
 {
     COCAINE_DECLARE_NONCOPYABLE(container_handle_t)
 
-    container_handle_t(std::shared_ptr<rpc_isolate_t> parent):
+    container_handle_t(std::shared_ptr<rpc_isolate_t> parent, std::string stdout_pipe_path):
         m_parent(parent),
         m_terminated(false),
         m_container_id(1234567890),
+        m_stdout_pipe_path(stdout_pipe_path),
         m_fd(0)
     { }
 
@@ -77,6 +79,26 @@ struct container_handle_t:
         }
     }
 
+    void attach(){
+        std::array<int, 2> pipes;
+
+        COCAINE_LOG_DEBUG(m_parent->m_log, "attaching container stdout at fifo %s", m_stdout_pipe_path);
+
+        m_fd = ::open(m_stdout_pipe_path.c_str(), O_RDONLY);
+        if(m_fd == -1){
+            throw std::system_error(errno, std::system_category(), "unable to open an output named pipe");
+        }
+
+        // if(::pipe(pipes.data()) != 0) {
+        //     throw std::system_error(errno, std::system_category(), "unable to create an output pipe");
+        // }
+
+        // if(::close(pipes[1])){
+        //     throw std::system_error(errno, std::system_category(), "unable to close writable side of ::pipe() result");
+        // }
+
+    }
+
     virtual
     int
     stdout() const {
@@ -87,6 +109,7 @@ private:
     std::shared_ptr<rpc_isolate_t> m_parent;
     bool m_terminated;
     uint64_t m_container_id;
+    std::string m_stdout_pipe_path;
     int m_fd;
 };
 
@@ -147,8 +170,10 @@ rpc_isolate_t::async_spool(std::function<void(const std::error_code&)> handler) 
         const_cast<service::conductor_t*>(conductor)->spool(m_image, [&] (const std::error_code& ec) {
 
             COCAINE_LOG_DEBUG(m_log, "isolate: spool done");
-            
-            get_io_service().post(std::bind(handler, std::error_code(errno, std::system_category())));
+
+            handler(std::error_code());
+            //get_io_service().post(std::bind(handler, std::error_code(errno, std::system_category())));
+            //get_io_service().post(std::bind(handler, std::error_code()));
 
         });
     }
@@ -186,13 +211,15 @@ rpc_isolate_t::async_spawn(const std::string& path_,
 
         auto self = shared_from_this();
 
+        auto stdout_path = args["--endpoint"] + "." + args["--uuid"] + ".stdout.pipe";
+
         const_cast<service::conductor_t*>(conductor)->spawn(
             m_image,
             path_,
             std::move(isolate_params),
             std::move(args),
             std::move(environment),
-            [this, self, handler] (const std::error_code& ec) {
+            [this, self, handler, stdout_path] (const std::error_code& ec) {
 
                 if (ec){
                     COCAINE_LOG_ERROR(m_log, "spawn error");
@@ -200,15 +227,20 @@ rpc_isolate_t::async_spawn(const std::string& path_,
                     COCAINE_LOG_DEBUG(m_log, "spawn reported ok");
                 }
 
-                auto lambda = [this, self, handler, &ec] {
+                auto lambda = [this, self, handler, ec, stdout_path] {
                     std::unique_ptr<api::handle_t> handle;
 
                     std::cout << "inner lambda" << std::endl;
 
-                    if (!ec){
+                    if (ec){
+                        COCAINE_LOG_ERROR(m_log, "spawn error");
+                    } else {
                         COCAINE_LOG_DEBUG(m_log, "creating container handle");
-                        handle.reset(new container_handle_t(self));
-                    }
+
+                        handle.reset(new container_handle_t(self, stdout_path));
+
+                        static_cast<container_handle_t*>(handle.get())->attach();
+                    }                        
 
                     handler(ec, handle);
                 };

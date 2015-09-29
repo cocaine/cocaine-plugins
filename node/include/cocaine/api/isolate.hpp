@@ -74,6 +74,12 @@ struct isolate_t {
     void
     spool() = 0;
 
+    virtual
+    void
+    fake() {
+        // Empty
+    }
+
     // Default implementation delegates the control flow into the blocking spool method.
     virtual
     std::unique_ptr<cancellation_t>
@@ -95,7 +101,9 @@ struct isolate_t {
         auto handle_ = spawn(path, args, environment);
 
         get_io_service().post([&] {
+                
             handler(std::error_code(errno, std::system_category()), handle_);
+            
         });
 
         //async_spawn(const std::string& path, const string_map_t& args, const string_map_t& environment, std::function<void(const std::error_code&)> handler) {

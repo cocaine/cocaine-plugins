@@ -1,0 +1,10 @@
+{
+    "isolate": {
+        "args": {
+            "registry": "something.blabla"
+        }, 
+        "type": "rpc-isolate"
+    },
+    "log-output": true,
+    "spawn-timeout": 30
+}

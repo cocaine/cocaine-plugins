@@ -122,7 +122,7 @@ spawning_t::spawn(unsigned long timeout) {
                     //throw new std::system_error::system_error(ec.value(), "spawn failed");
                 }
 
-                isolate->spool(); // it's empty
+                isolate->fake(); // it's empty
 
                 handle = std::move(handle_);
                 slave->loop.post(on_spawn_handler);
@@ -201,10 +201,19 @@ spawning_t::on_spawn(std::chrono::high_resolution_clock::time_point start) {
 
     try {
         // May throw system error when failed to assign native descriptor to the fetcher.
+
+        COCAINE_LOG_DEBUG(slave->log, "slave stdout fd is %d", handle->stdout());
+
+        COCAINE_LOG_DEBUG(slave->log, "make handshaking state...");
+        
         auto handshaking = std::make_shared<handshaking_t>(slave, std::move(handle));
         slave->migrate(handshaking);
 
+        COCAINE_LOG_DEBUG(slave->log, "migrated to handshaking state...");
+
         handshaking->start(slave->context.profile.timeout.handshake);
+
+        COCAINE_LOG_DEBUG(slave->log, "started to handshaking state...");
     } catch (const std::exception& err) {
         COCAINE_LOG_ERROR(slave->log, "unable to activate slave: %s", err.what());
 
