@@ -156,7 +156,7 @@ node_t::start_app(const std::string& name, const std::string& profile) {
 
 void
 node_t::pause_app(const std::string& name) {
-    COCAINE_LOG_DEBUG(log, "processing `pause_app` request, app: '%s' ", name);
+    COCAINE_LOG_DEBUG(log, "processing `pause_app` request, app: '%s'", name);
 
     apps.apply([&](std::map<std::string, std::shared_ptr<node::app_t>>& apps) {
         auto it = apps.find(name);
