@@ -407,7 +407,7 @@ closefrom_dir(boost::filesystem::path path) {
 
     std::vector<int> fds;
 
-    // Allocate at lease PAGE_SIZE bytes to prevent frequent reallocations.
+    // Allocate at least sizeof(int) * PAGE_SIZE bytes to prevent frequent reallocations.
     fds.reserve(::getpagesize());
 
     const boost::filesystem::directory_iterator end;
