@@ -4,6 +4,10 @@ set -e
 
 case $1 in
     configure)
+        # Create a new system user to run the cocaine
+        # and to own the cocaine runtime resources
+        adduser --quiet --system --ingroup adm cocaine
+
         # Set the correct permissions on the cocaine
         # runtime resources directory
         chown -R cocaine /var/spool/cocaine
@@ -20,4 +24,3 @@ esac
 #DEBHELPER#
 
 exit 0
-
