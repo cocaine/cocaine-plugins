@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.4.0) unstable; urgency=low
+
+  * sync(api): synchronize with the core package, which has broken the API
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 08 Oct 2015 14:23:35 +0300
+
 cocaine-plugins (0.12.3.28) unstable; urgency=low
 
   * Fix(debian): add cocaine user on post install.
