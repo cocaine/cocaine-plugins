@@ -1,22 +1,8 @@
 # Build directory
 build/*
 
-# Cmake
-CMakeCache.txt
-CMakeFiles
-Makefile
-cmake_install.cmake
-
 # Compiled files
 *.cocaine-plugin
 
 # IDEs
-nbproject
 
-# Build directory
-build/*
-cocaine-plugins.config
-cocaine-plugins.creator
-cocaine-plugins.creator.user
-cocaine-plugins.files
-cocaine-plugins.includes
