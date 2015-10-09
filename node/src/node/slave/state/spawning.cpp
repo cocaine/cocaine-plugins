@@ -1,5 +1,8 @@
 #include "cocaine/detail/service/node/slave/state/spawning.hpp"
 
+#include <boost/lexical_cast.hpp>
+#include <boost/range/adaptor/transformed.hpp>
+
 #include <cocaine/rpc/actor.hpp>
 
 #include "cocaine/detail/service/node/slave.hpp"
@@ -9,6 +12,8 @@
 namespace ph = std::placeholders;
 
 using namespace cocaine;
+
+using asio::ip::tcp;
 
 spawning_t::spawning_t(std::shared_ptr<state_machine_t> slave_) :
     slave(std::move(slave_)),
@@ -63,23 +68,14 @@ spawning_t::spawn(unsigned long timeout) {
         return;
     }
 
-    // Fill Locator's endpoint list.
-    std::ostringstream stream;
-    auto it = endpoints.begin();
-    stream << *it;
-    ++it;
-
-    for (; it != endpoints.end(); ++it) {
-        stream << "," << *it;
-    }
-
     // Prepare command line arguments for worker instance.
     COCAINE_LOG_DEBUG(slave->log, "preparing command line arguments");
     std::map<std::string, std::string> args;
     args["--uuid"]     = slave->context.id;
     args["--app"]      = slave->context.manifest.name;
     args["--endpoint"] = slave->context.manifest.endpoint;
-    args["--locator"]  = stream.str();
+    args["--locator"]  = boost::join(endpoints |
+        boost::adaptors::transformed(boost::lexical_cast<std::string, tcp::endpoint>), ",");
     args["--protocol"] = std::to_string(io::protocol<io::worker_tag>::version::value);
 
     // Spawn a worker instance and start reading standard outputs of it.
