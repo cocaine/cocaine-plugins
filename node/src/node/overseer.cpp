@@ -279,6 +279,21 @@ overseer_t::keep_alive(int count) {
     rebalance_slaves();
 }
 
+namespace {
+
+template<typename SuccCounter, typename FailCounter, typename F>
+void count_success_if(SuccCounter* succ, FailCounter* fail, F fn) {
+    try {
+        fn();
+        ++(*succ);
+    } catch (...) {
+        ++(*fail);
+        throw;
+    }
+}
+
+} // namespace
+
 std::shared_ptr<client_rpc_dispatch_t>
 overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstream,
                     app::event_t event,
@@ -288,27 +303,23 @@ overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstre
 
     std::shared_ptr<client_rpc_dispatch_t> dispatch;
 
-    queue.apply([&](queue_type& queue) {
-        const auto limit = profile().queue_limit;
+    count_success_if(&stats.requests.accepted, &stats.requests.rejected, [&] {
+        queue.apply([&](queue_type& queue) {
+            const auto limit = profile().queue_limit;
 
-        if (queue.size() >= limit && limit > 0) {
-            ++stats.requests.rejected;
-            throw std::system_error(error::queue_is_full);
-        }
+            if (queue.size() >= limit && limit > 0) {
+                throw std::system_error(error::queue_is_full);
+            }
 
-        dispatch = std::make_shared<client_rpc_dispatch_t>(manifest().name);
+            dispatch = std::make_shared<client_rpc_dispatch_t>(manifest().name);
 
-        queue.push_back({
-            {
-                std::move(event),
-                dispatch,
-                std::move(downstream)
-            },
-            trace_t::current()
+            queue.push_back({
+                {std::move(event), dispatch, std::move(downstream)},
+                trace_t::current()
+            });
         });
     });
 
-    ++stats.requests.accepted;
     rebalance_events();
     rebalance_slaves();
 
