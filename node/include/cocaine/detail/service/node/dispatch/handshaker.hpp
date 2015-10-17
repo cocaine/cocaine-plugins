@@ -48,10 +48,10 @@ public:
         }));
     }
 
-    /// Here we need that shitty const cast, because `io::dispatch_ptr_t` is a shared pointer over
-    /// constant dispatch.
     void
     bind(std::shared_ptr<session_t> session) const {
+        // Here we need that shitty const cast, because `dispatch_ptr_t` is a shared pointer over a
+        // constant dispatch.
         const_cast<handshaker_t*>(this)->bind(std::move(session));
     }
 

@@ -11,7 +11,7 @@
 
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 #include "cocaine/detail/service/node/dispatch/handshaker.hpp"
-#include "cocaine/detail/service/node/dispatch/hostess.hpp"
+#include "cocaine/detail/service/node/dispatch/init.hpp"
 #include "cocaine/detail/service/node/manifest.hpp"
 #include "cocaine/detail/service/node/overseer.hpp"
 #include "cocaine/detail/service/node/profile.hpp"
@@ -323,6 +323,8 @@ public:
         ));
 
         // Create an unix actor and bind to {manifest->name}.{pid} unix-socket.
+        using namespace detail::service::node;
+
         COCAINE_LOG_DEBUG(log, "publishing worker service with the context");
         engine.reset(new unix_actor_t(
             context,
@@ -332,7 +334,7 @@ public:
                 std::static_pointer_cast<const handshaker_t>(handshaker)->bind(session);
             },
             std::make_shared<asio::io_service>(),
-            std::make_unique<hostess_t>(manifest.name)
+            std::make_unique<init_dispatch_t>(manifest.name)
         ));
         engine->run();
     }
