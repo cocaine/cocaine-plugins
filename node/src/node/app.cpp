@@ -10,7 +10,7 @@
 #include "cocaine/traits/dynamic.hpp"
 
 #include "cocaine/detail/service/node/dispatch/client.hpp"
-#include "cocaine/detail/service/node/dispatch/handshaker.hpp"
+#include "cocaine/detail/service/node/dispatch/handshake.hpp"
 #include "cocaine/detail/service/node/dispatch/init.hpp"
 #include "cocaine/detail/service/node/manifest.hpp"
 #include "cocaine/detail/service/node/overseer.hpp"
@@ -330,8 +330,8 @@ public:
             context,
             manifest.endpoint,
             std::bind(&overseer_t::prototype, overseer->o),
-            [](io::dispatch_ptr_t handshaker, std::shared_ptr<session_t> session) {
-                std::static_pointer_cast<const handshaker_t>(handshaker)->bind(session);
+            [](io::dispatch_ptr_t handshake, std::shared_ptr<session_t> session) {
+                std::static_pointer_cast<const handshake_t>(handshake)->bind(session);
             },
             std::make_shared<asio::io_service>(),
             std::make_unique<init_dispatch_t>(manifest.name)

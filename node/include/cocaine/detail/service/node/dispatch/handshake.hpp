@@ -19,7 +19,7 @@ class control_t;
 ///
 /// Accepts only handshake messages and forwards it to the actual checker (i.e. to the Overseer).
 /// This is a single-shot dispatch, it will be invalidated after the first handshake processed.
-class handshaker_t:
+class handshake_t:
     public dispatch<io::worker_tag>
 {
     std::shared_ptr<session_t> session;
@@ -29,8 +29,8 @@ class handshaker_t:
 
 public:
     template<class F>
-    handshaker_t(const std::string& name, F&& fn):
-        dispatch<io::worker_tag>(format("%s/handshaker", name))
+    handshake_t(const std::string& name, F&& fn):
+        dispatch<io::worker_tag>(format("%s/handshake", name))
     {
         typedef io::streaming_slot<io::worker::handshake> slot_type;
 
@@ -52,7 +52,7 @@ public:
     bind(std::shared_ptr<session_t> session) const {
         // Here we need that shitty const cast, because `dispatch_ptr_t` is a shared pointer over a
         // constant dispatch.
-        const_cast<handshaker_t*>(this)->bind(std::move(session));
+        const_cast<handshake_t*>(this)->bind(std::move(session));
     }
 
     void

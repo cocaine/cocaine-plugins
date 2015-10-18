@@ -11,7 +11,7 @@
 #include "cocaine/detail/service/node/profile.hpp"
 
 #include "cocaine/detail/service/node/dispatch/client.hpp"
-#include "cocaine/detail/service/node/dispatch/handshaker.hpp"
+#include "cocaine/detail/service/node/dispatch/handshake.hpp"
 #include "cocaine/detail/service/node/dispatch/worker.hpp"
 #include "cocaine/detail/service/node/slave/control.hpp"
 #include "cocaine/detail/service/node/slot.hpp"
@@ -328,7 +328,7 @@ overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstre
 
 io::dispatch_ptr_t
 overseer_t::prototype() {
-    return std::make_shared<const handshaker_t>(
+    return std::make_shared<const handshake_t>(
         manifest().name,
         std::bind(&overseer_t::on_handshake, shared_from_this(), ph::_1, ph::_2, ph::_3)
     );
