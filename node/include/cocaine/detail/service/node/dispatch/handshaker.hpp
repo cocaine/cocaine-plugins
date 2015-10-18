@@ -18,7 +18,7 @@ class control_t;
 /// Initial dispatch for slaves.
 ///
 /// Accepts only handshake messages and forwards it to the actual checker (i.e. to the Overseer).
-/// This is a single-shot dispatch, it will be invalid after the first handshake processed.
+/// This is a single-shot dispatch, it will be invalidated after the first handshake processed.
 class handshaker_t:
     public dispatch<io::worker_tag>
 {
