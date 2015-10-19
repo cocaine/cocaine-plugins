@@ -17,7 +17,8 @@ else()
 endif()
 
 include_directories(
-    ${PROJECT_SOURCE_DIR}/node/include)
+    ${PROJECT_SOURCE_DIR}/node/include
+)
 
 add_library(node MODULE
     src/isolate/process.cpp
