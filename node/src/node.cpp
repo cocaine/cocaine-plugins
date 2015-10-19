@@ -31,8 +31,6 @@
 #include "cocaine/traits/tuple.hpp"
 #include "cocaine/traits/vector.hpp"
 
-#include "cocaine/tuple.hpp"
-
 #include "cocaine/detail/service/node/app.hpp"
 
 #include <blackhole/scoped_attributes.hpp>
