@@ -37,6 +37,8 @@
 
 #include <blackhole/scoped_attributes.hpp>
 
+#include <boost/range/adaptor/map.hpp>
+#include <boost/range/algorithm/copy.hpp>
 #include <boost/spirit/include/karma_char.hpp>
 #include <boost/spirit/include/karma_generate.hpp>
 #include <boost/spirit/include/karma_list.hpp>
@@ -173,10 +175,9 @@ node_t::pause_app(const std::string& name) {
 auto
 node_t::list() const -> dynamic_t {
     dynamic_t::array_t result;
-    auto builder = std::back_inserter(result);
 
     apps.apply([&](const std::map<std::string, std::shared_ptr<node::app_t>>& apps) {
-        std::transform(apps.begin(), apps.end(), builder, tuple::nth_element<0>());
+        boost::copy(apps | boost::adaptors::map_keys, std::back_inserter(result));
     });
 
     return result;
