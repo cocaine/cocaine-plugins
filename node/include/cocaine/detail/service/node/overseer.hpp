@@ -14,7 +14,6 @@
 #include "cocaine/detail/service/node/slot.hpp"
 
 namespace cocaine {
-    class balancer_t;
     class client_rpc_dispatch_t;
     class control_t;
     class slave_t;
