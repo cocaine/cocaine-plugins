@@ -60,7 +60,7 @@ spawning_t::spawn(unsigned long timeout) {
         return;
     }
 
-    const auto endpoints = locator->endpoints();
+    const auto endpoints = locator->location;
 
     if (endpoints.empty()) {
         COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: failed to determine the Locator endpoints");

@@ -16,7 +16,11 @@ else()
     message(STATUS "  Node service will be built without CGroups support")
 endif()
 
-include_directories(
+include_directories(SYSTEM
+    ${LibArchive_INCLUDE_DIRS}
+)
+
+include_directories(BEFORE
     ${PROJECT_SOURCE_DIR}/node/include
 )
 

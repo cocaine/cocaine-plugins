@@ -18,28 +18,25 @@ OPTION(UNICORN "Build Unified configuration service plugin" ON)
 # Include our CMake libraries.
 INCLUDE(cmake/locate_library.cmake)
 
-FIND_PACKAGE(Boost 1.46.0
-    REQUIRED COMPONENTS
-        system
-        filesystem
-        thread)
+FIND_PACKAGE(Boost 1.46.0 REQUIRED COMPONENTS
+    system
+    filesystem
+    thread)
 
 LOCATE_LIBRARY(LIBCOCAINE "cocaine/context.hpp" "cocaine-core")
 LOCATE_LIBRARY(LIBMSGPACK "msgpack.hpp" "msgpack")
 
 # System is required to get rid of errors in foreign libs
-INCLUDE_DIRECTORIES(
-    SYSTEM
+INCLUDE_DIRECTORIES(SYSTEM
     ${Boost_INCLUDE_DIRS}
     ${LIBCOCAINE_INCLUDE_DIRS}
-    ${LIBMSGPACK_INCLUDE_DIRS})
-
-# System is required to get rid of errors in foreign libs
-INCLUDE_DIRECTORIES(BEFORE
-    SYSTEM
+    ${LIBMSGPACK_INCLUDE_DIRS}
+    # Bundled third-party libraries.
     ${PROJECT_SOURCE_DIR}/foreign/asio/asio/include
-    ${PROJECT_SOURCE_DIR}/foreign/blackhole/src
     ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include)
+
+INCLUDE_DIRECTORIES(BEFORE
+    ${PROJECT_SOURCE_DIR}/foreign/blackhole/src)
 
 LINK_DIRECTORIES(
     ${Boost_LIBRARY_DIRS}
@@ -68,6 +65,7 @@ SET(PLUGINS_VERSION 3)
 
 FOREACH(PLUGIN ${PLUGINS})
     STRING(TOUPPER ${PLUGIN} OPTION_NAME)
+
     IF(${${OPTION_NAME}})
         message(STATUS "Configuring ${PLUGIN} plugin")
         ADD_SUBDIRECTORY(${PLUGIN})

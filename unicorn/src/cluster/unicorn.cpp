@@ -227,7 +227,7 @@ unicorn_cluster_t::announce() {
         announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
     }
 
-    auto cur_endpoints = actor->endpoints();
+    auto cur_endpoints = actor->location;
 
     COCAINE_LOG_DEBUG(log, "going to announce self");
     try {
