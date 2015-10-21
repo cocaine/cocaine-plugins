@@ -18,6 +18,8 @@ namespace cocaine {
     class control_t;
     class slave_t;
     class unix_actor_t;
+
+    struct metrics_t;
 } // namespace cocaine
 
 namespace cocaine {
@@ -91,6 +93,8 @@ private:
 
     /// Statistics.
     stats_t stats;
+
+    std::unique_ptr<metrics_t> metrics;
 
 public:
     overseer_t(context_t& context,

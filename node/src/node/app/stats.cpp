@@ -29,13 +29,7 @@ trunc(double v, uint n) noexcept {
 
 stats_t::stats_t():
     timings(boost::accumulators::tag::extended_p_square::probabilities = probabilities_)
-{
-    requests.accepted = 0;
-    requests.rejected = 0;
-
-    slaves.spawned = 0;
-    slaves.crashed = 0;
-}
+{}
 
 const std::vector<double>&
 stats_t::probabilities() const noexcept {

@@ -19,9 +19,64 @@
 
 #include <boost/accumulators/statistics/extended_p_square.hpp>
 
+#include <metrics/counter.hpp>
+#include <metrics/registry.hpp>
+
 namespace ph = std::placeholders;
 
 using namespace cocaine;
+
+namespace cocaine {
+namespace {
+
+template<typename T>
+struct visitor {
+    template<typename Visitable>
+    void visit(Visitable& visitable) {
+        visitable.visit(this);
+    }
+};
+
+}  // namespace
+}  // namespace cocaine
+
+namespace cocaine {
+
+struct metrics_t : public visitor<metrics_t>  {
+    struct requests_t : public visitor<requests_t> {
+        /// The number of requests, that are pushed into the queue.
+        metrics::counter<std::uint64_t> accepted;
+        /// The number of requests, that were rejected due to queue overflow or other circumstances.
+        metrics::counter<std::uint64_t> rejected;
+
+        requests_t(metrics::registry_t& re, const std::string& name):
+            accepted(re.counter<std::uint64_t>(format("cocaine.%s.requests.accepted", name))),
+            rejected(re.counter<std::uint64_t>(format("cocaine.%s.requests.rejected", name)))
+        {}
+    };
+
+    struct slaves_t : public visitor<slaves_t> {
+        /// The number of successfully spawned slaves.
+        metrics::counter<std::uint64_t> spawned;
+        /// The number of crashed slaves.
+        metrics::counter<std::uint64_t> crashed;
+
+        slaves_t(metrics::registry_t& re, const std::string& name):
+            spawned(re.counter<std::uint64_t>(format("cocaine.%s.slaves.spawned", name))),
+            crashed(re.counter<std::uint64_t>(format("cocaine.%s.slaves.crashed", name)))
+        {}
+    };
+
+    requests_t requests;
+    slaves_t slaves;
+
+    metrics_t(metrics::registry_t& registry, const std::string& name):
+        requests(registry, name),
+        slaves(registry, name)
+    {}
+};
+
+}  // namespace cocaine
 
 struct collector_t {
     std::size_t active;
@@ -53,7 +108,8 @@ overseer_t::overseer_t(context_t& context,
     profile_(profile),
     loop(loop),
     pool_target{},
-    stats{}
+    stats{},
+    metrics(new metrics_t(context.metrics(), manifest_.name))
 {
     COCAINE_LOG_DEBUG(log, "overseer has been initialized");
 }
@@ -85,8 +141,7 @@ struct queue_t {
 struct pool_t {
     unsigned long capacity;
 
-    std::uint64_t spawned;
-    std::uint64_t crashed;
+    metrics_t::slaves_t& slaves;
 
     const synchronized<overseer_t::pool_type>* pool;
 };
@@ -125,11 +180,11 @@ public:
 
     // Incoming requests.
     void
-    visit(std::uint64_t accepted, std::uint64_t rejected) {
+    visit(metrics_t::requests_t& requests) {
         dynamic_t::object_t info;
 
-        info["accepted"] = accepted;
-        info["rejected"] = rejected;
+        info["accepted"] = requests.accepted.get();
+        info["rejected"] = requests.rejected.get();
 
         result["requests"] = info;
     }
@@ -236,8 +291,8 @@ public:
             pinfo["idle"]     = pool.size() - collector.active;
             pinfo["capacity"] = value.capacity;
             pinfo["slaves"]   = slaves;
-            pinfo["total:spawned"] = value.spawned;
-            pinfo["total:crashed"] = value.crashed;
+            pinfo["total:spawned"] = value.slaves.spawned.get();
+            pinfo["total:crashed"] = value.slaves.crashed.get();
 
             result["pool"] = pinfo;
         });
@@ -255,10 +310,10 @@ overseer_t::info(io::node::info::flags_t flags) const {
     info_visitor_t visitor(flags, &result);
     visitor.visit(manifest());
     visitor.visit(profile());
-    visitor.visit(stats.requests.accepted.load(), stats.requests.rejected.load());
+    visitor.visit(metrics->requests);
     visitor.visit({ profile().queue_limit, &queue });
     visitor.visit(stats.quantiles());
-    visitor.visit({ profile().pool_limit, stats.slaves.spawned, stats.slaves.crashed, &pool });
+    visitor.visit({ profile().pool_limit, metrics->slaves, &pool });
 
     return result;
 }
@@ -285,9 +340,9 @@ template<typename SuccCounter, typename FailCounter, typename F>
 void count_success_if(SuccCounter* succ, FailCounter* fail, F fn) {
     try {
         fn();
-        ++(*succ);
+        succ->inc();
     } catch (...) {
-        ++(*fail);
+        fail->inc();
         throw;
     }
 }
@@ -303,7 +358,7 @@ overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstre
 
     std::shared_ptr<client_rpc_dispatch_t> dispatch;
 
-    count_success_if(&stats.requests.accepted, &stats.requests.rejected, [&] {
+    count_success_if(&metrics->requests.accepted, &metrics->requests.rejected, [&] {
         queue.apply([&](queue_type& queue) {
             const auto limit = profile().queue_limit;
 
@@ -348,7 +403,7 @@ overseer_t::spawn(pool_type& pool) {
         slave_t(std::move(ctx), *loop, std::bind(&overseer_t::on_slave_death, shared_from_this(), ph::_1, uuid))
     ));
 
-    ++stats.slaves.spawned;
+    metrics->slaves.spawned.inc();
 }
 
 void
@@ -450,7 +505,7 @@ void
 overseer_t::on_slave_death(const std::error_code& ec, std::string uuid) {
     if (ec) {
         COCAINE_LOG_DEBUG(log, "slave has removed itself from the pool: %s", ec.message());
-        ++stats.slaves.crashed;
+        metrics->slaves.crashed.inc();
     } else {
         COCAINE_LOG_DEBUG(log, "slave has removed itself from the pool");
     }
