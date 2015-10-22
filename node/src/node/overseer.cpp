@@ -17,8 +17,6 @@
 #include "cocaine/detail/service/node/slot.hpp"
 #include "cocaine/detail/service/node/util.hpp"
 
-#include <boost/accumulators/statistics/extended_p_square.hpp>
-
 #include <metrics/accumulator/sliding/window.hpp>
 #include <metrics/counter.hpp>
 #include <metrics/registry.hpp>
@@ -123,7 +121,6 @@ overseer_t::overseer_t(context_t& context,
     profile_(profile),
     loop(loop),
     pool_target{},
-    stats{},
     metrics(new metrics_t(context.metrics(), manifest_.name))
 {
     COCAINE_LOG_DEBUG(log, "overseer has been initialized");
