@@ -19,8 +19,10 @@
 
 #include <boost/accumulators/statistics/extended_p_square.hpp>
 
+#include <metrics/accumulator/sliding/window.hpp>
 #include <metrics/counter.hpp>
 #include <metrics/registry.hpp>
+#include <metrics/timer.hpp>
 
 namespace ph = std::placeholders;
 
@@ -67,8 +69,21 @@ struct metrics_t : public visitor<metrics_t>  {
         {}
     };
 
+    struct timers_t : public visitor<timers_t> {
+        typedef metrics::timer<metrics::accumulator::sliding::window_t> timer_type;
+
+        /// Overall event processing time distribution measured from the event enqueueing until
+        /// close event (queue time + slave time).
+        timer_type overall;
+
+        timers_t(metrics::registry_t& re, const std::string& name, const std::string& event):
+            overall(re.timer(format("cocaine.%s.timers.%s.overall", name, event)))
+        {}
+    };
+
     requests_t requests;
     slaves_t slaves;
+    synchronized<std::map<std::string, timers_t>> timers;
 
     metrics_t(metrics::registry_t& registry, const std::string& name):
         requests(registry, name),
@@ -88,7 +103,7 @@ struct collector_t {
         cumload{}
     {
         for (const auto& it : pool) {
-            const auto load = it.second.load();
+            const auto load = it.second.load(); // TODO: Replace with range-based for + values.
             if (it.second.active() && load) {
                 active++;
                 cumload += load;
@@ -223,16 +238,25 @@ public:
         result["queue"] = info;
     }
 
-    // Response time quantiles over all events.
     void
-    visit(const std::vector<stats_t::quantile_t>& value) {
+    visit(const std::map<std::string, metrics_t::timers_t>& distributions) {
         dynamic_t::object_t info;
 
-        std::array<char, 16> buf;
-        for (const auto& quantile : value) {
-            if (std::snprintf(buf.data(), buf.size(), "%.2f%%", quantile.probability)) {
-                info[buf.data()] = quantile.value;
-            }
+        for (const auto& kv : distributions) {
+            const auto& event = kv.first;
+            const auto& timers = kv.second;
+
+            const auto snapshot = timers.overall.snapshot();
+            dynamic_t::object_t metrics;
+
+            metrics["p50"] = std::lround(snapshot.median());
+            metrics["p75"] = std::lround(snapshot.p75());
+            metrics["p90"] = std::lround(snapshot.p90());
+            metrics["p95"] = std::lround(snapshot.p95());
+            metrics["p98"] = std::lround(snapshot.p98());
+            metrics["p99"] = std::lround(snapshot.p99());
+
+            info[event] = metrics;
         }
 
         result["timings"] = info;
@@ -312,7 +336,8 @@ overseer_t::info(io::node::info::flags_t flags) const {
     visitor.visit(profile());
     visitor.visit(metrics->requests);
     visitor.visit({ profile().queue_limit, &queue });
-    visitor.visit(stats.quantiles());
+    const auto distributions = *metrics->timers.synchronize();
+    visitor.visit(distributions);
     visitor.visit({ profile().pool_limit, metrics->slaves, &pool });
 
     return result;
@@ -406,30 +431,51 @@ overseer_t::spawn(pool_type& pool) {
     metrics->slaves.spawned.inc();
 }
 
+namespace cpp17 {
+namespace map {
+namespace {
+
+template<typename M, typename... Args>
+std::pair<typename M::iterator, bool>
+try_emplace(M* map, const typename M::key_type& key, Args&&... args) {
+    auto it = map->find(key);
+
+    if (it != map->end()) {
+        return std::make_pair(it, false);
+    }
+
+    return map->insert(std::make_pair(key, typename M::mapped_type(std::forward<Args>(args)...)));
+}
+
+}  // namespace
+}  // namespace map
+}  // namespace cpp17
+
 void
 overseer_t::assign(slave_t& slave, slave::channel_t& payload) {
-    // Attempts to inject the new channel into the slave.
-    const auto id = slave.id();
-    const auto timestamp = payload.event.birthstamp;
+    typedef metrics_t::timers_t::timer_type timer_type;
 
-    // TODO: Race possible.
+    auto observer = std::make_shared<timer_type::context_type>(metrics->timers.apply([&](std::map<std::string, metrics_t::timers_t>& timers)
+        -> timer_type::context_type
+    {
+        auto& timer = cpp17::map::try_emplace(
+            &timers,
+            payload.event.name,
+            context.metrics(),
+            manifest().name,
+            payload.event.name
+        ).first->second.overall;
+
+        return timer.context();
+    }));
+
     auto self = shared_from_this();
-    slave.inject(payload, [=](std::uint64_t) {
-        const auto now = std::chrono::high_resolution_clock::now();
-        const auto elapsed = std::chrono::duration<
-            double,
-            std::chrono::milliseconds::period
-        >(now - timestamp).count();
-
-        stats.timings.apply([&](stats_t::quantiles_t& timings) {
-            timings(elapsed);
-        });
-
+    slave.inject(payload, [=](std::uint64_t) mutable {
         // TODO: Hack, but at least it saves from the deadlock.
         // TODO: Notify watcher about channel finish.
+        observer.reset();
         loop->post(std::bind(&overseer_t::rebalance_events, self));
     });
-
     // TODO: Notify watcher about channel started.
 }
 
