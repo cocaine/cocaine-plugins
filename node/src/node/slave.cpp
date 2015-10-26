@@ -1,5 +1,8 @@
 #include "cocaine/detail/service/node/slave.hpp"
 
+#include <boost/range/adaptor/map.hpp>
+#include <boost/range/algorithm/min_element.hpp>
+
 #include <cocaine/context.hpp>
 #include <cocaine/rpc/actor.hpp>
 
@@ -111,17 +114,15 @@ state_machine_t::stats() const {
         result.load = channels.size();
         result.total = counter - 1;
 
-        auto it = std::min_element(
-            channels.begin(),
-            channels.end(),
-            [&](const std::pair<std::uint64_t, std::shared_ptr<channel_t>>& current,
-                const std::pair<std::uint64_t, std::shared_ptr<channel_t>>& first) -> bool
-        {
-            return current.second->birthstamp() < first.second->birthstamp();
+        typedef std::shared_ptr<channel_t> value_type;
+
+        const auto range = channels | boost::adaptors::map_values;
+        const auto channel = boost::min_element(range, +[](const value_type& cur, const value_type& first) -> bool {
+            return cur->birthstamp() < first->birthstamp();
         });
 
-        if (it != channels.end()) {
-            result.age.reset(it->second->birthstamp());
+        if (channel != boost::end(range)) {
+            result.age.reset((*channel)->birthstamp());
         }
     });
 
