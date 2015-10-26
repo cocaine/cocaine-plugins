@@ -51,7 +51,7 @@ isolate_t::isolate_t(context_t& context,  asio::io_service& io_context, const st
 unique_ptr<api::cancellation_t>
 isolate_t::async_spool(std::function<void(const std::error_code&)> handler)
 {
-    auto action = make_shared<spawn_action_t>(
+    auto action = make_shared<spool_action_t>(
         m_client,
         m_name,
         m_profile
