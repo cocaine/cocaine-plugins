@@ -10,7 +10,6 @@ namespace action {
 struct cancellation_t:
     public api::cancellation_t
 {
-
     typedef std::shared_ptr<action_t> parent_ptr;
     typedef std::weak_ptr<action_t> parent_wptr;
 
@@ -69,9 +68,9 @@ public:
 
     virtual void send(shared_ptr<session_type> session) = 0;
 
-    virtual void on_done(dynamic_t result) = 0;
+    virtual void on_done(const dynamic_t& result) = 0;
 
-    virtual void on_error(std::error_code ec) = 0;
+    virtual void on_error(const std::error_code& ec) = 0;
 
     uint64_t
     id(){
@@ -110,7 +109,7 @@ public:
 
     virtual
     void
-    done(dynamic_t& result){
+    done(const dynamic_t& result){
         COCAINE_LOG_DEBUG(m_parent->m_log, "request[%d]: complete", m_request_id);
         int expected = states::st_pending;
         if(m_state.compare_exchange_strong(expected, states::st_done)){
@@ -150,15 +149,12 @@ public:
 
 
 
-
-
 template<typename Tag>
 class action_dispatch:
     public dispatch<Tag>
 {
+    
     typedef typename io::protocol<Tag>::scope action_protocol;
-    typedef typename io::protocol<Tag>::scope::value value_method_tag;
-    typedef typename io::protocol<Tag>::scope::error error_method_tag;
 
     shared_ptr<action_t> m_parent_action;
 
@@ -168,8 +164,9 @@ public:
         dispatch<Tag>("<unknown"),
         m_parent_action (parent_action)
     {
-        this->on<typename action_protocol::value>(std::bind(&action_dispatch<Tag>::on_value, this, ph::_1));
-        //this->on<action_protocol::error>(std::bind(&action_dispatch<Tag>::on_error, this, ph::_1, ph::_2));
+        typedef typename action_protocol::value value;
+        this->template on<typename action_protocol::value>(std::bind(&action_dispatch<Tag>::on_value, this, ph::_1));
+        this->template on<typename action_protocol::error>(std::bind(&action_dispatch<Tag>::on_error, this, ph::_1, ph::_2));
     }
     
     void
@@ -180,12 +177,12 @@ public:
     }
 
     void
-    on_value(dynamic_t& result){
+    on_value(const dynamic_t& result){
         m_parent_action->done(result);
     }
 
     void
-    on_error(const std::error_code& ec){
+    on_error(const std::error_code& ec, const std::string& message){
         auto ec1 = const_cast<std::error_code&>(ec);
         m_parent_action->error(ec1);
     }

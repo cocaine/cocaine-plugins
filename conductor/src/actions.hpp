@@ -1,4 +1,6 @@
 
+#include "action.hpp"
+
 #ifndef COCAINE_CONDUCTOR_ACTIONS_HPP
 #define COCAINE_CONDUCTOR_ACTIONS_HPP
 
@@ -31,7 +33,7 @@ public:
 
     virtual
     shared_ptr<io::basic_dispatch_t>
-    dispatch (){
+    dispatch(){
         BOOST_ASSERT(!m_dispatch);
         m_dispatch = std::make_shared<action_dispatch<result_tag>>(shared_from_this());
         return m_dispatch;
@@ -49,7 +51,7 @@ public:
 
     virtual
     void
-    on_error(std::error_code ec){
+    on_error(const std::error_code& ec){
         auto self = this->shared_from_this();
         m_parent->post([self, ec, this](){
             m_handler(ec);
@@ -58,7 +60,7 @@ public:
 
     virtual
     void
-    on_done(dynamic_t result){
+    on_done(const dynamic_t& result){
         auto self = this->shared_from_this();
         m_parent->post([self, this](){
             m_handler(std::error_code());
@@ -99,7 +101,7 @@ public:
 
     virtual
     shared_ptr<io::basic_dispatch_t>
-    dispatch (){
+    dispatch(){
         BOOST_ASSERT(!m_dispatch);
         m_dispatch = std::make_shared<action_dispatch<result_tag>>(shared_from_this());
         return m_dispatch;
@@ -123,7 +125,7 @@ public:
 
     virtual
     void
-    on_error(std::error_code ec){
+    on_error(const std::error_code& ec){
         auto self = this->shared_from_this();
         m_parent->post([self, ec, this](){
             m_handler(ec, std::unique_ptr<api::handle_t>());
@@ -132,7 +134,7 @@ public:
 
     virtual
     void
-    on_done(dynamic_t result){
+    on_done(const dynamic_t& result){
 
         auto r = result.as_object();
         auto container_id = r.at("container_id").as_string();
@@ -195,13 +197,13 @@ public:
 
     virtual
     void
-    on_error(std::error_code ec){
+    on_error(const std::error_code& ec){
         // Empty
     }
 
     virtual
     void
-    on_done(dynamic_t result){
+    on_done(const dynamic_t& result){
         // Empty
     }
 

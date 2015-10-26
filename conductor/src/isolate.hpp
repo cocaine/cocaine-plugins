@@ -55,6 +55,19 @@ public:
               const std::string& name,
               const dynamic_t& args);
 
+    virtual
+    void
+    spool (){
+        // Empty
+    }
+
+    virtual
+    std::unique_ptr<api::handle_t>
+    spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment){
+        // Fake and empty. Never called.
+        return std::move(unique_ptr<api::handle_t>());
+    }
+
 
     virtual
     unique_ptr<api::cancellation_t>
