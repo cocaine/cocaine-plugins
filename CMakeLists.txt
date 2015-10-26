@@ -9,6 +9,7 @@ OPTION(CHRONO "Build Chrono Service plugin" ON)
 OPTION(DOCKER "Build Docker Isolation plugin" ON)
 OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
+OPTION(METRICS "Build Metrics Service plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(NODE "Build Node service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
@@ -53,6 +54,7 @@ SET(PLUGINS
     elasticsearch
     graphite
     ipvs
+    metrics
     mongo
     node
     unicorn
