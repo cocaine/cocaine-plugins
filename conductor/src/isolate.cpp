@@ -30,7 +30,7 @@ isolate_t::post_handler(std::function<void()> handler) {
     m_loop->post(handler);
 }
 
-void
+unique_ptr<api::cancellation_t>
 isolate_t::post_action(shared_ptr<action::action_t> action) {
     auto c = action->cancellation();
     m_loop->post(std::bind(&action->run, action));

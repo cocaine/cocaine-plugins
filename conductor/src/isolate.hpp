@@ -45,7 +45,7 @@ class isolate_t:
     void
     post_handler(std::function<void()> handler);
 
-    void
+    unique_ptr<api::cancellation_t>
     post_action(shared_ptr<action::action_t> action);
     
 public:
