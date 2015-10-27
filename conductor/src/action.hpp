@@ -129,8 +129,8 @@ public:
     void
     on_cancel(){
         auto self = this->shared_from_this();
-        m_parent->post([self](){
-            self->m_parent->cancel(self->m_request_id);
+        m_parent->post([self, this](){
+            m_parent->cancel(m_request_id);
         });
     }
 
