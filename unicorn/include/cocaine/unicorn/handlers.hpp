@@ -28,7 +28,7 @@ namespace unicorn {
 * On each get completion we compare last sent verison to client with current and if current version is greater send update to client.
 * On each watch invoke we issue get command (to later process with this handler) with new watcher.
 */
-struct zookeeper_api_t::subscribe_action_t :
+struct zookeeper_t::subscribe_action_t :
     public zookeeper::managed_data_handler_base_t,
     public zookeeper::managed_watch_handler_base_t,
     public zookeeper::managed_stat_handler_base_t
@@ -37,7 +37,7 @@ struct zookeeper_api_t::subscribe_action_t :
     subscribe_action_t(
         const zookeeper::handler_tag& tag,
         writable_helper<response::subscribe_result>::ptr _result,
-        const zookeeper_api_t::context_t& ctx,
+        const zookeeper_t::context_t& ctx,
         unicorn::path_t _path
     );
 
@@ -63,7 +63,7 @@ struct zookeeper_api_t::subscribe_action_t :
     operator()(int type, int state, zookeeper::path_t path);
 
     writable_helper<response::subscribe_result>::ptr result;
-    zookeeper_api_t::context_t ctx;
+    zookeeper_t::context_t ctx;
     std::mutex write_lock;
     unicorn::version_t last_version;
     const unicorn::path_t path;
@@ -75,7 +75,7 @@ struct zookeeper_api_t::subscribe_action_t :
 * On each get completion we compare last sent verison to client with current and if current version is greater send update to client.
 * On each watch invoke we issue child command (to later process with this handler) starting new watch.
 */
-struct zookeeper_api_t::children_subscribe_action_t :
+struct zookeeper_t::children_subscribe_action_t :
     public zookeeper::managed_strings_stat_handler_base_t,
     public zookeeper::managed_watch_handler_base_t
 {
@@ -83,7 +83,7 @@ struct zookeeper_api_t::children_subscribe_action_t :
     children_subscribe_action_t(
         const zookeeper::handler_tag& tag,
         writable_helper<response::children_subscribe_result>::ptr _result,
-        const zookeeper_api_t::context_t& ctx,
+        const zookeeper_t::context_t& ctx,
         unicorn::path_t _path
     );
 
@@ -101,21 +101,21 @@ struct zookeeper_api_t::children_subscribe_action_t :
 
 
     writable_helper<response::children_subscribe_result>::ptr result;
-    zookeeper_api_t::context_t ctx;
+    zookeeper_t::context_t ctx;
     std::mutex write_lock;
     unicorn::version_t last_version;
     const unicorn::path_t path;
 };
 
 
-struct zookeeper_api_t::put_action_t :
+struct zookeeper_t::put_action_t :
     public zookeeper::managed_stat_handler_base_t,
     public zookeeper::managed_data_handler_base_t
 {
 
     put_action_t(
         const zookeeper::handler_tag& tag,
-        const zookeeper_api_t::context_t& ctx,
+        const zookeeper_t::context_t& ctx,
         writable_helper<response::put_result>::ptr _result,
         unicorn::path_t _path,
         unicorn::value_t _value,
@@ -134,7 +134,7 @@ struct zookeeper_api_t::put_action_t :
     virtual void
     operator()(int rc, zookeeper::value_t value, zookeeper::node_stat const& stat);
 
-    zookeeper_api_t::context_t ctx;
+    zookeeper_t::context_t ctx;
     writable_helper<response::put_result>::ptr result;
     unicorn::path_t path;
     unicorn::value_t initial_value;
@@ -146,13 +146,13 @@ struct zookeeper_api_t::put_action_t :
 /**
 * Base handler for node creation. Used in create, lock, increment requests
 */
-struct zookeeper_api_t::create_action_base_t :
+struct zookeeper_t::create_action_base_t :
     public zookeeper::managed_string_handler_base_t
 {
 
     create_action_base_t(
         const zookeeper::handler_tag& tag,
-        const zookeeper_api_t::context_t& ctx,
+        const zookeeper_t::context_t& ctx,
         unicorn::path_t _path,
         unicorn::value_t _value,
         bool _ephemeral,
@@ -178,7 +178,7 @@ struct zookeeper_api_t::create_action_base_t :
     abort(int rc) = 0;
 
     int depth;
-    zookeeper_api_t::context_t ctx;
+    zookeeper_t::context_t ctx;
     unicorn::path_t path;
     unicorn::value_t initial_value;
     zookeeper::value_t encoded_value;
@@ -189,12 +189,12 @@ struct zookeeper_api_t::create_action_base_t :
 /**
 * Handler for simple node creation
 */
-struct zookeeper_api_t::create_action_t:
+struct zookeeper_t::create_action_t:
     public create_action_base_t
 {
     create_action_t(
         const zookeeper::handler_tag& tag,
-        const zookeeper_api_t::context_t& ctx,
+        const zookeeper_t::context_t& ctx,
         writable_helper<response::create_result>::ptr _result,
         unicorn::path_t _path,
         unicorn::value_t _value,
@@ -214,7 +214,7 @@ struct zookeeper_api_t::create_action_t:
 /**
 * Handler for delete request to ZK.
 */
-struct zookeeper_api_t::del_action_t :
+struct zookeeper_t::del_action_t :
     public zookeeper::void_handler_base_t
 {
     del_action_t(writable_helper<response::del_result>::ptr _result);
@@ -228,7 +228,7 @@ struct zookeeper_api_t::del_action_t :
 /**
 * Context for handling increment queries to service.
 */
-struct zookeeper_api_t::increment_action_t:
+struct zookeeper_t::increment_action_t:
     public create_action_base_t,
     public zookeeper::managed_stat_handler_base_t,
     public zookeeper::managed_data_handler_base_t
@@ -236,7 +236,7 @@ struct zookeeper_api_t::increment_action_t:
 
     increment_action_t(
         const zookeeper::handler_tag& tag,
-        const zookeeper_api_t::context_t& ctx,
+        const zookeeper_t::context_t& ctx,
         writable_helper<response::increment_result>::ptr _result,
         unicorn::path_t _path,
         unicorn::value_t _increment,
@@ -271,7 +271,7 @@ struct zookeeper_api_t::increment_action_t:
     virtual void
     abort(int rc);
 
-    zookeeper_api_t::context_t ctx;
+    zookeeper_t::context_t ctx;
     writable_helper<response::increment_result>::ptr result;
     unicorn::value_t total;
     std::weak_ptr<zookeeper::handler_scope_t> scope;
@@ -281,8 +281,8 @@ struct zookeeper_api_t::increment_action_t:
 * Lock mechanism is described here:
 * http://zookeeper.apache.org/doc/r3.1.2/recipes.html#sc_recipes_Locks
 */
-struct zookeeper_api_t::lock_action_t :
-    public zookeeper_api_t::create_action_base_t,
+struct zookeeper_t::lock_action_t :
+    public zookeeper_t::create_action_base_t,
     public zookeeper::managed_strings_stat_handler_base_t,
     public zookeeper::managed_stat_handler_base_t,
     public zookeeper::managed_watch_handler_base_t
@@ -290,8 +290,8 @@ struct zookeeper_api_t::lock_action_t :
 {
     lock_action_t(
         const zookeeper::handler_tag& tag,
-        const zookeeper_api_t::context_t& ctx,
-        std::shared_ptr<zookeeper_api_t::lock_state_t> state,
+        const zookeeper_t::context_t& ctx,
+        std::shared_ptr<zookeeper_t::lock_state_t> state,
         unicorn::path_t _path,
         unicorn::path_t folder,
         unicorn::value_t _value,
@@ -333,7 +333,7 @@ struct zookeeper_api_t::lock_action_t :
     virtual void
     abort(int rc);
 
-    std::shared_ptr<zookeeper_api_t::lock_state_t> state;
+    std::shared_ptr<zookeeper_t::lock_state_t> state;
     writable_helper<response::lock_result>::ptr result;
     unicorn::path_t folder;
     std::string created_node_name;
@@ -342,15 +342,15 @@ struct zookeeper_api_t::lock_action_t :
 /**
 * Handler for lock_release.
 */
-struct zookeeper_api_t::release_lock_action_t :
+struct zookeeper_t::release_lock_action_t :
     public zookeeper::void_handler_base_t
 {
-    release_lock_action_t(const zookeeper_api_t::context_t& ctx);
+    release_lock_action_t(const zookeeper_t::context_t& ctx);
 
     virtual void
         operator()(int rc);
 
-    zookeeper_api_t::context_t ctx;
+    zookeeper_t::context_t ctx;
 };
 
 

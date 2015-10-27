@@ -12,12 +12,14 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 * GNU General Public License for more details.
 */
-#ifndef ZOOKEEPER_HANDLER_HPP
-#define ZOOKEEPER_HANDLER_HPP
+
+#pragma once
 
 #include "cocaine/zookeeper/zookeeper.hpp"
 
 #include <cocaine/locked_ptr.hpp>
+
+#include <zookeeper/zookeeper.h>
 
 #include <functional>
 #include <string>
@@ -46,7 +48,8 @@ public:
     managed_handler_base_t(const handler_tag&) {}
     managed_handler_base_t(const managed_handler_base_t& other) = delete;
     managed_handler_base_t& operator=(const managed_handler_base_t& other) = delete;
-    virtual ~managed_handler_base_t() {}
+    virtual
+    ~managed_handler_base_t() {}
 };
 
 class handler_dispatcher_t {
@@ -236,4 +239,3 @@ public:
 
 
 }
-#endif

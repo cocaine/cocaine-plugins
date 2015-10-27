@@ -18,10 +18,25 @@
 
 #include "cocaine/unicorn/writable.hpp"
 
-namespace cocaine { namespace unicorn {
-class api_t {
-public:
+#include <cocaine/repository.hpp>
 
+namespace cocaine { namespace api {
+
+// As Unicorn provides subscription functionality
+// this class is dedicated to manage lifetime of such subscriptions, async requests etc
+class unicorn_request_scope_t {
+public:
+    virtual void
+    close() = 0;
+
+    virtual
+    ~unicorn_request_scope_t(){}
+};
+
+typedef std::shared_ptr<unicorn_request_scope_t> unicorn_scope_ptr;
+
+class unicorn_t {
+public:
     /**
     * Typedefs for result type. Actual result types are in include/cocaine/idl/unicorn.hpp
     */
@@ -36,76 +51,119 @@ public:
         typedef result_of<io::unicorn::lock>::type lock_result;
     };
 
-    virtual void
+    unicorn_t(context_t& context, const std::string& name, const dynamic_t& args);
+
+    virtual
+    unicorn_scope_ptr
     put(
-        writable_helper<response::put_result>::ptr result,
+        unicorn::writable_helper<response::put_result>::ptr result,
         unicorn::path_t path,
         unicorn::value_t value,
         unicorn::version_t version
     ) = 0;
 
-    virtual void
+    virtual
+    unicorn_scope_ptr
     get(
-        writable_helper<response::get_result>::ptr result,
+        unicorn::writable_helper<response::get_result>::ptr result,
         unicorn::path_t path
     ) = 0;
 
-    virtual void
+    virtual
+    unicorn_scope_ptr
     create(
-        writable_helper<response::create_result>::ptr result,
+        unicorn::writable_helper<response::create_result>::ptr result,
         unicorn::path_t path,
         unicorn::value_t value,
         bool ephemeral,
         bool sequence
     ) = 0;
 
-    void
+    unicorn_scope_ptr
     create_default(
-        writable_helper<response::create_result>::ptr result,
+        unicorn::writable_helper<response::create_result>::ptr result,
         unicorn::path_t path,
         unicorn::value_t value
     ) {
         return create(std::move(result), std::move(path), std::move(value), false, false);
     }
 
-    virtual void
+    virtual
+    unicorn_scope_ptr
     del(
-        writable_helper<response::del_result>::ptr result,
+        unicorn::writable_helper<response::del_result>::ptr result,
         unicorn::path_t path,
         unicorn::version_t version
     ) = 0;
 
-    virtual void
+    virtual
+    unicorn_scope_ptr
     subscribe(
-        writable_helper<response::subscribe_result>::ptr result,
+        unicorn::writable_helper<response::subscribe_result>::ptr result,
         unicorn::path_t path
     ) = 0;
 
-    virtual void
+    virtual
+    unicorn_scope_ptr
     children_subscribe(
-        writable_helper<response::children_subscribe_result>::ptr result,
+        unicorn::writable_helper<response::children_subscribe_result>::ptr result,
         unicorn::path_t path
     ) = 0;
 
-    virtual void
+    virtual
+    unicorn_scope_ptr
     increment(
-        writable_helper<response::increment_result>::ptr result,
+        unicorn::writable_helper<response::increment_result>::ptr result,
         unicorn::path_t path,
         unicorn::value_t value
     ) = 0;
 
-    virtual void
+    virtual
+    unicorn_scope_ptr
     lock(
-        writable_helper<response::lock_result>::ptr result,
+        unicorn::writable_helper<response::lock_result>::ptr result,
         unicorn::path_t path
     ) = 0;
 
-    virtual void
-    close() = 0;
-
     virtual
-    ~api_t() {}
+    ~unicorn_t() {}
 };
+
+template<>
+struct category_traits<unicorn_t> {
+    typedef std::shared_ptr<unicorn_t> ptr_type;
+
+    struct factory_type: public basic_factory<unicorn_t> {
+        virtual
+        ptr_type
+        get(context_t& context, const std::string& name, const dynamic_t& args) = 0;
+    };
+
+    template<class T>
+    struct default_factory: public factory_type {
+        virtual
+        ptr_type
+        get(context_t& context, const std::string& name, const dynamic_t& args) {
+            ptr_type instance;
+
+            instances.apply([&](std::map<std::string, std::weak_ptr<unicorn_t>>& instances_) {
+                if((instance = instances_[name].lock()) == nullptr) {
+                    instance = std::make_shared<T>(context, name, args);
+                    instances_[name] = instance;
+                }
+            });
+
+            return instance;
+        }
+
+    private:
+        synchronized<std::map<std::string, std::weak_ptr<unicorn_t>>> instances;
+    };
+};
+
+category_traits<unicorn_t>::ptr_type
+unicorn(context_t& context, const std::string& name);
+
 }}
 
 #endif

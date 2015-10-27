@@ -27,6 +27,7 @@ class unicorn_cluster_t:
     public api::cluster_t
 {
 public:
+    typedef api::category_traits<api::unicorn_t>::ptr_type unicorn_ptr;
     struct cfg_t {
         cfg_t(const dynamic_t& args);
 
@@ -37,15 +38,15 @@ public:
     unicorn_cluster_t(context_t& context, interface& locator, const std::string& name, const dynamic_t& args);
 
     struct on_announce:
-        public unicorn::writable_adapter_base_t<unicorn::api_t::response::create_result>,
+        public unicorn::writable_adapter_base_t<api::unicorn_t::response::create_result>,
         public std::enable_shared_from_this<on_announce>
     {
         on_announce(unicorn_cluster_t* _parent);
 
         virtual void
-        write(unicorn::api_t::response::create_result&& result);
+        write(api::unicorn_t::response::create_result&& result);
 
-        using unicorn::writable_adapter_base_t<unicorn::api_t::response::create_result>::abort;
+        using unicorn::writable_adapter_base_t<api::unicorn_t::response::create_result>::abort;
 
         virtual void
         abort(const std::error_code& ec);
@@ -54,15 +55,15 @@ public:
     };
 
     struct on_update:
-        public unicorn::writable_adapter_base_t<unicorn::api_t::response::subscribe_result>,
+        public unicorn::writable_adapter_base_t<api::unicorn_t::response::subscribe_result>,
         public std::enable_shared_from_this<on_update>
     {
         on_update(unicorn_cluster_t* _parent);
 
         virtual void
-        write(unicorn::api_t::response::subscribe_result&& result);
+        write(api::unicorn_t::response::subscribe_result&& result);
 
-        using unicorn::writable_adapter_base_t<unicorn::api_t::response::subscribe_result>::abort;
+        using unicorn::writable_adapter_base_t<api::unicorn_t::response::subscribe_result>::abort;
 
         virtual void
         abort(const std::error_code& ec);
@@ -71,14 +72,14 @@ public:
     };
 
     struct on_fetch :
-        public unicorn::writable_adapter_base_t<unicorn::api_t::response::get_result>
+        public unicorn::writable_adapter_base_t<api::unicorn_t::response::get_result>
     {
         on_fetch(std::string uuid, unicorn_cluster_t* _parent);
 
         virtual void
-        write(unicorn::api_t::response::get_result&& result);
+        write(api::unicorn_t::response::get_result&& result);
 
-        using unicorn::writable_adapter_base_t<unicorn::api_t::response::get_result>::abort;
+        using unicorn::writable_adapter_base_t<api::unicorn_t::response::get_result>::abort;
 
         virtual void
         abort(const std::error_code& ec);
@@ -88,14 +89,14 @@ public:
     };
 
     struct on_list_update :
-        public unicorn::writable_adapter_base_t<unicorn::api_t::response::children_subscribe_result>
+        public unicorn::writable_adapter_base_t<api::unicorn_t::response::children_subscribe_result>
     {
         on_list_update(unicorn_cluster_t* _parent);
 
         virtual void
-        write(unicorn::api_t::response::children_subscribe_result&& result);
+        write(api::unicorn_t::response::children_subscribe_result&& result);
 
-        using unicorn::writable_adapter_base_t<unicorn::api_t::response::children_subscribe_result>::abort;
+        using unicorn::writable_adapter_base_t<api::unicorn_t::response::children_subscribe_result>::abort;
 
         virtual void
         abort(const std::error_code& ec);
@@ -123,9 +124,8 @@ private:
     std::vector<asio::ip::tcp::endpoint> endpoints;
     asio::deadline_timer announce_timer;
     asio::deadline_timer subscribe_timer;
-    zookeeper::session_t zk_session;
-    zookeeper::connection_t zk;
-    synchronized<unicorn::zookeeper_api_t> unicorn;
+    unicorn_ptr unicorn;
+    api::unicorn_scope_ptr scope;
     synchronized<std::set<std::string>> registered_locators;
 };
 

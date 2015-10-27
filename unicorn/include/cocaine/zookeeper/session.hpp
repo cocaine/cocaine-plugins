@@ -12,10 +12,13 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 * GNU General Public License for more details.
 */
-#ifndef ZOOKEEPER_SESSION_HPP
-#define ZOOKEEPER_SESSION_HPP
+
+#pragma once
+
 #include <zookeeper/zookeeper.h>
+
 namespace zookeeper {
+
 /**
 * Class representing zookeeper clientid_t from C api.
 */
@@ -23,8 +26,8 @@ class session_t {
 public:
     session_t();
 
-    const
-    clientid_t* native();
+    const clientid_t*
+    native();
 
     /**
     * Reset session. Used to reset expired sesions
@@ -43,8 +46,9 @@ public:
     */
     bool
     valid() const;
+    
 private:
     clientid_t zk_session;
 };
-}
-#endif
+
+} //namespace zookeeper

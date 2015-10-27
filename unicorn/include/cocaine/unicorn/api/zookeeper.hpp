@@ -23,9 +23,15 @@
 
 namespace cocaine { namespace unicorn {
 
-zookeeper::cfg_t make_zk_config(const dynamic_t& args);
+//zookeeper::cfg_t make_zk_config(const dynamic_t& args);
 
-class zookeeper_api_t : public api_t {
+struct zookeeper_scope_t: public api::unicorn_request_scope_t {
+    std::shared_ptr<zookeeper::handler_scope_t> handler_scope;
+    virtual
+    ~zookeeper_scope_t() {}
+};
+
+class zookeeper_t : public api::unicorn_t {
 public:
 
     struct context_t {
@@ -33,16 +39,15 @@ public:
         zookeeper::connection_t& zk;
     };
 
-    typedef std::shared_ptr <zookeeper::handler_scope_t> scope_ptr;
-
     /**
     * Typedefs for result type. Actual result types are in include/cocaine/idl/unicorn.hpp
     */
-    typedef api_t::response response;
+    typedef api::unicorn_t::response response;
 
-    zookeeper_api_t(cocaine::logging::log_t& log, zookeeper::connection_t&);
+    zookeeper_t(cocaine::context_t& context, const std::string& name, const dynamic_t& args);
 
-    virtual void
+    virtual
+    api::unicorn_scope_ptr
     put(
         writable_helper<response::put_result>::ptr result,
         unicorn::path_t path,
@@ -50,13 +55,15 @@ public:
         unicorn::version_t version
     );
 
-    virtual void
+    virtual
+    api::unicorn_scope_ptr
     get(
         writable_helper<response::get_result>::ptr result,
         unicorn::path_t path
     );
 
-    virtual void
+    virtual
+    api::unicorn_scope_ptr
     create(
         writable_helper<response::create_result>::ptr result,
         unicorn::path_t path,
@@ -65,40 +72,42 @@ public:
         bool sequence = false
     );
 
-    virtual void
+    virtual
+    api::unicorn_scope_ptr
     del(
         writable_helper<response::del_result>::ptr result,
         unicorn::path_t path,
         unicorn::version_t version
     );
 
-    virtual void
+    virtual
+    api::unicorn_scope_ptr
     subscribe(
         writable_helper<response::subscribe_result>::ptr result,
         unicorn::path_t path
     );
 
-    virtual void
+    virtual
+    api::unicorn_scope_ptr
     children_subscribe(
         writable_helper<response::children_subscribe_result>::ptr result,
         unicorn::path_t path
     );
 
-    virtual void
+    virtual
+    api::unicorn_scope_ptr
     increment(
         writable_helper<response::increment_result>::ptr result,
         unicorn::path_t path,
         unicorn::value_t value
     );
 
-    virtual void
+    virtual
+    api::unicorn_scope_ptr
     lock(
         writable_helper<response::lock_result>::ptr result,
         unicorn::path_t path
     );
-
-    virtual void
-    close();
 
     /**
     * Callbacks to handle async ZK responses
@@ -123,50 +132,10 @@ public:
 
     struct release_lock_action_t;
 
-    class lock_state_t :
-        public std::enable_shared_from_this<lock_state_t>
-    {
-    public:
-        lock_state_t(const zookeeper_api_t::context_t& _ctx);
-        ~lock_state_t();
-        lock_state_t(const lock_state_t& other) = delete;
-        lock_state_t& operator=(const lock_state_t& other) = delete;
-
-        void
-        schedule_for_lock(scope_ptr _zk_scope);
-
-        void
-        release();
-
-        bool
-        release_if_discarded();
-
-        void
-        discard();
-
-        bool
-        set_lock_created(unicorn::path_t created_path);
-
-        void
-        abort_lock_creation();
-    private:
-        void
-        release_impl();
-
-        zookeeper_api_t::context_t ctx;
-        bool lock_created;
-        bool lock_released;
-        bool discarded;
-        unicorn::path_t lock_path;
-        unicorn::path_t created_path;
-        std::mutex access_mutex;
-        scope_ptr zk_scope;
-    };
-
 private:
-    std::shared_ptr<lock_state_t> lock_state;
-    scope_ptr handler_scope;
-    context_t ctx;
+    const std::unique_ptr<logging::log_t> log;
+    zookeeper::session_t zk_session;
+    zookeeper::connection_t zk;
 };
 }}
 

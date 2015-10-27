@@ -13,11 +13,7 @@
 * GNU General Public License for more details.
 */
 
-#ifndef ZOOKEEPER_HPP
-#define ZOOKEEPER_HPP
-
-#include <zookeeper/zookeeper.h>
-#include <zookeeper/zookeeper.jute.h>
+#pragma once
 
 #include <string>
 
@@ -47,6 +43,5 @@ get_sequence_from_node_name_or_path(const path_t& path);
 
 std::string
 get_node_name(const path_t& path);
-}
 
-#endif
+}
