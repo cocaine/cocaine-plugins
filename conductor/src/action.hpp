@@ -56,12 +56,6 @@ public:
         m_parent(client)
     {}
 
-    template<class Derived>
-    shared_ptr<Derived>
-    shared_self(){
-        return std::static_pointer_cast<Derived>(shared_from_this());
-    }
-
     virtual
     shared_ptr<io::basic_dispatch_t>
     dispatch() = 0;
@@ -86,7 +80,7 @@ public:
     virtual
     void
     run(){
-        m_parent->enqueue(this->shared_from_this());
+        m_parent->enqueue(shared_from_this());
     }
 
     virtual
