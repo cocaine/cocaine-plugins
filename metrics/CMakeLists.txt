@@ -2,6 +2,7 @@ set(MODULE metrics)
 
 find_package(Boost 1.46 COMPONENTS REQUIRED
     system
+    thread
 )
 
 include_directories(
@@ -9,6 +10,7 @@ include_directories(
 )
 
 add_library(${MODULE} MODULE
+    src/metrics
     src/module
 )
 
