@@ -62,8 +62,7 @@ isolate_t::async_spool(std::function<void(const std::error_code&)> handler)
     return post_action(action);
 }
 
-void
-//unique_ptr<api::cancellation_t>
+unique_ptr<api::cancellation_t>
 isolate_t::async_spawn(const std::string& path,
                        const api::string_map_t& args,
                        const api::string_map_t& environment,
@@ -81,7 +80,7 @@ isolate_t::async_spawn(const std::string& path,
         handler
     );
 
-    post_action(action);
+    return post_action(action);
 }
 
 
