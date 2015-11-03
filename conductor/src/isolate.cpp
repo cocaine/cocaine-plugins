@@ -5,7 +5,7 @@
 namespace cocaine { namespace isolate { namespace conductor {
 
 
-handle_t::handle_t(shared_ptr<container_t> container):
+handle_t::handle_t(std::shared_ptr<container_t> container):
     m_container(container)
 {
     // Empty
@@ -28,8 +28,8 @@ isolate_t::post_handler(std::function<void()> handler) {
     get_io_service().post(handler);
 }
 
-unique_ptr<api::cancellation_t>
-isolate_t::post_action(shared_ptr<action::action_t> action) {
+std::unique_ptr<api::cancellation_t>
+isolate_t::post_action(std::shared_ptr<action::action_t> action) {
     auto c = action->cancellation();
     get_io_service().post(std::bind(&action::action_t::run, action));
 
@@ -47,12 +47,12 @@ isolate_t::isolate_t(context_t& context,  asio::io_service& loop, const std::str
         
 }
 
-unique_ptr<api::cancellation_t>
+std::unique_ptr<api::cancellation_t>
 isolate_t::async_spool(std::function<void(const std::error_code&)> handler)
 {
     COCAINE_LOG_DEBUG(m_log, "isolate_t::async_spool");
 
-    auto action = make_shared<action::spool_t>(
+    auto action = std::make_shared<action::spool_t>(
         m_client,
         m_name,
         m_profile,
@@ -62,7 +62,7 @@ isolate_t::async_spool(std::function<void(const std::error_code&)> handler)
     return post_action(action);
 }
 
-unique_ptr<api::cancellation_t>
+std::unique_ptr<api::cancellation_t>
 isolate_t::async_spawn(const std::string& path,
                        const api::string_map_t& args,
                        const api::string_map_t& environment,
@@ -70,7 +70,7 @@ isolate_t::async_spawn(const std::string& path,
 {
     COCAINE_LOG_DEBUG(m_log, "isolate_t::async_spawn");
 
-    auto action = make_shared<action::spawn_t>(
+    auto action = std::make_shared<action::spawn_t>(
         m_client,
         m_name,
         m_profile,

@@ -102,10 +102,6 @@ connecting_t::reschedule_connect(){
 
     m_socket = std::make_unique<asio::ip::tcp::socket>(m_parent->m_loop);
 
-    // m_socket->async_connect(
-    //     endpoints.begin(), endpoints.end(),
-    //     std::bind(&connecting_t::on_connect, shared_from_this(), ph::_1, ph::_2));
-
     auto self = shared_from_this();
 
     asio::async_connect(

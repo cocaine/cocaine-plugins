@@ -33,27 +33,12 @@ namespace cocaine { namespace isolate { namespace conductor {
 
 namespace ph = std::placeholders;
 
-using std::enable_shared_from_this;
-using std::make_shared;
-using std::shared_ptr;
-using std::make_unique;
-using std::unique_ptr;
-
-
-
 struct handle_t;
 class isolate_t;
 class client_t;
 struct container_t;
 
 namespace state {
-
-
-using std::enable_shared_from_this;
-using std::make_shared;
-using std::shared_ptr;
-using std::make_unique;
-using std::unique_ptr;
 
 class base_t;
 class closed_t;

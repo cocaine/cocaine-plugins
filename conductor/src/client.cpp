@@ -15,7 +15,7 @@
 
 namespace cocaine { namespace isolate { namespace conductor {
 
-container_t::container_t(shared_ptr<client_t> parent,
+container_t::container_t(std::shared_ptr<client_t> parent,
                          std::string container_id,
                          std::string name,
                          dynamic_t profile,
@@ -36,10 +36,7 @@ container_t::terminate(){
         COCAINE_LOG_DEBUG(m_parent->m_log, "container[%s]::terminate", m_container_id);
 
         m_terminated = true;
-        // shared_ptr<action::action_t> action(
-        //     new action::terminate_t (m_parent, m_container_id)
-        // );
-        auto action = make_shared<action::terminate_t>(
+        auto action = std::make_shared<action::terminate_t>(
             m_parent,
             m_container_id,
             m_name,
@@ -65,9 +62,9 @@ container_t::attach (){
     m_fd = fd;
 }
 
-unique_ptr<api::handle_t>
+std::unique_ptr<api::handle_t>
 container_t::handle(){
-    unique_ptr<api::handle_t> handle_(new handle_t(shared_from_this()));
+    std::unique_ptr<api::handle_t> handle_(new handle_t(shared_from_this()));
 
     return std::move(handle_);
 }
@@ -92,13 +89,13 @@ client_t::client_t(cocaine::context_t& context, asio::io_service& loop, cocaine:
     COCAINE_LOG_DEBUG(m_log, "client_t::client_t");
 }
 
-shared_ptr<client_t>
+std::shared_ptr<client_t>
 client_t::create(context_t& context, asio::io_service& loop, const dynamic_t& args){
-    auto client = make_shared<client_t>(context, loop, args);
+    auto client = std::make_shared<client_t>(context, loop, args);
 
     COCAINE_LOG_DEBUG(client->m_log, "client_t::state[none]");
 
-    auto state = make_shared<state::closed_t>(client);
+    auto state = std::make_shared<state::closed_t>(client);
 
     client->migrate(nullptr, state);
 
@@ -107,7 +104,7 @@ client_t::create(context_t& context, asio::io_service& loop, const dynamic_t& ar
 }
 
 void
-client_t::enqueue(shared_ptr<action::action_t> action){
+client_t::enqueue(std::shared_ptr<action::action_t> action){
     if (action->m_state == st_pending){
         COCAINE_LOG_DEBUG(m_log, "client::enqueue(action[%d])", action->id());
         m_state->enqueue(action);
@@ -122,7 +119,7 @@ client_t::post(std::function<void()> handler){
 }
 
 void
-client_t::migrate(shared_ptr<state::base_t> current_state, shared_ptr<state::base_t> new_state) {
+client_t::migrate(std::shared_ptr<state::base_t> current_state, std::shared_ptr<state::base_t> new_state) {
     COCAINE_LOG_DEBUG(m_log, "client state transition requested: [%s]->[%s]",
                       current_state? current_state->name(): "null",
                       new_state->name());

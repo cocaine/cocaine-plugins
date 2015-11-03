@@ -28,13 +28,13 @@ struct cancellation_t:
 
 
 class action_t:
-    public enable_shared_from_this<action_t>
+    public std::enable_shared_from_this<action_t>
 {
 
 protected:
 
     uint64_t             m_request_id;
-    shared_ptr<client_t> m_parent;
+    std::shared_ptr<client_t> m_parent;
 
     io::dispatch_ptr_t   m_dispatch;
 
@@ -48,7 +48,7 @@ public:
 
     typedef session<asio::ip::tcp> session_type;
 
-    action_t(shared_ptr<client_t> client):
+    action_t(std::shared_ptr<client_t> client):
         m_state(st_pending),
         m_request_id(++client->max_request_id),
         m_parent(client)
@@ -68,7 +68,7 @@ public:
         return std::string("<action>");
     }
 
-    virtual void send(shared_ptr<session_type> session) = 0;
+    virtual void send(std::shared_ptr<session_type> session) = 0;
 
     virtual void on_done(const dynamic_t& result) = 0;
 
@@ -164,11 +164,11 @@ class action_dispatch:
     
     typedef typename io::protocol<Tag>::scope action_protocol;
 
-    shared_ptr<action_t> m_parent_action;
+    std::shared_ptr<action_t> m_parent_action;
 
 public:
 
-    action_dispatch(shared_ptr<action_t> parent_action):
+    action_dispatch(std::shared_ptr<action_t> parent_action):
         dispatch<Tag>(parent_action->name()),
         m_parent_action(parent_action)
     {

@@ -8,18 +8,18 @@
 namespace cocaine { namespace isolate { namespace conductor {
 
 struct container_t:
-    public enable_shared_from_this<container_t>
+    public std::enable_shared_from_this<container_t>
 {
     
     bool                 m_terminated;
-    shared_ptr<client_t> m_parent;
+    std::shared_ptr<client_t> m_parent;
     std::string          m_container_id;
     std::string          m_name;
     dynamic_t            m_profile;
     std::string          m_stdout_path;
     int                  m_fd;
 
-    container_t(shared_ptr<client_t> parent,
+    container_t(std::shared_ptr<client_t> parent,
                 std::string container_id,
                 std::string name,
                 dynamic_t profile,
@@ -31,7 +31,7 @@ struct container_t:
     void
     attach();
 
-    unique_ptr<api::handle_t>
+    std::unique_ptr<api::handle_t>
     handle();
 
     int
@@ -39,7 +39,7 @@ struct container_t:
 };
 
 class client_t:
-    public enable_shared_from_this<client_t>
+    public std::enable_shared_from_this<client_t>
 {
 
     friend class state::base_t;
@@ -55,7 +55,7 @@ class client_t:
 
     friend struct container_t;
 
-    shared_ptr<state::base_t> m_state;
+    std::shared_ptr<state::base_t> m_state;
 
     asio::io_service&     m_loop;
     std::atomic<uint64_t> max_request_id;
@@ -80,17 +80,17 @@ public:
     client_t(context_t& context, asio::io_service& loop, dynamic_t args);
 
     static
-    shared_ptr<client_t>
+    std::shared_ptr<client_t>
     create(context_t& context, asio::io_service& loop, const dynamic_t& args);
 
     void
-    enqueue(shared_ptr<action::action_t> action);
+    enqueue(std::shared_ptr<action::action_t> action);
 
     void
     post(std::function<void()> handler);
 
     void
-    migrate(shared_ptr<state::base_t> current_state, shared_ptr<state::base_t> new_state);
+    migrate(std::shared_ptr<state::base_t> current_state, std::shared_ptr<state::base_t> new_state);
 
     virtual
     ~client_t();

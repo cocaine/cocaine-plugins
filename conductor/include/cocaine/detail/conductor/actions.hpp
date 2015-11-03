@@ -10,7 +10,7 @@ namespace cocaine { namespace isolate { namespace conductor {
 namespace action {
 
 typedef std::function<void(const std::error_code&)> spool_handler_type;
-typedef std::function<void(const std::error_code&, unique_ptr<api::handle_t>&)> spawn_handler_type;
+typedef std::function<void(const std::error_code&, std::unique_ptr<api::handle_t>&)> spawn_handler_type;
 typedef std::function<void()> terminate_handler_type;
 
 class spool_t:
@@ -24,7 +24,7 @@ class spool_t:
 
 public:
 
-    spool_t(shared_ptr<client_t> client, std::string& name, dynamic_t& profile, spool_handler_type handler):
+    spool_t(std::shared_ptr<client_t> client, std::string& name, dynamic_t& profile, spool_handler_type handler):
         action_t(client),
         m_name(name),
         m_profile(profile),
@@ -47,7 +47,7 @@ public:
 
     virtual
     void
-    send(shared_ptr<session_type> session){
+    send(std::shared_ptr<session_type> session){
         if (!m_dispatch){
             dispatch();
         }
@@ -121,7 +121,7 @@ public:
 
     virtual
     void
-    send(shared_ptr<session_type> session){
+    send(std::shared_ptr<session_type> session){
         if (!m_dispatch){
             dispatch();
         }
@@ -153,7 +153,7 @@ public:
         auto container_id = r.at("container_id").as_string();
         auto stdout_path = r.at("stdout_path").as_string();
 
-        auto container = make_shared<container_t>(
+        auto container = std::make_shared<container_t>(
             m_parent,
             container_id,
             m_name,
@@ -208,7 +208,7 @@ public:
 
     virtual
     void
-    send(shared_ptr<session_type> session){
+    send(std::shared_ptr<session_type> session){
         if (!m_dispatch){
             dispatch();
         }

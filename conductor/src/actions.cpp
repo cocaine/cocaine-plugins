@@ -5,7 +5,7 @@ namespace cocaine { namespace isolate { namespace conductor {
 namespace action {
 
 typedef std::function<void(const std::error_code&)> spool_handler_type;
-typedef std::function<void(const std::error_code&, unique_ptr<api::handle_t>)> spawn_handler_type;
+typedef std::function<void(const std::error_code&, std::unique_ptr<api::handle_t>)> spawn_handler_type;
 typedef std::function<void()> terminate_handler_type;
 
 class spool_t:
@@ -17,13 +17,13 @@ class spool_t:
 
 public:
 
-    spool_t(shared_ptr<client_t> client, spool_handler_type handler):
+    spool_t(std::shared_ptr<client_t> client, spool_handler_type handler):
         action_t(client),
         m_handler(handler)
     {}
 
     virtual
-    shared_ptr<io::basic_dispatch_t>
+    std::shared_ptr<io::basic_dispatch_t>
     dispatch (){
         BOOST_ASSERT(!m_dispatch);
         m_dispatch = std::make_shared<action_dispatch<result_tag>>(shared_from_this());
@@ -32,7 +32,7 @@ public:
 
     virtual
     void
-    send(shared_ptr<session_type> session){
+    send(std::shared_ptr<session_type> session){
         if (!m_dispatch){
             dispatch();
         }
@@ -86,7 +86,7 @@ public:
     }
 
     virtual
-    shared_ptr<io::basic_dispatch_t>
+    std::shared_ptr<io::basic_dispatch_t>
     dispatch(){
         BOOST_ASSERT(!m_dispatch);
         m_dispatch = std::make_shared<action_dispatch<result_tag>>(shared_from_this());
@@ -95,7 +95,7 @@ public:
 
     virtual
     void
-    send(shared_ptr<session_type> session) {
+    send(std::shared_ptr<session_type> session) {
         if (!m_dispatch){
             dispatch();
         }
@@ -104,14 +104,14 @@ public:
     }
 
     virtual
-    unique_ptr<api::cancellation_t>
+    std::unique_ptr<api::cancellation_t>
     async_spawn(const std::string& path,
                 const api::string_map_t& args,
                 const api::string_map_t& environment,
                 api::spawn_handler_t handler)
     {
 
-        auto action = make_shared<spawn_action_t>(
+        auto action = std::make_shared<spawn_action_t>(
             m_client,
             m_name,
             m_profile,
@@ -140,7 +140,7 @@ public:
         auto r = result.as_object();
         auto container_id = r.at("container_id").as_string();
 
-        auto container = make_shared<container_t>(m_parent, container_id);
+        auto container = std::make_shared<container_t>(m_parent, container_id);
         auto self = shared_from_this();
         
         m_parent->post([self, container](){
@@ -158,7 +158,7 @@ class terminate_t:
 public:
 
     virtual
-    shared_ptr<io::basic_dispatch_t>
+    std::shared_ptr<io::basic_dispatch_t>
     dispatch (){
         BOOST_ASSERT(!m_dispatch);
         m_dispatch = std::make_shared<action_dispatch<result_tag>>(shared_from_this());
@@ -167,7 +167,7 @@ public:
 
     virtual
     void
-    send(shared_ptr<session_type> session){
+    send(std::shared_ptr<session_type> session){
         if (!m_dispatch){
             dispatch();
         }

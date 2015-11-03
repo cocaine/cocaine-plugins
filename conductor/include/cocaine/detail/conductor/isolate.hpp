@@ -15,9 +15,9 @@ namespace cocaine { namespace isolate { namespace conductor {
 struct handle_t:
     public api::handle_t
 {
-    shared_ptr<container_t> m_container;
+    std::shared_ptr<container_t> m_container;
 
-    handle_t(shared_ptr<container_t> container);
+    handle_t(std::shared_ptr<container_t> container);
 
     virtual
     void
@@ -32,7 +32,7 @@ struct handle_t:
 
 class isolate_t:
     public api::isolate_t,
-    public enable_shared_from_this<isolate_t>
+    public std::enable_shared_from_this<isolate_t>
 {
 
     std::string          m_name;
@@ -40,13 +40,13 @@ class isolate_t:
 
     std::shared_ptr<cocaine::logging::log_t> m_log;
 
-    shared_ptr<client_t> m_client;
+    std::shared_ptr<client_t> m_client;
 
     void
     post_handler(std::function<void()> handler);
 
-    unique_ptr<api::cancellation_t>
-    post_action(shared_ptr<action::action_t> action);
+    std::unique_ptr<api::cancellation_t>
+    post_action(std::shared_ptr<action::action_t> action);
     
 public:
 
@@ -65,17 +65,17 @@ public:
     std::unique_ptr<api::handle_t>
     spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment){
         // Fake and empty. Never called.
-        return std::move(unique_ptr<api::handle_t>());
+        return std::move(std::unique_ptr<api::handle_t>());
     }
 
 
     virtual
-    unique_ptr<api::cancellation_t>
+    std::unique_ptr<api::cancellation_t>
     async_spool(std::function<void(const std::error_code&)> handler);
     
 
     virtual
-    unique_ptr<api::cancellation_t>
+    std::unique_ptr<api::cancellation_t>
     async_spawn(const std::string& path,
                 const api::string_map_t& args,
                 const api::string_map_t& environment,
