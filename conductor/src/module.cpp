@@ -1,5 +1,5 @@
 
-#include "isolate.hpp"
+#include "cocaine/detail/conductor/isolate.hpp"
 
 using namespace cocaine;
 using namespace cocaine::isolate;
