@@ -4,11 +4,11 @@ INCLUDE_DIRECTORIES(
     ${CMAKE_SOURCE_DIR}/conductor/include)
 
 ADD_LIBRARY(conductor MODULE
-#    service/include/cocaine/conductor
-    include/cocaine/idl/conductor
+    src/client_state
+    src/action
     src/client
+    src/isolate
     src/module)
-
 
 TARGET_LINK_LIBRARIES(conductor
     cocaine-core

@@ -6,10 +6,10 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "client.hpp"
-#include "action.hpp"
-#include "actions.hpp"
-#include "isolate.hpp"
+#include "cocaine/detail/conductor/client.hpp"
+#include "cocaine/detail/conductor/action.hpp"
+#include "cocaine/detail/conductor/actions.hpp"
+#include "cocaine/detail/conductor/isolate.hpp"
 
 
 
@@ -32,6 +32,9 @@ container_t::container_t(shared_ptr<client_t> parent,
 void
 container_t::terminate(){
     if (!m_terminated){
+
+        COCAINE_LOG_DEBUG(m_parent->m_log, "container[%s]::terminate", m_container_id);
+
         m_terminated = true;
         // shared_ptr<action::action_t> action(
         //     new action::terminate_t (m_parent, m_container_id)
@@ -49,12 +52,13 @@ container_t::terminate(){
 
 void
 container_t::attach (){
-    COCAINE_LOG_DEBUG(m_parent->m_log, "attaching to container stdout fifo at %s", m_stdout_path);
+    COCAINE_LOG_DEBUG(m_parent->m_log, "container[%s]::attach  stdout fifo at %s", m_container_id, m_stdout_path);
     auto fd = ::open(m_stdout_path.c_str(), O_RDONLY) == -1;
+    //auto fd = ::open("/dev/null", O_RDONLY) == -1;
     if(fd == -1) {
         auto errno_ = errno;
 
-        COCAINE_LOG_ERROR(m_parent->m_log, "unable to open container stdout pipe");
+        COCAINE_LOG_ERROR(m_parent->m_log, "container[%s]::attach unable to open stdout pipe", m_container_id);
 
         throw std::system_error(errno_, std::system_category(), "unable to open container's stdout named pipe");
     }
@@ -79,33 +83,63 @@ client_t::cancel(uint64_t request_id){
     m_state->cancel(request_id);
 }
 
-client_t::client_t(cocaine::context_t& context, asio::io_service& loop, cocaine::dynamic_t& args):
+client_t::client_t(cocaine::context_t& context, asio::io_service& loop, cocaine::dynamic_t args):
     m_loop(loop),
-    m_log(context.log("conductor/client")),
-    m_args(args)
+    max_request_id(123),
+    m_args(args),
+    m_log(context.log("conductor/client"))
 {
-        
+    COCAINE_LOG_DEBUG(m_log, "client_t::client_t");
 }
 
 shared_ptr<client_t>
-client_t::create(context_t& context, asio::io_service& loop, dynamic_t& args){
-    shared_ptr<client_t> client(new client_t(context, loop, args));
-    client->m_state = make_shared<state::closed_t>(client);
+client_t::create(context_t& context, asio::io_service& loop, const dynamic_t& args){
+    auto client = make_shared<client_t>(context, loop, args);
+
+    COCAINE_LOG_DEBUG(client->m_log, "client_t::state[none]");
+
+    auto state = make_shared<state::closed_t>(client);
+
+    client->migrate(nullptr, state);
+
+    COCAINE_LOG_DEBUG(client->m_log, "client_t::state->closed");
     return client;
 }
 
 void
 client_t::enqueue(shared_ptr<action::action_t> action){
-    if (action->m_state == action::action_t::states::st_pending){
+    if (action->m_state == st_pending){
+        COCAINE_LOG_DEBUG(m_log, "client::enqueue(action[%d])", action->id());
         m_state->enqueue(action);
     } else {
-        COCAINE_LOG_INFO(m_log, "dropping cancelled/done action[%d] state[%d]", action->id(), action->m_state);
+        COCAINE_LOG_DEBUG(m_log, "client::enqueue action[%d] cancelled/done state[%d], dropping", action->id(), action->m_state);
     }
 }
 
 void
 client_t::post(std::function<void()> handler){
     m_loop.post(handler);
+}
+
+void
+client_t::migrate(shared_ptr<state::base_t> current_state, shared_ptr<state::base_t> new_state) {
+    COCAINE_LOG_DEBUG(m_log, "client state transition requested: [%s]->[%s]",
+                      current_state? current_state->name(): "null",
+                      new_state->name());
+    if(m_state == current_state){
+        COCAINE_LOG_DEBUG(m_log, "client state transition: [%s]->[%s]",
+                          current_state ? current_state->name() : "null",
+                          new_state->name());
+        m_state = new_state;
+    } else {
+        COCAINE_LOG_WARNING(m_log, "actual [%s] and current [%s] states don't match",
+                            m_state ? m_state->name() : "null",
+                            current_state ? current_state->name() : "null");
+    }
+}
+
+client_t::~client_t(){
+    COCAINE_LOG_WARNING(m_log, "client_t::~client_t");
 }
 
 }}} // namespace cocaine::isolate::conductor

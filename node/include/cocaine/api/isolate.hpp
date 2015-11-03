@@ -30,6 +30,8 @@
 
 #include <asio/io_service.hpp>
 
+#include <cocaine/detail/service/node/util.hpp>
+
 namespace cocaine { namespace api {
 
 struct handle_t {
@@ -74,12 +76,6 @@ struct isolate_t {
     void
     spool() = 0;
 
-    virtual
-    void
-    fake() {
-        // Empty
-    }
-
     // Default implementation delegates the control flow into the blocking spool method.
     virtual
     std::unique_ptr<cancellation_t>
@@ -100,16 +96,11 @@ struct isolate_t {
 
         auto handle_ = spawn(path, args, environment);
 
-        get_io_service().post([&] {
-                
-            handler(std::error_code(errno, std::system_category()), handle_);
-            
-        });
+        auto handler_ = cocaine::detail::move_handler(
+            std::bind(handler, std::error_code(), std::move(handle_)));
 
-        //async_spawn(const std::string& path, const string_map_t& args, const string_map_t& environment, std::function<void(const std::error_code&)> handler) {
-        // auto handle_ = spawn(path, args, environment);
-        // get_io_service().post(std::bind(handler, std::error_code(), handle_));
-        //get_io_service().post(std::bind(handler, std::error_code()));
+        get_io_service().post(handler_);
+
     }
 
     asio::io_service&

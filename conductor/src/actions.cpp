@@ -87,7 +87,7 @@ public:
 
     virtual
     shared_ptr<io::basic_dispatch_t>
-    dispatch (){
+    dispatch(){
         BOOST_ASSERT(!m_dispatch);
         m_dispatch = std::make_shared<action_dispatch<result_tag>>(shared_from_this());
         return m_dispatch;
@@ -95,7 +95,7 @@ public:
 
     virtual
     void
-    send(shared_ptr<session_type> session){
+    send(shared_ptr<session_type> session) {
         if (!m_dispatch){
             dispatch();
         }

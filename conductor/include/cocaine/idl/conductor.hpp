@@ -83,6 +83,8 @@ struct conductor {
         typedef boost::mpl::list<
             uint64_t // request_id
         >::type argument_type;
+
+        typedef void upstream_type;
     };
 };
 
