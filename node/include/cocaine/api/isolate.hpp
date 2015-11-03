@@ -91,7 +91,7 @@ struct isolate_t {
 
 
     virtual
-    void
+    std::unique_ptr<cancellation_t>
     async_spawn(const std::string& path, const string_map_t& args, const string_map_t& environment, spawn_handler_t handler) {
 
         auto handle_ = spawn(path, args, environment);
@@ -101,6 +101,7 @@ struct isolate_t {
 
         get_io_service().post(handler_);
 
+        return std::make_unique<cancellation_t>();
     }
 
     asio::io_service&
