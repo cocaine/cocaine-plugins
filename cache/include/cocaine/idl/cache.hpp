@@ -20,9 +20,12 @@
 
 namespace cocaine { namespace io {
 
+/// Tag type for cache protocol.
 struct cache_tag;
 
+/// Represents cache service methods scope.
 struct cache {
+    /// Represents put method interface.
     struct put {
         typedef cache_tag tag;
 
@@ -31,11 +34,14 @@ struct cache {
         }
 
         typedef boost::mpl::list<
-            /* key */ std::string,
-            /* value */ std::string
+            /// Key.
+            std::string,
+            /// Value.
+            std::string
         > argument_type;
     };
 
+    /// Represents get method interface.
     struct get {
         typedef cache_tag tag;
 
@@ -44,16 +50,20 @@ struct cache {
         }
 
         typedef boost::mpl::list<
-            /* key */ std::string
+            /// Key.
+            std::string
         > argument_type;
 
         typedef option_of<
-            /* exists */ bool,
-            /* value */ std::string
+            /// Exists flag.
+            bool,
+            /// Value.
+            std::string
         >::tag upstream_type;
     };
 };
 
+/// Explicit protocol template specialization for cache service.
 template<>
 struct protocol<cache_tag> {
     typedef boost::mpl::int_<

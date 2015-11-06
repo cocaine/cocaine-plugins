@@ -27,28 +27,40 @@
 
 namespace cocaine { namespace service {
 
+/// Cache service provides a convenient interface to the underlying LRU cache implementation.
+///
+/// It's the entry point for all incoming requests.
+///
+/// \remarks
+///     All methods of this class are **thread-safe**.
 class cache_t:
     public api::service_t,
     public dispatch<io::cache_tag>
 {
-    public:
-        cache_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
+    synchronized<cache::lru_cache<std::string, std::string>> cache_;
 
-        virtual
-        auto
-        prototype() const -> const io::basic_dispatch_t& {
-            return *this;
-        }
+public:
+    /// Constructs the cache service with the given context, I/O service, name and arguments.
+    ///
+    /// \param context Cocaine context.
+    /// \param asio reference to the underlying acceptor I/O service.
+    /// \param name service name.
+    /// \param args arguments tree that matches the appropriate configuration section.
+    cache_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
 
-    private:
-        void
-        put(const std::string& key, const std::string& value);
+    /// Returns a const reference to the actual dispatch prototype.
+    virtual
+    auto
+    prototype() const -> const io::basic_dispatch_t& {
+        return *this;
+    }
 
-        auto
-        get(const std::string& key) -> result_of<io::cache::get>::type;
+private:
+    void
+    put(const std::string& key, const std::string& value);
 
-    private:
-        synchronized<cache::lru_cache<std::string, std::string>> cache_;
+    auto
+    get(const std::string& key) -> result_of<io::cache::get>::type;
 };
 
 }} // namespace cocaine::service
