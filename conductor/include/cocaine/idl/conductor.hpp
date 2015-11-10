@@ -18,6 +18,22 @@ struct conductor_tag;
 
 struct conductor {
 
+    struct connect {
+        typedef conductor_tag tag;
+
+        static const char* alias() {
+            return "connect";
+        }
+
+        typedef boost::mpl::list<
+            std::string // application name
+        >::type argument_type;
+
+        typedef option_of<
+            std::string // connection id
+        >::tag upstream_type;
+    };
+
     struct spool {
         typedef conductor_tag tag;
 
@@ -95,6 +111,7 @@ struct protocol<conductor_tag> {
     >::type version;
 
     typedef boost::mpl::list<
+        conductor::connect,
         conductor::spool,
         conductor::spawn,
         conductor::terminate,

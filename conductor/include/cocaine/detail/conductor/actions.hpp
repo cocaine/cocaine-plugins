@@ -159,8 +159,29 @@ public:
             m_name,
             m_profile,
             stdout_path);
-        auto self = shared_from_this();
-        
+
+        try {
+            container->attach();
+        } catch (const std::system_error& err) {
+            COCAINE_LOG_ERROR(m_parent->m_log, "unable to attach to container stdout: %s", err.what());
+            
+            m_parent->m_loop.post(
+                cocaine::detail::move_handler(
+                    std::bind(m_handler,
+                              err.code(),
+                              std::unique_ptr<api::handle_t>())));
+            return;
+        } catch (const std::exception& err){
+            COCAINE_LOG_ERROR(m_parent->m_log, "unable to attach to container stdout: %s", err.what());
+            
+            m_parent->m_loop.post(
+                cocaine::detail::move_handler(
+                    std::bind(m_handler,
+                              std::error_code(1, std::generic_category()),
+                              std::unique_ptr<api::handle_t>())));
+            return;
+        }
+
         auto handle = container->handle();
 
         m_parent->m_loop.post (

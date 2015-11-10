@@ -93,8 +93,23 @@ public:
 
     virtual
     void
-    reset(){
-        m_dispatch.reset();
+    disown_dispatch(){
+        if (m_dispatch){
+            COCAINE_LOG_DEBUG(m_parent->m_log, "request[%d] discarding child dispatch", id());
+            //m_dispatch->discard(std::error_code(0, conductor_category()));
+            m_dispatch->discard(std::error_code(65418, std::system_category()));
+            m_dispatch.reset();
+        } else {
+            COCAINE_LOG_DEBUG(m_parent->m_log, "request[%d] has null dispatch", id());
+        }
+    }
+    
+    virtual
+    void
+    dismay(const std::error_code& ec){
+        COCAINE_LOG_ERROR(m_parent->m_log, "request[%d] closing parent due to [%d] %s", id(),  ec.value(), ec.message());
+        disown_dispatch();
+        m_parent->close();
     }
 
     virtual
@@ -156,7 +171,6 @@ public:
 };
 
 
-
 template<typename Tag>
 class action_dispatch:
     public dispatch<Tag>
@@ -166,11 +180,14 @@ class action_dispatch:
 
     std::shared_ptr<action_t> m_parent_action;
 
+    mutable bool m_disowned;
+
 public:
 
     action_dispatch(std::shared_ptr<action_t> parent_action):
         dispatch<Tag>(parent_action->name()),
-        m_parent_action(parent_action)
+        m_parent_action(parent_action),
+        m_disowned(false)
     {
         typedef typename action_protocol::value value;
         this->template on<typename action_protocol::value>(std::bind(&action_dispatch<Tag>::on_value, this, ph::_1));
@@ -180,21 +197,43 @@ public:
     virtual
     void
     discard(const std::error_code& ec) const {
-        COCAINE_LOG_DEBUG(m_parent_action->log(), "request[%d] discarded", m_parent_action->id());
         if(ec) {
-            COCAINE_LOG_ERROR(m_parent_action->log(), "request[%d] discarded: [%d] %s", m_parent_action->id(), ec.value(), ec.message());
-            m_parent_action->reset();
+            if (ec.value() == 65418){
+            //if (category() == conductor_category()){
+                COCAINE_LOG_DEBUG(m_parent_action->log(), "request[%d]<dispatch> disowned by parent: [%d] %s", m_parent_action->id(), ec.value(), ec.message());
+                m_disowned = true;
+                return;
+            }
+            
+            if(m_disowned){
+                COCAINE_LOG_DEBUG(m_parent_action->log(), "request[%d]<dispatch:disowned> discarded: [%d] %s", m_parent_action->id(), ec.value(), ec.message());
+                return;
+            }
+            COCAINE_LOG_ERROR(m_parent_action->log(), "request[%d]<dispatch> discarded: [%d] %s", m_parent_action->id(), ec.value(), ec.message());
+            m_parent_action->dismay(ec);
+        } else {
+            COCAINE_LOG_DEBUG(m_parent_action->log(), "request[%d]<dispatch> discarded", m_parent_action->id());
         }
     }
 
     void
     on_value(const dynamic_t& result){
+        if (m_disowned){
+            COCAINE_LOG_DEBUG(m_parent_action->log(), "request[%d]<dispatch:disowned> completed", m_parent_action->id());
+            return;
+        }
+        COCAINE_LOG_INFO(m_parent_action->log(), "request[%d]<dispatch> completed", m_parent_action->id());
         m_parent_action->done(result);
     }
 
     void
     on_error(const std::error_code& ec, const std::string& message){
         auto ec1 = const_cast<std::error_code&>(ec);
+        if (m_disowned){
+            COCAINE_LOG_DEBUG(m_parent_action->log(), "request[%d]<dispatch:disowned> completed with error [%d] %s", ec.value(), ec.message());
+            return;
+        }
+        COCAINE_LOG_DEBUG(m_parent_action->log(), "request[%d]<dispatch> completed with error [%d] %s", m_parent_action->id(), ec.value(), ec.message());
         m_parent_action->error(ec1);
     }
     

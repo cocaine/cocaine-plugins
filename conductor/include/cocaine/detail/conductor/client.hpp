@@ -7,6 +7,30 @@
 
 namespace cocaine { namespace isolate { namespace conductor {
 
+class conductor_category_t:
+    public std::error_category
+{
+    virtual
+    auto
+    name() const throw() -> const char* {
+        return "cocaine.isolate.conductor";
+    }
+
+    virtual
+    auto
+    message(int code) const -> std::string {
+        if (code == 0) {
+            return "discard by parent";
+        } else {
+            return "<unknown code>";
+        }
+    }
+};
+
+const std::error_category&
+conductor_category();
+
+
 struct container_t:
     public std::enable_shared_from_this<container_t>
 {
@@ -24,6 +48,8 @@ struct container_t:
                 std::string name,
                 dynamic_t profile,
                 std::string stdout_path);
+
+    ~container_t();
     
     void
     terminate();
@@ -88,6 +114,12 @@ public:
 
     void
     post(std::function<void()> handler);
+
+    void
+    reset_requests();
+
+    void
+    close();
 
     void
     migrate(std::shared_ptr<state::base_t> current_state, std::shared_ptr<state::base_t> new_state);

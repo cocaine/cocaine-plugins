@@ -45,6 +45,12 @@ public:
     }
 
     virtual
+    void
+    close(){
+        // Empty
+    }
+
+    virtual
     std::string
     name (){
         return "unknown";
@@ -143,6 +149,10 @@ public:
     name (){
         return "conected";
     }
+
+    virtual
+    void
+    close();
 
 };
 } // namespace state

@@ -15,6 +15,12 @@
 
 namespace cocaine { namespace isolate { namespace conductor {
 
+auto
+conductor_category() -> const std::error_category& {
+    static conductor_category_t instance;
+    return instance;
+}
+
 container_t::container_t(std::shared_ptr<client_t> parent,
                          std::string container_id,
                          std::string name,
@@ -27,7 +33,12 @@ container_t::container_t(std::shared_ptr<client_t> parent,
     m_profile(profile),
     m_stdout_path(stdout_path),
     m_fd(-1)
-{}
+{
+}
+
+container_t::~container_t(){
+    terminate();
+}
     
 void
 container_t::terminate(){
@@ -119,12 +130,29 @@ client_t::post(std::function<void()> handler){
 }
 
 void
+client_t::reset_requests(){
+    auto mapping = m_requests_pending;
+
+    for(auto it = mapping.begin(); it!= mapping.end();) {
+        auto a = it->second;
+        mapping.erase(it++);
+        a->disown_dispatch();
+        enqueue(a);
+    }
+}
+
+void
+client_t::close(){
+    m_state->close();
+}
+
+void
 client_t::migrate(std::shared_ptr<state::base_t> current_state, std::shared_ptr<state::base_t> new_state) {
     COCAINE_LOG_DEBUG(m_log, "client state transition requested: [%s]->[%s]",
                       current_state? current_state->name(): "null",
                       new_state->name());
     if(m_state == current_state){
-        COCAINE_LOG_DEBUG(m_log, "client state transition: [%s]->[%s]",
+        COCAINE_LOG_DEBUG(m_log, "client state transition granted: [%s]->[%s]",
                           current_state ? current_state->name() : "null",
                           new_state->name());
         m_state = new_state;

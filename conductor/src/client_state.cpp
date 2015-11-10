@@ -198,6 +198,15 @@ connected_t::enqueue(std::shared_ptr<action::action_t> action){
 }
 
 
+void
+connected_t::close(){
+    if (m_parent->m_state.get() == this){
+        auto closed = std::make_shared<closed_t>(m_parent);
+        m_parent->migrate(shared_from_this(), closed);
+        m_parent->reset_requests();
+    }
+}
+
 } // namespace state
 
 
