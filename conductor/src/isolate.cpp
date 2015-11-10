@@ -52,6 +52,10 @@ isolate_t::async_spool(std::function<void(const std::error_code&)> handler)
 {
     COCAINE_LOG_DEBUG(m_log, "isolate_t::async_spool");
 
+    if (!m_self){
+        m_self = shared_from_this();
+    }
+
     auto action = std::make_shared<action::spool_t>(
         m_client,
         m_name,
@@ -69,6 +73,10 @@ isolate_t::async_spawn(const std::string& path,
                        api::spawn_handler_t handler)
 {
     COCAINE_LOG_DEBUG(m_log, "isolate_t::async_spawn");
+
+    if (!m_self){
+        m_self = shared_from_this();
+    }
 
     auto action = std::make_shared<action::spawn_t>(
         m_client,

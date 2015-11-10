@@ -42,6 +42,9 @@ class isolate_t:
 
     std::shared_ptr<client_t> m_client;
 
+    // XXX temporary: keep isolate alive
+    std::shared_ptr<isolate_t> m_self;
+
     void
     post_handler(std::function<void()> handler);
 
