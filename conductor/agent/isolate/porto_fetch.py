@@ -12,10 +12,7 @@ log = logging.getLogger("agent.fetcher")
 log.setLevel(logging.DEBUG)
 logging.basicConfig(level=logging.DEBUG) 
 
-class config(object):
-    spool_dir = "/place/cocaine_spool"
-    volumes_base = "/place/cocaine_volumes"
-    porto_layers = "/place/porto_layers"
+from porto_config import config
 
 class Fetcher(object):
 
@@ -24,7 +21,7 @@ class Fetcher(object):
         self.image = name # temporary alias, until refactored out
         self.tag = tag
         self.registry = registry
-
+    
     def create_volume(self, rw=False, layers=None):
 
         if layers is None:
