@@ -1,4 +1,4 @@
-cocaine-plugins (0.12.4.1) UNRELEASED; urgency=low
+cocaine-plugins (0.12.4.1) unstable; urgency=low
 
   * misc(node): code simplification
 
