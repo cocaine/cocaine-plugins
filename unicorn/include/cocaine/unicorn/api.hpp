@@ -50,13 +50,26 @@ public:
         typedef result_of<io::unicorn::children_subscribe>::type children_subscribe_result;
         typedef result_of<io::unicorn::lock>::type lock_result;
     };
+    /**
+    * Typedefs for used writable helpers
+    */
+    struct writable_ptr {
+        typedef unicorn::writable_helper<response::put_result>::ptr put;
+        typedef unicorn::writable_helper<response::create_result>::ptr create;
+        typedef unicorn::writable_helper<response::del_result>::ptr del;
+        typedef unicorn::writable_helper<response::increment_result>::ptr increment;
+        typedef unicorn::writable_helper<response::get_result>::ptr get;
+        typedef unicorn::writable_helper<response::subscribe_result>::ptr subscribe;
+        typedef unicorn::writable_helper<response::children_subscribe_result>::ptr children_subscribe;
+        typedef unicorn::writable_helper<response::lock_result>::ptr lock;
+    };
 
     unicorn_t(context_t& context, const std::string& name, const dynamic_t& args);
 
     virtual
     unicorn_scope_ptr
     put(
-        unicorn::writable_helper<response::put_result>::ptr result,
+        writable_ptr::put result,
         unicorn::path_t path,
         unicorn::value_t value,
         unicorn::version_t version
@@ -65,14 +78,14 @@ public:
     virtual
     unicorn_scope_ptr
     get(
-        unicorn::writable_helper<response::get_result>::ptr result,
+        writable_ptr::get result,
         unicorn::path_t path
     ) = 0;
 
     virtual
     unicorn_scope_ptr
     create(
-        unicorn::writable_helper<response::create_result>::ptr result,
+        writable_ptr::create result,
         unicorn::path_t path,
         unicorn::value_t value,
         bool ephemeral,
@@ -81,7 +94,7 @@ public:
 
     unicorn_scope_ptr
     create_default(
-        unicorn::writable_helper<response::create_result>::ptr result,
+        writable_ptr::create result,
         unicorn::path_t path,
         unicorn::value_t value
     ) {
@@ -91,7 +104,7 @@ public:
     virtual
     unicorn_scope_ptr
     del(
-        unicorn::writable_helper<response::del_result>::ptr result,
+        writable_ptr::del result,
         unicorn::path_t path,
         unicorn::version_t version
     ) = 0;
@@ -99,21 +112,21 @@ public:
     virtual
     unicorn_scope_ptr
     subscribe(
-        unicorn::writable_helper<response::subscribe_result>::ptr result,
+        writable_ptr::subscribe result,
         unicorn::path_t path
     ) = 0;
 
     virtual
     unicorn_scope_ptr
     children_subscribe(
-        unicorn::writable_helper<response::children_subscribe_result>::ptr result,
+        writable_ptr::children_subscribe result,
         unicorn::path_t path
     ) = 0;
 
     virtual
     unicorn_scope_ptr
     increment(
-        unicorn::writable_helper<response::increment_result>::ptr result,
+        writable_ptr::increment result,
         unicorn::path_t path,
         unicorn::value_t value
     ) = 0;
@@ -121,7 +134,7 @@ public:
     virtual
     unicorn_scope_ptr
     lock(
-        unicorn::writable_helper<response::lock_result>::ptr result,
+        writable_ptr::lock result,
         unicorn::path_t path
     ) = 0;
 

@@ -40,16 +40,16 @@ public:
     };
 
     /**
-    * Typedefs for result type. Actual result types are in include/cocaine/idl/unicorn.hpp
+    * Typedefs for used writable helpers
     */
-    typedef api::unicorn_t::response response;
+    typedef api::unicorn_t::writable_ptr writable_ptr;
 
     zookeeper_t(cocaine::context_t& context, const std::string& name, const dynamic_t& args);
 
     virtual
     api::unicorn_scope_ptr
     put(
-        writable_helper<response::put_result>::ptr result,
+        writable_ptr::put result,
         unicorn::path_t path,
         unicorn::value_t value,
         unicorn::version_t version
@@ -58,14 +58,14 @@ public:
     virtual
     api::unicorn_scope_ptr
     get(
-        writable_helper<response::get_result>::ptr result,
+        writable_ptr::get result,
         unicorn::path_t path
     );
 
     virtual
     api::unicorn_scope_ptr
     create(
-        writable_helper<response::create_result>::ptr result,
+        writable_ptr::create result,
         unicorn::path_t path,
         unicorn::value_t value,
         bool ephemeral = false,
@@ -75,7 +75,7 @@ public:
     virtual
     api::unicorn_scope_ptr
     del(
-        writable_helper<response::del_result>::ptr result,
+        writable_ptr::del result,
         unicorn::path_t path,
         unicorn::version_t version
     );
@@ -83,21 +83,21 @@ public:
     virtual
     api::unicorn_scope_ptr
     subscribe(
-        writable_helper<response::subscribe_result>::ptr result,
+        writable_ptr::subscribe result,
         unicorn::path_t path
     );
 
     virtual
     api::unicorn_scope_ptr
     children_subscribe(
-        writable_helper<response::children_subscribe_result>::ptr result,
+        writable_ptr::children_subscribe result,
         unicorn::path_t path
     );
 
     virtual
     api::unicorn_scope_ptr
     increment(
-        writable_helper<response::increment_result>::ptr result,
+        writable_ptr::increment result,
         unicorn::path_t path,
         unicorn::value_t value
     );
@@ -105,32 +105,9 @@ public:
     virtual
     api::unicorn_scope_ptr
     lock(
-        writable_helper<response::lock_result>::ptr result,
+        writable_ptr::lock result,
         unicorn::path_t path
     );
-
-    /**
-    * Callbacks to handle async ZK responses
-    */
-    struct nonode_action_t;
-
-    struct subscribe_action_t;
-
-    struct children_subscribe_action_t;
-
-    struct put_action_t;
-
-    struct create_action_base_t;
-    struct create_action_t;
-
-    struct del_action_t;
-
-    struct increment_action_t;
-    struct increment_create_action_t;
-
-    struct lock_action_t;
-
-    struct release_lock_action_t;
 
 private:
     const std::unique_ptr<logging::log_t> log;
