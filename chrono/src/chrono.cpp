@@ -70,7 +70,7 @@ chrono_t::set_timer_impl(double first, double repeat, bool send_id) {
     try {
         ptr->insert(std::make_pair(timer_id, desc));
 
-        desc.timer_->expires_from_now(boost::posix_time::seconds(first));
+        desc.timer_->expires_from_now(boost::posix_time::microseconds(first * 1000000));
         desc.timer_->async_wait(std::bind(&chrono_t::on_timer, this, ph::_1, timer_id));
 
         if (send_id) {
@@ -99,7 +99,7 @@ void
 chrono_t::restart(io::timer_id_t timer_id) {
     timer_desc_t& timer_desc = timers_.unsafe().at(timer_id);
 
-    timer_desc.timer_->expires_from_now(boost::posix_time::seconds(timer_desc.interval_));
+    timer_desc.timer_->expires_from_now(boost::posix_time::microseconds(timer_desc.interval_ * 1000000));
     timer_desc.timer_->async_wait(std::bind(&chrono_t::on_timer, this, ph::_1, timer_id));
 }
 
