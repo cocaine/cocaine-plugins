@@ -58,7 +58,7 @@ Description: Cocaine - Chrono Service (debug symbols)
 Package: libcocaine-plugin-docker3
 Architecture: any
 Section: libs
-Pre-Depends: docker-engine | lxc-docker
+Pre-Depends: docker-engine | lxc-docker | cocaine-porto
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Cocaine - Docker Isolation
  Support of Docker for Cocaine.
