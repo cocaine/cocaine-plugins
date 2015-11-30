@@ -15,6 +15,8 @@
 
 #include "cocaine/detail/unicorn/zookeeper/increment.hpp"
 
+#include <cocaine/logging.hpp>
+
 #include "cocaine/unicorn/errors.hpp"
 
 namespace cocaine { namespace unicorn {
@@ -43,7 +45,7 @@ increment_action_t::stat_event(int rc, zookeeper::node_stat const& stat) {
             ctx.zk.get(path, *this);
         } catch(const std::system_error& e) {
             result->abort(e.code());
-            COCAINE_LOG_WARNING(ctx.log, "failure during increment get: %s", e.what());
+            COCAINE_LOG_WARNING(ctx.log, "failure during increment get: {}", e.what());
         }
     }
 }
@@ -79,7 +81,7 @@ increment_action_t::data_event(int rc, zookeeper::value_t value, const zookeeper
             }
         }
     } catch(const std::system_error& e) {
-        COCAINE_LOG_WARNING(ctx.log, "failure during get action of increment: %s", e.what());
+        COCAINE_LOG_WARNING(ctx.log, "failure during get action of increment: {}", e.what());
         result->abort(e.code());
     }
 }

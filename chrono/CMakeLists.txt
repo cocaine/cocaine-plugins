@@ -7,6 +7,7 @@ ADD_LIBRARY(chrono MODULE
 
 TARGET_LINK_LIBRARIES(chrono
     cocaine-core
+    blackhole
     ${Boost_LIBRARIES})
 
 SET_TARGET_PROPERTIES(chrono PROPERTIES
@@ -20,7 +21,6 @@ INSTALL(TARGETS chrono
 
 INSTALL(
     DIRECTORY
-        include/cocaine/framework
         include/cocaine/idl
     DESTINATION include/cocaine
     COMPONENT development)

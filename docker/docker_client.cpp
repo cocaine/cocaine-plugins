@@ -23,11 +23,16 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <blackhole/logger.hpp>
+
+#include <chrono>
+#include <iostream>
 #include <memory>
 #include <system_error>
-#include <chrono>
+
 #include <errno.h>
 
+using namespace cocaine;
 using namespace cocaine::docker;
 
 namespace {
@@ -142,7 +147,7 @@ connection_t::connection_t() {
 
 connection_t::connection_t(boost::asio::io_service& ioservice,
                            const endpoint_t& endpoint,
-                           std::shared_ptr<logging::log_t> logger): m_logger(std::move(logger))
+                           std::shared_ptr<logging::logger_t> logger): m_logger(std::move(logger))
 {
     connect(ioservice, endpoint);
 }
@@ -151,7 +156,7 @@ namespace {
 
     void
     timeout_handler(const boost::system::error_code& error,
-                    const std::shared_ptr<cocaine::logging::log_t>& logger,
+                    const std::shared_ptr<logging::logger_t>& logger,
                     bool& exit_with_timeout,
                     boost::asio::io_service& ioservice)
     {
@@ -160,13 +165,13 @@ namespace {
             exit_with_timeout = true;
             ioservice.stop();
         } else {
-            COCAINE_LOG_DEBUG(logger, "connection timer was cancelled: %s", error.message());
+            COCAINE_LOG_DEBUG(logger, "connection timer was cancelled: {}", error.message());
         }
     }
 
     void
     local_connection_handler(const boost::system::error_code& error,
-                             const std::shared_ptr<cocaine::logging::log_t>& logger,
+                             const std::shared_ptr<logging::logger_t>& logger,
                              boost::system::error_code& result,
                              boost::asio::io_service& ioservice)
     {
@@ -174,7 +179,7 @@ namespace {
             COCAINE_LOG_DEBUG(logger, "connection to unix socket aborted");
             return;
         } else if(error) {
-            COCAINE_LOG_DEBUG(logger, "connection to unix socket failed: %s", error.message().c_str());
+            COCAINE_LOG_DEBUG(logger, "connection to unix socket failed: {}", error.message());
             result = error;
         }
 
@@ -184,7 +189,7 @@ namespace {
     struct tcp_connector {
         void
         resolve_handler(const boost::system::error_code& error,
-                        const std::shared_ptr<cocaine::logging::log_t>& logger,
+                        const std::shared_ptr<logging::logger_t>& logger,
                         boost::asio::ip::tcp::resolver::iterator endpoint)
         {
             this->error = error;
@@ -193,7 +198,7 @@ namespace {
                 COCAINE_LOG_DEBUG(logger, "resolve of tcp address aborted");
                 return;
             } else if(error) {
-                COCAINE_LOG_DEBUG(logger, "resolve of tcp address failed: %s", error.message().c_str());
+                COCAINE_LOG_DEBUG(logger, "resolve of tcp address failed: {}", error.message());
                 this->ioservice.stop();
             } else if (endpoint == boost::asio::ip::tcp::resolver::iterator()) {
                 COCAINE_LOG_DEBUG(logger, "resolve of tcp address failed: last endpoint reached");
@@ -212,7 +217,7 @@ namespace {
         }
         void
         handler(const boost::system::error_code& error,
-                const std::shared_ptr<cocaine::logging::log_t>& logger,
+                const std::shared_ptr<logging::logger_t>& logger,
                 size_t next_endpoint)
         {
             if(error == boost::asio::error::operation_aborted) {
@@ -222,7 +227,7 @@ namespace {
                 COCAINE_LOG_DEBUG(logger, "connect to tcp address succeeded");
                 this->ioservice.stop();
             } else if(next_endpoint < endpoints.size()) {
-                COCAINE_LOG_DEBUG(logger, "connect to tcp address failed: %s, trying next endpoint", error.message().c_str());
+                COCAINE_LOG_DEBUG(logger, "connect to tcp address failed: {}, trying next endpoint", error.message());
                 socket = std::make_shared<boost::asio::ip::tcp::socket>(ioservice);
                 socket->async_connect(endpoints[next_endpoint],
                                       std::bind(&tcp_connector::handler,
@@ -231,7 +236,7 @@ namespace {
                                                 logger,
                                                 next_endpoint + 1));
             } else {
-                COCAINE_LOG_DEBUG(logger, "connect to tcp address failed: %s", error.message().c_str());
+                COCAINE_LOG_DEBUG(logger, "connect to tcp address failed: {}", error.message());
                 this->error = error;
                 this->socket.reset();
                 this->ioservice.stop();
@@ -257,7 +262,7 @@ connection_t::connect(boost::asio::io_service& ioservice,
     if(endpoint.is_unix()) {
         auto s = std::make_shared<boost::asio::local::stream_protocol::socket>(ioservice);
         boost::system::error_code error;
-        COCAINE_LOG_DEBUG(m_logger, "creating a connection to %s", endpoint.get_path());
+        COCAINE_LOG_DEBUG(m_logger, "creating a connection to {}", endpoint.get_path());
 
         s->async_connect(boost::asio::local::stream_protocol::endpoint(endpoint.get_path()),
                          std::bind(&local_connection_handler,
@@ -451,7 +456,7 @@ namespace {
     }
 }
 
-client_impl_t::client_impl_t(const endpoint_t& endpoint, std::shared_ptr<logging::log_t> logger) :
+client_impl_t::client_impl_t(const endpoint_t& endpoint, std::shared_ptr<logging::logger_t> logger) :
     m_logger(std::move(logger)),
     m_endpoint(endpoint),
     m_curl(curl_easy_init())
@@ -735,7 +740,7 @@ container_t::start(const rapidjson::Value& args) {
 
     if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
-                            "unable to start container %s: Docker replied with code %d and body '%s'",
+                            "unable to start container {}: Docker replied with code {} and body '{}'",
                             id(),
                             resp.code(),
                             resp.body());
@@ -750,7 +755,7 @@ container_t::kill() {
 
     if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
-                            "unable to kill container %s: Docker replied with code %d and body '%s'",
+                            "unable to kill container {}: Docker replied with code {} and body '{}'",
                             id(),
                             resp.code(),
                             resp.body());
@@ -765,7 +770,7 @@ container_t::stop(unsigned int timeout) {
 
     if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
-                            "unable to stop container %s: Docker replied with code %d and body '%s'",
+                            "unable to stop container {}: Docker replied with code {} and body '{}'",
                             id(),
                             resp.code(),
                             resp.body());
@@ -780,7 +785,7 @@ container_t::remove(bool volumes) {
 
     if(!(resp.code() >= 200 && resp.code() < 300)) {
         COCAINE_LOG_WARNING(m_logger,
-                            "Unable to remove container %s. Docker replied with code %d and body '%s'",
+                            "Unable to remove container {}. Docker replied with code {} and body '{}'",
                             id(),
                             resp.code(),
                             resp.body());
@@ -788,7 +793,7 @@ container_t::remove(bool volumes) {
     }
 
     COCAINE_LOG_DEBUG(m_logger,
-                      "container %s has been deleted: Docker replied with code %d and body '%s'",
+                      "container {} has been deleted: Docker replied with code {} and body '{}'",
                       id(),
                       resp.code(),
                       resp.body());
@@ -804,7 +809,7 @@ container_t::attach() {
 
     if(!(resp.code() >= 200 && resp.code() < 300)) {
         COCAINE_LOG_WARNING(m_logger,
-                            "Unable to attach container %s. Docker replied with code %d and body '%s'",
+                            "Unable to attach container {}. Docker replied with code {} and body '{}'",
                             id(),
                             resp.code(),
                             resp.body());
@@ -828,7 +833,7 @@ client_t::inspect_image(rapidjson::Document& result,
         result.SetNull();
     } else {
         COCAINE_LOG_WARNING(m_logger,
-                            "unable to inspect an image: Docker replied with code %d and body '%s'",
+                            "unable to inspect an image: Docker replied with code {} and body '{}'",
                             resp.code(),
                             resp.body());
         throw std::runtime_error("Unable to inspect an image");
@@ -870,7 +875,7 @@ client_t::pull_image(const std::string& image,
 
             if(status.HasParseError() || (status.IsObject() && status.HasMember("error"))) {
                 COCAINE_LOG_WARNING(m_logger,
-                                    "unable to create an image: Docker replied with body: '%s'",
+                                    "unable to create an image: Docker replied with body: '{}'",
                                     resp.body());
 
                 throw std::runtime_error("Unable to create an image");
@@ -878,7 +883,7 @@ client_t::pull_image(const std::string& image,
         }
     } else {
         COCAINE_LOG_ERROR(m_logger,
-                          "unable to create an image: Docker replied with code %d and body '%s'",
+                          "unable to create an image: Docker replied with code {} and body '{}'",
                           resp.code(),
                           resp.body());
         throw std::runtime_error("Unable to create an image");
@@ -896,7 +901,7 @@ client_t::create_container(const rapidjson::Value& args) {
 
         if(!answer.HasMember("Id")) {
             COCAINE_LOG_WARNING(m_logger,
-                                "unable to create a container: id not found in reply from the docker: '%s'",
+                                "unable to create a container: id not found in reply from the docker: '{}'",
                                 resp.body());
             throw std::runtime_error("Unable to create a container");
         }
@@ -905,14 +910,14 @@ client_t::create_container(const rapidjson::Value& args) {
             auto& warnings = answer["Warnings"];
 
             for(auto it = warnings.Begin(); it != warnings.End(); ++it) {
-                COCAINE_LOG_WARNING(m_logger, "warning from docker: '%s'", it->GetString());
+                COCAINE_LOG_WARNING(m_logger, "warning from docker: '{}'", it->GetString());
             }
         }
 
         return container_t(answer["Id"].GetString(), m_client, m_logger);
     } else {
         COCAINE_LOG_WARNING(m_logger,
-                            "unable to create a container: Docker replied with code %d and body '%s'",
+                            "unable to create a container: Docker replied with code {} and body '{}'",
                             resp.code(),
                             resp.body());
         throw std::runtime_error("Unable to create a container");

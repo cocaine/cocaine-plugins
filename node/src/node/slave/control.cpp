@@ -43,7 +43,7 @@ control_t::terminate(const std::error_code& ec) {
     try {
         stream = stream.send<io::worker::terminate>(ec.value(), ec.message());
     } catch (const std::system_error& err) {
-        COCAINE_LOG_WARNING(slave->log, "failed to send terminate message: %s", err.what());
+        COCAINE_LOG_WARNING(slave->log, "failed to send terminate message: {}", err.what());
         slave->shutdown(error::conrol_ipc_error);
     }
 }
@@ -62,7 +62,7 @@ control_t::cancel() {
 void
 control_t::discard(const std::error_code& ec) const {
     if (ec && !closed) {
-        COCAINE_LOG_DEBUG(slave->log, "control channel has been discarded: %s", ec.message());
+        COCAINE_LOG_DEBUG(slave->log, "control channel has been discarded: {}", ec.message());
 
         // NOTE: It should be called synchronously, because state machine's status should be updated
         // immediately to prevent infinite looping on events rebalancing.
@@ -86,7 +86,7 @@ control_t::on_heartbeat() {
 
 void
 control_t::on_terminate(int /*ec*/, const std::string& reason) {
-    COCAINE_LOG_DEBUG(slave->log, "processing terminate message: %s", reason);
+    COCAINE_LOG_DEBUG(slave->log, "processing terminate message: {}", reason);
 
     // TODO: Check the error code to diverge between normal and abnormal slave shutdown. More will
     // be implemented after error_categories come.

@@ -52,7 +52,7 @@ class zookeeper_t :
 public:
 
     struct context_t {
-        cocaine::logging::log_t& log;
+        logging::logger_t& log;
         zookeeper::connection_t& zk;
     };
 
@@ -113,7 +113,7 @@ public:
          const unicorn::path_t& path);
 
 private:
-    const std::unique_ptr<logging::log_t> log;
+    const std::unique_ptr<logging::logger_t> log;
     zookeeper::session_t zk_session;
     zookeeper::connection_t zk;
 };

@@ -140,7 +140,7 @@ public:
     typedef std::function<void(const std::error_code&)> cleanup_handler;
 
 private:
-    const std::unique_ptr<logging::log_t> log;
+    const std::unique_ptr<logging::logger_t> log;
 
     const slave_context context;
     // TODO: In current implementation this can be invalid, when engine is stopped.

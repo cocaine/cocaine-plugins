@@ -17,6 +17,7 @@
 
 #include <cocaine/rpc/actor.hpp>
 #include <cocaine/context.hpp>
+#include <cocaine/logging.hpp>
 
 #include <zookeeper/zookeeper.h>
 
@@ -157,7 +158,7 @@ unicorn_cluster_t::on_announce::abort(const std::error_code& rc, const std::stri
         COCAINE_LOG_INFO(parent->log, "announce checked");
         return;
     }
-    COCAINE_LOG_ERROR(parent->log, "could not announce local services(%i): %s - %s", rc.value(), rc.message(), reason);
+    COCAINE_LOG_ERROR(parent->log, "could not announce local services({}): {} - {}", rc.value(), rc.message(), reason);
     parent->announce_timer.expires_from_now(boost::posix_time::seconds(parent->config.retry_interval));
     parent->announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, parent, std::placeholders::_1));
 }
@@ -170,14 +171,14 @@ void
 unicorn_cluster_t::on_update::write(api::unicorn_t::response::subscribe&& result) {
     //Node disappeared
     if(result.get_version() < 0) {
-        COCAINE_LOG_ERROR(parent->log, "announce dissappeared, retrying.");
+        COCAINE_LOG_ERROR(parent->log, "announce dissappeared, retrying");
         parent->announce();
     }
 }
 
 void
 unicorn_cluster_t::on_update::abort(const std::error_code& rc, const std::string& reason) {
-    COCAINE_LOG_ERROR(parent->log, "announce dissappeared(%i) : %s - %s, retrying.", rc.value(), rc.message().c_str(), reason);
+    COCAINE_LOG_ERROR(parent->log, "announce dissappeared({}): {} - {}, retrying", rc.value(), rc.message(), reason);
     parent->announce();
 }
 
@@ -189,7 +190,7 @@ unicorn_cluster_t::on_fetch::on_fetch(std::string _uuid, unicorn_cluster_t* _par
 void
 unicorn_cluster_t::on_fetch::write(api::unicorn_t::response::get&& result) {
     if(!result.get_value().convertible_to<std::vector<asio::ip::tcp::endpoint>>()) {
-        COCAINE_LOG_WARNING(parent->log, "invalid value for announce: %s",
+        COCAINE_LOG_WARNING(parent->log, "invalid value for announce: {}",
             boost::lexical_cast<std::string>(result.get_value()).c_str()
         );
         auto storage = parent->registered_locators.synchronize();
@@ -210,7 +211,7 @@ unicorn_cluster_t::on_fetch::write(api::unicorn_t::response::get&& result) {
 
 void
 unicorn_cluster_t::on_fetch::abort(const std::error_code& rc, const std::string& reason) {
-    COCAINE_LOG_WARNING(parent->log, "error during fetch(%i): %s - %s", rc.value(), rc.message().c_str(), reason);
+    COCAINE_LOG_WARNING(parent->log, "error during fetch({}): {} - {}", rc.value(), rc.message(), reason);
     auto storage = parent->registered_locators.synchronize();
     auto it = storage->find(uuid);
     bool drop = false;
@@ -252,7 +253,7 @@ unicorn_cluster_t::on_list_update::write(api::unicorn_t::response::children_subs
 
 void
 unicorn_cluster_t::on_list_update::abort(const std::error_code& rc, const std::string& reason) {
-    COCAINE_LOG_WARNING(parent->log, "failure during subscription(%i): %s - %s, resubscribing", rc.value(), rc.message().c_str(), reason);
+    COCAINE_LOG_WARNING(parent->log, "failure during subscription({}): {} - {}, resubscribing", rc.value(), rc.message(), reason);
     parent->subscribe_timer.expires_from_now(boost::posix_time::seconds(parent->config.retry_interval));
     parent->subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, parent, std::placeholders::_1));
 
@@ -336,7 +337,7 @@ unicorn_cluster_t::subscribe() {
     );
     subscribe_timer.expires_from_now(boost::posix_time::seconds(config.check_interval));
     subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, this, std::placeholders::_1));
-    COCAINE_LOG_DEBUG(log, "subscribed for updates on %s", config.path.c_str());
+    COCAINE_LOG_DEBUG(log, "subscribed for updates on {}", config.path);
 }
 
 }}

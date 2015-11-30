@@ -3,7 +3,7 @@
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
 
-#include <blackhole/scoped_attributes.hpp>
+#include <blackhole/scoped.hpp>
 
 #include <cocaine/context.hpp>
 
@@ -275,7 +275,7 @@ overseer_t::uptime() const {
 void
 overseer_t::keep_alive(int count) {
     count = std::max(0, count);
-    COCAINE_LOG_DEBUG(log, "changed keep-alive slave count to %d", count);
+    COCAINE_LOG_DEBUG(log, "changed keep-alive slave count to {}", count);
 
     pool_target = count;
     rebalance_slaves();
@@ -386,7 +386,7 @@ overseer_t::prototype() {
 
 void
 overseer_t::spawn(pool_type& pool) {
-    COCAINE_LOG_INFO(log, "enlarging the slaves pool to %d", pool.size() + 1);
+    COCAINE_LOG_INFO(log, "enlarging the slaves pool to {}", pool.size() + 1);
 
     slave_context ctx(context, manifest(), profile());
 
@@ -462,7 +462,7 @@ overseer_t::on_handshake(const std::string& id,
                          std::shared_ptr<session_t> session,
                          upstream<io::worker::control_tag>&& stream)
 {
-    blackhole::scoped_attributes_t holder(*log, {{ "uuid", id }});
+    auto scoped = log->scoped({{ "uuid", id }});
 
     COCAINE_LOG_DEBUG(log, "processing handshake message");
 
@@ -482,7 +482,7 @@ overseer_t::on_handshake(const std::string& id,
             // Also unlikely we can receive here std::bad_alloc if unable to allocate more memory
             // for control dispatch.
             // If this happens the session will be closed.
-            COCAINE_LOG_ERROR(log, "failed to activate the slave: %s", err.what());
+            COCAINE_LOG_ERROR(log, "failed to activate the slave: {}", err.what());
         }
 
         return nullptr;
@@ -499,7 +499,7 @@ overseer_t::on_handshake(const std::string& id,
 void
 overseer_t::on_slave_death(const std::error_code& ec, std::string uuid) {
     if (ec) {
-        COCAINE_LOG_DEBUG(log, "slave has removed itself from the pool: %s", ec.message());
+        COCAINE_LOG_DEBUG(log, "slave has removed itself from the pool: {}", ec.message());
         ++stats.slaves.crashed;
     } else {
         COCAINE_LOG_DEBUG(log, "slave has removed itself from the pool");
@@ -557,7 +557,7 @@ overseer_t::rebalance_events() {
                     // strong exception guarantee.
                     queue.pop_front();
                 } catch (const std::exception& err) {
-                    COCAINE_LOG_DEBUG(log, "slave has rejected assignment: %s", err.what());
+                    COCAINE_LOG_DEBUG(log, "slave has rejected assignment: {}", err.what());
                 }
             }
         });
@@ -582,16 +582,16 @@ overseer_t::rebalance_slaves() {
 
     pool.apply([&](pool_type& pool) {
         if (pool_target) {
-            COCAINE_LOG_DEBUG(log, "attempting to rebalance slaves using direct policy")(
-                "load", load, "slaves", pool.size(), "target", target
-            );
+            COCAINE_LOG_DEBUG(log, "attempting to rebalance slaves using direct policy", {
+                {"load", load}, {"slaves", pool.size()}, {"target", target}
+            });
 
             if (target <= pool.size()) {
                 unsigned long active = boost::count_if(pool | boost::adaptors::map_values, +[](const slave_t& slave) -> bool {
                     return slave.active();
                 });
 
-                COCAINE_LOG_DEBUG(log, "sealing up to %d active slaves", active);
+                COCAINE_LOG_DEBUG(log, "sealing up to {} active slaves", active);
 
                 while (active-- > target) {
                     // Find active slave with minimal load.
@@ -609,10 +609,10 @@ overseer_t::rebalance_slaves() {
                     }
 
                     try {
-                        COCAINE_LOG_DEBUG(log, "sealing slave")("uuid", slave->id());
+                        COCAINE_LOG_DEBUG(log, "sealing slave", {{"uuid", slave->id()}});
                         slave->seal();
                     } catch (const std::exception& err) {
-                        COCAINE_LOG_WARNING(log, "unable to seal slave: %s", err.what());
+                        COCAINE_LOG_WARNING(log, "unable to seal slave: {}", err.what());
                     }
                 }
             } else {
@@ -621,9 +621,9 @@ overseer_t::rebalance_slaves() {
                 }
             }
         } else {
-            COCAINE_LOG_DEBUG(log, "attempting to rebalance slaves using automatic policy")(
-                "load", load, "slaves", pool.size(), "target", target
-            );
+            COCAINE_LOG_DEBUG(log, "attempting to rebalance slaves using automatic policy", {
+                {"load", load}, {"slaves", pool.size()}, {"target", target}
+            });
 
             if (pool.size() >= profile.pool_limit || pool.size() * profile.grow_threshold >= load) {
                 return;

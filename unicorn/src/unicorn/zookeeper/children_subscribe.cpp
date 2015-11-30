@@ -15,6 +15,8 @@
 
 #include "cocaine/detail/unicorn/zookeeper/children_subscribe.hpp"
 
+#include <cocaine/logging.hpp>
+
 #include "cocaine/unicorn/errors.hpp"
 
 namespace cocaine { namespace unicorn {
@@ -56,7 +58,7 @@ children_subscribe_action_t::watch_event(int /*type*/, int /*state*/, zookeeper:
         ctx.zk.childs(path, *this, *this);
     } catch (const std::system_error& e) {
         result->abort(e.code());
-        COCAINE_LOG_WARNING(ctx.log, "failure during subscription for childs: %s", e.what());
+        COCAINE_LOG_WARNING(ctx.log, "failure during subscription for childs: {}", e.what());
     }
 }
 }} // namespace cocaine::unicorn

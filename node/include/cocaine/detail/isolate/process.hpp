@@ -39,7 +39,7 @@ class process_t:
     context_t& m_context;
     asio::io_service& io_context;
 
-    const std::unique_ptr<logging::log_t> m_log;
+    const std::unique_ptr<logging::logger_t> m_log;
 
     const std::string m_name;
     const boost::filesystem::path m_working_directory;

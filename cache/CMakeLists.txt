@@ -20,7 +20,6 @@ INSTALL(TARGETS cache
 
 INSTALL(
     DIRECTORY
-        include/cocaine/framework
         include/cocaine/idl
     DESTINATION include/cocaine
     COMPONENT development)

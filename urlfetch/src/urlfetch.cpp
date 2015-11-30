@@ -106,7 +106,7 @@ void urlfetch_t::run_service()
     m_service.run(error);
 
     if (error) {
-        COCAINE_LOG_DEBUG(log_, "Can not run io_service, error %s", error.message() );
+        COCAINE_LOG_DEBUG(log_, "Can not run io_service, error {}", error.message() );
     }
 }
 
@@ -124,9 +124,9 @@ struct urlfetch_get_handler {
         bool success = (!error && (code < 400 || code >= 600) );
 
         if (success) {
-            COCAINE_LOG_DEBUG(log_, "Downloaded successfully %s, http code %d", reply.url().to_string(), reply.code() );
+            COCAINE_LOG_DEBUG(log_, "Downloaded successfully {}, http code {}", reply.url().to_string(), reply.code() );
         } else {
-            COCAINE_LOG_DEBUG(log_, "Unable to download %s, error %s, http code %d", reply.url().to_string(), error.message(), reply.code() );
+            COCAINE_LOG_DEBUG(log_, "Unable to download {}, error {}, http code {}", reply.url().to_string(), error.message(), reply.code() );
 
             if (reply.code() == 0) {
                 // Socket-only error, no valid http response
@@ -209,7 +209,7 @@ urlfetch_t::prepare_request(const std::string& url,
     request.set_follow_location(follow_location);
     request.set_timeout(timeout);
 
-    COCAINE_LOG_DEBUG(log_, "Downloading %s", url);
+    COCAINE_LOG_DEBUG(log_, "Downloading {}", url);
 
     BOOST_FOREACH(const auto& it, headers) {
         const auto& header_name = it.first;

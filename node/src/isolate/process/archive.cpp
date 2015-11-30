@@ -98,7 +98,7 @@ archive_t::archive_t(context_t& context, const std::string& archive):
         throw archive_error_t(m_archive);
     }
 
-    COCAINE_LOG_INFO(m_log, "compression: %s, size: %d bytes", type(), archive.size());
+    COCAINE_LOG_INFO(m_log, "compression: {}, size: {} bytes", type(), archive.size());
 }
 
 archive_t::~archive_t() {
@@ -116,7 +116,7 @@ archive_t::deploy(const std::string& prefix_) {
     const fs::path prefix = prefix_;
 
     if(fs::exists(prefix)) {
-        COCAINE_LOG_DEBUG(m_log, "cleaning %s up", prefix);
+        COCAINE_LOG_DEBUG(m_log, "cleaning {} up", prefix);
 
         for(fs::directory_iterator it(prefix), end; it != end; ++it) {
             fs::remove_all(it->path());
@@ -158,7 +158,7 @@ archive_t::deploy(const std::string& prefix_) {
             archive_entry_set_hardlink(entry, hardlink.string().c_str());
         }
 
-        COCAINE_LOG_DEBUG(m_log, "extracting %s", pathname);
+        COCAINE_LOG_DEBUG(m_log, "extracting {}", pathname);
 
         rv = archive_write_header(target, entry);
 
@@ -185,7 +185,7 @@ archive_t::deploy(const std::string& prefix_) {
 
     const size_t count = archive_file_count(m_archive);
 
-    COCAINE_LOG_INFO(m_log, "extracted %d file(s)", count);
+    COCAINE_LOG_INFO(m_log, "extracted {} file(s)", count);
 }
 
 void

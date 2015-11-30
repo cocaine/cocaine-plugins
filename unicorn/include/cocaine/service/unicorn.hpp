@@ -39,7 +39,7 @@ public:
 private:
     std::string name;
     std::shared_ptr<api::unicorn_t> unicorn;
-    std::shared_ptr<cocaine::logging::log_t> log;
+    std::shared_ptr<logging::logger_t> log;
 };
 
 /**

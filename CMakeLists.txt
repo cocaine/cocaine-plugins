@@ -8,11 +8,11 @@ OPTION(CACHE "Build LRU Cache plugin" ON)
 OPTION(CHRONO "Build Chrono Service plugin" ON)
 OPTION(DOCKER "Build Docker Isolation plugin" ON)
 OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
+OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
-OPTION(MONGO "Build MongoDB Storage plugin" OFF)
+OPTION(MONGO "Build MongoDB Storage plugin" ON)
 OPTION(NODE "Build Node service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
-OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(UNICORN "Build Unified configuration service plugin" ON)
 
 # Include our CMake libraries.

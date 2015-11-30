@@ -1,5 +1,6 @@
 #include "cocaine/detail/service/node/slave/state/spawning.hpp"
 
+#include <boost/algorithm/string/join.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
@@ -31,10 +32,10 @@ spawning_t::cancel() {
 
     try {
         const auto cancelled = timer.cancel();
-        COCAINE_LOG_DEBUG(slave->log, "processing spawn timer cancellation: done (%d cancelled)", cancelled);
+        COCAINE_LOG_DEBUG(slave->log, "processing spawn timer cancellation: done ({} cancelled)", cancelled);
     } catch (const std::system_error& err) {
         // If we are here, then something weird occurs with the timer.
-        COCAINE_LOG_WARNING(slave->log, "unable to cancel spawn timer: %s", err.what());
+        COCAINE_LOG_WARNING(slave->log, "unable to cancel spawn timer: {}", err.what());
     }
 }
 
@@ -48,7 +49,7 @@ void
 spawning_t::spawn(unsigned long timeout) {
     using asio::ip::tcp;
 
-    COCAINE_LOG_DEBUG(slave->log, "slave is spawning using '%s', timeout: %.2f ms",
+    COCAINE_LOG_DEBUG(slave->log, "slave is spawning using '{}', timeout: {:.2f} ms",
                       slave->context.manifest.executable, timeout);
 
     COCAINE_LOG_DEBUG(slave->log, "locating the Locator endpoint list");
@@ -107,7 +108,7 @@ spawning_t::spawn(unsigned long timeout) {
             &spawning_t::on_spawn, shared_from_this(), std::chrono::high_resolution_clock::now()
         ));
     } catch(const std::system_error& err) {
-        COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: %s", err.code().message());
+        COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: {}", err.code().message());
 
         slave->loop.post([=]() {
             slave->shutdown(err.code());
@@ -127,7 +128,7 @@ spawning_t::on_spawn(std::chrono::high_resolution_clock::time_point start) {
     }
 
     const auto now = std::chrono::high_resolution_clock::now();
-    COCAINE_LOG_DEBUG(slave->log, "slave has been spawned in %.2f ms",
+    COCAINE_LOG_DEBUG(slave->log, "slave has been spawned in {:.2f} ms",
         std::chrono::duration<float, std::chrono::milliseconds::period>(now - start).count());
 
     try {
@@ -137,7 +138,7 @@ spawning_t::on_spawn(std::chrono::high_resolution_clock::time_point start) {
 
         handshaking->start(slave->context.profile.timeout.handshake);
     } catch (const std::exception& err) {
-        COCAINE_LOG_ERROR(slave->log, "unable to activate slave: %s", err.what());
+        COCAINE_LOG_ERROR(slave->log, "unable to activate slave: {}", err.what());
 
         slave->shutdown(error::unknown_activate_error);
     }

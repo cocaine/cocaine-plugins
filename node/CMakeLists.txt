@@ -54,6 +54,7 @@ target_link_libraries(node
     ${LibArchive_LIBRARIES}
     ${LibCGroup_LIBRARY}
     msgpack
+    blackhole
     cocaine-core)
 
 set_target_properties(node PROPERTIES

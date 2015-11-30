@@ -15,6 +15,8 @@
 
 #include "cocaine/detail/unicorn/zookeeper/subscribe.hpp"
 
+#include <cocaine/logging.hpp>
+
 #include "cocaine/unicorn/errors.hpp"
 
 namespace cocaine { namespace unicorn {
@@ -52,7 +54,7 @@ subscribe_action_t::data_event(int rc, std::string value, const zookeeper::node_
             try {
                 ctx.zk.exists(path, *this, *this);
             } catch(const std::system_error& e) {
-                COCAINE_LOG_WARNING(ctx.log, "failure during subscription(get): %s", e.what());
+                COCAINE_LOG_WARNING(ctx.log, "failure during subscription(get): {}", e.what());
                 result->abort(e.code());
             }
         }
@@ -84,7 +86,7 @@ subscribe_action_t::stat_event(int rc, zookeeper::node_stat const&) {
         try {
             ctx.zk.get(path, *this, *this);
         } catch(const std::system_error& e)  {
-            COCAINE_LOG_WARNING(ctx.log, "failure during subscription(stat): %s", e.what());
+            COCAINE_LOG_WARNING(ctx.log, "failure during subscription(stat): {}", e.what());
             result->abort(e.code());
         }
     }
@@ -96,7 +98,7 @@ subscribe_action_t::watch_event(int /* type */, int /* state */, zookeeper::path
         ctx.zk.get(path, *this, *this);
     } catch(const std::system_error& e)  {
         result->abort(e.code());
-        COCAINE_LOG_WARNING(ctx.log, "failure during subscription(watch): %s", e.what());
+        COCAINE_LOG_WARNING(ctx.log, "failure during subscription(watch): {}", e.what());
     }
 }
 

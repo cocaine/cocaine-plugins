@@ -25,6 +25,7 @@ ADD_LIBRARY(unicorn MODULE
 
 TARGET_LINK_LIBRARIES(unicorn
     msgpack
+    blackhole
     cocaine-core
     zookeeper_mt
     ${Boost_LIBRARIES})
@@ -43,4 +44,3 @@ INSTALL(
         include/cocaine/idl
     DESTINATION include/cocaine
     COMPONENT development)
-

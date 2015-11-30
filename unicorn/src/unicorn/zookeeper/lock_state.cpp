@@ -16,6 +16,8 @@
 #include "cocaine/detail/unicorn/zookeeper/lock_state.hpp"
 #include "cocaine/detail/unicorn/zookeeper/lock.hpp"
 
+#include <cocaine/logging.hpp>
+
 #include "cocaine/unicorn/errors.hpp"
 
 namespace cocaine { namespace unicorn {
@@ -81,7 +83,7 @@ bool
 lock_state_t::set_lock_created(path_t _created_path) {
     //Safe as there is only one call to this
     created_path = std::move(_created_path);
-    COCAINE_LOG_DEBUG(ctx.log, "created lock: %s", created_path.c_str());
+    COCAINE_LOG_DEBUG(ctx.log, "created lock: {}", created_path);
     //Can not be removed before created.
     assert(!lock_released);
     bool should_release = false;
@@ -101,16 +103,16 @@ lock_state_t::set_lock_created(path_t _created_path) {
 
 void
 lock_state_t::release_impl() {
-    COCAINE_LOG_DEBUG(ctx.log, "release lock: %s", created_path.c_str());
+    COCAINE_LOG_DEBUG(ctx.log, "release lock: {}", created_path);
     try {
         std::unique_ptr<release_lock_action_t> h(new release_lock_action_t(ctx));
         ctx.zk.del(created_path, NOT_EXISTING_VERSION, std::move(h));
     } catch(const std::system_error& e) {
-        COCAINE_LOG_WARNING(ctx.log, "ZK exception during delete of lock: %s. Reconnecting to discard lock for sure.", e.what());
+        COCAINE_LOG_WARNING(ctx.log, "ZK exception during delete of lock: {}. Reconnecting to discard lock for sure.", e.what());
         try {
             ctx.zk.reconnect();
         } catch(const std::system_error& e2) {
-            COCAINE_LOG_WARNING(ctx.log, "give up on deleting lock. Exception: %s", e2.what());
+            COCAINE_LOG_WARNING(ctx.log, "give up on deleting lock. Exception: {}", e2.what());
         }
     }
 }

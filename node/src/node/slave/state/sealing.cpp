@@ -24,9 +24,9 @@ sealing_t::cancel() {
 
     try {
         const auto cancelled = timer.cancel();
-        COCAINE_LOG_DEBUG(slave->log, "processing seal timer cancellation: done (%d cancelled)", cancelled);
+        COCAINE_LOG_DEBUG(slave->log, "processing seal timer cancellation: done ({} cancelled)", cancelled);
     } catch (const std::system_error& err) {
-        COCAINE_LOG_WARNING(slave->log, "unable to cancel seal timer: %s", err.what());
+        COCAINE_LOG_WARNING(slave->log, "unable to cancel seal timer: {}", err.what());
     }
 }
 
@@ -37,7 +37,7 @@ sealing_t::start(unsigned long timeout) {
         return;
     }
 
-    COCAINE_LOG_DEBUG(slave->log, "slave is sealing, timeout: %.2f ms", timeout);
+    COCAINE_LOG_DEBUG(slave->log, "slave is sealing, timeout: {:.2f} ms", timeout);
 
     timer.expires_from_now(boost::posix_time::milliseconds(timeout));
     timer.async_wait(std::bind(&sealing_t::on_timeout, shared_from_this(), ph::_1));
@@ -45,7 +45,7 @@ sealing_t::start(unsigned long timeout) {
 
 void
 sealing_t::terminate(const std::error_code& ec) {
-    COCAINE_LOG_DEBUG(slave->log, "slave is terminating after been sealed: %s", ec.message());
+    COCAINE_LOG_DEBUG(slave->log, "slave is terminating after been sealed: {}", ec.message());
 
     cancel();
 

@@ -30,7 +30,7 @@ fetcher_t::close() {
             try {
                 watcher.close();
             } catch (const std::system_error& err) {
-                COCAINE_LOG_WARNING(slave->log, "unable to close standard output watcher: %s", err.what());
+                COCAINE_LOG_WARNING(slave->log, "unable to close standard output watcher: {}", err.what());
             }
         }
     });
@@ -52,7 +52,7 @@ void
 fetcher_t::on_read(const std::error_code& ec, size_t len) {
     switch (ec.value()) {
     case 0:
-        COCAINE_LOG_DEBUG(slave->log, "slave has received %d bytes of output", len);
+        COCAINE_LOG_DEBUG(slave->log, "slave has received {} bytes of output", len);
         slave->output(buffer.data(), len);
         watch();
         break;
@@ -62,6 +62,6 @@ fetcher_t::on_read(const std::error_code& ec, size_t len) {
         COCAINE_LOG_DEBUG(slave->log, "slave has closed its output");
         break;
     default:
-        COCAINE_LOG_WARNING(slave->log, "slave has failed to read output: %s", ec.message());
+        COCAINE_LOG_WARNING(slave->log, "slave has failed to read output: {}", ec.message());
     }
 }

@@ -15,6 +15,8 @@
 
 #include "cocaine/detail/unicorn/zookeeper/lock.hpp"
 
+#include <cocaine/logging.hpp>
+
 #include "cocaine/unicorn/errors.hpp"
 
 namespace cocaine { namespace unicorn {
@@ -53,7 +55,7 @@ lock_action_t::children_event(int rc, std::vector<std::string> children, zookeep
     */
     if(rc) {
         auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
-        COCAINE_LOG_ERROR(ctx.log, "Could not subscribe for lock(%i). : %s", code.value(), code.message().c_str());
+        COCAINE_LOG_ERROR(ctx.log, "Could not subscribe for lock({}): {}", code.value(), code.message());
         result->abort(code);
         return;
     }
@@ -151,11 +153,11 @@ void
 release_lock_action_t::void_event(int rc) {
     if(rc && rc != ZCLOSING) {
         auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
-        COCAINE_LOG_WARNING(ctx.log, "ZK error during lock delete: %s. Reconnecting to discard lock for sure.", code.message().c_str());
+        COCAINE_LOG_WARNING(ctx.log, "ZK error during lock delete: {}. Reconnecting to discard lock for sure", code.message().c_str());
         try {
             ctx.zk.reconnect();
         } catch(const std::system_error& e) {
-            COCAINE_LOG_ERROR(ctx.log, "giving up: %s", error::to_string(e));
+            COCAINE_LOG_ERROR(ctx.log, "giving up: {}", error::to_string(e));
         }
     }
 }

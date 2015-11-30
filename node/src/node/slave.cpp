@@ -1,5 +1,6 @@
 #include "cocaine/detail/service/node/slave.hpp"
 
+#include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptor/map.hpp>
 #include <boost/range/algorithm/min_element.hpp>
 
@@ -23,9 +24,13 @@
 #include "cocaine/detail/service/node/dispatch/worker.hpp"
 #include "cocaine/detail/service/node/util.hpp"
 
+#include <blackhole/logger.hpp>
+
 namespace ph = std::placeholders;
 
 using namespace cocaine;
+
+using blackhole::attribute_list;
 
 slave::stats_t::stats_t():
      tx{},
@@ -175,8 +180,9 @@ state_machine_t::inject(slave::channel_t& data, channel_handler handler) {
         return channels.size();
     });
 
-    COCAINE_LOG_DEBUG(log, "slave has started processing %d channel", id);
-    COCAINE_LOG_DEBUG(log, "slave has increased its load to %d", load)("channel", id);
+    COCAINE_LOG_DEBUG(log, "slave has started processing {} channel", id);
+
+    COCAINE_LOG_DEBUG(log, "slave has increased its load to {}", load, attribute_list({{"channel", id}}));
 
     // C2W dispatch.
     data.dispatch->attach(upstream, [=](const std::error_code& ec) {
@@ -207,7 +213,7 @@ state_machine_t::terminate(std::error_code ec) {
         return;
     }
 
-    COCAINE_LOG_DEBUG(log, "slave state machine is terminating: %s", ec.message());
+    COCAINE_LOG_DEBUG(log, "slave state machine is terminating: {}", ec.message());
 
     auto state = *this->state.synchronize();
     state->terminate(ec);
@@ -220,7 +226,7 @@ state_machine_t::output(const char* data, size_t size) {
         lines.push_back(*line);
 
         if (context.profile.log_output) {
-            COCAINE_LOG_DEBUG(log, "slave's output: `%s`", *line);
+            COCAINE_LOG_DEBUG(log, "slave's output: `{}`", *line);
         }
     }
 }
@@ -230,7 +236,7 @@ state_machine_t::migrate(std::shared_ptr<state_t> desired) {
     BOOST_ASSERT(desired);
 
     state.apply([=](std::shared_ptr<state_t>& state){
-        COCAINE_LOG_DEBUG(log, "slave has changed its state from '%s' to '%s'",
+        COCAINE_LOG_DEBUG(log, "slave has changed its state from '{}' to '{}'",
             state ? state->name() : "null", desired->name()
         );
 
@@ -245,7 +251,7 @@ state_machine_t::shutdown(std::error_code ec) {
     }
 
     auto state = *this->state.synchronize();
-    COCAINE_LOG_DEBUG(log, "slave is shutting down from state %s: %s", state->name(), ec.message());
+    COCAINE_LOG_DEBUG(log, "slave is shutting down from state {}: {}", state->name(), ec.message());
 
     state->cancel();
     if(state->terminating()) {
@@ -266,7 +272,7 @@ state_machine_t::shutdown(std::error_code ec) {
     data.channels.apply([&](channels_map_t& channels) {
         const auto size = channels.size();
         if (size > 0) {
-            COCAINE_LOG_WARNING(log, "slave is dropping %d sessions", size);
+            COCAINE_LOG_WARNING(log, "slave is dropping {} sessions", size);
         }
 
         for (auto& channel : channels) {
@@ -291,7 +297,7 @@ state_machine_t::shutdown(std::error_code ec) {
             cleanup_handler(ec);
         } catch (const std::exception& err) {
             // Just eat an exception, we don't care why the cleanup handler failed to do its job.
-            COCAINE_LOG_WARNING(log, "unable to cleanup after slave's death: %s", err.what());
+            COCAINE_LOG_WARNING(log, "unable to cleanup after slave's death: {}", err.what());
         }
     });
 }
@@ -303,8 +309,8 @@ state_machine_t::revoke(std::uint64_t id, channel_handler handler) {
         return channels.size();
     });
 
-    COCAINE_LOG_DEBUG(log, "slave has decreased its load to %d", load)("channel", id);
-    COCAINE_LOG_DEBUG(log, "slave has closed its %d channel", id);
+    COCAINE_LOG_DEBUG(log, "slave has decreased its load to {}", load, attribute_list({{"channel", id}}));
+    COCAINE_LOG_DEBUG(log, "slave has closed its {} channel", id);
 
     // Terminate the state machine if the current state is sealing and there are no more channels
     // left.
@@ -351,13 +357,13 @@ state_machine_t::dump() {
         indexes.emplace_back(buf, len);
     }
 
-    COCAINE_LOG_INFO(log, "slave is dumping output to 'crashlogs/%s' using [%s] indexes",
+    COCAINE_LOG_INFO(log, "slave is dumping output to 'crashlogs/{}' using [{}] indexes",
                      key, boost::join(indexes, ", "));
 
     try {
         api::storage(context.context, "core")->put("crashlogs", key, dump, indexes);
     } catch (const std::system_error& err) {
-        COCAINE_LOG_WARNING(log, "slave is unable to save the crashlog: %s", err.what());
+        COCAINE_LOG_WARNING(log, "slave is unable to save the crashlog: {}", err.what());
     }
 }
 

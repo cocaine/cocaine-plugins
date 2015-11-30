@@ -32,7 +32,7 @@ using namespace cocaine::isolate;
 
 void
 process_t::spool() {
-    COCAINE_LOG_INFO(m_log, "deploying app to %s", m_working_directory);
+    COCAINE_LOG_INFO(m_log, "deploying app to {}", m_working_directory);
 
     const auto storage = api::storage(m_context, "core");
     const auto archive = storage->get<std::string>("apps", m_name);
@@ -43,4 +43,3 @@ process_t::spool() {
     archive_t(m_context, archive).deploy(m_working_directory.string());
 #endif
 }
-

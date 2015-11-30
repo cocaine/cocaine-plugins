@@ -91,7 +91,7 @@ chrono_t::cancel(io::timer_id_t timer_id) {
     if (ptr->find(timer_id) != ptr->end()) {
         remove_timer(timer_id);
     } else {
-        COCAINE_LOG_INFO(log_, "attempt to cancel timer that does not exist, id is %1%", timer_id);
+        COCAINE_LOG_INFO(log_, "attempt to cancel timer that does not exist, id is {}", timer_id);
     }
 }
 
@@ -128,7 +128,7 @@ chrono_t::on_timer(const std::error_code& ec, io::timer_id_t timer_id) {
             restart(timer_id);
         }
     } catch (std::exception& ex) {
-        COCAINE_LOG_ERROR(log_, "possibly bug in timer service in chrono_t::on_timer(), error is %s", ex.what());
+        COCAINE_LOG_ERROR(log_, "possibly bug in timer service in chrono_t::on_timer(), error is {}", ex.what());
     }
 }
 
@@ -138,7 +138,7 @@ chrono_t::remove_timer(io::timer_id_t timer_id) {
         // Already locked.
         timers_.unsafe().at(timer_id).promise_.close();
     } catch (const std::exception& ex) {
-        COCAINE_LOG_ERROR(log_, "error occured while removing timer %s", ex.what());
+        COCAINE_LOG_ERROR(log_, "error occured while removing timer {}", ex.what());
     }
     timers_.unsafe().erase(timer_id);
 }

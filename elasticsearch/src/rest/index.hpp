@@ -35,7 +35,7 @@ struct index_handler_t {
     void
     operator()(Deferred& deferred, int code, const std::string& data) const {
         if (log) {
-            COCAINE_LOG_DEBUG(log, "Index request completed [%d]", code);
+            COCAINE_LOG_DEBUG(log, "Index request completed [{}]", code);
         }
 
         rapidjson::Document root;
@@ -51,7 +51,7 @@ struct index_handler_t {
         }
 
         if (log) {
-            COCAINE_LOG_DEBUG(log, "Received data: %s", data);
+            COCAINE_LOG_DEBUG(log, "Received data: {}", data);
         }
 
         deferred.write(std::make_tuple(true, std::string(root["_id"].GetString())));

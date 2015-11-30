@@ -35,7 +35,7 @@ struct delete_handler_t {
     operator()(Deferred& deferred, int code, const std::string& data) const {
         UNUSED(data);
         if (log) {
-            COCAINE_LOG_DEBUG(log, "Delete request completed [%d]", code);
+            COCAINE_LOG_DEBUG(log, "Delete request completed [{}]", code);
         }
 
         deferred.write(code == HTTP_OK || code == HTTP_ACCEPTED);

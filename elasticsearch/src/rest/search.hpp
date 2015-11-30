@@ -39,7 +39,7 @@ struct search_handler_t {
     void
     operator()(Deferred& deferred, int code, const std::string& data) const {
         if (log) {
-            COCAINE_LOG_DEBUG(log, "Search request completed [%d]", code);
+            COCAINE_LOG_DEBUG(log, "Search request completed [{}]", code);
         }
 
         rapidjson::Document root;

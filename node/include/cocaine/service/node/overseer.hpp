@@ -74,7 +74,7 @@ public:
     > queue_type;
 
 private:
-    const std::unique_ptr<logging::log_t> log;
+    const std::unique_ptr<logging::logger_t> log;
 
     context_t& context;
 

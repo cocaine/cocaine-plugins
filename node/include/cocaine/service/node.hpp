@@ -54,7 +54,7 @@ class node_t:
 {
     context_t& context;
 
-    const std::unique_ptr<logging::log_t> log;
+    const std::unique_ptr<logging::logger_t> log;
 
     synchronized<std::map<std::string, std::shared_ptr<node::app_t>>> apps;
 

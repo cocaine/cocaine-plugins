@@ -53,7 +53,7 @@ public:
     swarm::logger m_logger;
     mutable swarm::url_fetcher m_manager;
     const std::string m_endpoint;
-    std::shared_ptr<logging::log_t> m_log;
+    std::shared_ptr<logging::logger_t> m_log;
 
     impl_t(cocaine::context_t &context,
            asio::io_service &asio,
@@ -64,7 +64,7 @@ public:
         m_endpoint(extract_endpoint(args)),
         m_log(context.log(name))
     {
-        COCAINE_LOG_INFO(m_log, "Elasticsearch endpoint: %s", m_endpoint);
+        COCAINE_LOG_INFO(m_log, "Elasticsearch endpoint: {}", m_endpoint);
     }
 
     template<typename T, typename Handler>

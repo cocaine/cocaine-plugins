@@ -1,5 +1,7 @@
 #include "cocaine/detail/service/node/app.hpp"
 
+#include <boost/thread/thread.hpp>
+
 #include "cocaine/api/isolate.hpp"
 #include "cocaine/context.hpp"
 #include "cocaine/errors.hpp"
@@ -75,12 +77,12 @@ class control_slot_t:
 
     typedef std::shared_ptr<const io::basic_slot<io::app::control>::dispatch_type> result_type;
 
-    const std::unique_ptr<logging::log_t> log;
+    const std::unique_ptr<logging::logger_t> log;
     std::atomic<bool> locked;
     std::weak_ptr<overseer_proxy_t> overseer;
 
 public:
-    control_slot_t(std::shared_ptr<overseer_proxy_t> overseer_, std::unique_ptr<logging::log_t> log_):
+    control_slot_t(std::shared_ptr<overseer_proxy_t> overseer_, std::unique_ptr<logging::logger_t> log_):
         log(std::move(log_)),
         locked(false),
         overseer(overseer_)
@@ -116,7 +118,7 @@ class app_dispatch_t:
 {
     typedef io::streaming_slot<io::app::enqueue> slot_type;
 
-    const std::unique_ptr<logging::log_t> log;
+    const std::unique_ptr<logging::logger_t> log;
 
     // Yes, weak pointer here indicates about application destruction.
     std::weak_ptr<overseer_proxy_t> overseer;
@@ -143,7 +145,7 @@ public:
 private:
     std::shared_ptr<const slot_type::dispatch_type>
     on_enqueue(slot_type::upstream_type&& upstream , const std::string& event, const std::string& id) {
-        COCAINE_LOG_DEBUG(log, "processing enqueue '%s' event", event);
+        COCAINE_LOG_DEBUG(log, "processing enqueue '{}' event", event);
 
         typedef io::protocol<io::event_traits<io::app::enqueue>::dispatch_type>::scope protocol;
 
@@ -160,7 +162,7 @@ private:
                 throw std::system_error(std::make_error_code(std::errc::broken_pipe), "the application has been stopped");
             }
         } catch (const std::system_error& err) {
-            COCAINE_LOG_ERROR(log, "unable to enqueue '%s' event: %s", event, err.what());
+            COCAINE_LOG_ERROR(log, "unable to enqueue '{}' event: {}", event, err.what());
 
             upstream.send<protocol::error>(err.code(), err.what());
         }
@@ -252,7 +254,7 @@ public:
                asio::io_service& loop,
                const manifest_t& manifest,
                const profile_t& profile,
-               const logging::log_t* log,
+               logging::logger_t* const log,
                F handler)
     {
         isolate = context.get<api::isolate_t>(
@@ -269,10 +271,10 @@ public:
             // will be performed in a manner equivalent to using `boost::asio::io_service::post()`.
             spooler = isolate->async_spool(handler);
         } catch (const std::system_error& err) {
-            COCAINE_LOG_ERROR(log, "uncaught spool exception: [%d] %s", err.code().value(), err.code().message());
+            COCAINE_LOG_ERROR(log, "uncaught spool exception: [{}] {}", err.code().value(), err.code().message());
             handler(err.code());
         } catch (const std::exception& err) {
-            COCAINE_LOG_ERROR(log, "uncaught spool exception: %s", err.what());
+            COCAINE_LOG_ERROR(log, "uncaught spool exception: {}", err.what());
             handler(error::uncaught_spool_error);
         }
     }
@@ -296,7 +298,7 @@ public:
 class running_t:
     public base_t
 {
-    const logging::log_t* log;
+    logging::logger_t* const log;
 
     context_t& context;
 
@@ -309,7 +311,7 @@ public:
     running_t(context_t& context_,
               const manifest_t& manifest,
               const profile_t& profile,
-              const logging::log_t* log,
+              logging::logger_t* const log,
               std::shared_ptr<asio::io_service> loop):
         log(log),
         context(context_),
@@ -356,7 +358,7 @@ public:
             // earlier during bootstrap failure.
             context.remove(name);
         } catch (const std::exception& err) {
-            COCAINE_LOG_WARNING(log, "unable to remove application service from the context: %s", err.what());
+            COCAINE_LOG_WARNING(log, "unable to remove application service from the context: {}", err.what());
         }
 
         engine->terminate();
@@ -396,7 +398,7 @@ private:
 class cocaine::service::node::app_state_t:
     public std::enable_shared_from_this<app_state_t>
 {
-    const std::unique_ptr<logging::log_t> log;
+    const std::unique_ptr<logging::logger_t> log;
 
     context_t& context;
 
@@ -488,7 +490,7 @@ private:
     void
     on_spool(const std::error_code& ec) {
         if (ec) {
-            COCAINE_LOG_ERROR(log, "unable to spool app - [%d] %s", ec.value(), ec.message());
+            COCAINE_LOG_ERROR(log, "unable to spool app - [{}] {}", ec.value(), ec.message());
 
             loop->dispatch(std::bind(&app_state_t::cancel, shared_from_this(), ec));
 
@@ -514,10 +516,10 @@ private:
                 new state::running_t(context, manifest(), profile, log.get(), loop)
             );
         } catch (const std::system_error& err) {
-            COCAINE_LOG_ERROR(log, "unable to publish app: [%d] %s", err.code().value(), err.code().message());
+            COCAINE_LOG_ERROR(log, "unable to publish app: [{}] {}", err.code().value(), err.code().message());
             ec = err.code();
         } catch (const std::exception& err) {
-            COCAINE_LOG_ERROR(log, "unable to publish app: %s", err.what());
+            COCAINE_LOG_ERROR(log, "unable to publish app: {}", err.what());
             ec = error::uncaught_publish_error;
         }
 

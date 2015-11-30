@@ -53,7 +53,7 @@ class process_terminator_t:
     public std::enable_shared_from_this<process_terminator_t>
 {
 public:
-    const std::unique_ptr<logging::log_t> log;
+    const std::unique_ptr<logging::logger_t> log;
 
 private:
     pid_t pid;
@@ -68,7 +68,7 @@ private:
 public:
     process_terminator_t(pid_t pid_,
                          uint kill_timeout,
-                         std::unique_ptr<logging::log_t> log_,
+                         std::unique_ptr<logging::logger_t> log_,
                          asio::io_service& loop):
         log(std::move(log_)),
         pid(pid_),
@@ -89,7 +89,7 @@ public:
                 // Some error occurred, check errno.
                 const int ec = errno;
 
-                COCAINE_LOG_WARNING(log, "unable to properly collect the child: %d", ec);
+                COCAINE_LOG_WARNING(log, "unable to properly collect the child: {}", ec);
             }
                 break;
             case 0:
@@ -97,21 +97,21 @@ public:
                 // resort to prevent zombies.
                 if (::kill(pid, SIGKILL) == 0) {
                     if (::waitpid(pid, &status, 0) > 0) {
-                        COCAINE_LOG_DEBUG(log, "child has been killed: %d", status);
+                        COCAINE_LOG_DEBUG(log, "child has been killed: {}", status);
                     } else {
                         const int ec = errno;
 
-                        COCAINE_LOG_WARNING(log, "unable to properly collect the child: %d", ec);
+                        COCAINE_LOG_WARNING(log, "unable to properly collect the child: {}", ec);
                     }
                 } else {
                     // Unable to kill for some reasons, check errno.
                     const int ec = errno;
 
-                    COCAINE_LOG_WARNING(log, "unable to send kill signal to the child: %d", ec);
+                    COCAINE_LOG_WARNING(log, "unable to send kill signal to the child: {}", ec);
                 }
                 break;
             default:
-                COCAINE_LOG_DEBUG(log, "child has been collected: %d", status);
+                COCAINE_LOG_DEBUG(log, "child has been collected: {}", status);
             }
         }
     }
@@ -125,14 +125,14 @@ public:
         case -1: {
             const int ec = errno;
 
-            COCAINE_LOG_WARNING(log, "unable to collect the child: %d", ec);
+            COCAINE_LOG_WARNING(log, "unable to collect the child: {}", ec);
             break;
         }
         case 0: {
             // The child is not finished yet, send SIGTERM and try to collect it later after.
-            COCAINE_LOG_DEBUG(log, "unable to terminate child right now (not ready), sending SIGTERM")(
-                "timeout", timeout.kill
-            );
+            COCAINE_LOG_DEBUG(log, "unable to terminate child right now (not ready), sending SIGTERM", {
+                {"timeout", timeout.kill}
+            });
 
             // Ignore return code here.
             ::kill(pid, SIGTERM);
@@ -142,7 +142,7 @@ public:
             break;
         }
         default:
-            COCAINE_LOG_DEBUG(log, "child has been stopped: %d", status);
+            COCAINE_LOG_DEBUG(log, "child has been stopped: {}", status);
 
             pid = 0;
         }
@@ -164,7 +164,7 @@ private:
         case -1: {
             const int ec = errno;
 
-            COCAINE_LOG_WARNING(log, "unable to collect the child: %d", ec);
+            COCAINE_LOG_WARNING(log, "unable to collect the child: {}", ec);
             break;
         }
         case 0: {
@@ -178,7 +178,7 @@ private:
             break;
         }
         default:
-            COCAINE_LOG_DEBUG(log, "child has been terminated: %d", status);
+            COCAINE_LOG_DEBUG(log, "child has been terminated: {}", status);
 
             pid = 0;
         }
@@ -199,7 +199,7 @@ private:
         case -1: {
             const int ec = errno;
 
-            COCAINE_LOG_WARNING(log, "unable to collect the child: %d", ec);
+            COCAINE_LOG_WARNING(log, "unable to collect the child: {}", ec);
             break;
         }
         case 0: {
@@ -210,7 +210,7 @@ private:
             break;
         }
         default:
-            COCAINE_LOG_DEBUG(log, "child has been killed: %d", status);
+            COCAINE_LOG_DEBUG(log, "child has been killed: {}", status);
 
             pid = 0;
         }
@@ -229,7 +229,7 @@ public:
     process_handle_t(pid_t pid,
                      int stdout,
                      uint kill_timeout,
-                     std::unique_ptr<logging::log_t> log,
+                     std::unique_ptr<logging::logger_t> log,
                      asio::io_service& loop):
         terminator(std::make_shared<process_terminator_t>(pid, kill_timeout, std::move(log), loop)),
         m_stdout(stdout)
@@ -358,14 +358,14 @@ process_t::process_t(context_t& context, asio::io_service& io_context, const std
         cgroup_controller* ptr = cgroup_add_controller(m_cgroup, type->first.c_str());
 
         for(auto it = type->second.as_object().begin(); it != type->second.as_object().end(); ++it) {
-            COCAINE_LOG_INFO(m_log, "setting cgroup controller '%s' parameter '%s' to '%s'",
+            COCAINE_LOG_INFO(m_log, "setting cgroup controller '{}' parameter '{}' to '{}'",
                 type->first, it->first, boost::lexical_cast<std::string>(it->second)
             );
 
             try {
                 it->second.apply(cgroup_configurator_t(ptr, it->first.c_str()));
             } catch(const std::system_error& e) {
-                COCAINE_LOG_ERROR(m_log, "unable to set cgroup controller '%s' parameter '%s' - %s",
+                COCAINE_LOG_ERROR(m_log, "unable to set cgroup controller '{}' parameter '{}' - {}",
                     type->first, it->first, e.what()
                 );
             }
@@ -385,7 +385,7 @@ process_t::~process_t() {
     int rv = 0;
 
     if((rv = cgroup_delete_cgroup(m_cgroup, false)) != 0) {
-        COCAINE_LOG_ERROR(m_log, "unable to delete cgroup: %s", cgroup_strerror(rv));
+        COCAINE_LOG_ERROR(m_log, "unable to delete cgroup: {}", cgroup_strerror(rv));
     }
 
     cgroup_free(&m_cgroup);

@@ -22,7 +22,7 @@ terminating_t::~terminating_t() {
     control->cancel();
     session->detach(asio::error::operation_aborted);
 
-    COCAINE_LOG_DEBUG(slave->log, "state '%s' has been destroyed", name());
+    COCAINE_LOG_DEBUG(slave->log, "state '{}' has been destroyed", name());
 }
 
 bool
@@ -41,9 +41,9 @@ terminating_t::cancel() {
 
     try {
         const auto cancelled = timer.cancel();
-        COCAINE_LOG_DEBUG(slave->log, "processing termination timer cancellation: done (%d cancelled)", cancelled);
+        COCAINE_LOG_DEBUG(slave->log, "processing termination timer cancellation: done ({} cancelled)", cancelled);
     } catch (const std::system_error& err) {
-        COCAINE_LOG_WARNING(slave->log, "unable to cancel termination timer: %s", err.what());
+        COCAINE_LOG_WARNING(slave->log, "unable to cancel termination timer: {}", err.what());
     }
 }
 
@@ -55,7 +55,7 @@ terminating_t::terminate(const std::error_code& ec) {
 
 void
 terminating_t::start(unsigned long timeout, const std::error_code& ec) {
-    COCAINE_LOG_DEBUG(slave->log, "slave is terminating, timeout: %.2f ms", timeout);
+    COCAINE_LOG_DEBUG(slave->log, "slave is terminating, timeout: {:.2f} ms", timeout);
 
     timer.expires_from_now(boost::posix_time::milliseconds(timeout));
     timer.async_wait(std::bind(&terminating_t::on_timeout, shared_from_this(), ph::_1));

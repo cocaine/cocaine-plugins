@@ -17,6 +17,7 @@ ADD_LIBRARY(urlfetch MODULE
 
 TARGET_LINK_LIBRARIES(urlfetch
     cocaine-core
+    blackhole
     swarm
     swarm_urlfetcher
     ${Boost_LIBRARIES}

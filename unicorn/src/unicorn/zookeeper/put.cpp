@@ -15,6 +15,8 @@
 
 #include "cocaine/detail/unicorn/zookeeper/put.hpp"
 
+#include <cocaine/logging.hpp>
+
 #include "cocaine/unicorn/errors.hpp"
 
 namespace cocaine { namespace unicorn {
@@ -48,7 +50,7 @@ put_action_t::stat_event(int rc, zookeeper::node_stat const& stat) {
             result->write(std::make_tuple(true, versioned_value_t(initial_value, stat.version)));
         }
     } catch (const std::system_error& e) {
-        COCAINE_LOG_WARNING(ctx.log, "failure during put action: [%i] %s - %s", e.code().value(), e.code().message(), e.what());
+        COCAINE_LOG_WARNING(ctx.log, "failure during put action: [{}] {} - {}", e.code().value(), e.code().message(), e.what());
     }
 }
 

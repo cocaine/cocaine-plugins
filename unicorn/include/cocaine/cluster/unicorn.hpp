@@ -56,7 +56,7 @@ private:
     void
     on_subscribe_timer(const std::error_code& ec);
 
-    std::shared_ptr<cocaine::logging::log_t> log;
+    std::shared_ptr<logging::logger_t> log;
     cfg_t config;
     cocaine::context_t& context;
     cluster_t::interface& locator;

@@ -144,7 +144,7 @@ load_balancer_t::purge() {
             // exception guarantee.
             queue->pop_front();
         } catch (const std::exception& err) {
-            COCAINE_LOG_DEBUG(overseer->logger(), "slave has rejected assignment: %s", err.what());
+            COCAINE_LOG_DEBUG(overseer->logger(), "slave has rejected assignment: {}", err.what());
         }
     }
 }

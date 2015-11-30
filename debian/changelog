@@ -1,6 +1,13 @@
+cocaine-plugins (0.12.5.0) unstable; urgency=low
+
+  * Migrate to the Blackhole v1.0.
+  * Unicorn has been rewritten to provide stateless API.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 19 Jan 2016 19:25:03 +0300
+
 cocaine-plugins (0.12.4.2) unstable; urgency=low
 
-  * fix(chrono): chrono now accept doubles as it supposed to do. 
+  * fix(chrono): chrono now accept doubles as it supposed to do.
 
  -- Anton Matveenko <antmat@me.com>  Wed, 25 Nov 2015 17:37:00 +0300
 

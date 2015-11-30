@@ -15,6 +15,8 @@
 
 #include "cocaine/detail/unicorn/zookeeper/create.hpp"
 
+#include <cocaine/logging.hpp>
+
 #include "cocaine/unicorn/errors.hpp"
 
 namespace cocaine { namespace unicorn {
@@ -56,7 +58,7 @@ create_action_base_t::string_event(int rc, zookeeper::path_t value) {
             abort(rc);
         }
     } catch(const std::system_error& e) {
-        COCAINE_LOG_WARNING(ctx.log, "could not create node hierarchy. Exception: %s", e.what());
+        COCAINE_LOG_WARNING(ctx.log, "could not create node hierarchy. Exception: {}", e.what());
         abort(e.code().value());
     }
 }

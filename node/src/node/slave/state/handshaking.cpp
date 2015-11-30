@@ -38,9 +38,9 @@ void handshaking_t::cancel() {
 
     try {
         const auto cancelled = timer->cancel();
-        COCAINE_LOG_DEBUG(slave->log, "processing activation timer cancellation: done (%d cancelled)", cancelled);
+        COCAINE_LOG_DEBUG(slave->log, "processing activation timer cancellation: done ({} cancelled)", cancelled);
     } catch (const std::system_error& err) {
-        COCAINE_LOG_WARNING(slave->log, "unable to cancel activation timer: %s", err.what());
+        COCAINE_LOG_WARNING(slave->log, "unable to cancel activation timer: {}", err.what());
     }
 }
 
@@ -61,7 +61,7 @@ handshaking_t::activate(std::shared_ptr<session_t> session, upstream<io::worker:
     }
 
     const auto now = std::chrono::high_resolution_clock::now();
-    COCAINE_LOG_DEBUG(slave->log, "slave has been activated in %.2f ms",
+    COCAINE_LOG_DEBUG(slave->log, "slave has been activated in {:.2f} ms",
         std::chrono::duration<float, std::chrono::milliseconds::period>(now - birthtime).count());
 
     try {
@@ -71,7 +71,7 @@ handshaking_t::activate(std::shared_ptr<session_t> session, upstream<io::worker:
 
         return control;
     } catch (const std::exception& err) {
-        COCAINE_LOG_ERROR(slave->log, "unable to activate slave: %s", err.what());
+        COCAINE_LOG_ERROR(slave->log, "unable to activate slave: {}", err.what());
 
         slave->shutdown(error::unknown_activate_error);
     }
@@ -81,7 +81,7 @@ handshaking_t::activate(std::shared_ptr<session_t> session, upstream<io::worker:
 
 void
 handshaking_t::start(unsigned long timeout) {
-    COCAINE_LOG_DEBUG(slave->log, "slave is waiting for handshake, timeout: %.2f ms", timeout);
+    COCAINE_LOG_DEBUG(slave->log, "slave is waiting for handshake, timeout: {:.2f} ms", timeout);
 
     timer.apply([&](asio::deadline_timer& timer) {
         timer.expires_from_now(boost::posix_time::milliseconds(timeout));
