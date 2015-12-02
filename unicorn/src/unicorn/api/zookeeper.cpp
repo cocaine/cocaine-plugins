@@ -96,52 +96,6 @@ private:
     zookeeper::handler_scope_t zk_scope;
 };
 
-/**
-* Action for handling get requests during subscription.
-* When client subscribes for a path - we make a get request to ZK with setting watch on specified path.
-* On each get completion we compare last sent verison to client with current and if current version is greater send update to client.
-* On each watch invoke we issue get command (to later process with this handler) with new watcher.
-*/
-struct subscribe_action_t :
-    public zookeeper::managed_data_handler_base_t,
-    public zookeeper::managed_watch_handler_base_t,
-    public zookeeper::managed_stat_handler_base_t
-{
-
-    subscribe_action_t(
-        const zookeeper::handler_tag& tag,
-        writable_ptr::subscribe _result,
-        const zookeeper_t::context_t& ctx,
-        unicorn::path_t _path
-    );
-
-    /**
-    * Handling get events
-    */
-    virtual
-    void
-    operator()(int rc, std::string value, const zookeeper::node_stat& stat);
-
-    /**
-    * Handling exist events in case node does not exist.
-    */
-    virtual
-    void
-    operator()(int rc, zookeeper::node_stat const& stat);
-
-    /**
-    * Handling watch events
-    */
-    virtual
-    void
-    operator()(int type, int state, zookeeper::path_t path);
-
-    writable_ptr::subscribe result;
-    zookeeper_t::context_t ctx;
-    std::mutex write_lock;
-    unicorn::version_t last_version;
-    const unicorn::path_t path;
-};
 
 
 
@@ -425,7 +379,7 @@ zookeeper_t::put(
 scope_ptr
 zookeeper_t::get(writable_ptr::get result, path_t path) {
     auto scope = std::make_shared<zk_scope_t>();
-    auto& handler = scope->handler_scope->get_handler<subscribe_action_t>(
+    auto& handler = scope->handler_scope.get_handler<subscribe_action_t>(
         std::move(result),
         context_t({*log, zk}),
         std::move(path)
@@ -438,7 +392,7 @@ scope_ptr
 zookeeper_t::create(writable_ptr::create result, path_t path, value_t value, bool ephemeral, bool sequence ) {
     auto scope = std::make_shared<zk_scope_t>();
     //Note: There is a possibility to use unmanaged handler.
-    auto& handler = scope->handler_scope->get_handler<create_action_t>(
+    auto& handler = scope->handler_scope.get_handler<create_action_t>(
         context_t({*log, zk}),
         std::move(result),
         std::move(path),
@@ -460,7 +414,7 @@ zookeeper_t::del(writable_ptr::del result, path_t path, version_t version) {
 scope_ptr
 zookeeper_t::subscribe(writable_ptr::subscribe result, path_t path) {
     auto scope = std::make_shared<zk_scope_t>();
-    auto& handler = scope->handler_scope->get_handler<subscribe_action_t>(
+    auto& handler = scope->handler_scope.get_handler<subscribe_action_t>(
         std::move(result),
         context_t({*log,zk}),
         std::move(path)
@@ -472,7 +426,7 @@ zookeeper_t::subscribe(writable_ptr::subscribe result, path_t path) {
 scope_ptr
 zookeeper_t::children_subscribe(writable_ptr::children_subscribe result, path_t path) {
     auto scope = std::make_shared<zk_scope_t>();
-    auto& handler = scope->handler_scope->get_handler<children_subscribe_action_t>(
+    auto& handler = scope->handler_scope.get_handler<children_subscribe_action_t>(
         std::move(result),
         context_t({*log, zk}),
         std::move(path)
