@@ -12,10 +12,20 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 * GNU General Public License for more details.
 */
+
+#include "cocaine/detail/unicorn/zookeeper/children_subscribe.hpp"
+#include "cocaine/detail/unicorn/zookeeper/create.hpp"
+#include "cocaine/detail/unicorn/zookeeper/del.hpp"
+#include "cocaine/detail/unicorn/zookeeper/increment.hpp"
+#include "cocaine/detail/unicorn/zookeeper/lock.hpp"
+#include "cocaine/detail/unicorn/zookeeper/put.hpp"
+#include "cocaine/detail/unicorn/zookeeper/subscribe.hpp"
+#include "cocaine/detail/unicorn/zookeeper/lock_state.hpp"
+
 #include "cocaine/unicorn.hpp"
 #include "cocaine/unicorn/errors.hpp"
 #include "cocaine/unicorn/value.hpp"
-#include "cocaine/unicorn/api.hpp"
+#include "unicorn.hpp"
 #include "cocaine/unicorn/handlers.hpp"
 #include "cocaine/unicorn/api/zookeeper.hpp"
 
@@ -50,298 +60,19 @@ zookeeper::cfg_t make_zk_config(const dynamic_t& args) {
 }
 
 struct zk_scope_t:
-    public api::unicorn_request_scope_t
+public api::unicorn_request_scope_t
 {
     zookeeper::handler_scope_t handler_scope;
-};
 
-class lock_state_t :
-    public api::unicorn_request_scope_t,
-    public std::enable_shared_from_this<lock_state_t>
-{
-public:
-    lock_state_t(const zookeeper_t::context_t& _ctx);
-    ~lock_state_t();
-    lock_state_t(const lock_state_t& other) = delete;
-    lock_state_t& operator=(const lock_state_t& other) = delete;
-
-    void
-    schedule_for_lock(/*scope_ptr _zk_scope*/);
-
-    void
-    release();
-
-    bool
-    release_if_discarded();
-
-    void
-    discard();
-
-    bool
-    set_lock_created(unicorn::path_t created_path);
-
-    void
-    abort_lock_creation();
-private:
-    void
-    release_impl();
-
-    zookeeper_t::context_t ctx;
-    bool lock_created;
-    bool lock_released;
-    bool discarded;
-    unicorn::path_t lock_path;
-    unicorn::path_t created_path;
-    std::mutex access_mutex;
-    zookeeper::handler_scope_t zk_scope;
+    /**
+     * Does nothing as all work is done in handler_scope dtor.
+     */
+    virtual void
+    close(){}
 };
 
 
 
-
-struct put_action_t :
-    public zookeeper::managed_stat_handler_base_t,
-    public zookeeper::managed_data_handler_base_t
-{
-
-    put_action_t(
-        const zookeeper::handler_tag& tag,
-        const zookeeper_t::context_t& ctx,
-        writable_ptr::put _result,
-        unicorn::path_t _path,
-        unicorn::value_t _value,
-        unicorn::version_t _version
-    );
-
-    /**
-    * handling set request
-    */
-    virtual void
-    operator()(int rc, zookeeper::node_stat const& stat);
-
-    /**
-    * handling get request after version mismatch
-    */
-    virtual void
-    operator()(int rc, zookeeper::value_t value, zookeeper::node_stat const& stat);
-
-    zookeeper_t::context_t ctx;
-    writable_ptr::put result;
-    unicorn::path_t path;
-    unicorn::value_t initial_value;
-    zookeeper::value_t encoded_value;
-    unicorn::version_t version;
-};
-
-
-/**
-* Base handler for node creation. Used in create, lock, increment requests
-*/
-struct create_action_base_t :
-    public zookeeper::managed_string_handler_base_t
-{
-
-    create_action_base_t(
-        const zookeeper::handler_tag& tag,
-        const zookeeper_t::context_t& ctx,
-        unicorn::path_t _path,
-        unicorn::value_t _value,
-        bool _ephemeral,
-        bool _sequence
-    );
-
-    /**
-    * called from create subrequest.
-    */
-    virtual void
-    operator()(int rc, zookeeper::value_t value);
-
-    /**
-    * Called on success
-    */
-    virtual void
-    finalize(zookeeper::value_t) = 0;
-
-    /**
-    * Called on failure
-    */
-    virtual void
-    abort(int rc) = 0;
-
-    int depth;
-    zookeeper_t::context_t ctx;
-    unicorn::path_t path;
-    unicorn::value_t initial_value;
-    zookeeper::value_t encoded_value;
-    bool ephemeral;
-    bool sequence;
-};
-
-/**
-* Handler for simple node creation
-*/
-struct create_action_t:
-    public create_action_base_t
-{
-    create_action_t(
-        const zookeeper::handler_tag& tag,
-        const zookeeper_t::context_t& ctx,
-        writable_ptr::create _result,
-        unicorn::path_t _path,
-        unicorn::value_t _value,
-        bool ephemeral,
-        bool sequence
-    );
-
-    virtual void
-    finalize(zookeeper::value_t);
-
-    virtual void
-    abort(int rc);
-
-    writable_ptr::create result;
-};
-
-/**
-* Handler for delete request to ZK.
-*/
-struct del_action_t :
-    public zookeeper::void_handler_base_t
-{
-    del_action_t(writable_ptr::del _result);
-
-    virtual void
-    operator()(int rc);
-
-    writable_ptr::del result;
-};
-
-/**
-* Context for handling increment queries to service.
-*/
-struct increment_action_t:
-    public create_action_base_t,
-    public zookeeper::managed_stat_handler_base_t,
-    public zookeeper::managed_data_handler_base_t
-{
-
-    increment_action_t(
-        const zookeeper::handler_tag& tag,
-        const zookeeper_t::context_t& ctx,
-        writable_ptr::increment _result,
-        unicorn::path_t _path,
-        unicorn::value_t _increment
-    );
-
-    /**
-    * Get part of increment
-    */
-    virtual void
-    operator()(int rc, const zookeeper::node_stat& stat);
-
-    /**
-    * Put part of increment
-    */
-    virtual void
-    operator() (int rc, zookeeper::value_t value, const zookeeper::node_stat& stat);
-
-    /**
-    * Implicit call to base.
-    */
-    virtual void
-    operator()(int rc, zookeeper::value_t value) {
-        return create_action_base_t::operator()(rc, std::move(value));
-    }
-    /**
-    * Create part of increment
-    */
-    virtual void
-    finalize(zookeeper::value_t);
-
-    virtual void
-    abort(int rc);
-
-    zookeeper_t::context_t ctx;
-    writable_ptr::increment result;
-    unicorn::value_t total;
-};
-
-/**
-* Lock mechanism is described here:
-* http://zookeeper.apache.org/doc/r3.1.2/recipes.html#sc_recipes_Locks
-*/
-struct lock_action_t :
-    public create_action_base_t,
-    public zookeeper::managed_strings_stat_handler_base_t,
-    public zookeeper::managed_stat_handler_base_t,
-    public zookeeper::managed_watch_handler_base_t
-
-{
-    lock_action_t(
-        const zookeeper::handler_tag& tag,
-        const zookeeper_t::context_t& ctx,
-        std::shared_ptr<lock_state_t> state,
-        unicorn::path_t _path,
-        unicorn::path_t folder,
-        unicorn::value_t _value,
-        writable_ptr::lock _result
-    );
-
-    /**
-    * Childs subrequest handler
-    */
-    virtual void
-    operator()(int rc, std::vector<std::string> childs, zookeeper::node_stat const& stat);
-
-    /**
-    * Exists subrequest handler
-    */
-    virtual void
-    operator()(int rc, zookeeper::node_stat const& stat);
-
-
-    /**
-    * Watcher handler to watch on lock release.
-    */
-    virtual void operator()(int type, int state, unicorn::path_t path);
-
-    /**
-    * Implicit call to base.
-    */
-    virtual void
-    operator()(int rc, zookeeper::value_t value) {
-        return create_action_base_t::operator()(rc, std::move(value));
-    }
-
-    /**
-    * Lock creation handler.
-    */
-    virtual void
-    finalize(zookeeper::value_t);
-
-    virtual void
-    abort(int rc);
-
-    std::shared_ptr<lock_state_t> state;
-    std::weak_ptr<lock_state_t> weak_state;
-    writable_ptr::lock result;
-    unicorn::path_t folder;
-    std::string created_node_name;
-};
-
-/**
-* Handler for lock_release.
-*/
-struct release_lock_action_t :
-    public zookeeper::void_handler_base_t
-{
-    release_lock_action_t(const zookeeper_t::context_t& ctx);
-
-    virtual void
-        operator()(int rc);
-
-    zookeeper_t::context_t ctx;
-};
 
 }
 typedef api::unicorn_scope_ptr scope_ptr;
@@ -442,7 +173,7 @@ zookeeper_t::increment(writable_ptr::increment result, path_t path, value_t valu
         return nullptr;
     }
     auto scope = std::make_shared<zk_scope_t>();
-    auto& handler = scope->handler_scope->get_handler<increment_action_t>(
+    auto& handler = scope->handler_scope.get_handler<increment_action_t>(
         context_t({*log, zk}),
         std::move(result),
         std::move(path),
@@ -452,7 +183,7 @@ zookeeper_t::increment(writable_ptr::increment result, path_t path, value_t valu
     return scope;
 }
 
-std::shared_ptr<lock_state_t>
+scope_ptr
 zookeeper_t::lock(writable_ptr::lock result, path_t path) {
     path_t folder = std::move(path);
     path = folder + "/lock";
@@ -466,7 +197,8 @@ zookeeper_t::lock(writable_ptr::lock result, path_t path) {
         value_t(time(nullptr)),
         result
     );
-    ctx.zk.create(path, handler.encoded_value, handler.ephemeral, handler.sequence, handler);
+    zk.create(path, handler.encoded_value, handler.ephemeral, handler.sequence, handler);
+    return lock_state;
 }
 
 /**************************************************
@@ -474,10 +206,10 @@ zookeeper_t::lock(writable_ptr::lock result, path_t path) {
 **************************************************/
 
 
-zookeeper_t::put_action_t::put_action_t(
+put_action_t::put_action_t(
     const zookeeper::handler_tag& tag,
     const zookeeper_t::context_t& _ctx,
-    writable_helper<response::put_result>::ptr _result,
+    api::unicorn_t::writable_ptr::put _result,
     path_t _path,
     value_t _value,
     version_t _version
@@ -494,7 +226,7 @@ zookeeper_t::put_action_t::put_action_t(
 {}
 
 void
-zookeeper_t::put_action_t::operator()(int rc, zookeeper::node_stat const& stat) {
+put_action_t::operator()(int rc, zookeeper::node_stat const& stat) {
     try {
         if (rc == ZBADVERSION) {
             ctx.zk.get(path, *this);
@@ -510,7 +242,7 @@ zookeeper_t::put_action_t::operator()(int rc, zookeeper::node_stat const& stat) 
 }
 
 void
-zookeeper_t::put_action_t::operator()(int rc, zookeeper::value_t value, zookeeper::node_stat const& stat) {
+put_action_t::operator()(int rc, zookeeper::value_t value, zookeeper::node_stat const& stat) {
     if (rc) {
         auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
         result->abort(code, "failed get after version mismatch");
@@ -529,7 +261,7 @@ zookeeper_t::put_action_t::operator()(int rc, zookeeper::value_t value, zookeepe
 **************************************************/
 
 
-zookeeper_t::create_action_base_t::create_action_base_t(
+create_action_base_t::create_action_base_t(
     const zookeeper::handler_tag& tag,
     const zookeeper_t::context_t& _ctx,
     path_t _path,
@@ -549,7 +281,7 @@ zookeeper_t::create_action_base_t::create_action_base_t(
 {}
 
 void
-zookeeper_t::create_action_base_t::operator()(int rc, zookeeper::value_t value) {
+create_action_base_t::operator()(int rc, zookeeper::value_t value) {
     try {
         if (rc == ZOK) {
             if (depth == 0) {
@@ -574,10 +306,10 @@ zookeeper_t::create_action_base_t::operator()(int rc, zookeeper::value_t value) 
 }
 
 
-zookeeper_t::create_action_t::create_action_t(
+create_action_t::create_action_t(
     const zookeeper::handler_tag& tag,
     const zookeeper_t::context_t& _ctx,
-    writable_helper<response::create_result>::ptr _result,
+    api::unicorn_t::writable_ptr::create _result,
     path_t _path,
     value_t _value,
     bool _ephemeral,
@@ -589,12 +321,12 @@ zookeeper_t::create_action_t::create_action_t(
 {}
 
 void
-zookeeper_t::create_action_t::finalize(zookeeper::value_t) {
+create_action_t::finalize(zookeeper::value_t) {
     result->write(true);
 }
 
 void
-zookeeper_t::create_action_t::abort(int rc) {
+create_action_t::abort(int rc) {
     auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
     result->abort(code);
 }
@@ -605,12 +337,12 @@ zookeeper_t::create_action_t::abort(int rc) {
 ****************    DEL    ************************
 **************************************************/
 
-zookeeper_t::del_action_t::del_action_t(writable_helper<response::del_result>::ptr _result) :
+del_action_t::del_action_t(api::unicorn_t::writable_ptr::del _result) :
     result(std::move(_result)) {
 }
 
 void
-zookeeper_t::del_action_t::operator()(int rc) {
+del_action_t::operator()(int rc) {
     if (rc) {
         auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
         result->abort(code);
@@ -626,9 +358,9 @@ zookeeper_t::del_action_t::operator()(int rc) {
 *****************  SUBSCRIBE   ********************
 **************************************************/
 
-zookeeper_t::subscribe_action_t::subscribe_action_t(
+subscribe_action_t::subscribe_action_t(
     const zookeeper::handler_tag& tag,
-    writable_helper<response::subscribe_result>::ptr _result,
+    api::unicorn_t::writable_ptr::subscribe _result,
     const zookeeper_t::context_t& _ctx,
     path_t _path
 ) :
@@ -644,7 +376,7 @@ zookeeper_t::subscribe_action_t::subscribe_action_t(
 {}
 
 void
-zookeeper_t::subscribe_action_t::operator()(int rc, std::string value, const zookeeper::node_stat& stat) {
+subscribe_action_t::operator()(int rc, std::string value, const zookeeper::node_stat& stat) {
     if(rc == ZNONODE) {
         if(last_version != MIN_VERSION && last_version != NOT_EXISTING_VERSION) {
             auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
@@ -686,7 +418,7 @@ zookeeper_t::subscribe_action_t::operator()(int rc, std::string value, const zoo
 }
 
 void
-zookeeper_t::subscribe_action_t::operator()(int rc, zookeeper::node_stat const&) {
+subscribe_action_t::operator()(int rc, zookeeper::node_stat const&) {
     // Someone created a node in a gap between
     // we received nonode and issued exists
     if(rc == ZOK) {
@@ -700,7 +432,7 @@ zookeeper_t::subscribe_action_t::operator()(int rc, zookeeper::node_stat const&)
 }
 
 void
-zookeeper_t::subscribe_action_t::operator()(int /* type */, int /* state */, zookeeper::path_t) {
+subscribe_action_t::operator()(int /* type */, int /* state */, zookeeper::path_t) {
     try {
         ctx.zk.get(path, *this, *this);
     } catch(const std::system_error& e)  {
@@ -715,9 +447,9 @@ zookeeper_t::subscribe_action_t::operator()(int /* type */, int /* state */, zoo
 **************************************************/
 
 
-zookeeper_t::children_subscribe_action_t::children_subscribe_action_t(
+children_subscribe_action_t::children_subscribe_action_t(
     const zookeeper::handler_tag& tag,
-    writable_helper<response::children_subscribe_result>::ptr _result,
+    api::unicorn_t::writable_ptr::children_subscribe _result,
     const zookeeper_t::context_t& _ctx,
     path_t _path
 ) :
@@ -733,7 +465,7 @@ zookeeper_t::children_subscribe_action_t::children_subscribe_action_t(
 
 
 void
-zookeeper_t::children_subscribe_action_t::operator()(int rc, std::vector<std::string> childs, const zookeeper::node_stat& stat) {
+children_subscribe_action_t::operator()(int rc, std::vector<std::string> childs, const zookeeper::node_stat& stat) {
     if (rc != 0) {
         auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
         result->abort(code);
@@ -749,7 +481,7 @@ zookeeper_t::children_subscribe_action_t::operator()(int rc, std::vector<std::st
 }
 
 void
-zookeeper_t::children_subscribe_action_t::operator()(int /*type*/, int /*state*/, zookeeper::path_t /*path*/) {
+children_subscribe_action_t::operator()(int /*type*/, int /*state*/, zookeeper::path_t /*path*/) {
     try {
         ctx.zk.childs(path, *this, *this);
     } catch(const std::system_error& e) {
@@ -764,10 +496,10 @@ zookeeper_t::children_subscribe_action_t::operator()(int /*type*/, int /*state*/
 **************************************************/
 
 
-zookeeper_t::increment_action_t::increment_action_t(
+increment_action_t::increment_action_t(
     const zookeeper::handler_tag& tag,
     const zookeeper_t::context_t& _ctx,
-    writable_helper<response::increment_result>::ptr _result,
+    api::unicorn_t::writable_ptr::increment _result,
     path_t _path,
     value_t _increment
 ):
@@ -781,7 +513,8 @@ zookeeper_t::increment_action_t::increment_action_t(
 {}
 
 
-void zookeeper_t::increment_action_t::operator()(int rc, zookeeper::node_stat const& stat) {
+void
+increment_action_t::operator()(int rc, zookeeper::node_stat const& stat) {
     if (rc == ZOK) {
         result->write(versioned_value_t(total, stat.version));
     } else if (rc == ZBADVERSION) {
@@ -795,7 +528,7 @@ void zookeeper_t::increment_action_t::operator()(int rc, zookeeper::node_stat co
 }
 
 void
-zookeeper_t::increment_action_t::operator()(int rc, zookeeper::value_t value, const zookeeper::node_stat& stat) {
+increment_action_t::operator()(int rc, zookeeper::value_t value, const zookeeper::node_stat& stat) {
     try {
         if(rc == ZNONODE) {
             ctx.zk.create(path, encoded_value, ephemeral, sequence, *this);
@@ -831,27 +564,27 @@ zookeeper_t::increment_action_t::operator()(int rc, zookeeper::value_t value, co
 }
 
 void
-zookeeper_t::increment_action_t::finalize(zookeeper::value_t) {
+increment_action_t::finalize(zookeeper::value_t) {
     result->write(versioned_value_t(initial_value, version_t()));
 }
 
 void
-zookeeper_t::increment_action_t::abort(int rc) {
+increment_action_t::abort(int rc) {
     auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
     result->abort(code);
 }
 
-zookeeper_t::lock_action_t::lock_action_t(
+lock_action_t::lock_action_t(
     const zookeeper::handler_tag& tag,
     const zookeeper_t::context_t& _ctx,
     std::shared_ptr<lock_state_t> _state,
     path_t _path,
     path_t _folder,
     value_t _value,
-    writable_helper<response::lock_result>::ptr _result
+    api::unicorn_t::writable_ptr::lock _result
 ) :
     zookeeper::managed_handler_base_t(tag),
-    zookeeper_t::create_action_base_t(tag, _ctx, std::move(_path), std::move(_value), true, true),
+    create_action_base_t(tag, _ctx, std::move(_path), std::move(_value), true, true),
     zookeeper::managed_strings_stat_handler_base_t(tag),
     zookeeper::managed_stat_handler_base_t(tag),
     zookeeper::managed_watch_handler_base_t(tag),
@@ -861,7 +594,7 @@ zookeeper_t::lock_action_t::lock_action_t(
 {}
 
 void
-zookeeper_t::lock_action_t::operator()(int rc, std::vector<std::string> childs, zookeeper::node_stat const& /*stat*/) {
+lock_action_t::operator()(int rc, std::vector<std::string> childs, zookeeper::node_stat const& /*stat*/) {
     /**
     * Here we assume:
     *  * nobody has written trash data(any data except locks) in specified directory
@@ -909,7 +642,8 @@ zookeeper_t::lock_action_t::operator()(int rc, std::vector<std::string> childs, 
     }
 }
 
-void zookeeper_t::lock_action_t::operator()(int rc, zookeeper::node_stat const& /*stat*/) {
+void
+lock_action_t::operator()(int rc, zookeeper::node_stat const& /*stat*/) {
     /* If next lock in queue disappeared during request - issue childs immediately. */
     if(rc == ZNONODE) {
         try {
@@ -921,7 +655,8 @@ void zookeeper_t::lock_action_t::operator()(int rc, zookeeper::node_stat const& 
     }
 }
 
-void zookeeper_t::lock_action_t::operator()(int /*type*/, int /*zk_state*/, path_t /*path*/) {
+void
+lock_action_t::operator()(int /*type*/, int /*zk_state*/, path_t /*path*/) {
     try {
         ctx.zk.childs(folder, *this);
     } catch(const std::system_error& e) {
@@ -931,7 +666,7 @@ void zookeeper_t::lock_action_t::operator()(int /*type*/, int /*zk_state*/, path
 }
 
 void
-zookeeper_t::lock_action_t::finalize(zookeeper::value_t value) {
+lock_action_t::finalize(zookeeper::value_t value) {
     zookeeper::path_t created_path = std::move(value);
     created_node_name = zookeeper::get_node_name(created_path);
     if(state->set_lock_created(std::move(created_path))) {
@@ -945,17 +680,17 @@ zookeeper_t::lock_action_t::finalize(zookeeper::value_t value) {
 }
 
 void
-zookeeper_t::lock_action_t::abort(int rc) {
+lock_action_t::abort(int rc) {
     auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
     result->abort(code);
 }
 
-zookeeper_t::release_lock_action_t::release_lock_action_t(const zookeeper_t::context_t& _ctx) :
+release_lock_action_t::release_lock_action_t(const zookeeper_t::context_t& _ctx) :
     ctx(_ctx)
 {}
 
 void
-zookeeper_t::release_lock_action_t::operator()(int rc) {
+release_lock_action_t::operator()(int rc) {
     if(rc) {
         auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
         COCAINE_LOG_WARNING(ctx.log, "ZK error during lock delete: %s. Reconnecting to discard lock for sure.", code.message().c_str());
@@ -977,8 +712,9 @@ lock_state_t::~lock_state_t(){
     release();
 }
 
-void lock_state_t::schedule_for_lock(scope_ptr _zk_scope) {
-    zk_scope = std::move(_zk_scope);
+void lock_state_t::schedule_for_lock(/*scope_ptr _zk_scope*/) {
+    //TODO Take a look if this is correct
+    //zk_scope = std::move(_zk_scope);
 }
 
 void
@@ -1043,13 +779,13 @@ lock_state_t::set_lock_created(path_t _created_path) {
     if(should_release) {
         release_impl();
     }
-    zk_scope.reset();
+    //zk_scope.reset();
     return !lock_released;
 }
 
 void
 lock_state_t::abort_lock_creation() {
-    zk_scope.reset();
+    //zk_scope.reset();
 }
 
 void

@@ -20,7 +20,7 @@ using namespace cocaine::unicorn;
 
 namespace cocaine { namespace service {
 
-template<class Event, class Method, class Response = >
+template<class Event, class Method, class Response>
 class unicorn_slot_t :
     public io::basic_slot<Event>
 {

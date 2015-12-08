@@ -16,6 +16,7 @@
 #pragma once
 
 #include "cocaine/unicorn/api.hpp"
+
 #include "cocaine/unicorn/api/zookeeper.hpp"
 
 #include "cocaine/zookeeper/handler.hpp"
@@ -23,48 +24,42 @@
 namespace cocaine { namespace unicorn {
 
 /**
-* Action for handling get requests during subscription.
+* Action for handling requests during subscription for childs.
 * When client subscribes for a path - we make a get request to ZK with setting watch on specified path.
 * On each get completion we compare last sent verison to client with current and if current version is greater send update to client.
-* On each watch invoke we issue get command (to later process with this handler) with new watcher.
+* On each watch invoke we issue child command (to later process with this handler) starting new watch.
 */
-struct subscribe_action_t :
-public zookeeper::managed_data_handler_base_t,
-public zookeeper::managed_watch_handler_base_t,
-public zookeeper::managed_stat_handler_base_t {
+struct children_subscribe_action_t :
+    public zookeeper::managed_strings_stat_handler_base_t,
+    public zookeeper::managed_watch_handler_base_t
+{
     typedef api::unicorn_t::writable_ptr writable_ptr;
 
-    subscribe_action_t(const zookeeper::handler_tag& tag,
-                       writable_ptr::subscribe _result,
-                       const unicorn::zookeeper_t::context_t& ctx,
-                       unicorn::path_t _path);
+    children_subscribe_action_t(
+        const zookeeper::handler_tag& tag,
+        writable_ptr::children_subscribe _result,
+        const zookeeper_t::context_t& ctx,
+        path_t _path
+    );
 
     /**
-    * Handling get events
+    * Handling child requests
     */
-    virtual
-    void
-    operator()(int rc, std::string value, const zookeeper::node_stat& stat);
+    virtual void
+        operator()(int rc, std::vector<std::string> childs, const zookeeper::node_stat& stat);
 
     /**
-    * Handling exist events in case node does not exist.
+    * Handling watch
     */
-    virtual
-    void
-    operator()(int rc, zookeeper::node_stat const& stat);
+    virtual void
+        operator()(int type, int state, zookeeper::path_t path);
 
-    /**
-    * Handling watch events
-    */
-    virtual
-    void
-    operator()(int type, int state, zookeeper::path_t path);
 
-    writable_ptr::subscribe result;
-    unicorn::zookeeper_t::context_t ctx;
+    writable_ptr::children_subscribe result;
+    zookeeper_t::context_t ctx;
     std::mutex write_lock;
-    unicorn::version_t last_version;
-    const unicorn::path_t path;
+    version_t last_version;
+    const path_t path;
 };
 
 }} //namespace cocaine::unicorn
