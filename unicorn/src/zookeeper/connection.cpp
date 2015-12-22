@@ -13,11 +13,11 @@
 * GNU General Public License for more details.
 */
 
-#include "cocaine/unicorn/errors.hpp"
+#include "cocaine/detail/zookeeper/connection.hpp"
+#include "cocaine/detail/zookeeper/handler.hpp"
+#include "cocaine/detail/zookeeper/session.hpp"
 
-#include "cocaine/zookeeper/connection.hpp"
-#include "cocaine/zookeeper/session.hpp"
-#include "cocaine/zookeeper/handler.hpp"
+#include "cocaine/unicorn/errors.hpp"
 
 #include <zookeeper/zookeeper.h>
 #include <stdexcept>

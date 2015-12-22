@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "cocaine/zookeeper/zookeeper.hpp"
+#include "cocaine/detail/zookeeper/zookeeper.hpp"
 
 #include <cocaine/locked_ptr.hpp>
 

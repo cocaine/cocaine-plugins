@@ -12,11 +12,11 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 * GNU General Public License for more details.
 */
-#ifndef ZOOKEEPER_CONNECTION_HPP
-#define ZOOKEEPER_CONNECTION_HPP
 
-#include "cocaine/zookeeper/session.hpp"
-#include "cocaine/zookeeper/handler.hpp"
+#pragma once
+
+#include "cocaine/detail/zookeeper/handler.hpp"
+#include "cocaine/detail/zookeeper/session.hpp"
 
 #include <zookeeper/zookeeper.h>
 
@@ -139,4 +139,4 @@ private:
     managed_watch_handler_base_t& watcher;
 };
 }
-#endif
+

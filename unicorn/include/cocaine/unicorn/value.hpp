@@ -13,10 +13,7 @@
 * GNU General Public License for more details.
 */
 
-#ifndef COCAINE_UNICORN_VALUE_HPP
-#define COCAINE_UNICORN_VALUE_HPP
-
-#include "cocaine/zookeeper/zookeeper.hpp"
+#pragma once
 
 #include <cocaine/common.hpp>
 #include <cocaine/dynamic.hpp>
@@ -26,38 +23,19 @@
 
 namespace cocaine { namespace unicorn {
 
-typedef zookeeper::version_t version_t;
+typedef long long version_t;
 typedef cocaine::dynamic_t value_t;
 
 static constexpr version_t MIN_VERSION = -2;
 static constexpr version_t NOT_EXISTING_VERSION = -1;
 
-/**
-* Serializes service representation of value to zookepeers representation.
-* Currently ZK store msgpacked data, and service uses cocaine::dynamic_t
-*/
-zookeeper::value_t
-serialize(const value_t& val);
 
-/**
-* Unserializes zookepeers representation to service representation.
-*/
-value_t
-unserialize(const zookeeper::value_t& val);
 
 class versioned_value_t {
 public:
     versioned_value_t() = default;
     versioned_value_t(const versioned_value_t&) = default;
     versioned_value_t(value_t _value, version_t _version);
-
-    template<class Stream>
-    void
-    msgpack_pack(msgpack::packer<Stream>& packer) const {
-        packer.pack_array(2);
-        cocaine::io::type_traits<value_t>::pack(packer, value);
-        cocaine::io::type_traits<version_t>::pack(packer, version);
-    }
 
     const value_t&
     get_value() const {
@@ -75,4 +53,3 @@ private:
 };
 
 }}
-#endif

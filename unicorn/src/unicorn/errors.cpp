@@ -20,6 +20,8 @@
 
 #include "cocaine/unicorn/errors.hpp"
 
+#include <cocaine/errors.hpp>
+
 #include <string>
 
 namespace cocaine { namespace error {
@@ -36,7 +38,7 @@ class zookeeper_category_t:
     virtual
     auto
     message(int code) const -> std::string {
-        return zerror(code);
+        return std::string("zookeeper: ") + zerror(code);
     }
 };
 
@@ -74,7 +76,7 @@ class unicorn_category_t:
             case INVALID_CONNECTION_ENDPOINT:
                 return "Invalid connection endpoint specified";
             default:
-                return std::string("Unknow unicorn error - ") + std::to_string(code);
+                return std::string("Unknown unicorn error - ") + std::to_string(code);
         }
     }
 };
@@ -100,4 +102,13 @@ auto
 make_error_code(unicorn_errors code) -> std::error_code {
     return std::error_code(static_cast<int>(code), unicorn_category());
 }
+
+namespace {
+int placeholder = []() {
+    registrar::add(unicorn_category());
+    registrar::add(zookeeper_category());
+    return 42;
+}();
+}
+
 }}

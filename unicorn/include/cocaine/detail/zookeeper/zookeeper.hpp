@@ -21,7 +21,7 @@ namespace zookeeper {
 
 typedef std::string path_t;
 typedef std::string value_t;
-typedef long version_t;
+typedef long long version_t;
 
 /**
 * Get nth parent of path (starting from 1)

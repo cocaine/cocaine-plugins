@@ -15,9 +15,9 @@
 
 #pragma once
 
-#include "cocaine/unicorn/api.hpp"
+#include "cocaine/api/unicorn.hpp"
 
-#include "cocaine/zookeeper/handler.hpp"
+#include "cocaine/detail/zookeeper/handler.hpp"
 
 namespace cocaine { namespace unicorn {
 

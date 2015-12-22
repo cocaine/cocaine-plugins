@@ -13,8 +13,10 @@
 * GNU General Public License for more details.
 */
 
-#include "cocaine/unicorn.hpp"
 #include "cocaine/cluster/unicorn.hpp"
+#include "cocaine/service/unicorn.hpp"
+
+#include "cocaine/detail/unicorn/zookeeper.hpp"
 
 using namespace cocaine;
 extern "C" {
@@ -27,6 +29,7 @@ void
 initialize(api::repository_t& repository) {
     repository.insert<service::unicorn_service_t>("unicorn");
     repository.insert<cluster::unicorn_cluster_t>("unicorn");
+    repository.insert<unicorn::zookeeper_t>("zookeeper");
 }
 
 }

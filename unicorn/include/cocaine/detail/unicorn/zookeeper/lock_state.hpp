@@ -15,14 +15,14 @@
 
 #pragma once
 
-#include "cocaine/unicorn/api.hpp"
-#include "cocaine/unicorn/api/zookeeper.hpp"
-#include "cocaine/zookeeper/handler.hpp"
+#include "cocaine/api/unicorn.hpp"
+#include "cocaine/detail/unicorn/zookeeper.hpp"
+#include "cocaine/detail/zookeeper/handler.hpp"
 
 namespace cocaine { namespace unicorn {
 
 class lock_state_t :
-    public api::unicorn_request_scope_t,
+    public api::unicorn_scope_t,
     public std::enable_shared_from_this<lock_state_t>
 {
 public:

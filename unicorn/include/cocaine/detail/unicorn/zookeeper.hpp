@@ -13,25 +13,42 @@
 * GNU General Public License for more details.
 */
 
-#ifndef COCAINE_UNICORN_ZOOKEEPER_API_HPP
-#define COCAINE_UNICORN_ZOOKEEPER_API_HPP
+#pragma once
+
+#include "cocaine/api/unicorn.hpp"
+
+#include "cocaine/detail/zookeeper/connection.hpp"
 
 #include <cocaine/idl/unicorn.hpp>
-#include <cocaine/zookeeper/connection.hpp>
+
 #include <cocaine/unicorn/writable.hpp>
-#include "cocaine/unicorn/api.hpp"
 
 namespace cocaine { namespace unicorn {
 
 //zookeeper::cfg_t make_zk_config(const dynamic_t& args);
 
-struct zookeeper_scope_t: public api::unicorn_request_scope_t {
+/**
+* Serializes service representation of value to zookepeers representation.
+* Currently ZK store msgpacked data, and service uses cocaine::dynamic_t
+*/
+zookeeper::value_t
+serialize(const value_t& val);
+
+/**
+* Unserializes zookepeers representation to service representation.
+*/
+value_t
+unserialize(const zookeeper::value_t& val);
+
+struct zookeeper_scope_t: public api::unicorn_scope_t {
     std::shared_ptr<zookeeper::handler_scope_t> handler_scope;
     virtual
     ~zookeeper_scope_t() {}
 };
 
-class zookeeper_t : public api::unicorn_t {
+class zookeeper_t :
+    public api::unicorn_t
+{
 public:
 
     struct context_t {
@@ -48,8 +65,7 @@ public:
 
     virtual
     api::unicorn_scope_ptr
-    put(
-        writable_ptr::put result,
+    put(writable_ptr::put result,
         unicorn::path_t path,
         unicorn::value_t value,
         unicorn::version_t version
@@ -57,63 +73,49 @@ public:
 
     virtual
     api::unicorn_scope_ptr
-    get(
-        writable_ptr::get result,
+    get(writable_ptr::get result,
         unicorn::path_t path
     );
 
     virtual
     api::unicorn_scope_ptr
-    create(
-        writable_ptr::create result,
+    create(writable_ptr::create result,
+           unicorn::path_t path,
+           unicorn::value_t value,
+           bool ephemeral = false,
+           bool sequence = false);
+
+    virtual
+    api::unicorn_scope_ptr
+    del(writable_ptr::del result,
         unicorn::path_t path,
-        unicorn::value_t value,
-        bool ephemeral = false,
-        bool sequence = false
-    );
+        unicorn::version_t version);
 
     virtual
     api::unicorn_scope_ptr
-    del(
-        writable_ptr::del result,
-        unicorn::path_t path,
-        unicorn::version_t version
-    );
+    subscribe(writable_ptr::subscribe result,
+              unicorn::path_t path);
 
     virtual
     api::unicorn_scope_ptr
-    subscribe(
-        writable_ptr::subscribe result,
-        unicorn::path_t path
-    );
+    children_subscribe(writable_ptr::children_subscribe result,
+                       unicorn::path_t path);
 
     virtual
     api::unicorn_scope_ptr
-    children_subscribe(
-        writable_ptr::children_subscribe result,
-        unicorn::path_t path
-    );
+    increment(writable_ptr::increment result,
+              unicorn::path_t path,
+              unicorn::value_t value);
 
     virtual
     api::unicorn_scope_ptr
-    increment(
-        writable_ptr::increment result,
-        unicorn::path_t path,
-        unicorn::value_t value
-    );
-
-    virtual
-    api::unicorn_scope_ptr
-    lock(
-        writable_ptr::lock result,
-        unicorn::path_t path
-    );
+    lock(writable_ptr::lock result,
+         unicorn::path_t path);
 
 private:
     const std::unique_ptr<logging::log_t> log;
     zookeeper::session_t zk_session;
     zookeeper::connection_t zk;
 };
-}}
 
-#endif
+}}

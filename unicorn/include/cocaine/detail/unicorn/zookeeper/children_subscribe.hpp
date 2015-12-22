@@ -15,11 +15,11 @@
 
 #pragma once
 
-#include "cocaine/unicorn/api.hpp"
+#include "cocaine/api/unicorn.hpp"
 
-#include "cocaine/unicorn/api/zookeeper.hpp"
+#include "cocaine/detail/unicorn/zookeeper.hpp"
 
-#include "cocaine/zookeeper/handler.hpp"
+#include "cocaine/detail/zookeeper/handler.hpp"
 
 namespace cocaine { namespace unicorn {
 
@@ -35,24 +35,22 @@ struct children_subscribe_action_t :
 {
     typedef api::unicorn_t::writable_ptr writable_ptr;
 
-    children_subscribe_action_t(
-        const zookeeper::handler_tag& tag,
-        writable_ptr::children_subscribe _result,
-        const zookeeper_t::context_t& ctx,
-        path_t _path
-    );
+    children_subscribe_action_t(const zookeeper::handler_tag& tag,
+                                writable_ptr::children_subscribe result,
+                                const zookeeper_t::context_t& ctx,
+                                path_t path);
 
     /**
     * Handling child requests
     */
     virtual void
-        operator()(int rc, std::vector<std::string> childs, const zookeeper::node_stat& stat);
+    operator()(int rc, std::vector<std::string> childs, const zookeeper::node_stat& stat);
 
     /**
     * Handling watch
     */
     virtual void
-        operator()(int type, int state, zookeeper::path_t path);
+    operator()(int type, int state, zookeeper::path_t path);
 
 
     writable_ptr::children_subscribe result;

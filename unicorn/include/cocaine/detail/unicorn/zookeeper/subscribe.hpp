@@ -15,10 +15,11 @@
 
 #pragma once
 
-#include "cocaine/unicorn/api.hpp"
-#include "cocaine/unicorn/api/zookeeper.hpp"
+#include "cocaine/api/unicorn.hpp"
 
-#include "cocaine/zookeeper/handler.hpp"
+#include "cocaine/detail/unicorn/zookeeper.hpp"
+
+#include "cocaine/detail/zookeeper/handler.hpp"
 
 namespace cocaine { namespace unicorn {
 
@@ -29,9 +30,10 @@ namespace cocaine { namespace unicorn {
 * On each watch invoke we issue get command (to later process with this handler) with new watcher.
 */
 struct subscribe_action_t :
-public zookeeper::managed_data_handler_base_t,
-public zookeeper::managed_watch_handler_base_t,
-public zookeeper::managed_stat_handler_base_t {
+    public zookeeper::managed_data_handler_base_t,
+    public zookeeper::managed_watch_handler_base_t,
+    public zookeeper::managed_stat_handler_base_t
+{
     typedef api::unicorn_t::writable_ptr writable_ptr;
 
     subscribe_action_t(const zookeeper::handler_tag& tag,

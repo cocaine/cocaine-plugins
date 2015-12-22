@@ -19,6 +19,7 @@
 
 #include "cocaine/unicorn/writable.hpp"
 
+#include <cocaine/forwards.hpp>
 #include <cocaine/repository.hpp>
 
 namespace cocaine { namespace api {
@@ -35,7 +36,7 @@ public:
     close() = 0;
 
     virtual
-    ~unicorn_request_scope_t(){}
+    ~unicorn_scope_t(){}
 };
 
 typedef std::shared_ptr<unicorn_scope_t> unicorn_scope_ptr;
@@ -45,6 +46,7 @@ typedef std::shared_ptr<unicorn_scope_t> unicorn_scope_ptr;
  */
 class unicorn_t {
 public:
+    typedef unicorn_t category_type;
 
     /**
      * Typedefs for result type.
@@ -63,7 +65,7 @@ public:
 
     /**
      * Typedefs for used writable helpers
-     * Theese provide future-like functionality.
+     * These provide future-like functionality.
      * Either value can be written inside via call to write,
      * or an error can be signaled via call to abort.
      * @see cocaine::unicorn::writable_adapter_base_t
@@ -79,7 +81,7 @@ public:
         typedef unicorn::writable_helper<response::lock>::ptr lock;
     };
 
-    unicorn_t(context_t& /*context*/, const std::string& /*name*/, const dynamic_t& /*args*/) {}
+    unicorn_t(context_t& context, const std::string& name, const dynamic_t& args);
 
     /**
      * Put value in unicorn.

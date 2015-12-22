@@ -13,17 +13,24 @@
 * GNU General Public License for more details.
 */
 
-#ifndef COCAINE_UNICORN_HANDLERS_HPP
-#define COCAINE_UNICORN_HANDLERS_HPP
+#include "cocaine/detail/unicorn/zookeeper/del.hpp"
 
-#include "cocaine/unicorn.hpp"
-#include "cocaine/unicorn/api/zookeeper.hpp"
+#include "cocaine/unicorn/errors.hpp"
 
-namespace cocaine {
-namespace unicorn {
+namespace cocaine { namespace unicorn {
 
+del_action_t::del_action_t(api::unicorn_t::writable_ptr::del _result) : result(std::move(_result)) {
+    // pass
+}
 
+void
+del_action_t::operator()(int rc) {
+    if (rc) {
+        auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
+        result->abort(code);
+    } else {
+        result->write(true);
+    }
+}
 
-}}
-
-#endif
+}} //namespace cocaine::unicorn

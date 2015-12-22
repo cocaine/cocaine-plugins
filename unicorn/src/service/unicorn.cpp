@@ -13,12 +13,28 @@
 * GNU General Public License for more details.
 */
 
-#include "cocaine/unicorn.hpp"
+#include "cocaine/service/unicorn.hpp"
+
+#include "cocaine/traits/unicorn.hpp"
+
 #include <cocaine/context.hpp>
 
 using namespace cocaine::unicorn;
 
 namespace cocaine { namespace service {
+
+namespace {
+class null_scope_t:
+    public api::unicorn_scope_t
+{
+public:
+    virtual void
+    close() {}
+
+    virtual
+    ~null_scope_t(){}
+};
+}
 
 template<class Event, class Method, class Response>
 class unicorn_slot_t :
@@ -27,7 +43,10 @@ class unicorn_slot_t :
 public:
     typedef typename io::basic_slot<Event>::dispatch_type dispatch_type;
     typedef typename io::basic_slot<Event>::tuple_type tuple_type;
+    // This one is type of upstream.
     typedef typename io::basic_slot<Event>::upstream_type upstream_type;
+    // And here we use only upstream tag.
+    typedef typename io::aux::protocol_impl<typename io::event_traits<Event>::upstream_type>::type protocol;
 
     unicorn_slot_t(unicorn_service_t* _service, std::shared_ptr<api::unicorn_t> _unicorn, Method _method) :
         service(_service),
@@ -39,13 +58,26 @@ public:
     boost::optional<std::shared_ptr<const dispatch_type>>
     operator()(tuple_type&& args, upstream_type&& upstream)
     {
+        typedef boost::optional<std::shared_ptr<const dispatch_type>> opt_dispatch_t;
         Response result;
         auto wptr = unicorn::make_writable(result);
         auto api_args = std::tuple_cat(std::make_tuple(unicorn.get(), wptr), std::move(args));
-        auto request_scope = tuple::invoke(std::move(api_args), std::mem_fn(method));
-        auto dispatch = std::make_shared<unicorn_dispatch_t>(service->get_name(), service, std::move(request_scope));
-        result.attach(std::move(upstream));
-        return boost::make_optional<std::shared_ptr<const dispatch_type>>(dispatch);
+        api::unicorn_scope_ptr request_scope;
+        try {
+            request_scope = tuple::invoke(std::move(api_args), std::mem_fn(method));
+            result.attach(std::move(upstream));
+        } catch(const std::system_error& e) {
+            upstream.template send<typename protocol::error>(e.code(), std::string(e.what()));
+        } catch(const std::exception& e) {
+            upstream.template send<typename protocol::error>(error::uncaught_error, std::string(e.what()));
+        }
+        // Always create a dispatch for close.
+        // In case of exception we use null scope as request was not completed.
+        if(!request_scope) {
+            request_scope = std::make_shared<null_scope_t>();
+        }
+        auto dispatch = std::make_shared<unicorn_dispatch_t>(service->get_name(), service, request_scope);
+        return opt_dispatch_t(dispatch);
     }
 
 private:
@@ -100,7 +132,10 @@ unicorn_service_t::unicorn_service_t(context_t& context, asio::io_service& _asio
     service_t(context, _asio, _name, args),
     dispatch<io::unicorn_tag>(_name),
     name(_name),
-    unicorn(api::unicorn(context, args.as_object().at("backend").as_string())),
+    unicorn(api::unicorn(context, args.as_object().at("backend", "core").as_string())),
+
+
+
     log(context.log("unicorn"))
 {
     on<scope::subscribe>         (std::make_shared<subscribe_slot_t>         (this, unicorn, &api::unicorn_t::subscribe));

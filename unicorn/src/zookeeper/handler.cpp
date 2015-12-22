@@ -13,8 +13,8 @@
 * GNU General Public License for more details.
 */
 
-#include "cocaine/zookeeper/handler.hpp"
-#include "cocaine/zookeeper/zookeeper.hpp"
+#include "cocaine/detail/zookeeper/handler.hpp"
+#include "cocaine/detail/zookeeper/zookeeper.hpp"
 
 namespace zookeeper {
 namespace {

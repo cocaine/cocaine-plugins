@@ -13,11 +13,15 @@
 * GNU General Public License for more details.
 */
 
-#include "unicorn.hpp"
+#include "cocaine/api/unicorn.hpp"
 
 #include <cocaine/context.hpp>
 
 namespace cocaine { namespace api {
+
+unicorn_t::unicorn_t(context_t& /*context*/, const std::string& /*name*/, const dynamic_t& /*args*/) {
+    // empty
+}
 
 /**
  * Unicorn trait for service creation.
@@ -25,9 +29,9 @@ namespace cocaine { namespace api {
  */
 category_traits<unicorn_t>::ptr_type
 unicorn(context_t& context, const std::string& name) {
-    auto it = context.config.services.find(name);
+    auto it = context.config.unicorns.find(name);
 
-    if(it == context.config.services.end()) {
+    if(it == context.config.unicorns.end()) {
         throw std::system_error(std::make_error_code(std::errc::argument_out_of_domain), name);
     }
 

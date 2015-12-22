@@ -13,12 +13,10 @@
 * GNU General Public License for more details.
 */
 
-#ifndef COCAINE_UNICORN_PATH_HPP
-#define COCAINE_UNICORN_PATH_HPP
+#pragma once
 
-#include "cocaine/zookeeper/zookeeper.hpp"
+#include <string>
 
 namespace cocaine { namespace unicorn {
-typedef zookeeper::path_t path_t;
+typedef std::string path_t;
 }}
-#endif

@@ -13,13 +13,12 @@
 * GNU General Public License for more details.
 */
 
-#ifndef COCAINE_UNICORN_CLUSTER_HPP
-#define COCAINE_UNICORN_CLUSTER_HPP
+#pragma once
 
 #include "cocaine/api/cluster.hpp"
-#include "cocaine/unicorn.hpp"
+#include "cocaine/api/unicorn.hpp"
 
-#include <cocaine/context.hpp>
+#include <cocaine/forwards.hpp>
 
 namespace cocaine { namespace cluster {
 
@@ -28,6 +27,7 @@ class unicorn_cluster_t:
 {
 public:
     typedef api::category_traits<api::unicorn_t>::ptr_type unicorn_ptr;
+
     struct cfg_t {
         cfg_t(const dynamic_t& args);
 
@@ -35,76 +35,15 @@ public:
         size_t retry_interval;
         size_t check_interval;
     };
+
     unicorn_cluster_t(context_t& context, interface& locator, const std::string& name, const dynamic_t& args);
 
-    struct on_announce:
-        public unicorn::writable_adapter_base_t<api::unicorn_t::response::create_result>,
-        public std::enable_shared_from_this<on_announce>
-    {
-        on_announce(unicorn_cluster_t* _parent);
-
-        virtual void
-        write(api::unicorn_t::response::create_result&& result);
-
-        using unicorn::writable_adapter_base_t<api::unicorn_t::response::create_result>::abort;
-
-        virtual void
-        abort(const std::error_code& ec);
-
-        unicorn_cluster_t* parent;
-    };
-
-    struct on_update:
-        public unicorn::writable_adapter_base_t<api::unicorn_t::response::subscribe_result>,
-        public std::enable_shared_from_this<on_update>
-    {
-        on_update(unicorn_cluster_t* _parent);
-
-        virtual void
-        write(api::unicorn_t::response::subscribe_result&& result);
-
-        using unicorn::writable_adapter_base_t<api::unicorn_t::response::subscribe_result>::abort;
-
-        virtual void
-        abort(const std::error_code& ec);
-
-        unicorn_cluster_t* parent;
-    };
-
-    struct on_fetch :
-        public unicorn::writable_adapter_base_t<api::unicorn_t::response::get_result>
-    {
-        on_fetch(std::string uuid, unicorn_cluster_t* _parent);
-
-        virtual void
-        write(api::unicorn_t::response::get_result&& result);
-
-        using unicorn::writable_adapter_base_t<api::unicorn_t::response::get_result>::abort;
-
-        virtual void
-        abort(const std::error_code& ec);
-
-        std::string uuid;
-        unicorn_cluster_t* parent;
-    };
-
-    struct on_list_update :
-        public unicorn::writable_adapter_base_t<api::unicorn_t::response::children_subscribe_result>
-    {
-        on_list_update(unicorn_cluster_t* _parent);
-
-        virtual void
-        write(api::unicorn_t::response::children_subscribe_result&& result);
-
-        using unicorn::writable_adapter_base_t<api::unicorn_t::response::children_subscribe_result>::abort;
-
-        virtual void
-        abort(const std::error_code& ec);
-
-        unicorn_cluster_t* parent;
-    };
-
 private:
+    struct on_announce;
+    struct on_update;
+    struct on_fetch;
+    struct on_list_update;
+
     void
     announce();
 
@@ -130,5 +69,3 @@ private:
 };
 
 }}
-
-#endif
