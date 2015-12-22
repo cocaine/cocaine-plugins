@@ -1,0 +1,40 @@
+Following tests were made:
+  * Create
+    * Call "create" - ensure node was created
+    * Call "create" on existing node - ensure error raised
+    * Call "create" for nonexisting path - ensure all upper dirs are created.
+  * Put
+    * Call put on existing node with correct version. Ensure new value matches put value and service responded true.
+    * Call put on existing node with incorrect version. Ensure service responded false with actual value.
+    * Call put on non-existing node. Ensure error.
+  * Subscribe
+    * Subscribe for existing value. Ensure it sends current value first and updates on put command. Ensure it sends NONODE as error after delete
+    * Subscribe for unexisting value. Ensure it sends -1 as current version. Ensure it sends updates on create, put, del commands on that node.
+  * Del
+    * Ensure it deletes node if specified version is correct.
+    * Ensure it sends BAD_VERSION if version is incorrect.
+    * Ensure it sends NONODE on unexisting version
+  * Increment
+    * Ensure it increments non-existing path returning value of increment.
+    * Ensure it increments integer value node by integer
+    * Ensure it increments integer value node by double
+    * Ensure it increments double value node by integer
+    * Ensure it increments double value node by double
+    * Ensure it returns error on non-numeric argument
+    * Ensure it returns error on non-numeric node
+  * Children subscribe
+    * Subscribe for some unexisting path. Ensure it returns NONODE error
+    * Subscribe for some existing path. Ensure updates are coming on child creation and deletion.
+    * Ensure it returns error on path deletion
+  * Lock
+    * acquire lock on some path. Ensure other app can not acquire same lock. Ensure it released by unlock() method and other app acquires it.
+    * acquire lock on some path. Ensure other app can not acquire same lock. Ensure it released by app exit and other app acquires it.
+    * acquire lock on some path. Try to acquire lock on 3 more apps. Ensure each app transfer lock to only one other app on exit.
+    * acquire lock on some path. Try to acquire lock on another app and exit. Try to acquire on 3rd app. Ensure lock is not acquired until 1st app unlocks.
+    * acquire lock and release without reading answer. Ensure lock is not acquired.
+  * General
+    * Kill one zookeeper out of 3 active. Ensure any command works correctly.
+    * Kill all zookeepers. Ensure commands return error and runtime is working.
+    * Kill active zookeeper on subscribe. Ensure it returns error to client and reconnects automatically - new commands are ok.
+    * Aquire lock. kill all zookeepers. Restart all zookeepers. Ensure other app can not acquire lock.
+    * Aquire lock. kill all zookeepers. release lock. Restart all zookeepers. Ensure other app can acquire lock.
