@@ -26,12 +26,23 @@ Target* back_cast(const void* data) {
 
 handler_dispatcher_t::handler_dispatcher_t() :
     storage_lock(),
-    callbacks()
+    callbacks(),
+    active(true)
 {}
 /**
 * All callback are called from C ZK client, convert previously passed void* to
 * matching callback and invoke it.
 */
+
+handler_dispatcher_t::~handler_dispatcher_t() {
+    decltype(callbacks) tmp_callbacks;
+    {
+        std::unique_lock<std::mutex> lock(storage_lock);
+        active = false;
+        tmp_callbacks.swap(callbacks);
+    }
+    tmp_callbacks.clear();
+}
 
 void
 handler_dispatcher_t::watcher_cb(zhandle_t* /*zh*/, int type, int state, const char* path, void* watcherCtx) {
@@ -112,7 +123,9 @@ handler_dispatcher_t& handler_dispatcher_t::instance() {
 
 void handler_dispatcher_t::add(managed_handler_base_t* callback) {
     std::unique_lock<std::mutex> lock(storage_lock);
-    callbacks.insert(std::make_pair(callback, handler_ptr(callback)));
+    if(active) {
+        callbacks.insert(std::make_pair(callback, handler_ptr(callback)));
+    }
 }
 
 void handler_dispatcher_t::release(managed_handler_base_t* callback) {

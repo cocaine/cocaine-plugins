@@ -56,7 +56,7 @@ zookeeper::cfg_t make_zk_config(const dynamic_t& args) {
     if (endpoints.empty()) {
         endpoints.emplace_back("localhost", 2181);
     }
-    return zookeeper::cfg_t(endpoints, cfg.at("recv_timeout_ms", 1000u).as_uint());
+    return zookeeper::cfg_t(endpoints, cfg.at("recv_timeout_ms", 1000u).as_uint(), cfg.at("prefix", "").as_string());
 }
 
 struct zk_scope_t:
@@ -84,8 +84,8 @@ zookeeper_t::zookeeper_t(cocaine::context_t& context, const std::string& name, c
 scope_ptr
 zookeeper_t::put(
     writable_ptr::put result,
-    path_t path,
-    value_t value,
+    const path_t& path,
+    const value_t& value,
     version_t version
 ) {
     if (version < 0) {
@@ -96,8 +96,8 @@ zookeeper_t::put(
     auto& handler = scope->handler_scope.template get_handler<put_action_t>(
         context_t({*log, zk}),
         std::move(result),
-        std::move(path),
-        std::move(value),
+        path,
+        value,
         std::move(version)
     );
     zk.put(handler.path, handler.encoded_value, handler.version, handler);
@@ -105,26 +105,26 @@ zookeeper_t::put(
 }
 
 scope_ptr
-zookeeper_t::get(writable_ptr::get result, path_t path) {
+zookeeper_t::get(writable_ptr::get result, const path_t& path) {
     auto scope = std::make_shared<zk_scope_t>();
     auto& handler = scope->handler_scope.get_handler<subscribe_action_t>(
         std::move(result),
         context_t({*log, zk}),
-        std::move(path)
+        path
     );
     zk.get(handler.path, handler);
     return scope;
 }
 
 scope_ptr
-zookeeper_t::create(writable_ptr::create result, path_t path, value_t value, bool ephemeral, bool sequence ) {
+zookeeper_t::create(writable_ptr::create result, const path_t& path, const value_t& value, bool ephemeral, bool sequence ) {
     auto scope = std::make_shared<zk_scope_t>();
     //Note: There is a possibility to use unmanaged handler.
     auto& handler = scope->handler_scope.get_handler<create_action_t>(
         context_t({*log, zk}),
         std::move(result),
-        std::move(path),
-        std::move(value),
+        path,
+        value,
         ephemeral,
         sequence
     );
@@ -133,38 +133,38 @@ zookeeper_t::create(writable_ptr::create result, path_t path, value_t value, boo
 }
 
 scope_ptr
-zookeeper_t::del(writable_ptr::del result, path_t path, version_t version) {
+zookeeper_t::del(writable_ptr::del result, const path_t& path, version_t version) {
     auto handler = std::make_unique<del_action_t>(result);
     zk.del(path, version, std::move(handler));
     return nullptr;
 }
 
 scope_ptr
-zookeeper_t::subscribe(writable_ptr::subscribe result, path_t path) {
+zookeeper_t::subscribe(writable_ptr::subscribe result, const path_t& path) {
     auto scope = std::make_shared<zk_scope_t>();
     auto& handler = scope->handler_scope.get_handler<subscribe_action_t>(
         std::move(result),
         context_t({*log,zk}),
-        std::move(path)
+        path
     );
     zk.get(handler.path, handler, handler);
     return scope;
 }
 
 scope_ptr
-zookeeper_t::children_subscribe(writable_ptr::children_subscribe result, path_t path) {
+zookeeper_t::children_subscribe(writable_ptr::children_subscribe result, const path_t& path) {
     auto scope = std::make_shared<zk_scope_t>();
     auto& handler = scope->handler_scope.get_handler<children_subscribe_action_t>(
         std::move(result),
         context_t({*log, zk}),
-        std::move(path)
+        path
     );
     zk.childs(handler.path, handler, handler);
     return scope;
 }
 
 scope_ptr
-zookeeper_t::increment(writable_ptr::increment result, path_t path, value_t value) {
+zookeeper_t::increment(writable_ptr::increment result, const path_t& path, const value_t& value) {
     if (!value.is_double() && !value.is_int() && !value.is_uint()) {
         result->abort(cocaine::error::unicorn_errors::INVALID_TYPE);
         return nullptr;
@@ -173,17 +173,16 @@ zookeeper_t::increment(writable_ptr::increment result, path_t path, value_t valu
     auto& handler = scope->handler_scope.get_handler<increment_action_t>(
         context_t({*log, zk}),
         std::move(result),
-        std::move(path),
-        std::move(value)
+        path,
+        value
     );
     zk.get(handler.path, handler);
     return scope;
 }
 
 scope_ptr
-zookeeper_t::lock(writable_ptr::lock result, path_t path) {
-    path_t folder = std::move(path);
-    path = folder + "/lock";
+zookeeper_t::lock(writable_ptr::lock result, const path_t& folder) {
+    path_t path = folder + "/lock";
     auto lock_state = std::make_shared<lock_state_t>(context_t({*log, zk}));
     lock_state->schedule_for_lock();
     auto& handler = lock_state->handler_scope.get_handler<lock_action_t>(

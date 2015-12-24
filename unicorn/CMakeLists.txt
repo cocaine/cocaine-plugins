@@ -11,6 +11,7 @@ ADD_LIBRARY(unicorn MODULE
     src/unicorn/zookeeper/del.cpp
     src/unicorn/zookeeper/increment.cpp
     src/unicorn/zookeeper/lock.cpp
+    src/unicorn/zookeeper/lock_state.cpp
     src/unicorn/zookeeper/put.cpp
     src/unicorn/zookeeper/subscribe.cpp
     src/unicorn/errors.cpp

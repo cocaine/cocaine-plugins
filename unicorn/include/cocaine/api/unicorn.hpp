@@ -93,8 +93,8 @@ public:
     virtual
     unicorn_scope_ptr
     put(writable_ptr::put result,
-        unicorn::path_t path,
-        unicorn::value_t value,
+        const unicorn::path_t& path,
+        const unicorn::value_t& value,
         unicorn::version_t version) = 0;
 
     /**
@@ -105,7 +105,7 @@ public:
     virtual
     unicorn_scope_ptr
     get(writable_ptr::get result,
-        unicorn::path_t path) = 0;
+        const unicorn::path_t& path) = 0;
 
     /**
      * Create a node on specified path with specified value.
@@ -113,15 +113,15 @@ public:
     virtual
     unicorn_scope_ptr
     create(writable_ptr::create result,
-           unicorn::path_t path,
-           unicorn::value_t value,
+           const unicorn::path_t& path,
+           const unicorn::value_t& value,
            bool ephemeral,
            bool sequence) = 0;
 
     unicorn_scope_ptr
     create_default(writable_ptr::create result,
-                   unicorn::path_t path,
-                   unicorn::value_t value)
+                   const unicorn::path_t& path,
+                   const unicorn::value_t& value)
     {
         return create(std::move(result), std::move(path), std::move(value), false, false);
     }
@@ -129,29 +129,29 @@ public:
     virtual
     unicorn_scope_ptr
     del(writable_ptr::del result,
-        unicorn::path_t path,
+        const unicorn::path_t& path,
         unicorn::version_t version) = 0;
 
     virtual
     unicorn_scope_ptr
     subscribe(writable_ptr::subscribe result,
-              unicorn::path_t pat) = 0;
+              const unicorn::path_t& path) = 0;
 
     virtual
     unicorn_scope_ptr
     children_subscribe(writable_ptr::children_subscribe result,
-                       unicorn::path_t path) = 0;
+                       const unicorn::path_t& path) = 0;
 
     virtual
     unicorn_scope_ptr
     increment(writable_ptr::increment result,
-              unicorn::path_t path,
-              unicorn::value_t value) = 0;
+              const unicorn::path_t& path,
+              const unicorn::value_t& value) = 0;
 
     virtual
     unicorn_scope_ptr
     lock(writable_ptr::lock result,
-         unicorn::path_t path) = 0;
+         const unicorn::path_t& path) = 0;
 
     virtual
     ~unicorn_t() {}

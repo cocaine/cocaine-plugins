@@ -53,9 +53,10 @@ cfg_t::endpoint_t::to_string() const {
 }
 
 
-cfg_t::cfg_t(std::vector<cfg_t::endpoint_t> _endpoints, unsigned int _recv_timeout_ms):
+cfg_t::cfg_t(std::vector<cfg_t::endpoint_t> _endpoints, unsigned int _recv_timeout_ms, std::string _prefix):
     recv_timeout_ms(_recv_timeout_ms),
-    endpoints(std::move(_endpoints))
+    endpoints(std::move(_endpoints)),
+    prefix(std::move(_prefix))
 {
 }
 

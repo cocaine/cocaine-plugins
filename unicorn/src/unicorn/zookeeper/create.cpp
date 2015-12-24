@@ -37,7 +37,7 @@ create_action_base_t::create_action_base_t(const zookeeper::handler_tag& tag,
 {}
 
 void
-create_action_base_t::operator()(int rc, zookeeper::value_t value) {
+create_action_base_t::operator()(int rc, zookeeper::path_t value) {
     try {
         if (rc == ZOK) {
             if (depth == 0) {

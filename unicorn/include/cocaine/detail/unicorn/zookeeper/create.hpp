@@ -40,13 +40,13 @@ struct create_action_base_t :
     * called from create subrequest.
     */
     virtual void
-    operator()(int rc, zookeeper::value_t value);
+    operator()(int rc, zookeeper::path_t value);
 
     /**
     * Called on success
     */
     virtual void
-    finalize(zookeeper::value_t) = 0;
+    finalize(zookeeper::path_t) = 0;
 
     /**
     * Called on failure

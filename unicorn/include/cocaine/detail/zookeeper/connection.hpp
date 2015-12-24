@@ -39,7 +39,7 @@ public:
         unsigned int port;
     };
 
-    cfg_t(std::vector<endpoint_t> endpoints, unsigned int recv_timeout_ms);
+    cfg_t(std::vector<endpoint_t> endpoints, unsigned int recv_timeout_ms, std::string prefix);
 
     /**
     * ZK connection string.
@@ -51,7 +51,7 @@ public:
     const unsigned int recv_timeout_ms;
 private:
     std::vector<endpoint_t> endpoints;
-
+    std::string prefix;
 };
 
 /**

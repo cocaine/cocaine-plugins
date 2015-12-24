@@ -44,6 +44,8 @@ struct lock_action_t :
                   value_t _value,
                   api::unicorn_t::writable_ptr::lock _result);
 
+    virtual
+    ~lock_action_t();
     /**
     * Childs subrequest handler
     */
@@ -63,6 +65,7 @@ struct lock_action_t :
     virtual void operator()(int type, int state, unicorn::path_t path);
 
     /**
+    * Get handler.
     * Implicit call to base.
     */
     virtual void
@@ -74,13 +77,14 @@ struct lock_action_t :
     * Lock creation handler.
     */
     virtual void
-    finalize(zookeeper::value_t);
+    finalize(zookeeper::path_t);
 
     virtual void
     abort(int rc);
 
-    std::shared_ptr<lock_state_t> state;
-    std::weak_ptr<lock_state_t> weak_state;
+    // It is used to unlock if the callback was called after user has disconnected
+    std::shared_ptr<lock_state_t> state_lock;
+    std::weak_ptr<lock_state_t> state;
     api::unicorn_t::writable_ptr::lock result;
     path_t folder;
     std::string created_node_name;

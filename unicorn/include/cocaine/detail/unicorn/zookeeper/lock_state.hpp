@@ -35,7 +35,7 @@ public:
     lock_state_t& operator=(const lock_state_t& other) = delete;
 
     void
-    schedule_for_lock(/*scope_ptr _zk_scope*/);
+    schedule_for_lock();
 
     void
     release();
@@ -53,9 +53,6 @@ public:
 
     bool
     set_lock_created(unicorn::path_t created_path);
-
-    void
-    abort_lock_creation();
 
     zookeeper::handler_scope_t handler_scope;
 
