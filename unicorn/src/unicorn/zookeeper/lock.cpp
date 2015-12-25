@@ -42,7 +42,7 @@ lock_action_t::~lock_action_t() {
 }
 
 void
-lock_action_t::operator()(int rc, std::vector<std::string> childs, zookeeper::node_stat const& /*stat*/) {
+lock_action_t::children_event(int rc, std::vector<std::string> children, zookeeper::node_stat const& /*stat*/) {
     /**
     * Here we assume:
     *  * nobody has written trash data(any data except locks) in specified directory
@@ -58,19 +58,19 @@ lock_action_t::operator()(int rc, std::vector<std::string> childs, zookeeper::no
         return;
     }
     path_t next_min_node = created_node_name;
-    for(size_t i = 0; i < childs.size(); i++) {
+    for(size_t i = 0; i < children.size(); i++) {
         /**
         * Skip most obvious "trash" data.
         */
-        if(!zookeeper::is_valid_sequence_node(childs[i])) {
+        if(!zookeeper::is_valid_sequence_node(children[i])) {
             continue;
         }
-        if(childs[i] < next_min_node) {
+        if(children[i] < next_min_node) {
             if(next_min_node == created_node_name) {
-                next_min_node.swap(childs[i]);
+                next_min_node.swap(children[i]);
             } else {
-                if(childs[i] > next_min_node) {
-                    next_min_node.swap(childs[i]);
+                if(children[i] > next_min_node) {
+                    next_min_node.swap(children[i]);
                 }
             }
         }
@@ -96,7 +96,7 @@ lock_action_t::operator()(int rc, std::vector<std::string> childs, zookeeper::no
 }
 
 void
-lock_action_t::operator()(int rc, zookeeper::node_stat const& /*stat*/) {
+lock_action_t::stat_event(int rc, zookeeper::node_stat const& /*stat*/) {
     /* If next lock in queue disappeared during request - issue childs immediately. */
     if(rc == ZNONODE) {
         try {
@@ -111,7 +111,7 @@ lock_action_t::operator()(int rc, zookeeper::node_stat const& /*stat*/) {
 }
 
 void
-lock_action_t::operator()(int /*type*/, int /*zk_state*/, path_t /*path*/) {
+lock_action_t::watch_event(int /*type*/, int /*zk_state*/, path_t /*path*/) {
     try {
         ctx.zk.childs(folder, *this);
     } catch(const std::system_error& e) {
@@ -148,11 +148,15 @@ ctx(_ctx)
 {}
 
 void
-release_lock_action_t::operator()(int rc) {
-    if(rc) {
+release_lock_action_t::void_event(int rc) {
+    if(rc && rc != ZCLOSING) {
         auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
         COCAINE_LOG_WARNING(ctx.log, "ZK error during lock delete: %s. Reconnecting to discard lock for sure.", code.message().c_str());
-        ctx.zk.reconnect();
+        try {
+            ctx.zk.reconnect();
+        } catch(const std::system_error& e) {
+            COCAINE_LOG_ERROR(ctx.log, "giving up: %s", error::to_string(e));
+        }
     }
 }
 

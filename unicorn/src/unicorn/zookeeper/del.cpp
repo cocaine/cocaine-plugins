@@ -24,7 +24,7 @@ del_action_t::del_action_t(api::unicorn_t::writable_ptr::del _result) : result(s
 }
 
 void
-del_action_t::operator()(int rc) {
+del_action_t::void_event(int rc) {
     if (rc) {
         auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
         result->abort(code);

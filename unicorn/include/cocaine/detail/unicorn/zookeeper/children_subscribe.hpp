@@ -44,13 +44,13 @@ struct children_subscribe_action_t :
     * Handling child requests
     */
     virtual void
-    operator()(int rc, std::vector<std::string> childs, const zookeeper::node_stat& stat);
+    children_event(int rc, std::vector<std::string> childs, const zookeeper::node_stat& stat);
 
     /**
     * Handling watch
     */
     virtual void
-    operator()(int type, int state, zookeeper::path_t path);
+    watch_event(int type, int state, zookeeper::path_t path);
 
 
     writable_ptr::children_subscribe result;

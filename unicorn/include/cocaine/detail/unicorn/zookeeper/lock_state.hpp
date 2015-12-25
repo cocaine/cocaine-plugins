@@ -35,9 +35,6 @@ public:
     lock_state_t& operator=(const lock_state_t& other) = delete;
 
     void
-    schedule_for_lock();
-
-    void
     release();
 
     bool

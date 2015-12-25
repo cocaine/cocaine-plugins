@@ -50,27 +50,28 @@ struct lock_action_t :
     * Childs subrequest handler
     */
     virtual void
-    operator()(int rc, std::vector<std::string> childs, zookeeper::node_stat const& stat);
+    children_event(int rc, std::vector<std::string> childs, zookeeper::node_stat const& stat);
 
     /**
     * Exists subrequest handler
     */
     virtual void
-    operator()(int rc, zookeeper::node_stat const& stat);
+    stat_event(int rc, zookeeper::node_stat const& stat);
 
 
     /**
     * Watcher handler to watch on lock release.
     */
-    virtual void operator()(int type, int state, unicorn::path_t path);
+    virtual void
+    watch_event(int type, int state, unicorn::path_t path);
 
     /**
     * Get handler.
     * Implicit call to base.
     */
     virtual void
-    operator()(int rc, zookeeper::value_t value) {
-        return create_action_base_t::operator()(rc, std::move(value));
+    string_event(int rc, zookeeper::value_t value) {
+        return create_action_base_t::string_event(rc, std::move(value));
     }
 
     /**
@@ -99,7 +100,7 @@ public zookeeper::void_handler_base_t
     release_lock_action_t(const zookeeper_t::context_t& ctx);
 
     virtual void
-    operator()(int rc);
+    void_event(int rc);
 
     zookeeper_t::context_t ctx;
 };

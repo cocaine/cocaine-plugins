@@ -141,4 +141,16 @@ handler_scope_t::~handler_scope_t() {
         handler_dispatcher_t::instance().release(registered_callbacks[i]);
     }
 }
+
+void
+managed_string_handler_base_t::operator() (int rc, zookeeper::path_t value) {
+    if(!rc) {
+        assert(value.size() > prefix.size());
+        // TODO: Heavy assertion. Maybe we should delete it as we use asserts in prod.
+        assert(value.substr(0, prefix.size()) == prefix);
+        value.erase(0, prefix.size());
+    }
+    string_event(rc, std::move(value));
+}
+
 }

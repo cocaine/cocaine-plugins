@@ -37,7 +37,7 @@ put_action_t::put_action_t( const zookeeper::handler_tag& tag,
 {}
 
 void
-put_action_t::operator()(int rc, zookeeper::node_stat const& stat) {
+put_action_t::stat_event(int rc, zookeeper::node_stat const& stat) {
     try {
         if (rc == ZBADVERSION) {
             ctx.zk.get(path, *this);
@@ -53,7 +53,7 @@ put_action_t::operator()(int rc, zookeeper::node_stat const& stat) {
 }
 
 void
-put_action_t::operator()(int rc, zookeeper::value_t value, zookeeper::node_stat const& stat) {
+put_action_t::data_event(int rc, zookeeper::value_t value, zookeeper::node_stat const& stat) {
     if (rc) {
         auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
         result->abort(code, "failed get after version mismatch");

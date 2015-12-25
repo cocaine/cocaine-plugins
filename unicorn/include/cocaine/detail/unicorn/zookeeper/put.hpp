@@ -40,13 +40,13 @@ struct put_action_t :
     * handling set request
     */
     virtual void
-    operator()(int rc, zookeeper::node_stat const& stat);
+    stat_event(int rc, zookeeper::node_stat const& stat);
 
     /**
     * handling get request after version mismatch
     */
     virtual void
-    operator()(int rc, zookeeper::value_t value, zookeeper::node_stat const& stat);
+    data_event(int rc, zookeeper::value_t value, zookeeper::node_stat const& stat);
 
     zookeeper_t::context_t ctx;
     api::unicorn_t::writable_ptr::put result;

@@ -147,7 +147,7 @@ unicorn_cluster_t::on_announce::on_announce(unicorn_cluster_t* _parent) :
 void
 unicorn_cluster_t::on_announce::write(api::unicorn_t::response::create&& /*result*/) {
     COCAINE_LOG_INFO(parent->log, "announced self in unicorn");
-    parent->unicorn->subscribe(std::make_shared<on_update>(parent), parent->config.path + '/' + parent->locator.uuid());
+    parent->subscribe_scope = parent->unicorn->subscribe(std::make_shared<on_update>(parent), parent->config.path + '/' + parent->locator.uuid());
 }
 
 void
@@ -243,7 +243,7 @@ unicorn_cluster_t::on_list_update::write(api::unicorn_t::response::children_subs
         if(to_add[i] == parent->locator.uuid()) {
             continue;
         }
-        parent->unicorn->get(
+        parent->get_scope = parent->unicorn->get(
             std::make_shared<on_fetch>(to_add[i], parent),
             parent->config.path + '/' + to_add[i]
         );
@@ -300,7 +300,7 @@ unicorn_cluster_t::announce() {
         BOOST_ASSERT(false);
     } else {
         endpoints.swap(cur_endpoints);
-        unicorn->create(
+        create_scope = unicorn->create(
             std::make_shared<on_announce>(this),
             config.path + '/' + locator.uuid(),
             endpoints,
@@ -329,7 +329,7 @@ void unicorn_cluster_t::on_subscribe_timer(const std::error_code& ec) {
 
 void
 unicorn_cluster_t::subscribe() {
-    unicorn->children_subscribe(
+    children_subscribe_scope = unicorn->children_subscribe(
         std::make_shared<on_list_update>(this),
         config.path
     );

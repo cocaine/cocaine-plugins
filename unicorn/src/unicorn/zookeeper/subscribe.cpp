@@ -35,7 +35,7 @@ subscribe_action_t::subscribe_action_t(const zookeeper::handler_tag& tag,
 {}
 
 void
-subscribe_action_t::operator()(int rc, std::string value, const zookeeper::node_stat& stat) {
+subscribe_action_t::data_event(int rc, std::string value, const zookeeper::node_stat& stat) {
     if(rc == ZNONODE) {
         if(last_version != MIN_VERSION && last_version != NOT_EXISTING_VERSION) {
             auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
@@ -77,7 +77,7 @@ subscribe_action_t::operator()(int rc, std::string value, const zookeeper::node_
 }
 
 void
-subscribe_action_t::operator()(int rc, zookeeper::node_stat const&) {
+subscribe_action_t::stat_event(int rc, zookeeper::node_stat const&) {
     // Someone created a node in a gap between
     // we received nonode and issued exists
     if(rc == ZOK) {
@@ -91,7 +91,7 @@ subscribe_action_t::operator()(int rc, zookeeper::node_stat const&) {
 }
 
 void
-subscribe_action_t::operator()(int /* type */, int /* state */, zookeeper::path_t) {
+subscribe_action_t::watch_event(int /* type */, int /* state */, zookeeper::path_t) {
     try {
         ctx.zk.get(path, *this, *this);
     } catch(const std::system_error& e)  {

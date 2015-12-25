@@ -50,7 +50,7 @@ end
 def create(name, val)
   unicorn = Cocaine::Service.new(:unicorn)
   tx, rx = unicorn.create(name, val)
-	result = rx.recv()
+	result = rx.recv(timeout)
 	tx.close
   unicorn.terminate
 	result
@@ -59,7 +59,7 @@ end
 def get(name)
   unicorn = Cocaine::Service.new(:unicorn)
   tx, rx = unicorn.get(name)
-	result = rx.recv()
+	result = rx.recv(timeout)
 	tx.close
   unicorn.terminate
 	result
@@ -68,7 +68,7 @@ end
 def del(name, version=0)
   unicorn = Cocaine::Service.new(:unicorn)
   tx, rx = unicorn.del(name, version)
-  result = rx.recv()
+  result = rx.recv(timeout)
   tx.close
   unicorn.terminate
   result
@@ -77,7 +77,7 @@ end
 def put(name, value='test_value', version=0)
   unicorn = Cocaine::Service.new(:unicorn)
   tx, rx = unicorn.put(name, value, version)
-  result = rx.recv()
+  result = rx.recv(timeout)
   tx.close
   unicorn.terminate
   result
@@ -102,6 +102,10 @@ end
 
 def fast_timeout
   0.3
+end
+
+def timeout
+  3
 end
 
 describe :Unicorn do
@@ -266,11 +270,11 @@ describe :Unicorn do
     unicorn = Cocaine::Service.new(:unicorn)
     ensure_create(node, node_val)
     tx, rx = unicorn.subscribe(node)
-    result = rx.recv()
+    result = rx.recv(timeout)
     expect(result[1][0][0]).to eq node_val
     expect(result[1][0][1]).to eq 0
     ensure_del(node)
-    result = rx.recv()
+    result = rx.recv(timeout)
     expect(result[1][0][0]).to eq ZK_ERROR_CATEGORY
     expect(result[1][0][1]).to eq ZNONODE
     tx.close
@@ -281,7 +285,7 @@ describe :Unicorn do
     unicorn = Cocaine::Service.new(:unicorn)
     for i in [-1, 0, 1]
       tx, rx = unicorn.del(node, i)
-      result = rx.recv()
+      result = rx.recv(timeout)
       expect(result[1][0][0]).to be ZK_ERROR_CATEGORY
       expect(result[1][0][1]).to be ZNONODE
     end
@@ -293,7 +297,7 @@ describe :Unicorn do
     ensure_create(node, node_val)
     unicorn = Cocaine::Service.new(:unicorn)
     tx, rx = unicorn.del(node, 42)
-    result = rx.recv()
+    result = rx.recv(timeout)
     expect(result[1][0][0]).to be ZK_ERROR_CATEGORY
     expect(result[1][0][1]).to be ZBADVERSION
   end
@@ -322,13 +326,13 @@ describe :Unicorn do
     node = node_gen
     unicorn = Cocaine::Service.new(:unicorn)
     tx, rx = unicorn.increment(node, 42)
-    result = rx.recv()
+    result = rx.recv(timeout)
     expect(result[1][0][0]).to eq 42
     expect(result[1][0][1]).to eq 0
     ensure_get(node, 42, 0)
     ensure_del(node)
     tx, rx = unicorn.increment(node, 42.5)
-    result = rx.recv()
+    result = rx.recv(timeout)
     expect(result[1][0][0]).to eq 42.5
     expect(result[1][0][1]).to eq 0
     ensure_get(node, 42.5, 0)
@@ -340,11 +344,11 @@ describe :Unicorn do
     unicorn = Cocaine::Service.new(:unicorn)
     ensure_create(node, 42)
     tx, rx = unicorn.increment(node, 10)
-    result = rx.recv()
+    result = rx.recv(timeout)
     expect(result[1][0][0]).to eq 52
     expect(result[1][0][1]).to eq 1
     tx, rx = unicorn.increment(node, 0.1)
-    result = rx.recv()
+    result = rx.recv(timeout)
     expect(result[1][0][0]).to eq 52.1
     expect(result[1][0][1]).to eq 2
     ensure_get(node, 52.1, 2)
@@ -356,11 +360,11 @@ describe :Unicorn do
     unicorn = Cocaine::Service.new(:unicorn)
     ensure_create(node, 42.1)
     tx, rx = unicorn.increment(node, 10)
-    result = rx.recv()
+    result = rx.recv(timeout)
     expect(result[1][0][0]).to eq 52.1
     expect(result[1][0][1]).to eq 1
     tx, rx = unicorn.increment(node, 0.1)
-    result = rx.recv()
+    result = rx.recv(timeout)
     expect(result[1][0][0]).to eq 52.2
     expect(result[1][0][1]).to eq 2
     ensure_get(node, 52.2, 2)
@@ -371,17 +375,17 @@ describe :Unicorn do
     node = node_gen
     unicorn = Cocaine::Service.new(:unicorn)
     tx, rx = unicorn.increment(node, 'Invalid value')
-    result = rx.recv()
+    result = rx.recv(timeout)
     expect(result[1][0][0]).to be UNICORN_ERROR_CATEGORY
     expect(result[1][0][1]).to be INVALID_TYPE
 
     ensure_create(node, "QQ")
     tx, rx = unicorn.increment(node, 1)
-    result = rx.recv()
+    result = rx.recv(timeout)
     expect(result[1][0][0]).to be UNICORN_ERROR_CATEGORY
     expect(result[1][0][1]).to be INVALID_TYPE
     tx, rx = unicorn.increment(node, 0.1)
-    result = rx.recv()
+    result = rx.recv(timeout)
     expect(result[1][0][0]).to be UNICORN_ERROR_CATEGORY
     expect(result[1][0][1]).to be INVALID_TYPE
     ensure_del(node, 0)
@@ -391,7 +395,7 @@ describe :Unicorn do
     node = node_gen
     unicorn = Cocaine::Service.new(:unicorn)
     tx, rx = unicorn.children_subscribe(node)
-    result = rx.recv()
+    result = rx.recv(timeout)
     expect(result[1][0][0]).to be ZK_ERROR_CATEGORY
     expect(result[1][0][1]).to be ZNONODE
   end
@@ -401,7 +405,7 @@ describe :Unicorn do
     ensure_create(node, "")
     unicorn = Cocaine::Service.new(:unicorn)
     tx, rx = unicorn.children_subscribe(node)
-    result = rx.recv()
+    result = rx.recv(timeout)
     version = 0
     subnodes = Set.new
     expect(result[1][0]).to eq version
@@ -414,7 +418,7 @@ describe :Unicorn do
       ensure_create(full_node, "QQ")
       subnodes << subnode
       version += 1
-      result = rx.recv()
+      result = rx.recv(timeout)
       expect(result[1][0]).to eq version
       expect(Set.new(result[1][1])).to eq subnodes
       expect{
@@ -470,7 +474,7 @@ describe :Unicorn do
     tx, rx = unicorn.lock(node)
     tx.close
     tx2, rx2 = unicorn2.lock(node)
-    result = rx2.recv()
+    result = rx2.recv(timeout)
     expect(result[1][0]).to be true
   end
 end

@@ -64,7 +64,7 @@ private:
     asio::deadline_timer announce_timer;
     asio::deadline_timer subscribe_timer;
     unicorn_ptr unicorn;
-    api::unicorn_scope_ptr scope;
+    api::unicorn_scope_ptr create_scope, subscribe_scope, children_subscribe_scope, get_scope;
     synchronized<std::set<std::string>> registered_locators;
 };
 

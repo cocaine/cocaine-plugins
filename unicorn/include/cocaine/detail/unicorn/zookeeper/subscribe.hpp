@@ -46,21 +46,21 @@ struct subscribe_action_t :
     */
     virtual
     void
-    operator()(int rc, std::string value, const zookeeper::node_stat& stat);
+    data_event(int rc, std::string value, const zookeeper::node_stat& stat);
 
     /**
     * Handling exist events in case node does not exist.
     */
     virtual
     void
-    operator()(int rc, zookeeper::node_stat const& stat);
+    stat_event(int rc, zookeeper::node_stat const& stat);
 
     /**
     * Handling watch events
     */
     virtual
     void
-    operator()(int type, int state, zookeeper::path_t path);
+    watch_event(int type, int state, zookeeper::path_t path);
 
     writable_ptr::subscribe result;
     unicorn::zookeeper_t::context_t ctx;

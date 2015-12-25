@@ -31,7 +31,7 @@ struct del_action_t :
     del_action_t(api::unicorn_t::writable_ptr::del _result);
 
     virtual void
-    operator()(int rc);
+    void_event(int rc);
 
     api::unicorn_t::writable_ptr::del result;
 };

@@ -49,9 +49,9 @@ public:
     connection_string() const;
 
     const unsigned int recv_timeout_ms;
+    std::string prefix;
 private:
     std::vector<endpoint_t> endpoints;
-    std::string prefix;
 };
 
 /**
@@ -123,11 +123,13 @@ private:
             parent(_parent)
         {}
 
-        virtual void operator()(int type, int state, path_t path);
+        virtual void
+        watch_event(int type, int state, path_t path);
 
         connection_t& parent;
     };
 
+    path_t format_path(const path_t path);
 
     cfg_t cfg;
     session_t session;

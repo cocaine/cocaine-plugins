@@ -44,20 +44,20 @@ struct increment_action_t :
     * Get part of increment
     */
     virtual void
-    operator()(int rc, const zookeeper::node_stat& stat);
+    stat_event(int rc, const zookeeper::node_stat& stat);
 
     /**
     * Put part of increment
     */
     virtual void
-    operator()(int rc, zookeeper::value_t value, const zookeeper::node_stat& stat);
+    data_event(int rc, zookeeper::value_t value, const zookeeper::node_stat& stat);
 
     /**
     * Implicit call to base.
     */
     virtual void
-    operator()(int rc, zookeeper::value_t value) {
-        return create_action_base_t::operator()(rc, std::move(value));
+    string_event(int rc, zookeeper::value_t value) {
+        return create_action_base_t::string_event(rc, std::move(value));
     }
 
     /**

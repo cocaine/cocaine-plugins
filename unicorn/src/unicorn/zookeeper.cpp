@@ -184,7 +184,6 @@ scope_ptr
 zookeeper_t::lock(writable_ptr::lock result, const path_t& folder) {
     path_t path = folder + "/lock";
     auto lock_state = std::make_shared<lock_state_t>(context_t({*log, zk}));
-    lock_state->schedule_for_lock();
     auto& handler = lock_state->handler_scope.get_handler<lock_action_t>(
         context_t({*log, zk}),
         lock_state,

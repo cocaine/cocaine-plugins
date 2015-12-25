@@ -35,7 +35,7 @@ increment_action_t::increment_action_t(const zookeeper::handler_tag& tag,
 
 
 void
-increment_action_t::operator()(int rc, zookeeper::node_stat const& stat) {
+increment_action_t::stat_event(int rc, zookeeper::node_stat const& stat) {
     if (rc == ZOK) {
         result->write(versioned_value_t(total, stat.version));
     } else if (rc == ZBADVERSION) {
@@ -49,7 +49,7 @@ increment_action_t::operator()(int rc, zookeeper::node_stat const& stat) {
 }
 
 void
-increment_action_t::operator()(int rc, zookeeper::value_t value, const zookeeper::node_stat& stat) {
+increment_action_t::data_event(int rc, zookeeper::value_t value, const zookeeper::node_stat& stat) {
     try {
         if(rc == ZNONODE) {
             ctx.zk.create(path, encoded_value, ephemeral, sequence, *this);

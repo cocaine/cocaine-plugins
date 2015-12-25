@@ -33,11 +33,6 @@ lock_state_t::~lock_state_t(){
     release();
 }
 
-void lock_state_t::schedule_for_lock(/*scope_ptr _zk_scope*/) {
-    //TODO Take a look if this is correct
-    //zk_scope = std::move(_zk_scope);
-}
-
 void
 lock_state_t::release() {
     bool should_release = false;

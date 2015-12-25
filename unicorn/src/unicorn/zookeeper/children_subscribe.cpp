@@ -35,7 +35,7 @@ children_subscribe_action_t::children_subscribe_action_t(const zookeeper::handle
 
 
 void
-children_subscribe_action_t::operator()(int rc, std::vector <std::string> childs, const zookeeper::node_stat& stat) {
+children_subscribe_action_t::children_event(int rc, std::vector <std::string> childs, const zookeeper::node_stat& stat) {
     if (rc != 0) {
         auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
         result->abort(code);
@@ -51,7 +51,7 @@ children_subscribe_action_t::operator()(int rc, std::vector <std::string> childs
 }
 
 void
-children_subscribe_action_t::operator()(int /*type*/, int /*state*/, zookeeper::path_t /*path*/) {
+children_subscribe_action_t::watch_event(int /*type*/, int /*state*/, zookeeper::path_t /*path*/) {
     try {
         ctx.zk.childs(path, *this, *this);
     } catch (const std::system_error& e) {
