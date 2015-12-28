@@ -123,7 +123,7 @@ public:
                    const unicorn::path_t& path,
                    const unicorn::value_t& value)
     {
-        return create(std::move(result), std::move(path), std::move(value), false, false);
+        return create(std::move(result), path, value, false, false);
     }
 
     virtual

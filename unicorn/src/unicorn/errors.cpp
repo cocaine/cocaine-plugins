@@ -103,12 +103,4 @@ make_error_code(unicorn_errors code) -> std::error_code {
     return std::error_code(static_cast<int>(code), unicorn_category());
 }
 
-namespace {
-int placeholder = []() {
-    registrar::add(unicorn_category());
-    registrar::add(zookeeper_category());
-    return 42;
-}();
-}
-
 }}
