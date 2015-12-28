@@ -294,9 +294,7 @@ void count_success_if(SuccCounter* succ, FailCounter* fail, F fn) {
     }
 }
 
-} // namespace
-
-struct stream_adapter_t : public api::stream_t {
+struct tx_stream_t : public api::stream_t {
     std::shared_ptr<client_rpc_dispatch_t> dispatch;
 
     auto write(const std::string& chunk) -> stream_t& {
@@ -313,13 +311,13 @@ struct stream_adapter_t : public api::stream_t {
     }
 };
 
-struct rx_stream_adapter_t : public api::stream_t {
+struct rx_stream_t : public api::stream_t {
     typedef io::event_traits<io::worker::rpc::invoke>::upstream_type tag;
     typedef io::protocol<tag>::scope protocol;
 
     io::streaming_slot<io::app::enqueue>::upstream_type stream;
 
-    rx_stream_adapter_t(io::streaming_slot<io::app::enqueue>::upstream_type stream) :
+    rx_stream_t(io::streaming_slot<io::app::enqueue>::upstream_type stream) :
         stream(std::move(stream))
     {}
 
@@ -337,43 +335,23 @@ struct rx_stream_adapter_t : public api::stream_t {
     }
 };
 
+} // namespace
+
 std::shared_ptr<client_rpc_dispatch_t>
 overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstream,
                     app::event_t event,
-                    boost::optional<service::node::slave::id_t> /*id*/)
+                    boost::optional<service::node::slave::id_t> id)
 {
-    // TODO: Handle id parameter somehow.
-
-    std::shared_ptr<client_rpc_dispatch_t> dispatch;
-
-    count_success_if(&stats.requests.accepted, &stats.requests.rejected, [&] {
-        queue.apply([&](queue_type& queue) {
-            const auto limit = profile().queue_limit;
-
-            if (queue.size() >= limit && limit > 0) {
-                throw std::system_error(error::queue_is_full);
-            }
-
-            dispatch = std::make_shared<client_rpc_dispatch_t>(manifest().name);
-
-            queue.push_back({
-                {std::move(event), dispatch, std::make_shared<rx_stream_adapter_t>(std::move(downstream))},
-                trace_t::current()
-            });
-        });
-    });
-
-    rebalance_events();
-    rebalance_slaves();
-
-    return dispatch;
+    std::shared_ptr<api::stream_t> rx = std::make_shared<rx_stream_t>(std::move(downstream));
+    auto tx = enqueue(rx, std::move(event), std::move(id));
+    return std::static_pointer_cast<tx_stream_t>(tx)->dispatch;
 }
 
 auto overseer_t::enqueue(std::shared_ptr<api::stream_t> rx,
     app::event_t event,
     boost::optional<service::node::slave::id_t> /*id*/) -> std::shared_ptr<api::stream_t>
 {
-    auto tx = std::make_shared<stream_adapter_t>();
+    auto tx = std::make_shared<tx_stream_t>();
 
     count_success_if(&stats.requests.accepted, &stats.requests.rejected, [&] {
         queue.apply([&](queue_type& queue) {
