@@ -6,8 +6,14 @@
 #include "cocaine/idl/node.hpp"
 #include "cocaine/rpc/slot/deferred.hpp"
 
+namespace cocaine {
+
+class overseer_t;
+
+}  // namespace cocaine
+
 namespace cocaine { namespace service { namespace node {
-    class app_state_t;
+class app_state_t;
 }}} // namespace cocaine::service::node
 
 namespace cocaine { namespace service { namespace node {
@@ -30,6 +36,9 @@ public:
 
     dynamic_t
     info(io::node::info::flags_t flags) const;
+
+    std::shared_ptr<overseer_t>
+    overseer() const;
 };
 
 }}} // namespace cocaine::service::node

@@ -199,3 +199,22 @@ node_t::info(const std::string& name, io::node::info::flags_t flags) const {
 
     return app->info(flags);
 }
+
+std::shared_ptr<overseer_t>
+node_t::overseer(const std::string& name) const {
+    auto app = apps.apply([&](const std::map<std::string, std::shared_ptr<node::app_t>>& apps) -> std::shared_ptr<node::app_t> {
+        auto it = apps.find(name);
+
+        if(it != apps.end()) {
+            return it->second;
+        }
+
+        return nullptr;
+    });
+
+    if (!app) {
+        throw cocaine::error_t("app '%s' is not running", name);
+    }
+
+    return app->overseer();
+}

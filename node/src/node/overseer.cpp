@@ -1,4 +1,4 @@
-#include "cocaine/detail/service/node/overseer.hpp"
+#include "cocaine/service/node/overseer.hpp"
 
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>

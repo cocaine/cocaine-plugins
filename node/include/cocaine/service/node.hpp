@@ -31,11 +31,19 @@
 #include "cocaine/rpc/dispatch.hpp"
 
 namespace cocaine {
-    namespace service {
-        namespace node {
-            class app_t;
-        }
-    }
+
+class overseer_t;
+
+}  // namespace cocaine
+
+namespace cocaine {
+namespace service {
+namespace node {
+
+class app_t;
+
+}
+}
 }
 
 namespace cocaine { namespace service {
@@ -63,10 +71,6 @@ public:
     auto
     prototype() const -> const io::basic_dispatch_t&;
 
-private:
-    void
-    on_context_shutdown();
-
     deferred<void>
     start_app(const std::string& name, const std::string& profile);
 
@@ -78,6 +82,13 @@ private:
 
     dynamic_t
     info(const std::string& name, io::node::info::flags_t flags) const;
+
+    std::shared_ptr<overseer_t>
+    overseer(const std::string& name) const;
+
+private:
+    void
+    on_context_shutdown();
 };
 
 }} // namespace cocaine::service

@@ -9,11 +9,12 @@
 #include "cocaine/rpc/actor_unix.hpp"
 #include "cocaine/traits/dynamic.hpp"
 
+#include "cocaine/service/node/overseer.hpp"
+
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 #include "cocaine/detail/service/node/dispatch/handshake.hpp"
 #include "cocaine/detail/service/node/dispatch/init.hpp"
 #include "cocaine/detail/service/node/manifest.hpp"
-#include "cocaine/detail/service/node/overseer.hpp"
 #include "cocaine/detail/service/node/profile.hpp"
 
 namespace ph = std::placeholders;
@@ -199,6 +200,11 @@ public:
     virtual
     dynamic_t::object_t
     info(io::node::info::flags_t flags) const = 0;
+
+    std::shared_ptr<overseer_t>
+    overseer() const {
+        throw error_t("invalid state");
+    }
 };
 
 /// The application is stopped either normally or abnormally.
@@ -297,7 +303,7 @@ class running_t:
     std::string name;
 
     std::unique_ptr<unix_actor_t> engine;
-    std::shared_ptr<overseer_proxy_t> overseer;
+    std::shared_ptr<overseer_proxy_t> overseer_;
 
 public:
     running_t(context_t& context_,
@@ -310,7 +316,7 @@ public:
         name(manifest.name)
     {
         // Create the Overseer - slave spawner/despawner plus the event queue dispatcher.
-        overseer = std::make_shared<overseer_proxy_t>(
+        overseer_ = std::make_shared<overseer_proxy_t>(
             std::make_shared<overseer_t>(context, manifest, profile, loop)
         );
 
@@ -319,7 +325,7 @@ public:
         context.insert(manifest.name, std::make_unique<actor_t>(
             context,
             std::make_shared<asio::io_service>(),
-            std::make_unique<app_dispatch_t>(context, manifest.name, overseer)
+            std::make_unique<app_dispatch_t>(context, manifest.name, overseer_)
         ));
 
         // Create an unix actor and bind to {manifest->name}.{pid} unix-socket.
@@ -329,7 +335,7 @@ public:
         engine.reset(new unix_actor_t(
             context,
             manifest.endpoint,
-            std::bind(&overseer_t::prototype, overseer->o),
+            std::bind(&overseer_t::prototype, overseer()),
             [](io::dispatch_ptr_t handshake, std::shared_ptr<session_t> session) {
                 std::static_pointer_cast<const handshake_t>(handshake)->bind(session);
             },
@@ -354,7 +360,7 @@ public:
         }
 
         engine->terminate();
-        overseer->o->cancel();
+        overseer()->cancel();
     }
 
     virtual
@@ -363,13 +369,18 @@ public:
         dynamic_t::object_t info;
 
         if (is_overseer_report_required(flags)) {
-            info = overseer->o->info(flags);
+            info = overseer()->info(flags);
         } else {
-            info["uptime"] = overseer->o->uptime().count();
+            info["uptime"] = overseer()->uptime().count();
         }
 
         info["state"] = "running";
         return info;
+    }
+
+    std::shared_ptr<overseer_t>
+    overseer() const {
+        return overseer_->o;
     }
 
 private:
@@ -442,6 +453,11 @@ public:
     dynamic_t
     info(io::node::info::flags_t flags) const {
         return (*state.synchronize())->info(flags);
+    }
+
+    std::shared_ptr<overseer_t>
+    overseer() const {
+        return (*state.synchronize())->overseer();
     }
 
     void
@@ -540,4 +556,9 @@ app_t::name() const {
 dynamic_t
 app_t::info(io::node::info::flags_t flags) const {
     return state->info(flags);
+}
+
+std::shared_ptr<overseer_t>
+app_t::overseer() const {
+    return state->overseer();
 }

@@ -93,10 +93,8 @@ private:
     stats_t stats;
 
 public:
-    overseer_t(context_t& context,
-               manifest_t manifest,
-               profile_t profile,
-               std::shared_ptr<asio::io_service> loop);
+    overseer_t(context_t& context, manifest_t manifest, profile_t profile,
+        std::shared_ptr<asio::io_service> loop);
 
     ~overseer_t();
 
@@ -141,6 +139,11 @@ public:
     enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstream,
             app::event_t event,
             boost::optional<service::node::slave::id_t> id);
+
+    // std::shared_ptr<api::stream_t>
+    // enqueue(std::shared_ptr<api::stream_t> rx,
+    //     app::event_t event,
+    //     boost::optional<service::node::slave::id_t> id);
 
     /// Tries to keep alive at least `count` workers no matter what.
     ///
