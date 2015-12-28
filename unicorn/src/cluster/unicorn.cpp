@@ -294,10 +294,11 @@ unicorn_cluster_t::announce() {
 
     COCAINE_LOG_DEBUG(log, "going to announce self");
     if(!endpoints.empty() && cur_endpoints != endpoints) {
-        // TODO: fix this case.
+        // TODO: fix this case, if ever we would need it
         // This can happen only if actor endpoints have changed
         // which is not likely.
-        BOOST_ASSERT(false);
+        BOOST_ASSERT_MSG(false, "endpoints changed for locator sercice, can not comtimue, terminating" );
+        std::terminate();
     } else {
         endpoints.swap(cur_endpoints);
         create_scope = unicorn->create(

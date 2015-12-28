@@ -20,9 +20,11 @@
 #include "cocaine/unicorn/errors.hpp"
 
 #include <zookeeper/zookeeper.h>
+
+#include <algorithm>
+#include <errno.h>
 #include <stdexcept>
 #include <string>
-#include <errno.h>
 
 namespace zookeeper {
 namespace {

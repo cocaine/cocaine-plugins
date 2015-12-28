@@ -36,8 +36,6 @@
 
 #include <memory>
 
-//TODO: trycatch всем посоны
-
 namespace cocaine {
 namespace unicorn {
 
@@ -93,7 +91,7 @@ zookeeper_t::put(
         return nullptr;
     }
     auto scope = std::make_shared<zk_scope_t>();
-    auto& handler = scope->handler_scope.template get_handler<put_action_t>(
+    auto& handler = scope->handler_scope.get_handler<put_action_t>(
         context_t({*log, zk}),
         std::move(result),
         path,
