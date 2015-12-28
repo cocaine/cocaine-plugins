@@ -46,6 +46,7 @@ add_library(node MODULE
     src/node/slave/state/state.cpp
     src/node/slave/state/stopped.cpp
     src/node/slave/state/terminating.cpp
+    src/stream
 )
 
 target_link_libraries(node

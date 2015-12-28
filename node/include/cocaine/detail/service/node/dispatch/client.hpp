@@ -42,8 +42,10 @@ private:
     /// Current state.
     state_t state;
 
-    /// Upstream to the worker.
-    streamed<std::string> stream;
+    struct {
+        /// Upstream to the worker.
+        streamed<std::string> stream;
+    } data;
 
     callback_type callback;
 
@@ -71,6 +73,8 @@ public:
 
     void
     discard(const std::error_code& ec);
+
+    auto stream() -> streamed<std::string>&;
 
 private:
     void

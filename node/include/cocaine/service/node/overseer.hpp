@@ -18,7 +18,15 @@ namespace cocaine {
     class control_t;
     class slave_t;
     class unix_actor_t;
-} // namespace cocaine
+}  // namespace cocaine
+
+namespace cocaine {
+namespace api {
+
+class stream_t;
+
+}  // namespace api
+}  // namespace cocaine
 
 namespace cocaine {
 
@@ -102,23 +110,19 @@ public:
     ///
     /// Application's manifest is considered constant during all app's lifetime and can be
     /// changed only through restarting.
-    manifest_t
-    manifest() const;
+    auto manifest() const -> manifest_t;
 
     /// Returns copy of the current profile, which is used to spawn new slaves.
     ///
     /// \note the current profile may change in any moment. Moveover some slaves can be in some kind
     /// of transition state, i.e. migrating from one profile to another.
-    profile_t
-    profile() const;
+    auto profile() const -> profile_t;
 
     /// Returns application total uptime in seconds.
-    std::chrono::seconds
-    uptime() const;
+    auto uptime() const -> std::chrono::seconds;
 
     /// Returns the complete info about how the application works using json-like object.
-    dynamic_t::object_t
-    info(io::node::info::flags_t flags) const;
+    auto info(io::node::info::flags_t flags) const -> dynamic_t::object_t;
 
     // Modifiers.
 
@@ -140,10 +144,19 @@ public:
             app::event_t event,
             boost::optional<service::node::slave::id_t> id);
 
-    // std::shared_ptr<api::stream_t>
-    // enqueue(std::shared_ptr<api::stream_t> rx,
-    //     app::event_t event,
-    //     boost::optional<service::node::slave::id_t> id);
+    /// Enqueues the new event into the most appropriate slave.
+    ///
+    /// The event will be put into the queue if there are no slaves available at this moment or all
+    /// of them are busy.
+    ///
+    /// \param rx a receiver stream which methods will be called when the appropriate messages
+    ///     received.
+    /// \param event an invocation event.
+    /// \param id represents slave id to be enqueued (may be none, which means any slave).
+    /// \return a tx stream.
+    auto enqueue(std::shared_ptr<api::stream_t> rx,
+        app::event_t event,
+        boost::optional<service::node::slave::id_t> id) -> std::shared_ptr<api::stream_t>;
 
     /// Tries to keep alive at least `count` workers no matter what.
     ///

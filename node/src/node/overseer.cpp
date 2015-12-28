@@ -5,7 +5,9 @@
 
 #include <blackhole/scoped_attributes.hpp>
 
-#include "cocaine/context.hpp"
+#include <cocaine/context.hpp>
+
+#include "cocaine/api/stream.hpp"
 
 #include "cocaine/detail/service/node/manifest.hpp"
 #include "cocaine/detail/service/node/profile.hpp"
@@ -294,6 +296,47 @@ void count_success_if(SuccCounter* succ, FailCounter* fail, F fn) {
 
 } // namespace
 
+struct stream_adapter_t : public api::stream_t {
+    std::shared_ptr<client_rpc_dispatch_t> dispatch;
+
+    auto write(const std::string& chunk) -> stream_t& {
+        dispatch->stream().write(chunk);
+        return *this;
+    }
+
+    auto error(const std::error_code& ec, const std::string& reason) -> void {
+        dispatch->stream().abort(ec, reason);
+    }
+
+    auto close() -> void {
+        dispatch->stream().close();
+    }
+};
+
+struct rx_stream_adapter_t : public api::stream_t {
+    typedef io::event_traits<io::worker::rpc::invoke>::upstream_type tag;
+    typedef io::protocol<tag>::scope protocol;
+
+    io::streaming_slot<io::app::enqueue>::upstream_type stream;
+
+    rx_stream_adapter_t(io::streaming_slot<io::app::enqueue>::upstream_type stream) :
+        stream(std::move(stream))
+    {}
+
+    auto write(const std::string& chunk) -> stream_t& {
+        stream = stream.send<protocol::chunk>(chunk);
+        return *this;
+    }
+
+    auto error(const std::error_code& ec, const std::string& reason) -> void {
+        stream.send<protocol::error>(ec, reason);
+    }
+
+    auto close() -> void {
+        stream.send<protocol::choke>();
+    }
+};
+
 std::shared_ptr<client_rpc_dispatch_t>
 overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstream,
                     app::event_t event,
@@ -314,7 +357,7 @@ overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstre
             dispatch = std::make_shared<client_rpc_dispatch_t>(manifest().name);
 
             queue.push_back({
-                {std::move(event), dispatch, std::move(downstream)},
+                {std::move(event), dispatch, std::make_shared<rx_stream_adapter_t>(std::move(downstream))},
                 trace_t::current()
             });
         });
@@ -324,6 +367,35 @@ overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstre
     rebalance_slaves();
 
     return dispatch;
+}
+
+auto overseer_t::enqueue(std::shared_ptr<api::stream_t> rx,
+    app::event_t event,
+    boost::optional<service::node::slave::id_t> /*id*/) -> std::shared_ptr<api::stream_t>
+{
+    auto tx = std::make_shared<stream_adapter_t>();
+
+    count_success_if(&stats.requests.accepted, &stats.requests.rejected, [&] {
+        queue.apply([&](queue_type& queue) {
+            const auto limit = profile().queue_limit;
+
+            if (queue.size() >= limit && limit > 0) {
+                throw std::system_error(error::queue_is_full);
+            }
+
+            tx->dispatch = std::make_shared<client_rpc_dispatch_t>(manifest().name);
+
+            queue.push_back({
+                {std::move(event), tx->dispatch, std::move(rx)},
+                trace_t::current()
+            });
+        });
+    });
+
+    rebalance_events();
+    rebalance_slaves();
+
+    return tx;
 }
 
 io::dispatch_ptr_t

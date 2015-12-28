@@ -1,8 +1,10 @@
 #include "cocaine/detail/service/node/dispatch/worker.hpp"
 
+#include "cocaine/api/stream.hpp"
+
 using namespace cocaine;
 
-worker_rpc_dispatch_t::worker_rpc_dispatch_t(upstream<outcoming_tag>& stream_, callback_type callback):
+worker_rpc_dispatch_t::worker_rpc_dispatch_t(std::shared_ptr<stream_t> stream_, callback_type callback):
     dispatch<incoming_tag>("W2C"),
     stream(stream_), // NOTE: Intentionally copy here to provide exception-safety guarantee.
     state(state_t::open),
@@ -10,7 +12,7 @@ worker_rpc_dispatch_t::worker_rpc_dispatch_t(upstream<outcoming_tag>& stream_, c
 {
     on<protocol::chunk>([&](const std::string& chunk) {
         try {
-            stream = stream.send<protocol::chunk>(chunk);
+            stream->write(chunk);
         } catch (const std::system_error&) {
             finalize(asio::error::connection_aborted);
         }
@@ -18,7 +20,7 @@ worker_rpc_dispatch_t::worker_rpc_dispatch_t(upstream<outcoming_tag>& stream_, c
 
     on<protocol::error>([&](const std::error_code& ec, const std::string& reason) {
         try {
-            stream.send<protocol::error>(ec, reason);
+            stream->error(ec, reason);
             finalize();
         } catch (const std::system_error&) {
             finalize(asio::error::connection_aborted);
@@ -27,7 +29,7 @@ worker_rpc_dispatch_t::worker_rpc_dispatch_t(upstream<outcoming_tag>& stream_, c
 
     on<protocol::choke>([&]() {
         try {
-            stream.send<protocol::choke>();
+            stream->close();
             finalize();
         } catch (const std::system_error&) {
             finalize(asio::error::connection_aborted);
@@ -45,7 +47,7 @@ void
 worker_rpc_dispatch_t::discard(const std::error_code& ec) {
     if (ec) {
         try {
-            stream.send<protocol::error>(ec, "slave has been discarded");
+            stream->error(ec, "slave has been discarded");
         } catch (const std::exception&) {
             // Eat.
         }

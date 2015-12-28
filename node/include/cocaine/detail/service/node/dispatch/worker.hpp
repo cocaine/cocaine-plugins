@@ -7,7 +7,15 @@
 
 namespace cocaine {
 
+namespace api {
+
+class stream_t;
+
+}  // namespace api
+
 class channel_t;
+
+using api::stream_t;
 
 /// An adapter for [Client <- Worker] message passing.
 class worker_rpc_dispatch_t:
@@ -21,7 +29,7 @@ private:
     typedef io::event_traits<io::app::enqueue>::upstream_type outcoming_tag;
     typedef io::protocol<incoming_tag>::scope protocol;
 
-    upstream<incoming_tag> stream;
+    std::shared_ptr<stream_t> stream;
 
     enum class state_t {
         open,
@@ -36,7 +44,8 @@ private:
     std::mutex mutex;
 
 public:
-    worker_rpc_dispatch_t(upstream<outcoming_tag>& stream, callback_type callback);
+    /// \param stream rx stream provided from client.
+    worker_rpc_dispatch_t(std::shared_ptr<stream_t> stream, callback_type callback);
 
     /// The worker has been disconnected without closing its opened channels.
     ///

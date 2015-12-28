@@ -15,6 +15,7 @@
 #include <cocaine/unique_id.hpp>
 
 #include "cocaine/api/isolate.hpp"
+#include "cocaine/api/stream.hpp"
 #include "cocaine/idl/rpc.hpp"
 #include "cocaine/idl/node.hpp"
 
@@ -79,7 +80,9 @@ struct channel_t {
     app::event_t event;
 
     std::shared_ptr<client_rpc_dispatch_t> dispatch;
-    io::streaming_slot<io::app::enqueue>::upstream_type downstream;
+
+    /// An RX stream provided from user. The slave will call its callbacks on every incoming event.
+    std::shared_ptr<api::stream_t> downstream;
 };
 
 struct stats_t {
