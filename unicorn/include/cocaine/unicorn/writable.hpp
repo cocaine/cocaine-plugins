@@ -30,12 +30,12 @@ public:
     write(T&& t) = 0;
 
     virtual void
-    abort(const std::error_code& code, const std::string&) {
-        abort(code);
-    }
+    abort(const std::error_code& code, const std::string&) = 0;
 
-    virtual void
-    abort(const std::error_code& code) = 0;
+    void
+    abort(const std::error_code& code) {
+        abort(code, "");
+    }
 };
 
 template<class W, class T>
@@ -54,12 +54,12 @@ public:
 
     virtual void
     abort(const std::error_code& code, const std::string& reason) {
-        w.abort(code, reason);
-    }
-
-    virtual void
-    abort(const std::error_code& code) {
-        w.abort(code, "");
+        std::string full_reason = code.message();
+        if(!reason.empty()) {
+            full_reason += " - ";
+            full_reason += reason;
+        }
+        w.abort(code, full_reason);
     }
 
 private:

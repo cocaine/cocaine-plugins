@@ -13,20 +13,30 @@
 * GNU General Public License for more details.
 */
 
-#include "cocaine/unicorn.hpp"
 #include "cocaine/cluster/unicorn.hpp"
+
+#include "cocaine/detail/unicorn/zookeeper.hpp"
+
+#include "cocaine/unicorn/errors.hpp"
+
+#include "cocaine/service/unicorn.hpp"
+
+#include <cocaine/errors.hpp>
 
 using namespace cocaine;
 extern "C" {
 auto
 validation() -> api::preconditions_t {
-    return api::preconditions_t { COCAINE_MAKE_VERSION(0, 12, 0) };
+    return api::preconditions_t {COCAINE_MAKE_VERSION(0, 12, 0)};
 }
 
 void
 initialize(api::repository_t& repository) {
     repository.insert<service::unicorn_service_t>("unicorn");
     repository.insert<cluster::unicorn_cluster_t>("unicorn");
+    repository.insert<unicorn::zookeeper_t>("zookeeper");
+    error::registrar::add(error::unicorn_category());
+    error::registrar::add(error::zookeeper_category());
 }
 
 }

@@ -46,6 +46,12 @@ enum unicorn_errors {
 };
 
 auto
+zookeeper_category() -> const std::error_category&;
+
+auto
+unicorn_category() -> const std::error_category&;
+
+auto
 make_error_code(zookeeper_errors code) -> std::error_code;
 
 auto

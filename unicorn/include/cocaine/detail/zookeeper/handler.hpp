@@ -12,12 +12,14 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 * GNU General Public License for more details.
 */
-#ifndef ZOOKEEPER_HANDLER_HPP
-#define ZOOKEEPER_HANDLER_HPP
 
-#include "cocaine/zookeeper/zookeeper.hpp"
+#pragma once
+
+#include "cocaine/detail/zookeeper/zookeeper.hpp"
 
 #include <cocaine/locked_ptr.hpp>
+
+#include <zookeeper/zookeeper.h>
 
 #include <functional>
 #include <string>
@@ -46,7 +48,8 @@ public:
     managed_handler_base_t(const handler_tag&) {}
     managed_handler_base_t(const managed_handler_base_t& other) = delete;
     managed_handler_base_t& operator=(const managed_handler_base_t& other) = delete;
-    virtual ~managed_handler_base_t() {}
+    virtual
+    ~managed_handler_base_t() {}
 };
 
 class handler_dispatcher_t {
@@ -108,10 +111,12 @@ private:
     void release(managed_handler_base_t* callback);
 
     handler_dispatcher_t();
+    ~handler_dispatcher_t();
     handler_dispatcher_t(const handler_dispatcher_t& other) = delete;
     handler_dispatcher_t& operator=(const handler_dispatcher_t& other) = delete;
     std::mutex storage_lock;
     storage_t callbacks;
+    bool active;
 };
 
 /**
@@ -156,8 +161,13 @@ class managed_watch_handler_base_t :
     virtual public managed_handler_base_t
 {
 public:
-    virtual void
-    operator() (int type, int state, path_t path) = 0;
+    void
+    operator() (int type, int state, path_t path) {
+        watch_event(type, state, std::move(path));
+    }
+
+    virtual
+    void watch_event(int type, int state, path_t path)= 0;
 
     managed_watch_handler_base_t(const handler_tag& tag) :
         managed_handler_base_t(tag)
@@ -170,8 +180,13 @@ public:
 */
 class void_handler_base_t {
 public:
+    void
+    operator() (int rc){
+        void_event(rc);
+    }
+
     virtual void
-    operator() (int rc) = 0;
+    void_event(int rc) = 0;
 
     virtual
     ~void_handler_base_t() {}
@@ -181,8 +196,13 @@ class managed_stat_handler_base_t :
     virtual public managed_handler_base_t
 {
 public:
+    void
+    operator() (int rc, const node_stat& stat) {
+        stat_event(rc, stat);
+    }
+
     virtual void
-    operator() (int rc, const node_stat& stat) = 0;
+    stat_event(int rc, const node_stat& stat) = 0;
 
     managed_stat_handler_base_t(const handler_tag& tag) :
         managed_handler_base_t(tag)
@@ -197,7 +217,12 @@ class managed_data_handler_base_t :
 {
 public:
     virtual void
-    operator() (int rc, value_t value, const node_stat& stat) = 0;
+    operator() (int rc, value_t value, const node_stat& stat) {
+        data_event(rc, std::move(value), stat);
+    }
+
+    virtual void
+    data_event(int rc, value_t value, const node_stat& stat) = 0;
 
     managed_data_handler_base_t(const handler_tag& tag) :
         managed_handler_base_t(tag)
@@ -212,7 +237,10 @@ class managed_string_handler_base_t :
 {
 public:
     virtual void
-    operator() (int rc, zookeeper::value_t value) = 0;
+    operator() (int rc, zookeeper::value_t value);
+
+    virtual void
+    string_event(int rc, zookeeper::value_t value) = 0;
 
     managed_string_handler_base_t(const handler_tag& tag) :
         managed_handler_base_t(tag)
@@ -220,14 +248,26 @@ public:
 
     virtual
     ~managed_string_handler_base_t() {}
+
+    void
+    set_prefix(path_t _prefix) {
+        prefix = std::move(_prefix);
+    }
+private:
+    path_t prefix;
 };
 
 class managed_strings_stat_handler_base_t:
     virtual public managed_handler_base_t
 {
 public:
+    void
+    operator() (int rc, std::vector<std::string> childs, const node_stat& stat) {
+        children_event(rc, std::move(childs), stat);
+    }
+
     virtual void
-    operator() (int rc, std::vector<std::string> childs, const node_stat& stat) = 0;
+    children_event(int rc, std::vector<std::string> childs, const node_stat& stat) = 0;
 
     managed_strings_stat_handler_base_t(const handler_tag& tag) :
         managed_handler_base_t(tag)
@@ -236,4 +276,3 @@ public:
 
 
 }
-#endif

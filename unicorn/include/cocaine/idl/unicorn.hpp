@@ -13,14 +13,15 @@
 * GNU General Public License for more details.
 */
 
-#ifndef COCAINE_UNICORN_SERVICE_INTERFACE_HPP
-#define COCAINE_UNICORN_SERVICE_INTERFACE_HPP
+#pragma once
 
 #include "cocaine/unicorn/path.hpp"
 #include "cocaine/unicorn/value.hpp"
 
 #include <cocaine/rpc/protocol.hpp>
+
 #include <boost/mpl/list.hpp>
+
 #include <vector>
 
 namespace cocaine { namespace io {
@@ -278,4 +279,3 @@ struct protocol<unicorn_final_tag> {
 
 }} // namespace cocaine::io
 
-#endif
