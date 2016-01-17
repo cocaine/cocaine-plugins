@@ -23,6 +23,11 @@
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
+#include "cocaine/traits/endpoint.hpp"
+#include "cocaine/traits/graph.hpp"
+#include "cocaine/traits/siginfo.hpp"
+#include "cocaine/traits/vector.hpp"
+
 #include <array>
 #include <iostream>
 
@@ -40,181 +45,102 @@
 
 #include <sys/wait.h>
 
-namespace ph = std::placeholders;
-
 using namespace cocaine;
 using namespace cocaine::isolate;
 
 namespace fs = boost::filesystem;
+namespace ph = std::placeholders;
 
 namespace {
 
 class process_terminator_t:
-    public std::enable_shared_from_this<process_terminator_t>
+    public std::enable_shared_from_this<process_terminator_t>,
+    public dispatch<io::context_tag>
 {
 public:
-    const std::unique_ptr<logging::log_t> log;
-
-private:
-    pid_t pid;
-
-    struct {
-        uint kill;
-        uint gc;
-    } timeout;
-
-    asio::deadline_timer timer;
-
-public:
-    process_terminator_t(pid_t pid_,
-                         uint kill_timeout,
-                         std::unique_ptr<logging::log_t> log_,
-                         asio::io_service& loop):
+    process_terminator_t(
+            pid_t pid_,
+            uint kill_timeout_,
+            std::unique_ptr<logging::log_t> log_,
+            asio::io_service& loop
+    ) :
+        dispatch(format("process_terminator %i", pid)),
         log(std::move(log_)),
         pid(pid_),
+        collected(false),
+        kill_timeout(kill_timeout_),
         timer(loop)
     {
-        timeout.kill = kill_timeout;
-        timeout.gc   = 5;
-    }
-
-    ~process_terminator_t() {
-        COCAINE_LOG_DEBUG(log, "process terminator is destroying");
-
-        if (pid) {
-            int status = 0;
-
-            switch (::waitpid(pid, &status, WNOHANG)) {
-            case -1: {
-                // Some error occurred, check errno.
-                const int ec = errno;
-
-                COCAINE_LOG_WARNING(log, "unable to properly collect the child: %d", ec);
-            }
-                break;
-            case 0:
-                // The child is not finished yet, kill it and collect in a blocking way as as last
-                // resort to prevent zombies.
-                if (::kill(pid, SIGKILL) == 0) {
-                    if (::waitpid(pid, &status, 0) > 0) {
-                        COCAINE_LOG_DEBUG(log, "child has been killed: %d", status);
-                    } else {
-                        const int ec = errno;
-
-                        COCAINE_LOG_WARNING(log, "unable to properly collect the child: %d", ec);
-                    }
-                } else {
-                    // Unable to kill for some reasons, check errno.
-                    const int ec = errno;
-
-                    COCAINE_LOG_WARNING(log, "unable to send kill signal to the child: %d", ec);
-                }
-                break;
-            default:
-                COCAINE_LOG_DEBUG(log, "child has been collected: %d", status);
-            }
-        }
+        on<io::context::os_signal>(std::bind(&process_terminator_t::on_signal, this, ph::_1, ph::_2));
     }
 
     void
     start() {
-        int status = 0;
+        COCAINE_LOG_INFO(log, "terminator for pid %i started", pid);
+        terminate(SIGTERM);
+    }
 
-        // Attempt to collect the child non-blocking way.
-        switch (::waitpid(pid, &status, WNOHANG)) {
-        case -1: {
-            const int ec = errno;
-
-            COCAINE_LOG_WARNING(log, "unable to collect the child: %d", ec);
-            break;
-        }
-        case 0: {
-            // The child is not finished yet, send SIGTERM and try to collect it later after.
-            COCAINE_LOG_DEBUG(log, "unable to terminate child right now (not ready), sending SIGTERM")(
-                "timeout", timeout.kill
-            );
-
-            // Ignore return code here.
-            ::kill(pid, SIGTERM);
-
-            timer.expires_from_now(boost::posix_time::seconds(timeout.kill));
-            timer.async_wait(std::bind(&process_terminator_t::on_kill_timer, shared_from_this(), ph::_1));
-            break;
-        }
-        default:
-            COCAINE_LOG_DEBUG(log, "child has been stopped: %d", status);
-
-            pid = 0;
+    void
+    on_timer(const std::error_code& ec) {
+        if(ec) {
+            COCAINE_LOG_ERROR(log, "termination timer stopped: %s", ec.message());
+        } else if(!try_collect()) {
+            terminate(SIGKILL);
         }
     }
+
+    void
+    on_signal(int, const siginfo_t& info) {
+        if(info.si_pid && info.si_pid != pid) {
+            return;
+        } else if(try_collect()) {
+            COCAINE_LOG_INFO(log, "child with pid %d has been collected by signal", pid);
+            timer.cancel();
+        }
+    }
+
+    const std::unique_ptr<logging::log_t> log;
 
 private:
-    void
-    on_kill_timer(const std::error_code& ec) {
-        if(ec == asio::error::operation_aborted) {
-            COCAINE_LOG_DEBUG(log, "process kill timer has called its completion handler: cancelled");
-            return;
-        } else {
-            COCAINE_LOG_DEBUG(log, "process kill timer has called its completion handler");
-        }
+    process_terminator_t(const process_terminator_t&) = delete;
+    process_terminator_t& operator=(const process_terminator_t&) = delete;
 
+    bool try_collect() {
+        COCAINE_LOG_DEBUG(log, "trying to collect");
         int status = 0;
-
-        switch (::waitpid(pid, &status, WNOHANG)) {
-        case -1: {
-            const int ec = errno;
-
-            COCAINE_LOG_WARNING(log, "unable to collect the child: %d", ec);
-            break;
-        }
-        case 0: {
-            COCAINE_LOG_DEBUG(log, "killing the child, resuming after 5 sec");
-
-            // Ignore return code here too.
-            ::kill(pid, SIGKILL);
-
-            timer.expires_from_now(boost::posix_time::seconds(timeout.gc));
-            timer.async_wait(std::bind(&process_terminator_t::on_gc_action, shared_from_this(), ph::_1));
-            break;
-        }
-        default:
-            COCAINE_LOG_DEBUG(log, "child has been terminated: %d", status);
-
-            pid = 0;
-        }
+        auto rc = ::waitpid(pid, &status, WNOHANG);
+        return collected.apply([&](bool& collected) {
+            if(collected) {
+                return true;
+            }
+            if((rc == -1 && errno == ECHILD) || rc != 0) {
+                COCAINE_LOG_INFO(log, "child with pid %d has been collected", pid);
+                collected = true;
+            } else if(rc == -1) {
+                COCAINE_LOG_WARNING(log, "unknow waitpid error: %i", errno);
+            } else {
+                COCAINE_LOG_INFO(log, "pid is still running");
+            }
+            return collected;
+        });
     }
 
-    void
-    on_gc_action(const std::error_code& ec) {
-        if(ec == asio::error::operation_aborted) {
-            COCAINE_LOG_DEBUG(log, "process GC timer has called its completion handler: cancelled");
-            return;
-        } else {
-            COCAINE_LOG_DEBUG(log, "process GC timer has called its completion handler");
-        }
-
-        int status = 0;
-
-        switch (::waitpid(pid, &status, WNOHANG)) {
-        case -1: {
-            const int ec = errno;
-
-            COCAINE_LOG_WARNING(log, "unable to collect the child: %d", ec);
-            break;
-        }
-        case 0: {
-            COCAINE_LOG_DEBUG(log, "child has not been killed, resuming after 5 sec");
-
-            timer.expires_from_now(boost::posix_time::seconds(timeout.gc));
-            timer.async_wait(std::bind(&process_terminator_t::on_gc_action, shared_from_this(), ph::_1));
-            break;
-        }
-        default:
-            COCAINE_LOG_DEBUG(log, "child has been killed: %d", status);
-
-            pid = 0;
-        }
+    void terminate(int signal) {
+        collected.apply([&](const bool& collected){
+            if(collected) {
+                return;
+            }
+            ::kill(pid, signal);
+            COCAINE_LOG_INFO(log, "terminating pid with %i", signal);
+            timer.expires_from_now(boost::posix_time::seconds(kill_timeout));
+            timer.async_wait(std::bind(&process_terminator_t::on_timer, shared_from_this(), ph::_1));
+        });
     }
+
+    pid_t pid;
+    synchronized<bool> collected;
+    uint kill_timeout;
+    asio::deadline_timer timer;
 };
 
 struct process_handle_t:
@@ -227,6 +153,7 @@ private:
 
 public:
     process_handle_t(pid_t pid,
+                     context_t& context,
                      int stdout,
                      uint kill_timeout,
                      std::unique_ptr<logging::log_t> log,
@@ -234,12 +161,13 @@ public:
         terminator(std::make_shared<process_terminator_t>(pid, kill_timeout, std::move(log), loop)),
         m_stdout(stdout)
     {
-        COCAINE_LOG_DEBUG(terminator->log, "process handle has been created");
+        context.listen(terminator, loop);
+        COCAINE_LOG_INFO(terminator->log, "process handle has been created");
     }
 
     ~process_handle_t() {
         terminate();
-        COCAINE_LOG_DEBUG(terminator->log, "process handle has been destroyed");
+        COCAINE_LOG_INFO(terminator->log, "process handle has been destroyed");
     }
 
     virtual
@@ -474,6 +402,7 @@ process_t::spawn(const std::string& path, const api::string_map_t& args, const a
     if(pid > 0) {
         return std::make_unique<process_handle_t>(
             pid,
+            m_context,
             pipes[0],
             m_kill_timeout,
             m_context.log(format("%s/process", m_name), {{ "pid", blackhole::attribute::value_t(pid) }}),
