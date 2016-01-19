@@ -12,11 +12,11 @@
 * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 * GNU General Public License for more details.
 */
-#ifndef ZOOKEEPER_CONNECTION_HPP
-#define ZOOKEEPER_CONNECTION_HPP
 
-#include "cocaine/zookeeper/session.hpp"
-#include "cocaine/zookeeper/handler.hpp"
+#pragma once
+
+#include "cocaine/detail/zookeeper/handler.hpp"
+#include "cocaine/detail/zookeeper/session.hpp"
 
 #include <zookeeper/zookeeper.h>
 
@@ -39,7 +39,7 @@ public:
         unsigned int port;
     };
 
-    cfg_t(std::vector<endpoint_t> endpoints, unsigned int recv_timeout_ms);
+    cfg_t(std::vector<endpoint_t> endpoints, unsigned int recv_timeout_ms, std::string prefix);
 
     /**
     * ZK connection string.
@@ -49,9 +49,9 @@ public:
     connection_string() const;
 
     const unsigned int recv_timeout_ms;
+    std::string prefix;
 private:
     std::vector<endpoint_t> endpoints;
-
 };
 
 /**
@@ -123,11 +123,13 @@ private:
             parent(_parent)
         {}
 
-        virtual void operator()(int type, int state, path_t path);
+        virtual void
+        watch_event(int type, int state, path_t path);
 
         connection_t& parent;
     };
 
+    path_t format_path(const path_t path);
 
     cfg_t cfg;
     session_t session;
@@ -139,4 +141,4 @@ private:
     managed_watch_handler_base_t& watcher;
 };
 }
-#endif
+

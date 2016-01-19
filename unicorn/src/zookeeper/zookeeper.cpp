@@ -13,12 +13,9 @@
 * GNU General Public License for more details.
 */
 
+#include "cocaine/detail/zookeeper/zookeeper.hpp"
+
 #include "cocaine/unicorn/errors.hpp"
-
-#include "cocaine/zookeeper/zookeeper.hpp"
-
-#include <stdexcept>
-#include <errno.h>
 
 namespace zookeeper {
 

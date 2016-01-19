@@ -13,40 +13,42 @@
 * GNU General Public License for more details.
 */
 
-#ifndef ZOOKEEPER_HPP
-#define ZOOKEEPER_HPP
+#pragma once
 
 #include <zookeeper/zookeeper.h>
-#include <zookeeper/zookeeper.jute.h>
-
-#include <string>
 
 namespace zookeeper {
 
-typedef std::string path_t;
-typedef std::string value_t;
-typedef long version_t;
-
 /**
-* Get nth parent of path (starting from 1)
-* For path /A/B/C/D 1th parent is /A/B/C
+* Class representing zookeeper clientid_t from C api.
 */
-path_t
-path_parent(const path_t& path, unsigned int depth);
+class session_t {
+public:
+    session_t();
 
-/**
-* Check if node has a sequence on it's end
-*/
-bool is_valid_sequence_node(const path_t& path);
+    const clientid_t*
+    native();
 
-/**
-* Get sequence number from nodes created via automated sequence
-*/
-unsigned long
-get_sequence_from_node_name_or_path(const path_t& path);
+    /**
+    * Reset session. Used to reset expired sesions
+    */
+    void
+    reset();
 
-std::string
-get_node_name(const path_t& path);
-}
+    /**
+    * Assign native handle to session
+    */
+    void
+    assign(const clientid_t& native);
 
-#endif
+    /**
+    * Check if session was filled with valid native handle
+    */
+    bool
+    valid() const;
+    
+private:
+    clientid_t zk_session;
+};
+
+} //namespace zookeeper

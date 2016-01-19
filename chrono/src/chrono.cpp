@@ -70,7 +70,7 @@ chrono_t::set_timer_impl(double first, double repeat, bool send_id) {
     try {
         ptr->insert(std::make_pair(timer_id, desc));
 
-        desc.timer_->expires_from_now(boost::posix_time::seconds(first));
+        desc.timer_->expires_from_now(boost::posix_time::microseconds(first * 1000000));
         desc.timer_->async_wait(std::bind(&chrono_t::on_timer, this, ph::_1, timer_id));
 
         if (send_id) {
@@ -99,7 +99,7 @@ void
 chrono_t::restart(io::timer_id_t timer_id) {
     timer_desc_t& timer_desc = timers_.unsafe().at(timer_id);
 
-    timer_desc.timer_->expires_from_now(boost::posix_time::seconds(timer_desc.interval_));
+    timer_desc.timer_->expires_from_now(boost::posix_time::microseconds(timer_desc.interval_ * 1000000));
     timer_desc.timer_->async_wait(std::bind(&chrono_t::on_timer, this, ph::_1, timer_id));
 }
 
@@ -114,7 +114,7 @@ chrono_t::on_timer(const std::error_code& ec, io::timer_id_t timer_id) {
     auto ptr = timers_.synchronize();
 
     try {
-        timer_desc_t& timer_desc = ptr->at(timer_id);
+        timer_desc_t timer_desc = ptr->at(timer_id);
 
         try {
             timer_desc.promise_.write(timer_id);
@@ -124,7 +124,7 @@ chrono_t::on_timer(const std::error_code& ec, io::timer_id_t timer_id) {
 
         if (!timer_desc.interval_ && ptr->find(timer_id) != ptr->end()) {
             remove_timer(timer_id);
-        } else if (timer_desc.interval_) {
+        } else if (timer_desc.interval_ && ptr->find(timer_id) != ptr->end()) {
             restart(timer_id);
         }
     } catch (std::exception& ex) {
@@ -137,8 +137,8 @@ chrono_t::remove_timer(io::timer_id_t timer_id) {
     try {
         // Already locked.
         timers_.unsafe().at(timer_id).promise_.close();
-        timers_.unsafe().erase(timer_id);
     } catch (const std::exception& ex) {
         COCAINE_LOG_ERROR(log_, "error occured while removing timer %s", ex.what());
     }
+    timers_.unsafe().erase(timer_id);
 }

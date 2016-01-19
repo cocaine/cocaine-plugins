@@ -15,8 +15,25 @@
 
 #pragma once
 
-#include <string>
+#include "cocaine/api/unicorn.hpp"
+
+#include "cocaine/detail/zookeeper/handler.hpp"
 
 namespace cocaine { namespace unicorn {
-typedef std::string path_t;
-}}
+
+
+/**
+* Handler for delete request to ZK.
+*/
+struct del_action_t :
+    public zookeeper::void_handler_base_t
+{
+    del_action_t(api::unicorn_t::writable_ptr::del _result);
+
+    virtual void
+    void_event(int rc);
+
+    api::unicorn_t::writable_ptr::del result;
+};
+
+}} //namespace cocaine::unicorn

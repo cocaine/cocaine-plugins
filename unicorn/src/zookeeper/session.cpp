@@ -13,9 +13,12 @@
 * GNU General Public License for more details.
 */
 
+#include "cocaine/detail/zookeeper/session.hpp"
+
 #include <zookeeper/zookeeper.h>
+
 #include <algorithm>
-#include "cocaine/zookeeper/session.hpp"
+
 namespace zookeeper {
 
 session_t::session_t() :
