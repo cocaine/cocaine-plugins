@@ -33,7 +33,7 @@
 
 #include "cocaine/detail/service/node/app.hpp"
 
-#include <blackhole/scoped.hpp>
+#include <blackhole/scope/holder.hpp>
 
 #include <boost/range/adaptor/map.hpp>
 #include <boost/range/algorithm/copy.hpp>
@@ -93,7 +93,7 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
     std::vector<std::string> errored;
 
     for(auto it = runlist.begin(); it != runlist.end(); ++it) {
-        auto scoped = log->scoped({{ "app", it->first }});
+        const blackhole::scope::holder_t scoped(*log, {{ "app", it->first }});
 
         try {
             start_app(it->first, it->second);

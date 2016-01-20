@@ -25,7 +25,7 @@
 
 #include <cstring>
 
-#include <blackhole/scoped_attributes.hpp>
+#include <blackhole/scope/holder.hpp>
 
 #include <asio/io_service.hpp>
 #include <asio/ip/host_name.hpp>
@@ -124,9 +124,9 @@ ipvs_t::remote_t::remote_t(ipvs_t *const parent_, const partition_t& name_):
 {
     ipvs_service_t handle;
 
-    scoped_attributes_t attributes(*parent->m_log, {
-        attribute::make("service", info.service),
-        attribute::make("version", info.version)
+    scope::holder_t attributes(*parent->m_log, {
+        {"service", info.service},
+        {"version", info.version}
     });
 
     auto port = parent->m_context.mapper.assign(cocaine::format("%s@%d:virtual", info.service,

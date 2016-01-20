@@ -205,7 +205,7 @@ public:
 
     std::shared_ptr<overseer_t>
     overseer() const {
-        throw error_t("invalid state");
+        throw cocaine::error_t("invalid state");
     }
 };
 

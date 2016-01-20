@@ -3,7 +3,7 @@
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
 
-#include <blackhole/scoped.hpp>
+#include <blackhole/scope/holder.hpp>
 
 #include <cocaine/context.hpp>
 
@@ -462,7 +462,8 @@ overseer_t::on_handshake(const std::string& id,
                          std::shared_ptr<session_t> session,
                          upstream<io::worker::control_tag>&& stream)
 {
-    auto scoped = log->scoped({{ "uuid", id }});
+
+    const blackhole::scope::holder_t scoped(*log, {{ "uuid", id }});
 
     COCAINE_LOG_DEBUG(log, "processing handshake message");
 
