@@ -38,7 +38,7 @@ namespace ph = std::placeholders;
 class urlfetch_logger_interface : public swarm::logger_interface
 {
 public:
-    urlfetch_logger_interface(const std::shared_ptr<logging::log_t> &log) : log_(log)
+    urlfetch_logger_interface(const std::shared_ptr<logging::logger_t> &log) : log_(log)
     {
     }
 
@@ -58,9 +58,7 @@ public:
             verbosity = logging::priorities::debug;
         }
 
-        if (log_->log().verbosity() >= verbosity) {
-            COCAINE_LOG(log_, verbosity, msg);
-        }
+        COCAINE_LOG(log_, verbosity, std::string(msg));
     }
 
     virtual void reopen()
@@ -68,7 +66,7 @@ public:
     }
 
 private:
-    std::shared_ptr<logging::log_t> log_;
+    std::shared_ptr<logging::logger_t> log_;
 };
 
 urlfetch_t::urlfetch_t(context_t& context,
@@ -114,7 +112,7 @@ namespace {
 
 struct urlfetch_get_handler {
     deferred<urlfetch_t::get_result_type> promise;
-    std::shared_ptr<logging::log_t> log_;
+    std::shared_ptr<logging::logger_t> log_;
 
     void
     operator()(const swarm::url_fetcher::response& reply,

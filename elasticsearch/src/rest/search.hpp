@@ -33,7 +33,7 @@
 namespace cocaine { namespace service {
 
 struct search_handler_t {
-    std::shared_ptr<cocaine::logging::log_t> log;
+    std::shared_ptr<logging::logger_t> log;
 
     template<typename Deferred = cocaine::deferred<response::search>>
     void

@@ -28,7 +28,7 @@
 namespace cocaine { namespace service {
 
 struct delete_handler_t {
-    std::shared_ptr<cocaine::logging::log_t> log;
+    std::shared_ptr<logging::logger_t> log;
 
     template<typename Deferred = cocaine::deferred<response::delete_index>>
     void
