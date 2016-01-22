@@ -1,4 +1,4 @@
-cocaine-plugins (0.12.5.0) unstable; urgency=low
+cocaine-plugins (0.12.5.0-rc1) unstable; urgency=low
 
   * Migrate to the Blackhole v1.0.
   * Unicorn has been rewritten to provide stateless API.
