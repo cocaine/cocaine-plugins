@@ -24,6 +24,8 @@
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 
+#include <blackhole/logger.hpp>
+
 #include <cocaine/logging.hpp>
 #include <cocaine/traits/tuple.hpp>
 

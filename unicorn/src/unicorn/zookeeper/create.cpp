@@ -15,6 +15,8 @@
 
 #include "cocaine/detail/unicorn/zookeeper/create.hpp"
 
+#include <blackhole/logger.hpp>
+
 #include <cocaine/logging.hpp>
 
 #include "cocaine/unicorn/errors.hpp"

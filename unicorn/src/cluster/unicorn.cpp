@@ -21,6 +21,8 @@
 
 #include <zookeeper/zookeeper.h>
 
+#include <blackhole/logger.hpp>
+
 namespace cocaine {
 
 template<>

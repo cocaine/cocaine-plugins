@@ -17,6 +17,8 @@
 
 #include <memory>
 
+#include <blackhole/logger.hpp>
+
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 

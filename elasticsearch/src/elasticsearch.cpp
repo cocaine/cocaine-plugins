@@ -26,6 +26,8 @@
 #include <cocaine/logging.hpp>
 #include <cocaine/traits/tuple.hpp>
 
+#include <blackhole/logger.hpp>
+
 #include <swarm/urlfetcher/boost_event_loop.hpp>
 #include <swarm/urlfetcher/url_fetcher.hpp>
 

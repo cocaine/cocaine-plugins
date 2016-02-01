@@ -16,6 +16,8 @@
 #include "cocaine/detail/unicorn/zookeeper/lock_state.hpp"
 #include "cocaine/detail/unicorn/zookeeper/lock.hpp"
 
+#include <blackhole/logger.hpp>
+
 #include <cocaine/logging.hpp>
 
 #include "cocaine/unicorn/errors.hpp"

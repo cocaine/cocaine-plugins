@@ -34,6 +34,8 @@
 #include <cocaine/context.hpp>
 #include <asio/io_service.hpp>
 
+#include <blackhole/logger.hpp>
+
 #include <memory>
 
 namespace cocaine {

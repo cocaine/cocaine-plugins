@@ -17,6 +17,8 @@
 
 #include "cocaine/traits/unicorn.hpp"
 
+#include <blackhole/logger.hpp>
+
 #include <cocaine/context.hpp>
 
 using namespace cocaine::unicorn;

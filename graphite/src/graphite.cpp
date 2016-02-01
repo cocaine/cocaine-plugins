@@ -17,6 +17,8 @@
 #include <cocaine/dynamic.hpp>
 #include <cocaine/context.hpp>
 
+#include <blackhole/logger.hpp>
+
 namespace ph = std::placeholders;
 
 namespace cocaine { namespace service {

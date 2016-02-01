@@ -22,6 +22,8 @@
 
 #include <rapidjson/document.h>
 
+#include <blackhole/logger.hpp>
+
 #include <cocaine/logging.hpp>
 
 #include "cocaine/service/elasticsearch.hpp"

@@ -15,6 +15,8 @@
 
 #include "cocaine/detail/unicorn/zookeeper/children_subscribe.hpp"
 
+#include <blackhole/logger.hpp>
+
 #include <cocaine/logging.hpp>
 
 #include "cocaine/unicorn/errors.hpp"

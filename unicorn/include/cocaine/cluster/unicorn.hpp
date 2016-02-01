@@ -18,6 +18,8 @@
 #include "cocaine/api/cluster.hpp"
 #include "cocaine/api/unicorn.hpp"
 
+#include <blackhole/logger.hpp>
+
 #include <cocaine/forwards.hpp>
 
 namespace cocaine { namespace cluster {

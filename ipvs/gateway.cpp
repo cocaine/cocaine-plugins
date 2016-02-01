@@ -36,6 +36,8 @@
 #include <boost/spirit/include/karma_stream.hpp>
 #include <boost/spirit/include/karma_string.hpp>
 
+#include <blackhole/logger.hpp>
+
 extern "C" {
 
 #include "libipvs-1.26/libipvs.h"

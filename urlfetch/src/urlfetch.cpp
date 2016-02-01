@@ -20,6 +20,8 @@
 #include <boost/foreach.hpp>
 #include <boost/format.hpp>
 
+#include <blackhole/logger.hpp>
+
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/traits/tuple.hpp>
