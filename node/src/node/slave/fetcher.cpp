@@ -1,6 +1,8 @@
 #include "cocaine/detail/service/node/slave/fetcher.hpp"
 
-#include "cocaine/detail/service/node/slave.hpp"
+#include <blackhole/logger.hpp>
+
+#include "cocaine/service/node/slave.hpp"
 
 namespace ph = std::placeholders;
 

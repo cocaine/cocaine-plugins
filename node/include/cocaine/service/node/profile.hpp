@@ -18,32 +18,47 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef COCAINE_ENGINE_MANIFEST_HPP
-#define COCAINE_ENGINE_MANIFEST_HPP
+#ifndef COCAINE_ENGINE_PROFILE_HPP
+#define COCAINE_ENGINE_PROFILE_HPP
 
 #include <cocaine/common.hpp>
 #include <cocaine/dynamic.hpp>
 
-#include "cocaine/detail/service/node/cached.hpp"
+#include "cocaine/service/node/cached.hpp"
 
 namespace cocaine {
 
-struct manifest_t:
+struct profile_t:
     cached<dynamic_t>
 {
-    manifest_t(context_t& context, const std::string& name);
+    profile_t(context_t& context, const std::string& name);
 
-    // The application name.
+    // The profile name.
     std::string name;
 
-    // The application engine's endpoint name.
-    std::string endpoint;
+    // Copy all the slave output to the runtime log.
+    bool log_output;
 
-    // Optional environment.
-    std::map<std::string, std::string> environment;
+    // Timeouts.
+    struct {
+        unsigned long spawn;
+        unsigned long handshake;
+        unsigned long heartbeat;
+        unsigned long seal;
+        unsigned long terminate;
+        unsigned long idle;
+    } timeout;
 
-    // What to execute.
-    std::string executable;
+    // Limits.
+    unsigned long concurrency;
+    unsigned long crashlog_limit;
+    unsigned long grow_threshold;
+    unsigned long pool_limit;
+    unsigned long queue_limit;
+
+    // NOTE: The slave processes are launched in sandboxed environments,
+    // called isolates. This one describes the isolate type and arguments.
+    config_t::component_t isolate;
 };
 
 } // namespace cocaine

@@ -1,6 +1,6 @@
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 
-#include "cocaine/detail/service/node/slave.hpp"
+#include "cocaine/service/node/slave.hpp"
 
 using namespace cocaine;
 

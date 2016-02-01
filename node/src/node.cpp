@@ -33,6 +33,7 @@
 
 #include "cocaine/detail/service/node/app.hpp"
 
+#include <blackhole/logger.hpp>
 #include <blackhole/scope/holder.hpp>
 
 #include <boost/range/adaptor/map.hpp>

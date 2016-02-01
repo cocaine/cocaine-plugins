@@ -9,7 +9,7 @@
 
 #include "cocaine/idl/rpc.hpp"
 
-#include "cocaine/detail/service/node/slot.hpp"
+#include "cocaine/service/node/slot.hpp"
 
 namespace cocaine {
 

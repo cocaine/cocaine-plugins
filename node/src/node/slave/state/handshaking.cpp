@@ -1,6 +1,9 @@
 #include "cocaine/detail/service/node/slave/state/handshaking.hpp"
 
-#include "cocaine/detail/service/node/slave.hpp"
+#include <blackhole/logger.hpp>
+
+#include "cocaine/service/node/slave.hpp"
+
 #include "cocaine/detail/service/node/slave/control.hpp"
 #include "cocaine/detail/service/node/slave/fetcher.hpp"
 #include "cocaine/detail/service/node/slave/state/active.hpp"

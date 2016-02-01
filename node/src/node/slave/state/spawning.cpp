@@ -4,9 +4,12 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
+#include <blackhole/logger.hpp>
+
 #include <cocaine/rpc/actor.hpp>
 
-#include "cocaine/detail/service/node/slave.hpp"
+#include "cocaine/service/node/slave.hpp"
+
 #include "cocaine/detail/service/node/slave/state/handshaking.hpp"
 #include "cocaine/detail/service/node/util.hpp"
 

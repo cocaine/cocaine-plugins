@@ -8,10 +8,10 @@
 #include "cocaine/idl/node.hpp"
 #include "cocaine/idl/rpc.hpp"
 
-#include "cocaine/detail/service/node/app/stats.hpp"
-#include "cocaine/detail/service/node/event.hpp"
-#include "cocaine/detail/service/node/slave.hpp"
-#include "cocaine/detail/service/node/slot.hpp"
+#include "cocaine/service/node/app/stats.hpp"
+#include "cocaine/service/node/event.hpp"
+#include "cocaine/service/node/slave.hpp"
+#include "cocaine/service/node/slot.hpp"
 
 namespace cocaine {
     class client_rpc_dispatch_t;

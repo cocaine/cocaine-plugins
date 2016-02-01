@@ -2,6 +2,8 @@
 
 #include <boost/thread/thread.hpp>
 
+#include <blackhole/logger.hpp>
+
 #include "cocaine/api/isolate.hpp"
 #include "cocaine/context.hpp"
 #include "cocaine/errors.hpp"
@@ -11,13 +13,13 @@
 #include "cocaine/rpc/actor_unix.hpp"
 #include "cocaine/traits/dynamic.hpp"
 
+#include "cocaine/service/node/manifest.hpp"
 #include "cocaine/service/node/overseer.hpp"
+#include "cocaine/service/node/profile.hpp"
 
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 #include "cocaine/detail/service/node/dispatch/handshake.hpp"
 #include "cocaine/detail/service/node/dispatch/init.hpp"
-#include "cocaine/detail/service/node/manifest.hpp"
-#include "cocaine/detail/service/node/profile.hpp"
 
 namespace ph = std::placeholders;
 

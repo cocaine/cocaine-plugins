@@ -1,6 +1,7 @@
 #include "cocaine/detail/service/node/slave/state/active.hpp"
 
-#include "cocaine/detail/service/node/slave.hpp"
+#include "cocaine/service/node/slave.hpp"
+
 #include "cocaine/detail/service/node/slave/control.hpp"
 #include "cocaine/detail/service/node/slave/state/sealing.hpp"
 #include "cocaine/detail/service/node/slave/state/terminating.hpp"

@@ -18,7 +18,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "cocaine/detail/service/node/manifest.hpp"
+#include "cocaine/service/node/manifest.hpp"
 
 #include <cocaine/traits/dynamic.hpp>
 
@@ -40,4 +40,3 @@ manifest_t::manifest_t(context_t& context, const std::string& name_):
         throw cocaine::error_t("runnable object has not been specified");
     }
 }
-

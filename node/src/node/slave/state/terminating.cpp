@@ -1,6 +1,9 @@
 #include "cocaine/detail/service/node/slave/state/terminating.hpp"
 
-#include "cocaine/detail/service/node/slave.hpp"
+#include <blackhole/logger.hpp>
+
+#include "cocaine/service/node/slave.hpp"
+
 #include "cocaine/detail/service/node/slave/control.hpp"
 
 namespace ph = std::placeholders;

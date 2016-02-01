@@ -1,4 +1,4 @@
-#include "cocaine/detail/service/node/slave/error.hpp"
+#include "cocaine/service/node/slave/error.hpp"
 
 #include <string>
 

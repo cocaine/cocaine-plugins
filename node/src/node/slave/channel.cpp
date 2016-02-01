@@ -1,5 +1,7 @@
 #include "cocaine/detail/service/node/slave/channel.hpp"
 
+#include <blackhole/logger.hpp>
+
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 #include "cocaine/detail/service/node/dispatch/worker.hpp"
 

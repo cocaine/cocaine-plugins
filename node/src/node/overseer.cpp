@@ -3,20 +3,21 @@
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
 
+#include <blackhole/logger.hpp>
 #include <blackhole/scope/holder.hpp>
 
 #include <cocaine/context.hpp>
 
 #include "cocaine/api/stream.hpp"
 
-#include "cocaine/detail/service/node/manifest.hpp"
-#include "cocaine/detail/service/node/profile.hpp"
+#include "cocaine/service/node/manifest.hpp"
+#include "cocaine/service/node/profile.hpp"
+#include "cocaine/service/node/slot.hpp"
 
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 #include "cocaine/detail/service/node/dispatch/handshake.hpp"
 #include "cocaine/detail/service/node/dispatch/worker.hpp"
 #include "cocaine/detail/service/node/slave/control.hpp"
-#include "cocaine/detail/service/node/slot.hpp"
 #include "cocaine/detail/service/node/util.hpp"
 
 #include <boost/accumulators/statistics/extended_p_square.hpp>

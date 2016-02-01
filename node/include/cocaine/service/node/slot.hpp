@@ -2,6 +2,8 @@
 
 #include <cocaine/rpc/slot.hpp>
 
+#include <boost/mpl/copy.hpp>
+
 namespace cocaine { namespace io {
 
 template<class T> struct deduce;

@@ -19,15 +19,12 @@
 #include "cocaine/idl/rpc.hpp"
 #include "cocaine/idl/node.hpp"
 
-#include "cocaine/detail/service/node/event.hpp"
-#include "cocaine/detail/service/node/manifest.hpp"
-#include "cocaine/detail/service/node/profile.hpp"
-#include "cocaine/detail/service/node/splitter.hpp"
-
-#include "slave/error.hpp"
-
-// TODO: Temporary.
-#include "cocaine/detail/service/node/slot.hpp"
+#include "cocaine/service/node/event.hpp"
+#include "cocaine/service/node/manifest.hpp"
+#include "cocaine/service/node/profile.hpp"
+#include "cocaine/service/node/slave/error.hpp"
+#include "cocaine/service/node/slot.hpp"
+#include "cocaine/service/node/splitter.hpp"
 
 namespace cocaine {
 

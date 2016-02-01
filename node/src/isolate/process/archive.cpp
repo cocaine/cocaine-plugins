@@ -29,6 +29,8 @@
 #include <archive.h>
 #include <archive_entry.h>
 
+#include <blackhole/logger.hpp>
+
 using namespace cocaine;
 using namespace cocaine::isolate;
 

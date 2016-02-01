@@ -40,6 +40,8 @@
 
 #include <sys/wait.h>
 
+#include <blackhole/logger.hpp>
+
 namespace ph = std::placeholders;
 
 using namespace cocaine;

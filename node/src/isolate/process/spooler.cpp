@@ -27,6 +27,8 @@
 
 #include "cocaine/detail/isolate/archive.hpp"
 
+#include <blackhole/logger.hpp>
+
 using namespace cocaine;
 using namespace cocaine::isolate;
 

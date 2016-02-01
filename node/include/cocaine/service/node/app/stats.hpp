@@ -8,7 +8,7 @@
 
 #include <cocaine/locked_ptr.hpp>
 
-namespace cocaine { // namespace detail { namespace service { namespace node { namespace app {
+namespace cocaine {
 
 struct stats_t {
     struct {
@@ -52,4 +52,4 @@ private:
     probabilities() const noexcept;
 };
 
-} //}}}} // namespace cocaine::detail::service::node::app
+}  // namespace cocaine

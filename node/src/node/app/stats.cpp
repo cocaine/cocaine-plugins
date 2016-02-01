@@ -1,11 +1,11 @@
-#include "cocaine/detail/service/node/app/stats.hpp"
+#include "cocaine/service/node/app/stats.hpp"
 
 #include <cmath>
 
 #include <boost/accumulators/statistics/extended_p_square.hpp>
 #include <boost/accumulators/statistics/extended_p_square_quantile.hpp>
 
-using namespace cocaine;//::detail::service::node::app;
+namespace cocaine {
 
 namespace {
 
@@ -58,3 +58,5 @@ stats_t::quantiles() const {
 
     return result;
 }
+
+}  // namespace cocaine
