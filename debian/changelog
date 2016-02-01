@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.5.0-rc2) UNRELEASED; urgency=low
+
+  * Node: clean up includes for development package.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 01 Feb 2016 17:43:59 +0300
+
 cocaine-plugins (0.12.5.0-rc1) unstable; urgency=low
 
   * Migrate to the Blackhole v1.0.
