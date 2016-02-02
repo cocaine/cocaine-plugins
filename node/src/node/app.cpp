@@ -1,4 +1,4 @@
-#include "cocaine/detail/service/node/app.hpp"
+#include "cocaine/service/node/app.hpp"
 
 #include <boost/thread/thread.hpp>
 
