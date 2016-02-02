@@ -20,7 +20,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/node/include
 )
 
-add_library(node MODULE
+add_library(node SHARED
     src/isolate/process.cpp
     src/isolate/process/archive.cpp
     src/isolate/process/spooler.cpp
@@ -57,10 +57,27 @@ target_link_libraries(node
     blackhole
     cocaine-core)
 
+set(BUILD_FLAGS "-std=c++0x")
+set(BUILD_FLAGS "${BUILD_FLAGS} -Wall")
+set(BUILD_FLAGS "${BUILD_FLAGS} -Wextra")
+set(BUILD_FLAGS "${BUILD_FLAGS} -Waddress")
+set(BUILD_FLAGS "${BUILD_FLAGS} -Warray-bounds")
+set(BUILD_FLAGS "${BUILD_FLAGS} -Wbuiltin-macro-redefined")
+set(BUILD_FLAGS "${BUILD_FLAGS} -Wconversion")
+set(BUILD_FLAGS "${BUILD_FLAGS} -Wctor-dtor-privacy")
+set(BUILD_FLAGS "${BUILD_FLAGS} -Winit-self")
+set(BUILD_FLAGS "${BUILD_FLAGS} -Wnon-virtual-dtor")
+set(BUILD_FLAGS "${BUILD_FLAGS} -Wold-style-cast")
+set(BUILD_FLAGS "${BUILD_FLAGS} -Woverloaded-virtual")
+set(BUILD_FLAGS "${BUILD_FLAGS} -Wswitch")
+set(BUILD_FLAGS "${BUILD_FLAGS} -Wunreachable-code")
+set(BUILD_FLAGS "${BUILD_FLAGS} -pedantic -pedantic-errors")
+
 set_target_properties(node PROPERTIES
+    COMPILE_FLAGS "${BUILD_FLAGS}"
     PREFIX ""
-    SUFFIX ".2${COCAINE_PLUGIN_SUFFIX}"
-    COMPILE_FLAGS "-std=c++0x -Wall -Wextra -Winit-self -Wconversion -Wno-sign-conversion -Wold-style-cast -Woverloaded-virtual -Wctor-dtor-privacy -Wnon-virtual-dtor -Wunreachable-code -pedantic -pedantic-errors"
+    SUFFIX "${COCAINE_PLUGIN_SUFFIX}"
+    SOVERSION 3
 )
 
 install(TARGETS node
