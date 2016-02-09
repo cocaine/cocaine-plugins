@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.5.0-rc4) unstable; urgency=low
+
+  * Bug fix: fixed all invalid logging patterns.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 09 Feb 2016 17:43:24 +0300
+
 cocaine-plugins (0.12.5.0-rc3) unstable; urgency=low
 
   * Feature: add Echo helper plugin for testing and benchmarking reasons.
