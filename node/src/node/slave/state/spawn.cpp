@@ -7,11 +7,13 @@
 #include <blackhole/logger.hpp>
 
 #include <cocaine/rpc/actor.hpp>
+#include <cocaine/detail/service/node/slave/spawn_handle.hpp>
 
 #include "cocaine/api/isolate.hpp"
 #include "cocaine/service/node/slave/id.hpp"
 
 #include "cocaine/detail/service/node/slave/machine.hpp"
+#include "cocaine/detail/service/node/slave/spawn_handle.hpp"
 #include "cocaine/detail/service/node/slave/state/handshaking.hpp"
 #include "cocaine/detail/service/node/util.hpp"
 
@@ -88,58 +90,30 @@ auto spawn_t::spawn(unsigned long timeout) -> void {
     try {
         auto isolate = slave->context.get<api::isolate_t>(
             slave->profile.isolate.type, slave->context, slave->loop, slave->manifest.name,
-            slave->profile.isolate.args);
+            slave->profile.isolate.type, slave->profile.isolate.args);
 
         COCAINE_LOG_DEBUG(slave->log, "spawning");
 
         timer.expires_from_now(boost::posix_time::milliseconds(static_cast<std::int64_t>(timeout)));
         timer.async_wait(trace_t::bind(&spawn_t::on_timeout, shared_from_this(), ph::_1));
 
-        handle = isolate->spawn(slave->manifest.executable, args, slave->manifest.environment);
+        std::shared_ptr<api::spawn_handle_base_t> spawn_handle = std::make_shared<spawn_handle_t>(slave, shared_from_this());
+        handle = isolate->spawn(
+            slave->manifest.executable,
+            args,
+            slave->manifest.environment,
+            spawn_handle
+        );
 
-        // Currently we spawn all slaves synchronously, but here is the right place to provide
-        // a callback function to the Isolate.
-        // NOTE: The callback must be called from the event loop thread, otherwise the behavior
-        // is undefined.
-        slave->loop.post(trace_t::bind(&spawn_t::on_spawn, shared_from_this(),
-                                       std::chrono::high_resolution_clock::now()));
-    } catch (const std::system_error& err) {
+    } catch(const std::system_error& err) {
         COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: {}", err.code().message());
 
         slave->loop.post([=]() { slave->shutdown(err.code()); });
     }
 }
 
-auto spawn_t::on_spawn(std::chrono::high_resolution_clock::time_point start) -> void {
-    std::error_code ec;
-    const size_t cancelled = timer.cancel(ec);
-    if (ec || cancelled == 0) {
-        // If we are here, then the spawn timer has been triggered and the slave has been
-        // shutdowned with a spawn timeout error.
-        COCAINE_LOG_WARNING(slave->log,
-                            "slave has been spawned, but the timeout has already expired");
-        return;
-    }
-
-    const auto now = std::chrono::high_resolution_clock::now();
-    COCAINE_LOG_DEBUG(
-        slave->log, "slave has been spawned in {} ms",
-        std::chrono::duration<float, std::chrono::milliseconds::period>(now - start).count());
-
-    try {
-        // May throw system error when failed to assign native descriptor to the fetcher.
-        auto handshaking = std::make_shared<handshaking_t>(slave, std::move(handle));
-        slave->migrate(handshaking);
-
-        handshaking->start(slave->profile.timeout.handshake);
-    } catch (const std::exception& err) {
-        COCAINE_LOG_ERROR(slave->log, "unable to activate slave: {}", err.what());
-
-        slave->shutdown(error::unknown_activate_error);
-    }
-}
-
-auto spawn_t::on_timeout(const std::error_code& ec) -> void {
+void
+spawn_t::on_timeout(const std::error_code& ec) {
     if (ec) {
         COCAINE_LOG_DEBUG(slave->log, "spawn timer has called its completion handler: cancelled");
     } else {

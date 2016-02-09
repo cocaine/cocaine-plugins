@@ -11,11 +11,16 @@ endif()
 
 if(COCAINE_ALLOW_CGROUPS)
     locate_library(LibCGroup "libcgroup.h" "cgroup")
-
     set(LibCGroup_LIBRARY "cgroup")
     add_definitions(-DCOCAINE_ALLOW_CGROUPS=1)
+    set(CGROUP_SOURCES
+            src/isolate/process/cgroup.cpp
+    )
 else()
     message(STATUS "  Node service will be built without CGroups support")
+    set(CGROUP_SOURCES
+            src/isolate/process/cgroup_stub.cpp
+    )
 endif()
 
 include_directories(
@@ -25,7 +30,9 @@ include_directories(
 add_library(${PLUGIN_NAME} SHARED
     src/isolate/process.cpp
     src/isolate/process/archive.cpp
-    src/isolate/process/spooler.cpp
+    ${CGROUP_SOURCES}
+    src/isolate/external.cpp
+    src/isolate/fetcher.cpp
     src/module.cpp
     src/node.cpp
     src/node/app.cpp
@@ -40,7 +47,6 @@ add_library(${PLUGIN_NAME} SHARED
     src/node/slave/channel.cpp
     src/node/slave/control.cpp
     src/node/slave/error.cpp
-    src/node/slave/fetcher.cpp
     src/node/slave/id.cpp
     src/node/slave/machine.cpp
     src/node/slave/state/active.cpp
@@ -53,6 +59,15 @@ add_library(${PLUGIN_NAME} SHARED
     src/node/slave/stats.cpp
     src/node/stats.cpp
     src/stream.cpp
+    src/node/slave/spawn_handle.cpp
+)
+
+add_library(isolate_mock SHARED
+    tests/isolate_mock.cpp
+)
+
+target_link_libraries(isolate_mock
+	${PLUGIN_NAME}
 )
 
 target_link_libraries(${PLUGIN_NAME}
@@ -82,6 +97,12 @@ set_target_properties(${PLUGIN_NAME} PROPERTIES
     COMPILE_FLAGS "${BUILD_FLAGS}"
     PREFIX ""
     SUFFIX "${COCAINE_PLUGIN_SUFFIX}"
+)
+
+set_target_properties(isolate_mock PROPERTIES
+        COMPILE_FLAGS "${BUILD_FLAGS}"
+        PREFIX ""
+        SUFFIX "${COCAINE_PLUGIN_SUFFIX}"
 )
 
 install(TARGETS ${PLUGIN_NAME}

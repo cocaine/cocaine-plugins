@@ -255,22 +255,22 @@ class spooling_t:
     public base_t
 {
     std::shared_ptr<api::isolate_t> isolate;
-    std::unique_ptr<api::cancellation_t> spooler;
+    std::shared_ptr<api::cancellation_t> spooler;
 
 public:
-    template<class F>
     spooling_t(context_t& context,
                asio::io_service& loop,
                const manifest_t& manifest,
                const profile_t& profile,
                logging::logger_t* const log,
-               F handler)
+               std::shared_ptr<api::spool_handle_base_t> handle)
     {
         isolate = context.get<api::isolate_t>(
             profile.isolate.type,
             context,
             loop,
             manifest.name,
+            profile.isolate.type,
             profile.isolate.args
         );
 
@@ -278,13 +278,13 @@ public:
             // NOTE: Regardless of whether the asynchronous operation completes immediately or not,
             // the handler will not be invoked from within this call. Invocation of the handler
             // will be performed in a manner equivalent to using `boost::asio::io_service::post()`.
-            spooler = isolate->async_spool(handler);
+            spooler = isolate->spool(handle);
         } catch (const std::system_error& err) {
             COCAINE_LOG_ERROR(log, "uncaught spool exception: [{}] {}", err.code().value(), err.code().message());
-            handler(err.code());
+            handle->on_abort(err.code(), err.what());
         } catch (const std::exception& err) {
             COCAINE_LOG_ERROR(log, "uncaught spool exception: {}", err.what());
-            handler(error::uncaught_spool_error);
+            handle->on_abort(error::uncaught_spool_error, err.what());
         }
     }
 
@@ -404,28 +404,6 @@ private:
 
 } // namespace state
 
-namespace {
-
-/// The wrapper declares a copy constructor, tricking asio's machinery into submission, but never
-/// defines it, so that copying would result in a linking error.
-template<typename F>
-struct move_hack : F {
-    move_hack(F&& f) : F(std::move(f)) {}
-
-    move_hack(const move_hack& other);
-    move_hack(move_hack&& other) = default;
-
-    auto operator=(const move_hack& other) -> move_hack&;
-    auto operator=(move_hack&& other) -> move_hack& = default;
-};
-
-template <typename T>
-auto make_hack(T&& t) -> move_hack<typename std::decay<T>::type> {
-    return std::move(t);
-}
-
-}  // namespace
-
 class cocaine::service::node::app_state_t:
     public std::enable_shared_from_this<app_state_t>
 {
@@ -446,6 +424,11 @@ class cocaine::service::node::app_state_t:
 
     std::shared_ptr<asio::io_service> loop;
     std::unique_ptr<asio::io_service::work> work;
+
+    // Bind isolation to application lifetime to ensure,
+    // that isolation object is not being recreated all the times.
+    api::category_traits<api::isolate_t>::ptr_type isolate;
+
     boost::thread thread;
 
 public:
@@ -460,7 +443,13 @@ public:
         manifest_(std::move(manifest_)),
         profile(std::move(profile_)),
         loop(std::make_shared<asio::io_service>()),
-        work(std::make_unique<asio::io_service::work>(*loop))
+        work(std::make_unique<asio::io_service::work>(*loop)),
+        isolate(context.get<api::isolate_t>(profile.isolate.type,
+                                            context,
+                                            *loop,
+                                            manifest_.name,
+                                            profile.isolate.type,
+                                            profile.isolate.args))
     {
         COCAINE_LOG_DEBUG(log, "application has initialized its internal state");
 
@@ -494,16 +483,21 @@ public:
     }
 
     auto spool() -> void {
-        auto state = this->state.synchronize();
+        state.apply([&](state_type& state) {
+            if (!state->stopped()) {
+                throw std::logic_error("invalid state");
+            }
 
-        if ((*state)->stopped()) {
-            // Defer possible long spooling operation into a separate thread.
-            loop->post(make_hack(
-                std::bind(&app_state_t::spool_job, shared_from_this(), std::move(state))));
-            return;
-        }
-
-        throw std::logic_error("invalid state");
+            COCAINE_LOG_DEBUG(log, "app is spooling");
+            state.reset(new state::spooling_t(
+                context,
+                *loop,
+                manifest(),
+                profile,
+                log.get(),
+                std::make_shared<spool_handle_t>(shared_from_this())
+            ));
+        });
     }
 
     void
@@ -512,37 +506,39 @@ public:
     }
 
 private:
-    auto spool_job(locked_ptr<state_type>& state) -> void {
-        COCAINE_LOG_DEBUG(log, "app is spooling");
-        state->reset(new state::spooling_t(
-            context,
-            *loop,
-            manifest(),
-            profile,
-            log.get(),
-            std::bind(&app_state_t::on_spool, shared_from_this(), ph::_1)
-        ));
-    }
 
-    void
-    on_spool(const std::error_code& ec) {
-        if (ec) {
-            COCAINE_LOG_ERROR(log, "unable to spool app - [{}] {}", ec.value(), ec.message());
-
-            loop->post(std::bind(&app_state_t::cancel, shared_from_this(), ec));
+    struct spool_handle_t :
+        public api::spool_handle_base_t,
+        public std::enable_shared_from_this<spool_handle_t>
+    {
+        virtual
+        void
+        on_abort(const std::error_code& ec, const std::string& msg) {
+            COCAINE_LOG_ERROR(parent->log, "unable to spool app, [{}] {} - {}", ec.value(), ec.message(), msg);
+            // Dispatch the completion handler to be sure it will be called in a I/O thread to
+            // avoid possible deadlocks.
+            parent->loop->dispatch(std::bind(&app_state_t::cancel, parent, ec));
 
             // Attempt to finish node service's request.
             try {
-                deferred.abort({}, ec, ec.message());
+                parent->deferred.abort({}, ec, msg);
             } catch (const std::exception&) {
                 // Ignore if the client has been disconnected.
             }
-        } else {
-            // Dispatch the completion handler to be sure it will be called in a I/O thread to
-            // avoid possible deadlocks.
-            loop->post(std::bind(&app_state_t::publish, shared_from_this()));
         }
-    }
+        virtual
+        void
+        on_ready() {
+            COCAINE_LOG_DEBUG(parent->log, "application has been spooled");
+            parent->loop->dispatch(std::bind(&app_state_t::publish, parent));
+        }
+
+        spool_handle_t(std::shared_ptr<app_state_t> _parent) :
+            parent(_parent)
+        {}
+
+    std::shared_ptr<app_state_t> parent;
+    };
 
     void
     publish() {

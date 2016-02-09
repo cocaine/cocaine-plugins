@@ -5,7 +5,6 @@
 #include "cocaine/api/isolate.hpp"
 
 #include "cocaine/detail/service/node/slave/control.hpp"
-#include "cocaine/detail/service/node/slave/fetcher.hpp"
 #include "cocaine/detail/service/node/slave/machine.hpp"
 #include "cocaine/detail/service/node/slave/state/active.hpp"
 
@@ -18,23 +17,12 @@ namespace state {
 
 namespace ph = std::placeholders;
 
-handshaking_t::handshaking_t(std::shared_ptr<machine_t> slave_, std::unique_ptr<api::handle_t> handle_)
+handshaking_t::handshaking_t(std::shared_ptr<machine_t> slave_, std::unique_ptr<api::cancellation_t> handle_)
     : slave(std::move(slave_)),
       timer(slave->loop),
       handle(std::move(handle_)),
-      birthtime(std::chrono::high_resolution_clock::now()) {
-    COCAINE_LOG_DEBUG(slave->log, "slave is attaching the standard output handler");
-
-    slave->fetcher.apply([&](std::shared_ptr<fetcher_t>& fetcher) {
-        // If there is no fetcher already - it only means, that the slave has been shut down
-        // externally.
-        if (fetcher) {
-            fetcher->assign(handle->stdout());
-        } else {
-            throw std::system_error(error::overseer_shutdowning, "slave is shutdowning");
-        }
-    });
-}
+      birthtime(std::chrono::high_resolution_clock::now())
+{}
 
 auto handshaking_t::name() const noexcept -> const char* {
     return "handshaking";

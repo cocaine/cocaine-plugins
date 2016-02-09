@@ -5,22 +5,21 @@
 
 #include <asio/posix/stream_descriptor.hpp>
 
+#include <cocaine/forwards.hpp>
 #include <cocaine/locked_ptr.hpp>
 
 #include "cocaine/detail/service/node/forwards.hpp"
 
 namespace cocaine {
-namespace detail {
-namespace service {
-namespace node {
-namespace slave {
+namespace isolate {
 
 /// Represents slave's standard output fetcher.
 ///
 /// \warning all methods must be called from the event loop thread, otherwise the behavior is
 /// undefined.
 class fetcher_t : public std::enable_shared_from_this<fetcher_t> {
-    std::shared_ptr<machine_t> slave;
+    std::shared_ptr<api::spawn_handle_base_t> handle;
+    std::unique_ptr<logging::logger_t> logger;
 
     std::array<char, 4096> buffer;
 
@@ -28,7 +27,9 @@ class fetcher_t : public std::enable_shared_from_this<fetcher_t> {
     synchronized<watcher_type> watcher;
 
 public:
-    explicit fetcher_t(std::shared_ptr<machine_t> slave);
+    explicit fetcher_t(asio::io_service& io_context,
+                       std::shared_ptr<api::spawn_handle_base_t> handle,
+                       std::unique_ptr<logging::logger_t> logger);
 
     /// Assigns an existing native descriptor to the output watcher and starts watching over it.
     ///
@@ -44,8 +45,5 @@ private:
     auto on_read(const std::error_code& ec, size_t len) -> void;
 };
 
-}  // namespace slave
-}  // namespace node
-}  // namespace service
-}  // namespace detail
+}  // namespace isolate
 }  // namespace cocaine

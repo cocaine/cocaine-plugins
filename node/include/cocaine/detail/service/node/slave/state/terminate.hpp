@@ -17,14 +17,14 @@ namespace state {
 
 class terminate_t : public state_t, public std::enable_shared_from_this<terminate_t> {
     std::shared_ptr<machine_t> slave;
-    std::unique_ptr<api::handle_t> handle;
+    std::unique_ptr<api::cancellation_t> handle;
     std::shared_ptr<control_t> control;
     std::shared_ptr<session_t> session;
 
     asio::deadline_timer timer;
 
 public:
-    terminate_t(std::shared_ptr<machine_t> slave, std::unique_ptr<api::handle_t> handle,
+    terminate_t(std::shared_ptr<machine_t> slave, std::unique_ptr<api::cancellation_t> handle,
                   std::shared_ptr<control_t> control, std::shared_ptr<session_t> session);
     ~terminate_t();
 

@@ -22,12 +22,12 @@ class handshaking_t : public state_t, public std::enable_shared_from_this<handsh
     std::shared_ptr<machine_t> slave;
 
     synchronized<asio::deadline_timer> timer;
-    std::unique_ptr<api::handle_t> handle;
+    std::unique_ptr<api::cancellation_t> handle;
 
     std::chrono::high_resolution_clock::time_point birthtime;
 
 public:
-    handshaking_t(std::shared_ptr<machine_t> slave, std::unique_ptr<api::handle_t> handle);
+    handshaking_t(std::shared_ptr<machine_t> slave, std::unique_ptr<api::cancellation_t> handle);
 
     auto name() const noexcept -> const char*;
     auto cancel() -> void;

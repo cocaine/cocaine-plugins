@@ -11,7 +11,9 @@ class worker_rpc_dispatch_t;
 
 namespace api {
 
-struct handle_t;
+struct cancellation_t;
+struct spool_handle_base_t;
+struct spawn_handle_base_t;
 
 class stream_t;
 
@@ -26,6 +28,7 @@ class channel_t;
 class control_t;
 class fetcher_t;
 class machine_t;
+class spawn_handle_t;
 
 struct load_t;
 struct stats_t;

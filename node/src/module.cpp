@@ -1,3 +1,4 @@
+#include <cocaine/detail/isolate/external.hpp>
 #include "cocaine/service/node.hpp"
 
 #include "cocaine/detail/isolate/process.hpp"
@@ -12,8 +13,12 @@ auto validation() -> api::preconditions_t {
 }
 
 void initialize(api::repository_t& repository) {
-    repository.insert<isolate::process_t>("process");
+    repository.insert<isolate::process_t>("legacy_process");
     repository.insert<node_t>("node::v2");
+    repository.insert<isolate::external_t>("external");
+    repository.insert<isolate::external_t>("process");
+    repository.insert<isolate::external_t>("docker");
+    repository.insert<isolate::external_t>("porto");
 }
 
 }  // extern "C"

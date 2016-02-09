@@ -43,6 +43,8 @@ class machine_t : public std::enable_shared_from_this<machine_t> {
     friend class state::inactive_t;
     friend class state::terminate_t;
 
+    friend class spawn_handle_t;
+
     friend class client_rpc_dispatch_t;
 
     friend class channel_t;
@@ -73,7 +75,6 @@ private:
     cleanup_handler cleanup;
 
     splitter_t splitter;
-    synchronized<std::shared_ptr<fetcher_t>> fetcher;
     boost::circular_buffer<std::string> lines;
 
     std::atomic<bool> shutdowned;
@@ -134,6 +135,9 @@ public:
 private:
     void
     output(const char* data, size_t size);
+
+    void
+    output(const std::string& data);
 
     void
     migrate(std::shared_ptr<state_t> desired);
