@@ -116,7 +116,7 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
     context.listen(signal, asio);
 }
 
-node_t::~node_t() {}
+node_t::~node_t() = default;
 
 auto
 node_t::prototype() const -> const io::basic_dispatch_t&{
