@@ -205,6 +205,7 @@ public:
     dynamic_t::object_t
     info(io::node::info::flags_t flags) const = 0;
 
+    virtual
     std::shared_ptr<overseer_t>
     overseer() const {
         throw cocaine::error_t("invalid state");
