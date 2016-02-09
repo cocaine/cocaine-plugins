@@ -1,3 +1,11 @@
+cocaine-plugins (0.12.5.0-rc3) unstable; urgency=low
+
+  * Feature: add Echo helper plugin for testing and benchmarking reasons.
+  * Bug fix: prevent always throwing invalid state error while obtaining an
+    overseer from application via Node service.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 09 Feb 2016 16:45:19 +0300
+
 cocaine-plugins (0.12.5.0-rc2) unstable; urgency=low
 
   * Plugins: fix build with the Cocaine v0.12.5.
