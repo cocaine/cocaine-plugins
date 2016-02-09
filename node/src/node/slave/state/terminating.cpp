@@ -58,7 +58,7 @@ terminating_t::terminate(const std::error_code& ec) {
 
 void
 terminating_t::start(unsigned long timeout, const std::error_code& ec) {
-    COCAINE_LOG_DEBUG(slave->log, "slave is terminating, timeout: {:.2f} ms", timeout);
+    COCAINE_LOG_DEBUG(slave->log, "slave is terminating, timeout: {} ms", timeout);
 
     timer.expires_from_now(boost::posix_time::milliseconds(timeout));
     timer.async_wait(std::bind(&terminating_t::on_timeout, shared_from_this(), ph::_1));

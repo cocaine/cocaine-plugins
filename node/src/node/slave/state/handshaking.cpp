@@ -64,7 +64,7 @@ handshaking_t::activate(std::shared_ptr<session_t> session, upstream<io::worker:
     }
 
     const auto now = std::chrono::high_resolution_clock::now();
-    COCAINE_LOG_DEBUG(slave->log, "slave has been activated in {:.2f} ms",
+    COCAINE_LOG_DEBUG(slave->log, "slave has been activated in {} ms",
         std::chrono::duration<float, std::chrono::milliseconds::period>(now - birthtime).count());
 
     try {
@@ -84,7 +84,7 @@ handshaking_t::activate(std::shared_ptr<session_t> session, upstream<io::worker:
 
 void
 handshaking_t::start(unsigned long timeout) {
-    COCAINE_LOG_DEBUG(slave->log, "slave is waiting for handshake, timeout: {:.2f} ms", timeout);
+    COCAINE_LOG_DEBUG(slave->log, "slave is waiting for handshake, timeout: {} ms", timeout);
 
     timer.apply([&](asio::deadline_timer& timer) {
         timer.expires_from_now(boost::posix_time::milliseconds(timeout));

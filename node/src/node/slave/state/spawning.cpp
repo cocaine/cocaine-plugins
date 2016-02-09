@@ -52,7 +52,7 @@ void
 spawning_t::spawn(unsigned long timeout) {
     using asio::ip::tcp;
 
-    COCAINE_LOG_DEBUG(slave->log, "slave is spawning using '{}', timeout: {:.2f} ms",
+    COCAINE_LOG_DEBUG(slave->log, "slave is spawning using '{}', timeout: {} ms",
                       slave->context.manifest.executable, timeout);
 
     COCAINE_LOG_DEBUG(slave->log, "locating the Locator endpoint list");
@@ -131,7 +131,7 @@ spawning_t::on_spawn(std::chrono::high_resolution_clock::time_point start) {
     }
 
     const auto now = std::chrono::high_resolution_clock::now();
-    COCAINE_LOG_DEBUG(slave->log, "slave has been spawned in {:.2f} ms",
+    COCAINE_LOG_DEBUG(slave->log, "slave has been spawned in {} ms",
         std::chrono::duration<float, std::chrono::milliseconds::period>(now - start).count());
 
     try {
