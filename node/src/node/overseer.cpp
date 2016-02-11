@@ -17,11 +17,79 @@
 #include "cocaine/detail/service/node/slot.hpp"
 #include "cocaine/detail/service/node/util.hpp"
 
-#include <boost/accumulators/statistics/extended_p_square.hpp>
+#include <metrics/accumulator/sliding/window.hpp>
+#include <metrics/counter.hpp>
+#include <metrics/registry.hpp>
+#include <metrics/timer.hpp>
 
 namespace ph = std::placeholders;
 
 using namespace cocaine;
+
+namespace cocaine {
+namespace {
+
+template<typename T>
+struct visitor {
+    template<typename Visitable>
+    void visit(Visitable& visitable) {
+        visitable.visit(this);
+    }
+};
+
+}  // namespace
+}  // namespace cocaine
+
+namespace cocaine {
+
+struct metrics_t : public visitor<metrics_t>  {
+    struct requests_t : public visitor<requests_t> {
+        /// The number of requests, that are pushed into the queue.
+        metrics::counter<std::uint64_t> accepted;
+        /// The number of requests, that were rejected due to queue overflow or other circumstances.
+        metrics::counter<std::uint64_t> rejected;
+
+        requests_t(metrics::registry_t& re, const std::string& name):
+            accepted(re.counter<std::uint64_t>(format("cocaine.%s.requests.accepted", name))),
+            rejected(re.counter<std::uint64_t>(format("cocaine.%s.requests.rejected", name)))
+        {}
+    };
+
+    struct slaves_t : public visitor<slaves_t> {
+        /// The number of successfully spawned slaves.
+        metrics::counter<std::uint64_t> spawned;
+        /// The number of crashed slaves.
+        metrics::counter<std::uint64_t> crashed;
+
+        slaves_t(metrics::registry_t& re, const std::string& name):
+            spawned(re.counter<std::uint64_t>(format("cocaine.%s.slaves.spawned", name))),
+            crashed(re.counter<std::uint64_t>(format("cocaine.%s.slaves.crashed", name)))
+        {}
+    };
+
+    struct timers_t : public visitor<timers_t> {
+        typedef metrics::timer<metrics::accumulator::sliding::window_t> timer_type;
+
+        /// Overall event processing time distribution measured from the event enqueueing until
+        /// close event (queue time + slave time).
+        timer_type overall;
+
+        timers_t(metrics::registry_t& re, const std::string& name, const std::string& event):
+            overall(re.timer(format("cocaine.%s.timers.%s.overall", name, event)))
+        {}
+    };
+
+    requests_t requests;
+    slaves_t slaves;
+    synchronized<std::map<std::string, timers_t>> timers;
+
+    metrics_t(metrics::registry_t& registry, const std::string& name):
+        requests(registry, name),
+        slaves(registry, name)
+    {}
+};
+
+}  // namespace cocaine
 
 struct collector_t {
     std::size_t active;
@@ -33,7 +101,7 @@ struct collector_t {
         cumload{}
     {
         for (const auto& it : pool) {
-            const auto load = it.second.load();
+            const auto load = it.second.load(); // TODO: Replace with range-based for + values.
             if (it.second.active() && load) {
                 active++;
                 cumload += load;
@@ -53,7 +121,7 @@ overseer_t::overseer_t(context_t& context,
     profile_(profile),
     loop(loop),
     pool_target{},
-    stats{}
+    metrics(new metrics_t(context.metrics(), manifest_.name))
 {
     COCAINE_LOG_DEBUG(log, "overseer has been initialized");
 }
@@ -85,8 +153,7 @@ struct queue_t {
 struct pool_t {
     unsigned long capacity;
 
-    std::uint64_t spawned;
-    std::uint64_t crashed;
+    metrics_t::slaves_t& slaves;
 
     const synchronized<overseer_t::pool_type>* pool;
 };
@@ -125,11 +192,11 @@ public:
 
     // Incoming requests.
     void
-    visit(std::uint64_t accepted, std::uint64_t rejected) {
+    visit(metrics_t::requests_t& requests) {
         dynamic_t::object_t info;
 
-        info["accepted"] = accepted;
-        info["rejected"] = rejected;
+        info["accepted"] = requests.accepted.get();
+        info["rejected"] = requests.rejected.get();
 
         result["requests"] = info;
     }
@@ -168,16 +235,25 @@ public:
         result["queue"] = info;
     }
 
-    // Response time quantiles over all events.
     void
-    visit(const std::vector<stats_t::quantile_t>& value) {
+    visit(const std::map<std::string, metrics_t::timers_t>& distributions) {
         dynamic_t::object_t info;
 
-        std::array<char, 16> buf;
-        for (const auto& quantile : value) {
-            if (std::snprintf(buf.data(), buf.size(), "%.2f%%", quantile.probability)) {
-                info[buf.data()] = quantile.value;
-            }
+        for (const auto& kv : distributions) {
+            const auto& event = kv.first;
+            const auto& timers = kv.second;
+
+            const auto snapshot = timers.overall.snapshot();
+            dynamic_t::object_t metrics;
+
+            metrics["p50"] = std::lround(snapshot.median());
+            metrics["p75"] = std::lround(snapshot.p75());
+            metrics["p90"] = std::lround(snapshot.p90());
+            metrics["p95"] = std::lround(snapshot.p95());
+            metrics["p98"] = std::lround(snapshot.p98());
+            metrics["p99"] = std::lround(snapshot.p99());
+
+            info[event] = metrics;
         }
 
         result["timings"] = info;
@@ -236,8 +312,8 @@ public:
             pinfo["idle"]     = pool.size() - collector.active;
             pinfo["capacity"] = value.capacity;
             pinfo["slaves"]   = slaves;
-            pinfo["total:spawned"] = value.spawned;
-            pinfo["total:crashed"] = value.crashed;
+            pinfo["total:spawned"] = value.slaves.spawned.get();
+            pinfo["total:crashed"] = value.slaves.crashed.get();
 
             result["pool"] = pinfo;
         });
@@ -255,10 +331,11 @@ overseer_t::info(io::node::info::flags_t flags) const {
     info_visitor_t visitor(flags, &result);
     visitor.visit(manifest());
     visitor.visit(profile());
-    visitor.visit(stats.requests.accepted.load(), stats.requests.rejected.load());
+    visitor.visit(metrics->requests);
     visitor.visit({ profile().queue_limit, &queue });
-    visitor.visit(stats.quantiles());
-    visitor.visit({ profile().pool_limit, stats.slaves.spawned, stats.slaves.crashed, &pool });
+    const auto distributions = *metrics->timers.synchronize();
+    visitor.visit(distributions);
+    visitor.visit({ profile().pool_limit, metrics->slaves, &pool });
 
     return result;
 }
@@ -285,9 +362,9 @@ template<typename SuccCounter, typename FailCounter, typename F>
 void count_success_if(SuccCounter* succ, FailCounter* fail, F fn) {
     try {
         fn();
-        ++(*succ);
+        succ->inc();
     } catch (...) {
-        ++(*fail);
+        fail->inc();
         throw;
     }
 }
@@ -303,7 +380,7 @@ overseer_t::enqueue(io::streaming_slot<io::app::enqueue>::upstream_type downstre
 
     std::shared_ptr<client_rpc_dispatch_t> dispatch;
 
-    count_success_if(&stats.requests.accepted, &stats.requests.rejected, [&] {
+    count_success_if(&metrics->requests.accepted, &metrics->requests.rejected, [&] {
         queue.apply([&](queue_type& queue) {
             const auto limit = profile().queue_limit;
 
@@ -348,33 +425,54 @@ overseer_t::spawn(pool_type& pool) {
         slave_t(std::move(ctx), *loop, std::bind(&overseer_t::on_slave_death, shared_from_this(), ph::_1, uuid))
     ));
 
-    ++stats.slaves.spawned;
+    metrics->slaves.spawned.inc();
 }
+
+namespace cpp17 {
+namespace map {
+namespace {
+
+template<typename M, typename... Args>
+std::pair<typename M::iterator, bool>
+try_emplace(M* map, const typename M::key_type& key, Args&&... args) {
+    auto it = map->find(key);
+
+    if (it != map->end()) {
+        return std::make_pair(it, false);
+    }
+
+    return map->insert(std::make_pair(key, typename M::mapped_type(std::forward<Args>(args)...)));
+}
+
+}  // namespace
+}  // namespace map
+}  // namespace cpp17
 
 void
 overseer_t::assign(slave_t& slave, slave::channel_t& payload) {
-    // Attempts to inject the new channel into the slave.
-    const auto id = slave.id();
-    const auto timestamp = payload.event.birthstamp;
+    typedef metrics_t::timers_t::timer_type timer_type;
 
-    // TODO: Race possible.
+    auto observer = std::make_shared<timer_type::context_type>(metrics->timers.apply([&](std::map<std::string, metrics_t::timers_t>& timers)
+        -> timer_type::context_type
+    {
+        auto& timer = cpp17::map::try_emplace(
+            &timers,
+            payload.event.name,
+            context.metrics(),
+            manifest().name,
+            payload.event.name
+        ).first->second.overall;
+
+        return timer.context();
+    }));
+
     auto self = shared_from_this();
-    slave.inject(payload, [=](std::uint64_t) {
-        const auto now = std::chrono::high_resolution_clock::now();
-        const auto elapsed = std::chrono::duration<
-            double,
-            std::chrono::milliseconds::period
-        >(now - timestamp).count();
-
-        stats.timings.apply([&](stats_t::quantiles_t& timings) {
-            timings(elapsed);
-        });
-
+    slave.inject(payload, [=](std::uint64_t) mutable {
         // TODO: Hack, but at least it saves from the deadlock.
         // TODO: Notify watcher about channel finish.
+        observer.reset();
         loop->post(std::bind(&overseer_t::rebalance_events, self));
     });
-
     // TODO: Notify watcher about channel started.
 }
 
@@ -450,7 +548,7 @@ void
 overseer_t::on_slave_death(const std::error_code& ec, std::string uuid) {
     if (ec) {
         COCAINE_LOG_DEBUG(log, "slave has removed itself from the pool: %s", ec.message());
-        ++stats.slaves.crashed;
+        metrics->slaves.crashed.inc();
     } else {
         COCAINE_LOG_DEBUG(log, "slave has removed itself from the pool");
     }

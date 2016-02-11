@@ -8,7 +8,6 @@
 #include "cocaine/idl/node.hpp"
 #include "cocaine/idl/rpc.hpp"
 
-#include "cocaine/detail/service/node/app/stats.hpp"
 #include "cocaine/detail/service/node/event.hpp"
 #include "cocaine/detail/service/node/slave.hpp"
 #include "cocaine/detail/service/node/slot.hpp"
@@ -18,6 +17,8 @@ namespace cocaine {
     class control_t;
     class slave_t;
     class unix_actor_t;
+
+    struct metrics_t;
 } // namespace cocaine
 
 namespace cocaine {
@@ -89,8 +90,8 @@ private:
     /// Pending queue.
     synchronized<queue_type> queue;
 
-    /// Statistics.
-    stats_t stats;
+    /// Application metrics.
+    std::unique_ptr<metrics_t> metrics;
 
 public:
     overseer_t(context_t& context,
