@@ -94,7 +94,16 @@ zookeeper::connection_t::connection_t(const cfg_t& _cfg, const session_t& _sessi
         int flag = 0;
         for (size_t i = count; i>0; i--) {
             auto path = path_parent(cfg.prefix, i - 1);
-            int rc = zoo_create(zhandle, path.c_str(), "", 0, &acl, flag, NULL, 0);
+            constexpr size_t retry_cnt = 3;
+            int rc = ZOK;
+            for(size_t current_try = 0; current_try < retry_cnt; current_try++) {
+                rc = zoo_create(zhandle, path.c_str(), "", 0, &acl, flag, NULL, 0);
+                if(rc && rc != ZNODEEXISTS && current_try != retry_cnt - 1) {
+                    reconnect();
+                } else {
+                    break;
+                }
+            }
             if(rc && rc != ZNODEEXISTS) {
                 throw std::system_error(cocaine::error::make_error_code(static_cast<ZOO_ERRORS>(rc)), "zookeeper error during prefix creation");
             }
