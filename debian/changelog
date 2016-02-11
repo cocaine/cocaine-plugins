@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.5.0-rc5) unstable; urgency=low
+
+  * Bug fix: Unicorn should now retry on failure during prefix creation.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 11 Feb 2016 15:12:29 +0300
+
 cocaine-plugins (0.12.5.0-rc4) unstable; urgency=low
 
   * Bug fix: fixed all invalid logging patterns.
