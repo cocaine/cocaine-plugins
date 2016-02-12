@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.5.0-rc7) unstable; urgency=low
+
+  * Bug fix: fixed previous bug fix which itself is bugged. Now the Node service
+    dev package should contain valid include files.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 12 Feb 2016 16:55:27 +0300
+
 cocaine-plugins (0.12.5.0-rc6) unstable; urgency=low
 
   * Bug fix: fixed install section for Node service's Debian package.
