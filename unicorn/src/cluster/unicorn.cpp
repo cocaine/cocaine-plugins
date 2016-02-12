@@ -15,13 +15,16 @@
 
 #include "cocaine/cluster/unicorn.hpp"
 
-#include <cocaine/rpc/actor.hpp>
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
-#include <zookeeper/zookeeper.h>
+#include <cocaine/rpc/actor.hpp>
+
+#include <cocaine/unicorn/value.hpp>
 
 #include <blackhole/logger.hpp>
+
+#include <zookeeper/zookeeper.h>
 
 namespace cocaine {
 

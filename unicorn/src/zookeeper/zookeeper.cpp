@@ -13,9 +13,10 @@
 * GNU General Public License for more details.
 */
 
+#include "cocaine/detail/zookeeper/errors.hpp"
 #include "cocaine/detail/zookeeper/zookeeper.hpp"
 
-#include "cocaine/unicorn/errors.hpp"
+#include <cocaine/errors.hpp>
 
 namespace zookeeper {
 
@@ -47,7 +48,7 @@ bool is_valid_sequence_node(const path_t& path) {
 unsigned long
 get_sequence_from_node_name_or_path(const path_t& path) {
     if(!is_valid_sequence_node(path)) {
-        throw std::system_error(cocaine::error::INVALID_NODE_NAME);
+        throw std::system_error(cocaine::error::invalid_node_name);
     }
     auto pos = path.size()-1;
     unsigned char ch = static_cast<unsigned char>(path[pos]);
@@ -63,7 +64,7 @@ std::string
 get_node_name(const path_t& path) {
     auto pos = path.find_last_of('/');
     if(pos == std::string::npos || pos == path.size()-1) {
-        throw std::system_error(cocaine::error::INVALID_PATH);
+        throw std::system_error(cocaine::error::invalid_path);
     }
     return path.substr(pos+1);
 }

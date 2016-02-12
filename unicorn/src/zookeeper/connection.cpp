@@ -17,7 +17,7 @@
 #include "cocaine/detail/zookeeper/handler.hpp"
 #include "cocaine/detail/zookeeper/session.hpp"
 
-#include "cocaine/unicorn/errors.hpp"
+#include "cocaine/detail/zookeeper/errors.hpp"
 
 #include <zookeeper/zookeeper.h>
 
@@ -48,7 +48,7 @@ cfg_t::endpoint_t::endpoint_t(std::string _hostname, unsigned int _port) :
 std::string
 cfg_t::endpoint_t::to_string() const {
     if(hostname.empty() || port == 0) {
-        throw std::system_error(cocaine::error::INVALID_CONNECTION_ENDPOINT);
+        throw std::system_error(cocaine::error::invalid_connection_endpoint);
     }
     //Zookeeper handles even ipv6 addresses correctly in this case
     return hostname + ':' + std::to_string(port);
@@ -105,7 +105,7 @@ zookeeper::connection_t::connection_t(const cfg_t& _cfg, const session_t& _sessi
                 }
             }
             if(rc && rc != ZNODEEXISTS) {
-                throw std::system_error(cocaine::error::make_error_code(static_cast<ZOO_ERRORS>(rc)), "zookeeper error during prefix creation");
+                throw std::system_error(rc, cocaine::error::zookeeper_category(), "zookeeper error during prefix creation");
             }
         }
     }
@@ -119,7 +119,7 @@ zookeeper::connection_t::~connection_t() {
 
 path_t zookeeper::connection_t::format_path(const path_t path) {
     if(path.empty() || path[0] != '/') {
-        throw std::system_error(cocaine::error::make_error_code(ZBADARGUMENTS));
+        throw std::system_error(ZBADARGUMENTS,  cocaine::error::zookeeper_category());
     }
     return cfg.prefix + path;
 }
@@ -227,7 +227,7 @@ void connection_t::reconnect() {
             // Swap in any case.
             // Sometimes we really want to force reconnect even when zk is unavailable at all. For example on lock release.
             std::swap(new_zhandle, zhandle);
-            throw std::system_error(cocaine::error::COULD_NOT_CONNECT);
+            throw std::system_error(cocaine::error::could_not_connect);
         }
     } else {
         if(!session.valid()) {

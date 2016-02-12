@@ -63,6 +63,8 @@ public:
 
     zookeeper_t(cocaine::context_t& context, const std::string& name, const dynamic_t& args);
 
+    ~zookeeper_t();
+
     virtual
     api::unicorn_scope_ptr
     put(writable_ptr::put result,

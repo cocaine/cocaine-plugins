@@ -16,11 +16,11 @@
 #include "cocaine/detail/unicorn/zookeeper/lock_state.hpp"
 #include "cocaine/detail/unicorn/zookeeper/lock.hpp"
 
+#include "cocaine/detail/zookeeper/errors.hpp"
+
 #include <blackhole/logger.hpp>
 
 #include <cocaine/logging.hpp>
-
-#include "cocaine/unicorn/errors.hpp"
 
 namespace cocaine { namespace unicorn {
 
@@ -108,7 +108,7 @@ lock_state_t::release_impl() {
     COCAINE_LOG_DEBUG(ctx.log, "release lock: {}", created_path);
     try {
         std::unique_ptr<release_lock_action_t> h(new release_lock_action_t(ctx));
-        ctx.zk.del(created_path, NOT_EXISTING_VERSION, std::move(h));
+        ctx.zk.del(created_path, not_existing_version, std::move(h));
     } catch(const std::system_error& e) {
         COCAINE_LOG_WARNING(ctx.log, "ZK exception during delete of lock: {}. Reconnecting to discard lock for sure.", e.what());
         try {

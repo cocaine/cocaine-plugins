@@ -15,11 +15,11 @@
 
 #include "cocaine/detail/unicorn/zookeeper/increment.hpp"
 
+#include "cocaine/detail/zookeeper/errors.hpp"
+
 #include <blackhole/logger.hpp>
 
 #include <cocaine/logging.hpp>
-
-#include "cocaine/unicorn/errors.hpp"
 
 namespace cocaine { namespace unicorn {
 
@@ -66,11 +66,11 @@ increment_action_t::data_event(int rc, zookeeper::value_t value, const zookeeper
                 parsed = unserialize(value);
             }
             if (stat.numChildren != 0) {
-                result->abort(cocaine::error::CHILD_NOT_ALLOWED, "increment error during value get");
+                result->abort(cocaine::error::child_not_allowed, "increment error during value get");
                 return;
             }
             if (!parsed.is_double() && !parsed.is_int() && !parsed.is_uint()) {
-                result->abort(cocaine::error::INVALID_TYPE, "increment error during value get");
+                result->abort(cocaine::error::invalid_type, "increment error during value get");
                 return;
             }
             assert(initial_value.is_uint() || initial_value.is_uint() || initial_value.is_double());

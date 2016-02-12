@@ -15,10 +15,10 @@
 
 #pragma once
 
-#include "cocaine/unicorn/path.hpp"
-#include "cocaine/unicorn/value.hpp"
-
 #include <cocaine/rpc/protocol.hpp>
+
+#include <cocaine/unicorn/path.hpp>
+#include <cocaine/unicorn/value.hpp>
 
 #include <boost/mpl/list.hpp>
 
