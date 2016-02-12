@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.5.0-rc6) unstable; urgency=low
+
+  * Bug fix: fixed install section for Node service's Debian package.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 12 Feb 2016 12:29:12 +0300
+
 cocaine-plugins (0.12.5.0-rc5) unstable; urgency=low
 
   * Bug fix: Unicorn should now retry on failure during prefix creation.
