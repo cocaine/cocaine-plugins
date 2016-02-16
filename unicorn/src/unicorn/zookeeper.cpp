@@ -25,13 +25,14 @@
 
 #include "cocaine/detail/zookeeper/handler.hpp"
 
-#include "cocaine/unicorn/errors.hpp"
-
-#include "cocaine/unicorn/value.hpp"
+#include "cocaine/detail/zookeeper/errors.hpp"
 
 #include "cocaine/service/unicorn.hpp"
 
 #include <cocaine/context.hpp>
+
+#include <cocaine/unicorn/value.hpp>
+
 #include <asio/io_service.hpp>
 
 #include <blackhole/logger.hpp>
@@ -81,6 +82,8 @@ zookeeper_t::zookeeper_t(cocaine::context_t& context, const std::string& name, c
 {
 }
 
+zookeeper_t::~zookeeper_t() = default;
+
 scope_ptr
 zookeeper_t::put(
     writable_ptr::put result,
@@ -89,7 +92,7 @@ zookeeper_t::put(
     version_t version
 ) {
     if (version < 0) {
-        result->abort(cocaine::error::VERSION_NOT_ALLOWED);
+        result->abort(cocaine::error::version_not_allowed);
         return nullptr;
     }
     auto scope = std::make_shared<zk_scope_t>();
@@ -166,7 +169,7 @@ zookeeper_t::children_subscribe(writable_ptr::children_subscribe result, const p
 scope_ptr
 zookeeper_t::increment(writable_ptr::increment result, const path_t& path, const value_t& value) {
     if (!value.is_double() && !value.is_int() && !value.is_uint()) {
-        result->abort(cocaine::error::unicorn_errors::INVALID_TYPE);
+        result->abort(cocaine::error::unicorn_errors::invalid_type);
         return nullptr;
     }
     auto scope = std::make_shared<zk_scope_t>();
@@ -214,7 +217,7 @@ value_t unserialize(const zookeeper::value_t& val) {
 
     //Only strict unparse.
     if(static_cast<msgpack::unpack_return>(ret) != msgpack::UNPACK_SUCCESS) {
-        throw std::system_error(cocaine::error::unicorn_errors::INVALID_VALUE);
+        throw std::system_error(cocaine::error::unicorn_errors::invalid_value);
     }
     value_t target;
     cocaine::io::type_traits<cocaine::dynamic_t>::unpack(obj, target);

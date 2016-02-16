@@ -15,11 +15,11 @@
 
 #include "cocaine/detail/unicorn/zookeeper/subscribe.hpp"
 
+#include "cocaine/detail/zookeeper/errors.hpp"
+
 #include <blackhole/logger.hpp>
 
 #include <cocaine/logging.hpp>
-
-#include "cocaine/unicorn/errors.hpp"
 
 namespace cocaine { namespace unicorn {
 
@@ -34,23 +34,23 @@ subscribe_action_t::subscribe_action_t(const zookeeper::handler_tag& tag,
     result(std::move(_result)),
     ctx(_ctx),
     write_lock(),
-    last_version(unicorn::MIN_VERSION),
+    last_version(unicorn::min_version),
     path(std::move(_path))
 {}
 
 void
 subscribe_action_t::data_event(int rc, std::string value, const zookeeper::node_stat& stat) {
     if(rc == ZNONODE) {
-        if(last_version != MIN_VERSION && last_version != NOT_EXISTING_VERSION) {
+        if(last_version != min_version && last_version != not_existing_version) {
             auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
             result->abort(code);
         } else {
             // Write that node is not exist to client only first time.
             // After that set a watch to see when it will appear
-            if(last_version == MIN_VERSION) {
+            if(last_version == min_version) {
                 std::lock_guard<std::mutex> guard(write_lock);
-                if (NOT_EXISTING_VERSION > last_version) {
-                    result->write(versioned_value_t(value_t(), NOT_EXISTING_VERSION));
+                if (not_existing_version > last_version) {
+                    result->write(versioned_value_t(value_t(), not_existing_version));
                 }
             }
             try {
@@ -64,7 +64,7 @@ subscribe_action_t::data_event(int rc, std::string value, const zookeeper::node_
         auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
         result->abort(code);
     } else if (stat.numChildren != 0) {
-        result->abort(cocaine::error::CHILD_NOT_ALLOWED);
+        result->abort(cocaine::error::child_not_allowed);
     } else {
         version_t new_version(stat.version);
         std::lock_guard<std::mutex> guard(write_lock);

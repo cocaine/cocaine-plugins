@@ -4,18 +4,16 @@ INCLUDE_DIRECTORIES(
 ADD_LIBRARY(unicorn MODULE
     src/cluster/unicorn.cpp
     src/service/unicorn.cpp
-    src/api/unicorn.cpp
     src/unicorn/zookeeper.cpp
     src/unicorn/zookeeper/children_subscribe.cpp
     src/unicorn/zookeeper/create.cpp
     src/unicorn/zookeeper/del.cpp
+    src/unicorn/zookeeper/errors.cpp
     src/unicorn/zookeeper/increment.cpp
     src/unicorn/zookeeper/lock.cpp
     src/unicorn/zookeeper/lock_state.cpp
     src/unicorn/zookeeper/put.cpp
     src/unicorn/zookeeper/subscribe.cpp
-    src/unicorn/errors.cpp
-    src/unicorn/value.cpp
     src/zookeeper/zookeeper.cpp
     src/zookeeper/session.cpp
     src/zookeeper/handler.cpp

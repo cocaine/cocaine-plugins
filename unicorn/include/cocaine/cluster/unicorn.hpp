@@ -15,13 +15,12 @@
 
 #pragma once
 
-#include "cocaine/api/cluster.hpp"
-#include "cocaine/api/unicorn.hpp"
-
-#include <blackhole/logger.hpp>
+#include <cocaine/api/cluster.hpp>
+#include <cocaine/api/unicorn.hpp>
 
 #include <cocaine/forwards.hpp>
 
+#include <set>
 namespace cocaine { namespace cluster {
 
 class unicorn_cluster_t:

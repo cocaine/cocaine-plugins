@@ -15,11 +15,11 @@
 
 #include "cocaine/detail/unicorn/zookeeper/children_subscribe.hpp"
 
+#include "cocaine/detail/zookeeper/errors.hpp"
+
 #include <blackhole/logger.hpp>
 
 #include <cocaine/logging.hpp>
-
-#include "cocaine/unicorn/errors.hpp"
 
 namespace cocaine { namespace unicorn {
 
@@ -33,7 +33,7 @@ children_subscribe_action_t::children_subscribe_action_t(const zookeeper::handle
     result(std::move(_result)),
     ctx(_ctx),
     write_lock(),
-    last_version(unicorn::MIN_VERSION),
+    last_version(unicorn::min_version),
     path(std::move(_path))
 { }
 

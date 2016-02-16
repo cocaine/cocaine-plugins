@@ -15,7 +15,7 @@
 
 #include "cocaine/detail/unicorn/zookeeper/del.hpp"
 
-#include "cocaine/unicorn/errors.hpp"
+#include "cocaine/detail/zookeeper/errors.hpp"
 
 namespace cocaine { namespace unicorn {
 
