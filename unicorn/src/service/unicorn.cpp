@@ -146,6 +146,9 @@ unicorn_service_t::unicorn_service_t(context_t& context, asio::io_service& _asio
     on<scope::get>               (std::make_shared<get_slot_t>               (this, unicorn, &api::unicorn_t::get));
     on<scope::create>            (std::make_shared<create_slot_t>            (this, unicorn, &api::unicorn_t::create_default));
     on<scope::del>               (std::make_shared<del_slot_t>               (this, unicorn, &api::unicorn_t::del));
+
+    // alias for del method
+    on<scope::remove>            (std::make_shared<del_slot_t>               (this, unicorn, &api::unicorn_t::del));
     on<scope::increment>         (std::make_shared<increment_slot_t>         (this, unicorn, &api::unicorn_t::increment));
     on<scope::lock>              (std::make_shared<lock_slot_t>              (this, unicorn, &api::unicorn_t::lock));
 }
