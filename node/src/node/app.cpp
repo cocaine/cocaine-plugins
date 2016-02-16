@@ -398,6 +398,28 @@ private:
 
 } // namespace state
 
+namespace {
+
+/// The wrapper declares a copy constructor, tricking asio's machinery into submission, but never
+/// defines it, so that copying would result in a linking error.
+template<typename F>
+struct move_hack : F {
+    move_hack(F&& f) : F(std::move(f)) {}
+
+    move_hack(const move_hack& other);
+    move_hack(move_hack&& other) = default;
+
+    auto operator=(const move_hack& other) -> move_hack&;
+    auto operator=(move_hack&& other) -> move_hack& = default;
+};
+
+template <typename T>
+auto make_hack(T&& t) -> move_hack<typename std::decay<T>::type> {
+    return std::move(t);
+}
+
+}  // namespace
+
 class cocaine::service::node::app_state_t:
     public std::enable_shared_from_this<app_state_t>
 {
@@ -465,23 +487,17 @@ public:
         return (*state.synchronize())->overseer();
     }
 
-    void
-    spool() {
-        state.apply([&](state_type& state) {
-            if (!state->stopped()) {
-                throw std::logic_error("invalid state");
-            }
+    auto spool() -> void {
+        auto state = this->state.synchronize();
 
-            COCAINE_LOG_DEBUG(log, "app is spooling");
-            state.reset(new state::spooling_t(
-                context,
-                *loop,
-                manifest(),
-                profile,
-                log.get(),
-                std::bind(&app_state_t::on_spool, shared_from_this(), ph::_1)
-            ));
-        });
+        if ((*state)->stopped()) {
+            // Defer possible long spooling operation into a separate thread.
+            loop->post(make_hack(
+                std::bind(&app_state_t::spool_job, shared_from_this(), std::move(state))));
+            return;
+        }
+
+        throw std::logic_error("invalid state");
     }
 
     void
@@ -490,6 +506,18 @@ public:
     }
 
 private:
+    auto spool_job(locked_ptr<state_type>& state) -> void {
+        COCAINE_LOG_DEBUG(log, "app is spooling");
+        state->reset(new state::spooling_t(
+            context,
+            *loop,
+            manifest(),
+            profile,
+            log.get(),
+            std::bind(&app_state_t::on_spool, shared_from_this(), ph::_1)
+        ));
+    }
+
     void
     on_spool(const std::error_code& ec) {
         if (ec) {
