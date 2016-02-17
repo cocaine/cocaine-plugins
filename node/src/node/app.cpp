@@ -523,7 +523,7 @@ private:
         if (ec) {
             COCAINE_LOG_ERROR(log, "unable to spool app - [{}] {}", ec.value(), ec.message());
 
-            loop->dispatch(std::bind(&app_state_t::cancel, shared_from_this(), ec));
+            loop->post(std::bind(&app_state_t::cancel, shared_from_this(), ec));
 
             // Attempt to finish node service's request.
             try {
@@ -534,7 +534,7 @@ private:
         } else {
             // Dispatch the completion handler to be sure it will be called in a I/O thread to
             // avoid possible deadlocks.
-            loop->dispatch(std::bind(&app_state_t::publish, shared_from_this()));
+            loop->post(std::bind(&app_state_t::publish, shared_from_this()));
         }
     }
 
