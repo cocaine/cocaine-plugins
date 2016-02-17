@@ -147,26 +147,42 @@ struct unicorn {
         typedef unicorn_final_tag dispatch_type;
     };
 
-    struct del {
+    /**
+     * delete node. replaces del method as "del" is a reserved word in Python
+     * */
+    struct remove{
         typedef unicorn_tag tag;
 
         static const char* alias() {
-            return "del";
+            return "remove";
         }
 
         /**
         * delete node. Will only succeed if there are no child nodes.
         */
         typedef boost::mpl::list<
-            cocaine::unicorn::path_t,
-            cocaine::unicorn::version_t
+        cocaine::unicorn::path_t,
+        cocaine::unicorn::version_t
         > argument_type;
 
         typedef option_of<
-            bool
+        bool
         >::tag upstream_type;
 
         typedef unicorn_final_tag dispatch_type;
+    };
+
+    /**
+     * Delete node. Deprecated, use remove instead.
+     */
+    struct del: public remove {
+        using remove::tag;
+        using remove::argument_type;
+        using remove::upstream_type;
+        using remove::dispatch_type;
+        static const char* alias() {
+            return "del";
+        }
     };
 
     struct increment {
@@ -257,6 +273,9 @@ struct protocol<unicorn_tag> {
         unicorn::get,
         unicorn::create,
         unicorn::del,
+
+        // alias for del method
+        unicorn::remove,
         unicorn::increment,
         unicorn::lock
     > messages;
