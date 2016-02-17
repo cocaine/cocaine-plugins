@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.5.0-rc9) unstable; urgency=low
+
+  * Bug fix: fixed deadlock in Node service while spooling applications.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 17 Feb 2016 16:07:06 +0300
+
 cocaine-plugins (0.12.5.0-rc8) unstable; urgency=low
 
   * Bug fix: Node service will now always perform all spooling operations in a
