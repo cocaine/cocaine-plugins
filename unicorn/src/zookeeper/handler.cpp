@@ -16,6 +16,8 @@
 #include "cocaine/detail/zookeeper/handler.hpp"
 #include "cocaine/detail/zookeeper/zookeeper.hpp"
 
+#include <iostream>
+
 namespace zookeeper {
 namespace {
 template <class Target>
