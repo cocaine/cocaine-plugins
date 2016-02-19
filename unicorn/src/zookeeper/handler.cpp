@@ -16,6 +16,7 @@
 #include "cocaine/detail/zookeeper/handler.hpp"
 #include "cocaine/detail/zookeeper/zookeeper.hpp"
 
+#include <atomic>
 #include <iostream>
 
 namespace zookeeper {
