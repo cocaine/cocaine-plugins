@@ -298,7 +298,7 @@ unicorn_cluster_t::announce() {
 
     auto cur_endpoints = actor->endpoints();
 
-    COCAINE_LOG_DEBUG(log, "going to announce self");
+    COCAINE_LOG_INFO(log, "going to announce self");
     if(!endpoints.empty() && cur_endpoints != endpoints) {
         // TODO: fix this case, if ever we would need it
         // This can happen only if actor endpoints have changed
@@ -342,7 +342,7 @@ unicorn_cluster_t::subscribe() {
     );
     subscribe_timer.expires_from_now(boost::posix_time::seconds(config.check_interval));
     subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, this, std::placeholders::_1));
-    COCAINE_LOG_DEBUG(log, "subscribed for updates on {}", config.path);
+    COCAINE_LOG_INFO(log, "subscribed for updates on path {} (may be prefixed)", config.path);
 }
 
 }}
