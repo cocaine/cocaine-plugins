@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.5.0-rc10) unstable; urgency=low
+
+  * Bug fix: Unicorn plugin will now use indexes in callback handler instead of
+    pointers to avoid random crashes.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 19 Feb 2016 17:00:51 +0300
+
 cocaine-plugins (0.12.5.0-rc9) unstable; urgency=low
 
   * Bug fix: fixed deadlock in Node service while spooling applications.
