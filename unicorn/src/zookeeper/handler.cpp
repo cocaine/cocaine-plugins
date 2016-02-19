@@ -22,7 +22,13 @@ template <class Target>
 Target* back_cast(const void* data) {
     return const_cast<Target*>(static_cast<const Target*>(data));
 }
+
+std::atomic<size_t> callback_counter;
 }
+
+managed_handler_base_t::managed_handler_base_t(const handler_tag&) :
+    idx(callback_counter++)
+{}
 
 handler_dispatcher_t::handler_dispatcher_t() :
     storage_lock(),
@@ -124,15 +130,17 @@ handler_dispatcher_t& handler_dispatcher_t::instance() {
 void handler_dispatcher_t::add(managed_handler_base_t* callback) {
     std::unique_lock<std::mutex> lock(storage_lock);
     if(active) {
-        callbacks.insert(std::make_pair(callback, handler_ptr(callback)));
+        callbacks.insert(std::make_pair(callback->get_id(), handler_ptr(callback)));
     }
 }
 
 void handler_dispatcher_t::release(managed_handler_base_t* callback) {
     std::unique_lock<std::mutex> lock(storage_lock);
-    auto it = callbacks.find(callback);
+    auto it = callbacks.find(callback->get_id());
     if(it != callbacks.end()) {
         callbacks.erase(it);
+    } else {
+        std::cerr << "could not release managed callback - not found\n";
     }
 }
 

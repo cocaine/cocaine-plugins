@@ -45,11 +45,19 @@ public:
     // Tagged constructor.
     // Used to disable implicit instantiation.
     // All instantiations are made through scope object.
-    managed_handler_base_t(const handler_tag&) {}
+    managed_handler_base_t(const handler_tag&);
     managed_handler_base_t(const managed_handler_base_t& other) = delete;
     managed_handler_base_t& operator=(const managed_handler_base_t& other) = delete;
     virtual
     ~managed_handler_base_t() {}
+
+    size_t
+    get_id() {
+        return idx;
+    }
+
+private:
+    size_t idx;
 };
 
 class handler_dispatcher_t {
@@ -81,8 +89,7 @@ public:
 private:
     typedef std::shared_ptr<managed_handler_base_t> handler_ptr;
 
-    //Ugly hack. That is fixed in C++14 - we can search in set by convertible value. Now we use map.
-    typedef std::unordered_map<const managed_handler_base_t*, handler_ptr> storage_t;
+    typedef std::unordered_map<size_t, handler_ptr> storage_t;
 
     friend
     class handler_scope_t;
@@ -93,9 +100,10 @@ private:
     void
     call(const void* callback, Args&& ...args) {
         handler_ptr cb;
+        size_t idx = reinterpret_cast<size_t>(callback);
         {
             std::lock_guard<std::mutex> lock(storage_lock);
-            auto it = callbacks.find(reinterpret_cast<const managed_handler_base_t*>(callback));
+            auto it = callbacks.find(idx);
             if (it != callbacks.end()) {
                 cb = it->second;
                 assert(cb);

@@ -35,7 +35,7 @@ void* c_ptr(Ptr p) {
 
 template <class Ptr>
 void* mc_ptr(Ptr p) {
-    return reinterpret_cast<void*>(static_cast<managed_handler_base_t*>(p));
+    return reinterpret_cast<void*>(p->get_id());
 }
 
 }
