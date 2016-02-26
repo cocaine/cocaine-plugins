@@ -1,3 +1,31 @@
+cocaine-plugins (0.12.5.1) unstable; urgency=low
+
+  * Release version.
+
+ -- Evgeny Safronov <division494@gmail.com>  Sat, 20 Feb 2016 14:37:05 +0300
+
+cocaine-plugins (0.12.5.0-rc10) unstable; urgency=low
+
+  * Bug fix: Unicorn plugin will now use indexes in callback handler instead of
+    pointers to avoid random crashes.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 19 Feb 2016 17:00:51 +0300
+
+cocaine-plugins (0.12.5.0-rc9) unstable; urgency=low
+
+  * Bug fix: fixed deadlock in Node service while spooling applications.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 17 Feb 2016 16:07:06 +0300
+
+cocaine-plugins (0.12.5.0-rc8) unstable; urgency=low
+
+  * Bug fix: Node service will now always perform all spooling operations in a
+    separate thread that is not connected with the global thread pool.
+    This avoids the pool's thread locking, which resulted in wrong thread
+    selection for upcoming requests.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 16 Feb 2016 19:22:29 +0300
+
 cocaine-plugins (0.12.5.0-rc7) unstable; urgency=low
 
   * Bug fix: fixed previous bug fix which itself is bugged. Now the Node service
