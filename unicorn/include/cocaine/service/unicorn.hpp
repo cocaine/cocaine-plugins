@@ -16,8 +16,8 @@
 #pragma once
 
 #include "cocaine/idl/unicorn.hpp"
-#include "cocaine/api/unicorn.hpp"
 
+#include <cocaine/api/unicorn.hpp>
 #include <cocaine/api/service.hpp>
 #include <cocaine/rpc/dispatch.hpp>
 
