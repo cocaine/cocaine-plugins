@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.6.0-alpha1) unstable; urgency=low
+
+  * Bug fix: fix default runtime path for Docker plugin.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 29 Feb 2016 15:57:21 +0300
+
 cocaine-plugins (0.12.6.0-alpha0) unstable; urgency=low
 
   * WTF version.
