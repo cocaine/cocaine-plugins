@@ -117,7 +117,8 @@ docker_t::docker_t(context_t& context,  asio::io_service& io_context, const std:
 {
     try {
         const auto& config = args.as_object();
-        m_runtime_path = config.at("runtime-path", "/run/cocaine").as_string();
+        // TODO (@easfronov): in 12.7 take this default path from the profile.
+        m_runtime_path = config.at("runtime-path", cowntext.config.path.runtime).as_string();
 
         if(config.count("registry") > 0) {
             m_do_pool = true;
