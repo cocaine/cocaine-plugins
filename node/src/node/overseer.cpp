@@ -299,16 +299,16 @@ struct tx_stream_t : public api::stream_t {
     std::shared_ptr<client_rpc_dispatch_t> dispatch;
 
     auto write(const std::string& chunk) -> stream_t& {
-        dispatch->stream().write(chunk);
+        dispatch->write(chunk);
         return *this;
     }
 
     auto error(const std::error_code& ec, const std::string& reason) -> void {
-        dispatch->stream().abort(ec, reason);
+        dispatch->abort(ec, reason);
     }
 
     auto close() -> void {
-        dispatch->stream().close();
+        dispatch->close();
     }
 };
 

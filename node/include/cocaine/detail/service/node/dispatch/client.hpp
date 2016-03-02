@@ -74,11 +74,15 @@ public:
     void
     discard(const std::error_code& ec);
 
-    auto stream() -> streamed<std::string>&;
+    auto write(const std::string& data) -> void;
+    auto abort(const std::error_code& ec, const std::string& reason) -> void;
+    auto close() -> void;
 
 private:
     void
     finalize();
+
+    auto stream() -> streamed<std::string>&;
 };
 
 } // namespace cocaine

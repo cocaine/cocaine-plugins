@@ -16,6 +16,12 @@ cocaine-plugins (0.12.6.0-alpha0) unstable; urgency=low
 
  -- Evgeny Safronov <division494@gmail.com>  Fri, 26 Feb 2016 15:58:52 +0300
 
+cocaine-plugins (0.12.5.2) unstable; urgency=low
+
+  * Bug fix: properly close transmission side of channels when using stream API.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 02 Mar 2016 19:29:48 +0300
+
 cocaine-plugins (0.12.5.1) unstable; urgency=low
 
   * Release version.
