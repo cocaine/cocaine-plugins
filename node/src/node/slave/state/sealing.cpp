@@ -42,7 +42,7 @@ sealing_t::start(unsigned long timeout) {
 
     COCAINE_LOG_DEBUG(slave->log, "slave is sealing, timeout: {} ms", timeout);
 
-    timer.expires_from_now(boost::posix_time::milliseconds(timeout));
+    timer.expires_from_now(boost::posix_time::milliseconds(static_cast<std::int64_t>(timeout)));
     timer.async_wait(std::bind(&sealing_t::on_timeout, shared_from_this(), ph::_1));
 }
 

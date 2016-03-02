@@ -60,7 +60,7 @@ void
 terminating_t::start(unsigned long timeout, const std::error_code& ec) {
     COCAINE_LOG_DEBUG(slave->log, "slave is terminating, timeout: {} ms", timeout);
 
-    timer.expires_from_now(boost::posix_time::milliseconds(timeout));
+    timer.expires_from_now(boost::posix_time::milliseconds(static_cast<std::int64_t>(timeout)));
     timer.async_wait(std::bind(&terminating_t::on_timeout, shared_from_this(), ph::_1));
 
     // The following operation may fail if the session is already disconnected. In this case a slave

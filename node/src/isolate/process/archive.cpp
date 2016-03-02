@@ -185,7 +185,7 @@ archive_t::deploy(const std::string& prefix_) {
     archive_write_free(target);
 #endif
 
-    const size_t count = archive_file_count(m_archive);
+    const auto count = archive_file_count(m_archive);
 
     COCAINE_LOG_INFO(m_log, "extracted {} file(s)", count);
 }

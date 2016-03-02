@@ -87,7 +87,7 @@ handshaking_t::start(unsigned long timeout) {
     COCAINE_LOG_DEBUG(slave->log, "slave is waiting for handshake, timeout: {} ms", timeout);
 
     timer.apply([&](asio::deadline_timer& timer) {
-        timer.expires_from_now(boost::posix_time::milliseconds(timeout));
+        timer.expires_from_now(boost::posix_time::milliseconds(static_cast<std::int64_t>(timeout)));
         timer.async_wait(std::bind(&handshaking_t::on_timeout, shared_from_this(), ph::_1));
     });
 }

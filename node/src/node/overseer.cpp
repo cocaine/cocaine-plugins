@@ -573,7 +573,7 @@ overseer_t::rebalance_slaves() {
     const auto load = queue->size();
     const auto profile = this->profile();
 
-    const auto pool_target = this->pool_target.load();
+    const auto pool_target = static_cast<std::size_t>(this->pool_target.load());
 
     // Bound current pool target between [1; limit].
     const auto target = detail::bound(
@@ -589,9 +589,9 @@ overseer_t::rebalance_slaves() {
             });
 
             if (target <= pool.size()) {
-                unsigned long active = boost::count_if(pool | boost::adaptors::map_values, +[](const slave_t& slave) -> bool {
+                auto active = static_cast<std::size_t>(boost::count_if(pool | boost::adaptors::map_values, +[](const slave_t& slave) -> bool {
                     return slave.active();
-                });
+                }));
 
                 COCAINE_LOG_DEBUG(log, "sealing up to {} active slaves", active);
 

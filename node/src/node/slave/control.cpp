@@ -32,7 +32,8 @@ void
 control_t::start() {
     COCAINE_LOG_DEBUG(slave->log, "heartbeat timer has been started");
 
-    timer.expires_from_now(boost::posix_time::milliseconds(slave->context.profile.timeout.heartbeat));
+    timer.expires_from_now(boost::posix_time::milliseconds(
+        static_cast<std::int64_t>(slave->context.profile.timeout.heartbeat)));
     timer.async_wait(std::bind(&control_t::on_timeout, shared_from_this(), ph::_1));
 }
 
@@ -81,7 +82,8 @@ control_t::on_heartbeat() {
     } else {
         COCAINE_LOG_DEBUG(slave->log, "heartbeat timer has been restarted");
 
-        timer.expires_from_now(boost::posix_time::milliseconds(slave->context.profile.timeout.heartbeat));
+        timer.expires_from_now(boost::posix_time::milliseconds(
+            static_cast<std::int64_t>(slave->context.profile.timeout.heartbeat)));
         timer.async_wait(std::bind(&control_t::on_timeout, shared_from_this(), ph::_1));
     }
 }

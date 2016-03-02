@@ -94,7 +94,7 @@ spawning_t::spawn(unsigned long timeout) {
 
         COCAINE_LOG_DEBUG(slave->log, "spawning");
 
-        timer.expires_from_now(boost::posix_time::milliseconds(timeout));
+        timer.expires_from_now(boost::posix_time::milliseconds(static_cast<std::int64_t>(timeout)));
         timer.async_wait(trace_t::bind(&spawning_t::on_timeout, shared_from_this(), ph::_1));
 
         handle = isolate->spawn(
