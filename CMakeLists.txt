@@ -4,6 +4,12 @@ PROJECT(COCAINE-PLUGINS)
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+# Choose new behaviour for CMP0042.
+# See http://www.cmake.org/cmake/help/v3.0/policy/CMP0042.html for more details.
+if (POLICY CMP0042)
+	cmake_policy(SET CMP0042 NEW)
+endif (POLICY CMP0042)
+
 OPTION(CACHE "Build LRU Cache plugin" ON)
 OPTION(CHRONO "Build Chrono Service plugin" ON)
 OPTION(DOCKER "Build Docker Isolation plugin" ON)
