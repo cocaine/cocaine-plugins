@@ -11,17 +11,15 @@ client_rpc_dispatch_t::client_rpc_dispatch_t(const std::string& name):
     // Uncaught exceptions here will lead to a client disconnection and further dispatch discarding.
 
     on<protocol::chunk>([&](const std::string& chunk) {
-        stream().write(chunk);
+        write(chunk);
     });
 
     on<protocol::error>([&](const std::error_code& ec, const std::string& reason) {
-        stream().abort(ec, reason);
-        finalize();
+        abort(ec, reason);
     });
 
     on<protocol::choke>([&] {
-        stream().close();
-        finalize();
+        close();
     });
 }
 
@@ -64,6 +62,20 @@ client_rpc_dispatch_t::discard(const std::error_code& ec) {
 
         finalize();
     }
+}
+
+auto client_rpc_dispatch_t::write(const std::string& data) -> void {
+    stream().write(data);
+}
+
+auto client_rpc_dispatch_t::abort(const std::error_code& ec, const std::string& reason) -> void {
+    stream().abort(ec, reason);
+    finalize();
+}
+
+auto client_rpc_dispatch_t::close() -> void {
+    stream().close();
+    finalize();
 }
 
 auto client_rpc_dispatch_t::stream() -> streamed<std::string>& {
