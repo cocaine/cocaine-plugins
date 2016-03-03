@@ -146,7 +146,7 @@ public:
 
 private:
     std::shared_ptr<const slot_type::dispatch_type>
-    on_enqueue(slot_type::upstream_type&& upstream , const std::string& event, const std::string& id) {
+    on_enqueue(slot_type::upstream_type&& upstream, const std::string& event, const std::string& id) {
         COCAINE_LOG_DEBUG(log, "processing enqueue '{}' event", event);
 
         typedef io::protocol<io::event_traits<io::app::enqueue>::dispatch_type>::scope protocol;
