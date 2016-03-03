@@ -154,9 +154,9 @@ private:
         try {
             if (auto overseer = this->overseer.lock()) {
                 if (id.empty()) {
-                    return overseer->o->enqueue(upstream, event, boost::none);
+                    return overseer->o->enqueue(upstream, {event, {}}, boost::none);
                 } else {
-                    return overseer->o->enqueue(upstream, event, service::node::slave::id_t(id));
+                    return overseer->o->enqueue(upstream, {event, {}}, service::node::slave::id_t(id));
                 }
             } else {
                 // We shouldn't close the connection here, because there possibly can be events

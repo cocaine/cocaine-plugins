@@ -304,7 +304,7 @@ struct tx_stream_t : public api::stream_t {
     }
 
     auto error(const std::error_code& ec, const std::string& reason, hpack::header_storage_t headers) -> void {
-        dispatch->sabort(std::move(headers), ec, reason);
+        dispatch->abort(std::move(headers), ec, reason);
     }
 
     auto close(hpack::header_storage_t headers) -> void {
@@ -322,12 +322,12 @@ struct rx_stream_t : public api::stream_t {
         stream(std::move(stream))
     {}
 
-    auto write(const std::string& chunk, hpack::header_storage_t headers) -> stream_t& {
+    auto write(hpack::header_storage_t headers, const std::string& chunk) -> stream_t& {
         stream = stream.send<protocol::chunk>(std::move(headers), chunk);
         return *this;
     }
 
-    auto error(const std::error_code& ec, const std::string& reason, hpack::header_storage_t headers) -> void {
+    auto error(hpack::header_storage_t headers, const std::error_code& ec, const std::string& reason) -> void {
         stream.send<protocol::error>(std::move(headers), ec, reason);
     }
 

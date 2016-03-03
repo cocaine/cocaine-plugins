@@ -16,22 +16,15 @@ public:
 
     virtual
     stream_t&
-    write(const std::string& chunk, hpack::header_storage_t headers) = 0;
+    write(hpack::header_storage_t headers, const std::string& chunk) = 0;
 
     virtual
     void
-    error(const std::error_code& ec, const std::string& reason, hpack::header_storage_t headers) = 0;
+    error(hpack::header_storage_t headers, const std::error_code& ec, const std::string& reason) = 0;
 
     virtual
     void
     close(hpack::header_storage_t headers) = 0;
-
-    // This should be only called once.
-    virtual
-    hpack::header_storage_t
-    initial_headers() {
-        return {};
-    }
 };
 
 }  // namespace api
