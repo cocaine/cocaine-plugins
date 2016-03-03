@@ -337,6 +337,7 @@ public:
         using namespace detail::service::node;
 
         COCAINE_LOG_DEBUG(log, "publishing worker service with the context");
+        // TODO: We can fail here. Hense noone is going to remove TCP server from the context.
         engine.reset(new unix_actor_t(
             context,
             manifest.endpoint,
