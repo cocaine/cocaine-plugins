@@ -298,12 +298,12 @@ void count_success_if(SuccCounter* succ, FailCounter* fail, F fn) {
 struct tx_stream_t : public api::stream_t {
     std::shared_ptr<client_rpc_dispatch_t> dispatch;
 
-    auto write(const std::string& chunk, hpack::header_storage_t headers) -> stream_t& {
+    auto write(hpack::header_storage_t headers, const std::string& chunk) -> stream_t& {
         dispatch->write(std::move(headers), chunk);
         return *this;
     }
 
-    auto error(const std::error_code& ec, const std::string& reason, hpack::header_storage_t headers) -> void {
+    auto error(hpack::header_storage_t headers, const std::error_code& ec, const std::string& reason) -> void {
         dispatch->abort(std::move(headers), ec, reason);
     }
 
