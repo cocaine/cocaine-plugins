@@ -528,7 +528,7 @@ private:
 
             // Attempt to finish node service's request.
             try {
-                deferred.abort(ec, ec.message());
+                deferred.abort({}, ec, ec.message());
             } catch (const std::exception&) {
                 // Ignore if the client has been disconnected.
             }
@@ -559,9 +559,9 @@ private:
         try {
             if (ec) {
                 cancel(ec);
-                deferred.abort(ec, ec.message());
+                deferred.abort({}, ec, ec.message());
             } else {
-                deferred.close();
+                deferred.close({});
             }
         } catch (const std::exception&) {
             // Ignore if the client has been disconnected.
