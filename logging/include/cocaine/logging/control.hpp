@@ -74,7 +74,7 @@ struct category_traits<control_t> {
         ptr_type
         get() {
             return instance.apply([](std::shared_ptr<control_t>& instance){
-                if (instance.use_count() == 0) {
+                if (!instance) {
                     instance = new control_t();
                 }
                 return instance;

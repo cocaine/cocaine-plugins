@@ -159,7 +159,7 @@ struct named_log {
             underlying loggers might silently truncate it. */
             std::string,
         /* Log severity*/
-            optional_with_default<unsigned int, 1u>,
+            unsigned int,
          /* Log event attached attributes. */
             optional<logging::attributes_t>
         >::type argument_type;

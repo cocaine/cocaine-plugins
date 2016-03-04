@@ -16,11 +16,11 @@ OPTION(DOCKER "Build Docker Isolation plugin" ON)
 OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
 OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
+OPTION(LOGGING "Build logging v2 service plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" ON)
 OPTION(NODE "Build Node service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(UNICORN "Build Unified configuration service plugin" ON)
-OPTION(LOGGING "Build logging v2 service plugin" ON)
 
 # Include our CMake libraries.
 INCLUDE(cmake/locate_library.cmake)
@@ -60,11 +60,11 @@ SET(PLUGINS
     elasticsearch
     graphite
     ipvs
+    logging
     mongo
     node
     unicorn
     urlfetch
-    logging
 )
 
 IF("${CMAKE_SHARED_LIBRARY_SUFFIX}" STREQUAL "")
