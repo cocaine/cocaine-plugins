@@ -74,9 +74,9 @@ public:
     void
     discard(const std::error_code& ec);
 
-    auto write(const std::string& data) -> void;
-    auto abort(const std::error_code& ec, const std::string& reason) -> void;
-    auto close() -> void;
+    auto write(hpack::header_storage_t headers, const std::string& data) -> void;
+    auto abort(hpack::header_storage_t headers, const std::error_code& ec, const std::string& reason) -> void;
+    auto close(hpack::header_storage_t headers) -> void;
 
 private:
     void
