@@ -39,6 +39,7 @@ enum class filter_result_t {
 
 class filter_t {
 public:
+    typedef uint64_t seconds_t;
     typedef uint64_t id_type;
     typedef dynamic_t representation_t;
     //TODO: FIXME, use proper type
