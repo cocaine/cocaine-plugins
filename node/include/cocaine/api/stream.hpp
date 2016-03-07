@@ -1,10 +1,13 @@
 #pragma once
 
-#include <cocaine/hpack/header.hpp>
-
 #include <cstdint>
 #include <string>
 #include <system_error>
+
+namespace cocaine {
+namespace hpack {
+class header_storage_t;
+}} // namespace cocaine::hpack
 
 namespace cocaine {
 namespace api {

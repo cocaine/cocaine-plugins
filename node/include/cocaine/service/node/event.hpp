@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cocaine/hpack/header.hpp>
+
 #include <chrono>
 #include <string>
 
