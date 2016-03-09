@@ -1,6 +1,7 @@
 /*
     Copyright (c) 2011-2014 Andrey Sibiryov <me@kobology.ru>
-    Copyright (c) 2011-2014 Other contributors as noted in the AUTHORS file.
+    Copyright (c) 2014-2016 Evgeny Safronov <division494@gmail.com>
+    Copyright (c) 2011-2016 Other contributors as noted in the AUTHORS file.
 
     This file is part of Cocaine.
 
@@ -28,9 +29,7 @@
 
 namespace cocaine {
 
-struct profile_t:
-    cached<dynamic_t>
-{
+struct profile_t : cached<dynamic_t> {
     profile_t(context_t& context, const std::string& name);
 
     // The profile name.
@@ -56,11 +55,11 @@ struct profile_t:
     unsigned long pool_limit;
     unsigned long queue_limit;
 
-    // NOTE: The slave processes are launched in sandboxed environments,
-    // called isolates. This one describes the isolate type and arguments.
+    // The slave processes are launched in sandboxed environments, called isolates. This one
+    // describes the isolate type and arguments.
     config_t::component_t isolate;
 };
 
-} // namespace cocaine
+}  // namespace cocaine
 
 #endif

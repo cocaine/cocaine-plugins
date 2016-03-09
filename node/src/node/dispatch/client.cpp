@@ -1,7 +1,5 @@
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 
-#include "cocaine/service/node/slave.hpp"
-
 using namespace cocaine;
 
 client_rpc_dispatch_t::client_rpc_dispatch_t(const std::string& name):

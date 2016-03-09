@@ -1,4 +1,4 @@
-#include "cocaine/service/node/app/stats.hpp"
+#include "cocaine/detail/service/node/stats.hpp"
 
 #include <cmath>
 

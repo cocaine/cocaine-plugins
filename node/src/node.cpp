@@ -20,16 +20,16 @@
 
 #include "cocaine/service/node.hpp"
 
-#include "cocaine/api/storage.hpp"
+#include <cocaine/api/storage.hpp>
 
-#include "cocaine/context.hpp"
-#include "cocaine/logging.hpp"
+#include <cocaine/context.hpp>
+#include <cocaine/logging.hpp>
 
-#include "cocaine/traits/dynamic.hpp"
-#include "cocaine/traits/endpoint.hpp"
-#include "cocaine/traits/graph.hpp"
-#include "cocaine/traits/tuple.hpp"
-#include "cocaine/traits/vector.hpp"
+#include <cocaine/traits/dynamic.hpp>
+#include <cocaine/traits/endpoint.hpp>
+#include <cocaine/traits/graph.hpp>
+#include <cocaine/traits/tuple.hpp>
+#include <cocaine/traits/vector.hpp>
 
 #include "cocaine/service/node/app.hpp"
 
@@ -51,8 +51,8 @@ namespace ph = std::placeholders;
 node_t::node_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args):
     category_type(context, asio, name, args),
     dispatch<io::node_tag>(name),
-    context(context),
-    log(context.log(name))
+    log(context.log(name)),
+    context(context)
 {
     on<io::node::start_app>(std::bind(&node_t::start_app, this, ph::_1, ph::_2));
     on<io::node::pause_app>(std::bind(&node_t::pause_app, this, ph::_1));
@@ -201,7 +201,7 @@ node_t::info(const std::string& name, io::node::info::flags_t flags) const {
     return app->info(flags);
 }
 
-std::shared_ptr<overseer_t>
+std::shared_ptr<node::overseer_t>
 node_t::overseer(const std::string& name) const {
     auto app = apps.apply([&](const std::map<std::string, std::shared_ptr<node::app_t>>& apps) -> std::shared_ptr<node::app_t> {
         auto it = apps.find(name);

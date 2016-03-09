@@ -1,4 +1,4 @@
-#include "cocaine/detail/service/node/slave/state/spawning.hpp"
+#include "cocaine/detail/service/node/slave/state/spawn.hpp"
 
 #include <boost/algorithm/string/join.hpp>
 #include <boost/lexical_cast.hpp>
@@ -8,55 +8,55 @@
 
 #include <cocaine/rpc/actor.hpp>
 
-#include "cocaine/service/node/slave.hpp"
+#include "cocaine/api/isolate.hpp"
+#include "cocaine/service/node/slave/id.hpp"
 
+#include "cocaine/detail/service/node/slave/machine.hpp"
 #include "cocaine/detail/service/node/slave/state/handshaking.hpp"
 #include "cocaine/detail/service/node/util.hpp"
 
-namespace ph = std::placeholders;
+namespace cocaine {
+namespace detail {
+namespace service {
+namespace node {
+namespace slave {
+namespace state {
 
-using namespace cocaine;
+namespace ph = std::placeholders;
 
 using asio::ip::tcp;
 
-spawning_t::spawning_t(std::shared_ptr<state_machine_t> slave_) :
-    slave(std::move(slave_)),
-    timer(slave->loop)
-{}
+spawn_t::spawn_t(std::shared_ptr<machine_t> slave_)
+    : slave(std::move(slave_)), timer(slave->loop) {}
 
-const char*
-spawning_t::name() const noexcept {
+auto spawn_t::name() const noexcept -> const char* {
     return "spawning";
 }
 
-void
-spawning_t::cancel() {
+auto spawn_t::cancel() -> void {
     COCAINE_LOG_DEBUG(slave->log, "processing spawn timer cancellation");
 
     try {
         const auto cancelled = timer.cancel();
-        COCAINE_LOG_DEBUG(slave->log, "processing spawn timer cancellation: done ({} cancelled)", cancelled);
+        COCAINE_LOG_DEBUG(slave->log, "processing spawn timer cancellation: done ({} cancelled)",
+                          cancelled);
     } catch (const std::system_error& err) {
         // If we are here, then something weird occurs with the timer.
         COCAINE_LOG_WARNING(slave->log, "unable to cancel spawn timer: {}", err.what());
     }
 }
 
-void
-spawning_t::terminate(const std::error_code& ec) {
+auto spawn_t::terminate(const std::error_code& ec) -> void {
     cancel();
     slave->shutdown(ec);
 }
 
-void
-spawning_t::spawn(unsigned long timeout) {
-    using asio::ip::tcp;
-
+auto spawn_t::spawn(unsigned long timeout) -> void {
     COCAINE_LOG_DEBUG(slave->log, "slave is spawning using '{}', timeout: {} ms",
-                      slave->context.manifest.executable, timeout);
+                      slave->manifest.executable, timeout);
 
     COCAINE_LOG_DEBUG(slave->log, "locating the Locator endpoint list");
-    const auto locator = slave->context.context.locate("locator");
+    const auto locator = slave->context.locate("locator");
 
     if (!locator) {
         COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: failed to locate the Locator");
@@ -67,7 +67,8 @@ spawning_t::spawn(unsigned long timeout) {
     const auto endpoints = locator->endpoints();
 
     if (endpoints.empty()) {
-        COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: failed to determine the Locator endpoints");
+        COCAINE_LOG_ERROR(slave->log,
+                          "unable to spawn slave: failed to determine the Locator endpoints");
         slave->shutdown(error::empty_locator_endpoints);
         return;
     }
@@ -75,63 +76,54 @@ spawning_t::spawn(unsigned long timeout) {
     // Prepare command line arguments for worker instance.
     COCAINE_LOG_DEBUG(slave->log, "preparing command line arguments");
     std::map<std::string, std::string> args;
-    args["--uuid"]     = slave->context.id;
-    args["--app"]      = slave->context.manifest.name;
-    args["--endpoint"] = slave->context.manifest.endpoint;
-    args["--locator"]  = boost::join(endpoints |
-        boost::adaptors::transformed(boost::lexical_cast<std::string, tcp::endpoint>), ",");
+    args["--uuid"] = slave->id.id();
+    args["--app"] = slave->manifest.name;
+    args["--endpoint"] = slave->manifest.endpoint;
+    args["--locator"] = boost::join(
+        endpoints | boost::adaptors::transformed(boost::lexical_cast<std::string, tcp::endpoint>),
+        ",");
     args["--protocol"] = std::to_string(io::protocol<io::worker_tag>::version::value);
 
     // Spawn a worker instance and start reading standard outputs of it.
     try {
-        auto isolate = slave->context.context.get<api::isolate_t>(
-            slave->context.profile.isolate.type,
-            slave->context.context,
-            slave->loop,
-            slave->context.manifest.name,
-            slave->context.profile.isolate.args
-        );
+        auto isolate = slave->context.get<api::isolate_t>(
+            slave->profile.isolate.type, slave->context, slave->loop, slave->manifest.name,
+            slave->profile.isolate.args);
 
         COCAINE_LOG_DEBUG(slave->log, "spawning");
 
         timer.expires_from_now(boost::posix_time::milliseconds(static_cast<std::int64_t>(timeout)));
-        timer.async_wait(trace_t::bind(&spawning_t::on_timeout, shared_from_this(), ph::_1));
+        timer.async_wait(trace_t::bind(&spawn_t::on_timeout, shared_from_this(), ph::_1));
 
-        handle = isolate->spawn(
-            slave->context.manifest.executable,
-            args,
-            slave->context.manifest.environment
-        );
+        handle = isolate->spawn(slave->manifest.executable, args, slave->manifest.environment);
 
         // Currently we spawn all slaves synchronously, but here is the right place to provide
         // a callback function to the Isolate.
         // NOTE: The callback must be called from the event loop thread, otherwise the behavior
         // is undefined.
-        slave->loop.post(trace_t::bind(
-            &spawning_t::on_spawn, shared_from_this(), std::chrono::high_resolution_clock::now()
-        ));
-    } catch(const std::system_error& err) {
+        slave->loop.post(trace_t::bind(&spawn_t::on_spawn, shared_from_this(),
+                                       std::chrono::high_resolution_clock::now()));
+    } catch (const std::system_error& err) {
         COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: {}", err.code().message());
 
-        slave->loop.post([=]() {
-            slave->shutdown(err.code());
-        });
+        slave->loop.post([=]() { slave->shutdown(err.code()); });
     }
 }
 
-void
-spawning_t::on_spawn(std::chrono::high_resolution_clock::time_point start) {
+auto spawn_t::on_spawn(std::chrono::high_resolution_clock::time_point start) -> void {
     std::error_code ec;
     const size_t cancelled = timer.cancel(ec);
     if (ec || cancelled == 0) {
         // If we are here, then the spawn timer has been triggered and the slave has been
         // shutdowned with a spawn timeout error.
-        COCAINE_LOG_WARNING(slave->log, "slave has been spawned, but the timeout has already expired");
+        COCAINE_LOG_WARNING(slave->log,
+                            "slave has been spawned, but the timeout has already expired");
         return;
     }
 
     const auto now = std::chrono::high_resolution_clock::now();
-    COCAINE_LOG_DEBUG(slave->log, "slave has been spawned in {} ms",
+    COCAINE_LOG_DEBUG(
+        slave->log, "slave has been spawned in {} ms",
         std::chrono::duration<float, std::chrono::milliseconds::period>(now - start).count());
 
     try {
@@ -139,7 +131,7 @@ spawning_t::on_spawn(std::chrono::high_resolution_clock::time_point start) {
         auto handshaking = std::make_shared<handshaking_t>(slave, std::move(handle));
         slave->migrate(handshaking);
 
-        handshaking->start(slave->context.profile.timeout.handshake);
+        handshaking->start(slave->profile.timeout.handshake);
     } catch (const std::exception& err) {
         COCAINE_LOG_ERROR(slave->log, "unable to activate slave: {}", err.what());
 
@@ -147,8 +139,7 @@ spawning_t::on_spawn(std::chrono::high_resolution_clock::time_point start) {
     }
 }
 
-void
-spawning_t::on_timeout(const std::error_code& ec) {
+auto spawn_t::on_timeout(const std::error_code& ec) -> void {
     if (ec) {
         COCAINE_LOG_DEBUG(slave->log, "spawn timer has called its completion handler: cancelled");
     } else {
@@ -157,3 +148,10 @@ spawning_t::on_timeout(const std::error_code& ec) {
         slave->shutdown(error::spawn_timeout);
     }
 }
+
+}  // namespace state
+}  // namespace slave
+}  // namespace node
+}  // namespace service
+}  // namespace detail
+}  // namespace cocaine

@@ -1,22 +1,25 @@
 #include "cocaine/detail/service/node/slave/state/active.hpp"
 
-#include "cocaine/service/node/slave.hpp"
+#include "cocaine/api/isolate.hpp"
 
 #include "cocaine/detail/service/node/slave/control.hpp"
-#include "cocaine/detail/service/node/slave/state/sealing.hpp"
-#include "cocaine/detail/service/node/slave/state/terminating.hpp"
+#include "cocaine/detail/service/node/slave/machine.hpp"
+#include "cocaine/detail/service/node/slave/state/seal.hpp"
+#include "cocaine/detail/service/node/slave/state/terminate.hpp"
 
-using namespace cocaine;
+namespace cocaine {
+namespace detail {
+namespace service {
+namespace node {
+namespace slave {
+namespace state {
 
-active_t::active_t(std::shared_ptr<state_machine_t> slave_,
-                   std::unique_ptr<api::handle_t> handle_,
-                   std::shared_ptr<session_t> session_,
-                   std::shared_ptr<control_t> control_):
-    slave(std::move(slave_)),
-    handle(std::move(handle_)),
-    session(std::move(session_)),
-    control(std::move(control_))
-{
+active_t::active_t(std::shared_ptr<machine_t> slave_, std::unique_ptr<api::handle_t> handle_,
+                   std::shared_ptr<session_t> session_, std::shared_ptr<control_t> control_)
+    : slave(std::move(slave_)),
+      handle(std::move(handle_)),
+      session(std::move(session_)),
+      control(std::move(control_)) {
     control->start();
 }
 
@@ -30,43 +33,40 @@ active_t::~active_t() {
     }
 }
 
-const char*
-active_t::name() const noexcept {
+auto active_t::name() const noexcept -> const char* {
     return "active";
 }
 
-bool
-active_t::active() const noexcept {
+auto active_t::active() const noexcept -> bool {
     return true;
 }
 
-io::upstream_ptr_t
-active_t::inject(inject_dispatch_ptr_t dispatch) {
-    BOOST_ASSERT(session);
-
+auto active_t::inject(std::shared_ptr<const dispatch<io::stream_of<std::string>::tag>> dispatch)
+    -> io::upstream_ptr_t {
     return session->fork(dispatch);
 }
 
-void
-active_t::seal() {
-    using namespace cocaine::service::node::slave::state;
-
-    auto sealing = std::make_shared<sealing_t>(
-        slave, std::move(handle), std::move(control), std::move(session)
-    );
+auto active_t::seal() -> void {
+    auto sealing =
+        std::make_shared<seal_t>(slave, std::move(handle), std::move(control), std::move(session));
 
     slave->migrate(sealing);
 
-    sealing->start(slave->context.profile.timeout.seal);
+    sealing->start(slave->profile.timeout.seal);
 }
 
-void
-active_t::terminate(const std::error_code& ec) {
-    auto terminating = std::make_shared<terminating_t>(
-        slave, std::move(handle), std::move(control), std::move(session)
-    );
+auto active_t::terminate(const std::error_code& ec) -> void {
+    auto terminating = std::make_shared<terminate_t>(slave, std::move(handle), std::move(control),
+                                                     std::move(session));
 
     slave->migrate(terminating);
 
-    terminating->start(slave->context.profile.timeout.terminate, ec);
+    terminating->start(slave->profile.timeout.terminate, ec);
 }
+
+}  // namespace state
+}  // namespace slave
+}  // namespace node
+}  // namespace service
+}  // namespace detail
+}  // namespace cocaine

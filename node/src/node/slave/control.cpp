@@ -7,14 +7,18 @@
 
 #include <cocaine/traits/tuple.hpp>
 
-#include "cocaine/service/node/slave.hpp"
+#include "cocaine/detail/service/node/slave/machine.hpp"
+
+namespace cocaine {
+namespace detail {
+namespace service {
+namespace node {
+namespace slave {
 
 namespace ph = std::placeholders;
 
-using namespace cocaine;
-
-control_t::control_t(std::shared_ptr<state_machine_t> slave_, upstream<io::worker::control_tag> stream_):
-    dispatch<io::worker::control_tag>(format("%s/control", slave_->context.manifest.name)),
+control_t::control_t(std::shared_ptr<machine_t> slave_, upstream<io::worker::control_tag> stream_):
+    dispatch<io::worker::control_tag>(format("%s/control", slave_->manifest.name)),
     slave(std::move(slave_)),
     stream(std::move(stream_)),
     timer(slave->loop),
@@ -28,17 +32,15 @@ control_t::~control_t() {
     COCAINE_LOG_DEBUG(slave->log, "control channel has been destroyed");
 }
 
-void
-control_t::start() {
+auto control_t::start() -> void {
     COCAINE_LOG_DEBUG(slave->log, "heartbeat timer has been started");
 
     timer.expires_from_now(boost::posix_time::milliseconds(
-        static_cast<std::int64_t>(slave->context.profile.timeout.heartbeat)));
+        static_cast<std::int64_t>(slave->profile.timeout.heartbeat)));
     timer.async_wait(std::bind(&control_t::on_timeout, shared_from_this(), ph::_1));
 }
 
-void
-control_t::terminate(const std::error_code& ec) {
+auto control_t::terminate(const std::error_code& ec) -> void {
     BOOST_ASSERT(ec);
 
     COCAINE_LOG_DEBUG(slave->log, "sending terminate message");
@@ -51,8 +53,7 @@ control_t::terminate(const std::error_code& ec) {
     }
 }
 
-void
-control_t::cancel() {
+auto control_t::cancel() -> void {
     closed.store(true);
 
     try {
@@ -62,8 +63,7 @@ control_t::cancel() {
     }
 }
 
-void
-control_t::discard(const std::error_code& ec) const {
+auto control_t::discard(const std::error_code& ec) const -> void {
     if (ec && !closed) {
         COCAINE_LOG_DEBUG(slave->log, "control channel has been discarded: {}", ec.message());
 
@@ -73,8 +73,7 @@ control_t::discard(const std::error_code& ec) const {
     }
 }
 
-void
-control_t::on_heartbeat() {
+auto control_t::on_heartbeat() -> void {
     COCAINE_LOG_DEBUG(slave->log, "processing heartbeat message");
 
     if (closed) {
@@ -83,13 +82,12 @@ control_t::on_heartbeat() {
         COCAINE_LOG_DEBUG(slave->log, "heartbeat timer has been restarted");
 
         timer.expires_from_now(boost::posix_time::milliseconds(
-            static_cast<std::int64_t>(slave->context.profile.timeout.heartbeat)));
+            static_cast<std::int64_t>(slave->profile.timeout.heartbeat)));
         timer.async_wait(std::bind(&control_t::on_timeout, shared_from_this(), ph::_1));
     }
 }
 
-void
-control_t::on_terminate(int /*ec*/, const std::string& reason) {
+auto control_t::on_terminate(int /*ec*/, const std::string& reason) -> void {
     COCAINE_LOG_DEBUG(slave->log, "processing terminate message: {}", reason);
 
     // TODO: Check the error code to diverge between normal and abnormal slave shutdown. More will
@@ -97,8 +95,7 @@ control_t::on_terminate(int /*ec*/, const std::string& reason) {
     slave->shutdown(error::committed_suicide);
 }
 
-void
-control_t::on_timeout(const std::error_code& ec) {
+auto control_t::on_timeout(const std::error_code& ec) -> void {
     // No error containing in error code indicates that the slave has failed to send heartbeat
     // message at least once in profile.timeout.heartbeat milliseconds.
     // In this case we should terminate it.
@@ -109,3 +106,9 @@ control_t::on_timeout(const std::error_code& ec) {
         slave->shutdown(error::heartbeat_timeout);
     }
 }
+
+}  // namespace slave
+}  // namespace node
+}  // namespace service
+}  // namespace detail
+}  // namespace cocaine

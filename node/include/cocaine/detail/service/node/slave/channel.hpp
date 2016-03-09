@@ -1,30 +1,24 @@
 #pragma once
 
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <mutex>
-#include <functional>
 #include <system_error>
 
 namespace cocaine {
+namespace detail {
+namespace service {
+namespace node {
+namespace slave {
 
-class client_rpc_dispatch_t;
-class worker_rpc_dispatch_t;
-
-class channel_t:
-    public std::enable_shared_from_this<channel_t>
-{
+class channel_t : public std::enable_shared_from_this<channel_t> {
 public:
     typedef std::function<void()> callback_type;
     typedef std::chrono::high_resolution_clock::time_point time_point;
 
 private:
-    enum side_t {
-        none = 0x00,
-        tx = 0x01,
-        rx = 0x02,
-        both = tx | rx
-    };
+    enum side_t { none = 0x00, tx = 0x01, rx = 0x02, both = tx | rx };
 
     const std::uint64_t id_;
     const time_point birthstamp_;
@@ -41,35 +35,27 @@ public:
 public:
     channel_t(std::uint64_t id, time_point birthstamp, callback_type callback);
 
-    std::uint64_t id() const noexcept;
+    auto id() const noexcept -> std::uint64_t;
 
-    time_point
-    birthstamp() const;
+    auto birthstamp() const -> time_point;
 
-    bool
-    closed() const;
+    auto closed() const -> bool;
 
-    bool
-    send_closed() const;
+    auto send_closed() const -> bool;
+    auto recv_closed() const -> bool;
 
-    bool
-    recv_closed() const;
+    auto watch() -> void;
 
-    void
-    watch();
-
-    void
-    close_send();
-
-    void
-    close_recv();
-
-    void
-    close_both();
+    auto close_send() -> void;
+    auto close_recv() -> void;
+    auto close_both() -> void;
 
 private:
-    void
-    maybe_notify(std::lock_guard<std::mutex>& lock);
+    auto maybe_notify(std::lock_guard<std::mutex>& lock) -> void;
 };
 
-}
+}  // namespace slave
+}  // namespace node
+}  // namespace service
+}  // namespace detail
+}  // namespace cocaine

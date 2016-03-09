@@ -2,11 +2,10 @@
 
 #include <system_error>
 
-namespace cocaine { namespace error {
+namespace cocaine {
+namespace error {
 
-enum app_errors {
-    invalid_app_state = 1
-};
+enum app_errors { invalid_app_state = 1 };
 
 enum overseer_errors {
     /// The queue is full.
@@ -68,32 +67,23 @@ enum slave_errors {
     slave_is_sealing
 };
 
-const std::error_category&
-overseer_category();
+auto overseer_category() -> const std::error_category&;
+auto make_error_code(overseer_errors err) -> std::error_code;
 
-std::error_code
-make_error_code(overseer_errors err);
+auto slave_category() -> const std::error_category&;
+auto make_error_code(slave_errors err) -> std::error_code;
 
-const std::error_category&
-slave_category();
-
-std::error_code
-make_error_code(slave_errors err);
-
-}} // namespace cocaine::error
+}  // namespace error
+}  // namespace cocaine
 
 namespace std {
 
 /// Extends the type trait std::is_error_code_enum to identify `overseer_errors` error codes.
-template<>
-struct is_error_code_enum<cocaine::error::overseer_errors>:
-    public true_type
-{};
+template <>
+struct is_error_code_enum<cocaine::error::overseer_errors> : public true_type {};
 
 /// Extends the type trait std::is_error_code_enum to identify `slave_errors` error codes.
-template<>
-struct is_error_code_enum<cocaine::error::slave_errors>:
-    public true_type
-{};
+template <>
+struct is_error_code_enum<cocaine::error::slave_errors> : public true_type {};
 
-} // namespace std
+}  // namespace std

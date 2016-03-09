@@ -10,10 +10,9 @@
 
 #include "cocaine/idl/node.hpp"
 #include "cocaine/idl/rpc.hpp"
+#include "cocaine/service/node/forwards.hpp"
 
 namespace cocaine {
-
-class state_machine_t;
 
 /// An adapter for [Client -> Worker] message passing.
 class client_rpc_dispatch_t:

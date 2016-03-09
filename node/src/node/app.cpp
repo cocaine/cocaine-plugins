@@ -5,6 +5,7 @@
 #include <blackhole/logger.hpp>
 
 #include "cocaine/api/isolate.hpp"
+#include "cocaine/logging.hpp"
 #include "cocaine/context.hpp"
 #include "cocaine/errors.hpp"
 #include "cocaine/idl/node.hpp"
@@ -20,6 +21,11 @@
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 #include "cocaine/detail/service/node/dispatch/handshake.hpp"
 #include "cocaine/detail/service/node/dispatch/init.hpp"
+#include "cocaine/detail/service/node/rpc/slot.hpp"
+#include "cocaine/detail/service/node/slave/control.hpp"
+
+#include "cocaine/detail/service/node/slave/load.hpp"
+#include "cocaine/service/node/slave/id.hpp"
 
 namespace ph = std::placeholders;
 
@@ -56,7 +62,7 @@ class control_slot_t:
         {
             on<protocol::chunk>([&](int size) {
                 if (auto overseer = p->overseer.lock()) {
-                    overseer->o->keep_alive(size);
+                    overseer->o->failover(size);
                 }
             });
 
@@ -72,7 +78,7 @@ class control_slot_t:
         discard(const std::error_code&) const {
             COCAINE_LOG_DEBUG(p->log, "client has been disappeared, assuming direct control");
             if (auto overseer = p->overseer.lock()) {
-                overseer->o->keep_alive(0);
+                overseer->o->failover(0);
             }
         }
     };
@@ -343,7 +349,7 @@ public:
             manifest.endpoint,
             std::bind(&overseer_t::prototype, overseer()),
             [](io::dispatch_ptr_t handshake, std::shared_ptr<session_t> session) {
-                std::static_pointer_cast<const handshake_t>(handshake)->bind(session);
+                std::static_pointer_cast<const handshaking_t>(handshake)->bind(session);
             },
             std::make_shared<asio::io_service>(),
             std::make_unique<init_dispatch_t>(manifest.name)
@@ -366,7 +372,6 @@ public:
         }
 
         engine->terminate();
-        overseer()->cancel();
     }
 
     virtual
