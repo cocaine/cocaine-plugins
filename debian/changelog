@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.6.1) unstable; urgency=low
+
+  * Release version.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 09 Mar 2016 13:44:43 +0300
+
 cocaine-plugins (0.12.6.0-alpha2) unstable; urgency=low
 
   * Bug fix: fix billion of sign conversion warnings from Node service.
