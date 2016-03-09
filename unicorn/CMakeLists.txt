@@ -1,6 +1,8 @@
 INCLUDE_DIRECTORIES(
     ${PROJECT_SOURCE_DIR}/unicorn/include)
 
+LOCATE_LIBRARY(LIBZOOKEEPER_MT "zookeeper/zookeeper.h" "zookeeper_mt")
+
 ADD_LIBRARY(unicorn MODULE
     src/cluster/unicorn.cpp
     src/service/unicorn.cpp
