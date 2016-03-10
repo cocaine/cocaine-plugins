@@ -55,15 +55,15 @@ public:
     typedef Overseer overseer_type;
 
 private:
-    typedef state_machine<Overseer> state_machine_t;
+    typedef state_machine<Overseer> machine_t;
 
 private:
-    std::shared_ptr<state_machine_t> d;
+    std::shared_ptr<machine_t> d;
 
 public:
     /// Constructs the slave.
     slave(manifest_type manifest, profile_type profile, std::shared_ptr<overseer_type> overseer)
-        : d(std::make_shared<state_machine_t>(std::move(overseer))) {}
+        : d(std::make_shared<machine_t>(std::move(overseer))) {}
 
     ~slave() {}
 };

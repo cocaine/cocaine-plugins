@@ -5,15 +5,9 @@
 #include "cocaine/idl/node.hpp"
 #include "cocaine/idl/rpc.hpp"
 
+#include "cocaine/detail/service/node/forwards.hpp"
+
 namespace cocaine {
-
-namespace api {
-
-class stream_t;
-
-}  // namespace api
-
-class channel_t;
 
 using api::stream_t;
 

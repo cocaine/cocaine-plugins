@@ -27,9 +27,9 @@ add_library(node SHARED
     src/module.cpp
     src/node.cpp
     src/node/app.cpp
-    src/node/app/stats.cpp
     src/node/dispatch/client.cpp
     src/node/dispatch/worker.cpp
+    src/node/engine.cpp
     src/node/error.cpp
     src/node/manifest.cpp
     src/node/overseer.cpp
@@ -39,14 +39,18 @@ add_library(node SHARED
     src/node/slave/control.cpp
     src/node/slave/error.cpp
     src/node/slave/fetcher.cpp
+    src/node/slave/id.cpp
+    src/node/slave/machine.cpp
     src/node/slave/state/active.cpp
     src/node/slave/state/handshaking.cpp
-    src/node/slave/state/sealing.cpp
-    src/node/slave/state/spawning.cpp
+    src/node/slave/state/inactive.cpp
+    src/node/slave/state/seal.cpp
+    src/node/slave/state/spawn.cpp
     src/node/slave/state/state.cpp
-    src/node/slave/state/stopped.cpp
-    src/node/slave/state/terminating.cpp
-    src/stream
+    src/node/slave/state/terminate.cpp
+    src/node/slave/stats.cpp
+    src/node/stats.cpp
+    src/stream.cpp
 )
 
 target_link_libraries(node

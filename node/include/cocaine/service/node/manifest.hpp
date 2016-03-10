@@ -1,6 +1,7 @@
 /*
     Copyright (c) 2011-2014 Andrey Sibiryov <me@kobology.ru>
-    Copyright (c) 2011-2014 Other contributors as noted in the AUTHORS file.
+    Copyright (c) 2014-2016 Evgeny Safronov <division494@gmail.com>
+    Copyright (c) 2011-2016 Other contributors as noted in the AUTHORS file.
 
     This file is part of Cocaine.
 
@@ -28,9 +29,7 @@
 
 namespace cocaine {
 
-struct manifest_t:
-    cached<dynamic_t>
-{
+struct manifest_t : cached<dynamic_t> {
     manifest_t(context_t& context, const std::string& name);
 
     // The application name.
@@ -46,6 +45,6 @@ struct manifest_t:
     std::string executable;
 };
 
-} // namespace cocaine
+}  // namespace cocaine
 
 #endif

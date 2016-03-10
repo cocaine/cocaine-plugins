@@ -6,11 +6,7 @@
 #include "cocaine/idl/node.hpp"
 #include "cocaine/rpc/slot/deferred.hpp"
 
-namespace cocaine {
-
-class overseer_t;
-
-}  // namespace cocaine
+#include "cocaine/service/node/forwards.hpp"
 
 namespace cocaine { namespace service { namespace node {
 class app_state_t;

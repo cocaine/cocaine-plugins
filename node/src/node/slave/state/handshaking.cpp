@@ -2,26 +2,31 @@
 
 #include <blackhole/logger.hpp>
 
-#include "cocaine/service/node/slave.hpp"
+#include "cocaine/api/isolate.hpp"
 
 #include "cocaine/detail/service/node/slave/control.hpp"
 #include "cocaine/detail/service/node/slave/fetcher.hpp"
+#include "cocaine/detail/service/node/slave/machine.hpp"
 #include "cocaine/detail/service/node/slave/state/active.hpp"
+
+namespace cocaine {
+namespace detail {
+namespace service {
+namespace node {
+namespace slave {
+namespace state {
 
 namespace ph = std::placeholders;
 
-using namespace cocaine;
-
-handshaking_t::handshaking_t(std::shared_ptr<state_machine_t> slave_, std::unique_ptr<api::handle_t> handle_):
-    slave(std::move(slave_)),
-    timer(slave->loop),
-    handle(std::move(handle_)),
-    birthtime(std::chrono::high_resolution_clock::now())
-{
+handshaking_t::handshaking_t(std::shared_ptr<machine_t> slave_, std::unique_ptr<api::handle_t> handle_)
+    : slave(std::move(slave_)),
+      timer(slave->loop),
+      handle(std::move(handle_)),
+      birthtime(std::chrono::high_resolution_clock::now()) {
     COCAINE_LOG_DEBUG(slave->log, "slave is attaching the standard output handler");
 
     slave->fetcher.apply([&](std::shared_ptr<fetcher_t>& fetcher) {
-        // If there is no fetcher already - it only means, that the slave has been shutted down
+        // If there is no fetcher already - it only means, that the slave has been shut down
         // externally.
         if (fetcher) {
             fetcher->assign(handle->stdout());
@@ -31,45 +36,47 @@ handshaking_t::handshaking_t(std::shared_ptr<state_machine_t> slave_, std::uniqu
     });
 }
 
-const char*
-handshaking_t::name() const noexcept {
+auto handshaking_t::name() const noexcept -> const char* {
     return "handshaking";
 }
 
-void handshaking_t::cancel() {
+auto handshaking_t::cancel() -> void {
     COCAINE_LOG_DEBUG(slave->log, "processing activation timer cancellation");
 
     try {
         const auto cancelled = timer->cancel();
-        COCAINE_LOG_DEBUG(slave->log, "processing activation timer cancellation: done ({} cancelled)", cancelled);
+        COCAINE_LOG_DEBUG(
+            slave->log, "processing activation timer cancellation: done ({} cancelled)", cancelled);
     } catch (const std::system_error& err) {
         COCAINE_LOG_WARNING(slave->log, "unable to cancel activation timer: {}", err.what());
     }
 }
 
-void
-handshaking_t::terminate(const std::error_code& ec) {
+auto handshaking_t::terminate(const std::error_code& ec) -> void {
     cancel();
     slave->shutdown(ec);
 }
 
-std::shared_ptr<control_t>
-handshaking_t::activate(std::shared_ptr<session_t> session, upstream<io::worker::control_tag> stream) {
+auto handshaking_t::activate(std::shared_ptr<session_t> session,
+                           upstream<io::worker::control_tag> stream) -> std::shared_ptr<control_t> {
     std::error_code ec;
 
     const size_t cancelled = timer->cancel(ec);
     if (ec || cancelled == 0) {
-        COCAINE_LOG_WARNING(slave->log, "slave has been activated, but the timeout has already expired");
+        COCAINE_LOG_WARNING(slave->log,
+                            "slave has been activated, but the timeout has already expired");
         return nullptr;
     }
 
     const auto now = std::chrono::high_resolution_clock::now();
-    COCAINE_LOG_DEBUG(slave->log, "slave has been activated in {} ms",
+    COCAINE_LOG_DEBUG(
+        slave->log, "slave has been activated in {} ms",
         std::chrono::duration<float, std::chrono::milliseconds::period>(now - birthtime).count());
 
     try {
         auto control = std::make_shared<control_t>(slave, std::move(stream));
-        auto active = std::make_shared<active_t>(slave, std::move(handle), std::move(session), control);
+        auto active =
+            std::make_shared<active_t>(slave, std::move(handle), std::move(session), control);
         slave->migrate(active);
 
         return control;
@@ -82,8 +89,7 @@ handshaking_t::activate(std::shared_ptr<session_t> session, upstream<io::worker:
     return nullptr;
 }
 
-void
-handshaking_t::start(unsigned long timeout) {
+auto handshaking_t::start(unsigned long timeout) -> void {
     COCAINE_LOG_DEBUG(slave->log, "slave is waiting for handshake, timeout: {} ms", timeout);
 
     timer.apply([&](asio::deadline_timer& timer) {
@@ -92,13 +98,20 @@ handshaking_t::start(unsigned long timeout) {
     });
 }
 
-void
-handshaking_t::on_timeout(const std::error_code& ec) {
+auto handshaking_t::on_timeout(const std::error_code& ec) -> void {
     if (ec) {
-        COCAINE_LOG_DEBUG(slave->log, "activation timer has called its completion handler: cancelled");
+        COCAINE_LOG_DEBUG(slave->log,
+                          "activation timer has called its completion handler: cancelled");
     } else {
         COCAINE_LOG_ERROR(slave->log, "unable to activate slave: timeout");
 
         slave->shutdown(error::activate_timeout);
     }
 }
+
+}  // namespace state
+}  // namespace slave
+}  // namespace node
+}  // namespace service
+}  // namespace detail
+}  // namespace cocaine

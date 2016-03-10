@@ -3,22 +3,24 @@
 #include <array>
 #include <memory>
 
-#include "cocaine/locked_ptr.hpp"
-
 #include <asio/posix/stream_descriptor.hpp>
 
+#include <cocaine/locked_ptr.hpp>
+
+#include "cocaine/detail/service/node/forwards.hpp"
+
 namespace cocaine {
+namespace detail {
+namespace service {
+namespace node {
+namespace slave {
 
-class state_machine_t;
-
-/// The slave's output fetcher.
+/// Represents slave's standard output fetcher.
 ///
-/// \reentrant all methods must be called from the event loop thread, otherwise the behavior is
+/// \warning all methods must be called from the event loop thread, otherwise the behavior is
 /// undefined.
-class fetcher_t:
-    public std::enable_shared_from_this<fetcher_t>
-{
-    std::shared_ptr<state_machine_t> slave;
+class fetcher_t : public std::enable_shared_from_this<fetcher_t> {
+    std::shared_ptr<machine_t> slave;
 
     std::array<char, 4096> buffer;
 
@@ -26,25 +28,24 @@ class fetcher_t:
     synchronized<watcher_type> watcher;
 
 public:
-    explicit
-    fetcher_t(std::shared_ptr<state_machine_t> slave);
+    explicit fetcher_t(std::shared_ptr<machine_t> slave);
 
     /// Assigns an existing native descriptor to the output watcher and starts watching over it.
     ///
     /// \throws std::system_error on any system error while assigning an fd.
-    void
-    assign(int fd);
+    auto assign(int fd) -> void;
 
     /// Cancels all asynchronous operations associated with the descriptor by closing it.
-    void
-    close();
+    auto close() -> void;
 
 private:
-    void
-    watch();
+    auto watch() -> void;
 
-    void
-    on_read(const std::error_code& ec, size_t len);
+    auto on_read(const std::error_code& ec, size_t len) -> void;
 };
 
-} // namespace cocaine
+}  // namespace slave
+}  // namespace node
+}  // namespace service
+}  // namespace detail
+}  // namespace cocaine

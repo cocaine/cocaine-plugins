@@ -6,8 +6,6 @@
 
 namespace cocaine { namespace io {
 
-template<class T> struct deduce;
-
 template<class Event>
 class streaming_slot:
     public io::basic_slot<Event>
