@@ -3,6 +3,8 @@
 #include <chrono>
 #include <string>
 
+#include <boost/optional/optional.hpp>
+
 #include <cocaine/hpack/header.hpp>
 
 namespace cocaine {
@@ -12,17 +14,17 @@ namespace app {
 
 class event_t {
 public:
-    std::string name;
-    std::chrono::high_resolution_clock::time_point birthstamp;
+    typedef std::chrono::high_resolution_clock clock_type;
 
-    // TODO: Add urgency policy || lookup headers.
-    // TODO: Add deadline policy || lookup headers.
+    std::string name;
+    clock_type::time_point birthstamp;
+    boost::optional<clock_type::time_point> deadline;
 
     hpack::header_storage_t headers;
 
     event_t(std::string name, hpack::header_storage_t headers)
         : name(std::move(name)),
-          birthstamp(std::chrono::high_resolution_clock::now()),
+          birthstamp(clock_type::now()),
           headers(std::move(headers)) {}
 };
 

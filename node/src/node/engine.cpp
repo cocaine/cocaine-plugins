@@ -396,6 +396,13 @@ auto engine_t::spawn(pool_type& pool) -> void {
 }
 
 auto engine_t::assign(slave_t& slave, load_t& load) -> void {
+    if (load.event.deadline && *load.event.deadline < std::chrono::high_resolution_clock::now()) {
+        COCAINE_LOG_DEBUG(log, "event has expired, dropping");
+
+        load.downstream->error({}, error::deadline_error, "the event has expired in the queue");
+        return;
+    }
+
     // Attempts to inject the new channel into the slave.
     const auto id = slave.id();
     const auto timestamp = load.event.birthstamp;
