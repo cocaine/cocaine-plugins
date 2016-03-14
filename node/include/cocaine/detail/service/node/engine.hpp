@@ -140,6 +140,9 @@ private:
     /// Spawns a new slave using current manifest and profile.
     auto spawn(pool_type& pool) -> void;
 
+    /// Spawns a new slave with the given id using current manifest and profile.
+    auto spawn(const id_t& id, pool_type& pool) -> void;
+
     /// \warning must be called under the pool lock.
     auto assign(slave_t& slave, load_t& load) -> void;
 

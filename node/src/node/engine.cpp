@@ -350,7 +350,7 @@ auto engine_t::enqueue(upstream<io::stream_of<std::string>::tag> downstream, eve
 
 auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx,
     event_t event,
-    boost::optional<id_t> /*id*/) -> std::shared_ptr<api::stream_t>
+    boost::optional<id_t> id) -> std::shared_ptr<api::stream_t>
 {
     auto tx = std::make_shared<tx_stream_t>();
 
@@ -362,9 +362,17 @@ auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx,
                 throw std::system_error(error::queue_is_full);
             }
 
+            if (id) {
+                pool.apply([&](pool_type& pool) {
+                    if (pool.count(id->id()) == 0) {
+                        spawn(*id, pool);
+                    }
+                });
+            }
+
             tx->dispatch = std::make_shared<client_rpc_dispatch_t>(manifest().name);
 
-            queue.push_back({std::move(event), tx->dispatch, std::move(rx), trace_t::current()});
+            queue.push_back({std::move(event), trace_t::current(), id, tx->dispatch, std::move(rx)});
         });
     });
 
@@ -382,11 +390,18 @@ auto engine_t::prototype() -> io::dispatch_ptr_t {
 }
 
 auto engine_t::spawn(pool_type& pool) -> void {
+    spawn(id_t(), pool);
+}
+
+auto engine_t::spawn(const id_t& id, pool_type& pool) -> void {
+    if (pool.size() >= profile().pool_limit) {
+        throw std::system_error(error::pool_is_full, "the pool is full");
+    }
+
     COCAINE_LOG_INFO(log, "enlarging the slaves pool to {}", pool.size() + 1);
 
     // It is guaranteed that the cleanup handler will not be invoked from within the slave's
     // constructor.
-    const auto id = id_t();
     pool.insert(std::make_pair(
         id.id(),
         slave_t(context, id, manifest(), profile(), *loop, std::bind(&engine_t::on_slave_death, shared_from_this(), ph::_1, id.id()))
@@ -396,6 +411,7 @@ auto engine_t::spawn(pool_type& pool) -> void {
 }
 
 auto engine_t::assign(slave_t& slave, load_t& load) -> void {
+    trace_t::restore_scope_t scope(load.trace);
     if (load.event.deadline && *load.event.deadline < std::chrono::high_resolution_clock::now()) {
         COCAINE_LOG_DEBUG(log, "event has expired, dropping");
 
@@ -510,6 +526,11 @@ auto engine_t::rebalance_events() -> void {
 
     const auto concurrency = profile().concurrency;
 
+    // Find an active non-overloaded slave.
+    const auto filter = [&](const slave_t& slave) -> bool {
+        return slave.active() && slave.load() < concurrency;
+    };
+
     pool.apply([&](pool_type& pool) {
         if (pool.empty()) {
             return;
@@ -518,33 +539,55 @@ auto engine_t::rebalance_events() -> void {
         COCAINE_LOG_DEBUG(log, "rebalancing events queue");
         queue.apply([&](queue_type& queue) {
             while (!queue.empty()) {
-                // Find an active slave with minimal load, which is not overloaded.
-                const auto filter = std::function<bool(const slave_t&)>([&](const slave_t& slave) -> bool {
-                    return slave.active() && slave.load() < concurrency;
-                });
-
-                const auto range = pool | boost::adaptors::map_values | filtered(filter);
-
-                auto slave = boost::min_element(range, +[](const slave_t& lhs, const slave_t& rhs) -> bool {
-                    return lhs.load() < rhs.load();
-                });
-
-                // No free slaves found.
-                if(slave == boost::end(range)) {
-                    return;
-                }
-
                 auto& load = queue.front();
 
-                try {
-                    trace_t::restore_scope_t scope(load.trace);
-                    assign(*slave, load);
-                    // The slave may become invalid and reject the assignment (or reject for any
-                    // other reasons). We pop the channel only on successful assignment to achieve
-                    // strong exception guarantee.
-                    queue.pop_front();
-                } catch (const std::exception& err) {
-                    COCAINE_LOG_DEBUG(log, "slave has rejected assignment: {}", err.what());
+                // If we are dealing with tagged events we need to find an active slave with the
+                // specified id.
+                if (load.id && pool.count(load.id->id()) != 0) {
+                    auto& slave = pool.at(load.id->id());
+
+                    if (filter(slave)) {
+                        // In case of tagged events the rejected event is an error, which can only
+                        // occur in the case of state (slave has died), out of the memory issues
+                        // or something else out of out control.
+                        // The only reasonable way is to notify the client about the error allowing
+                        // it to retry if required.
+                        try {
+                            assign(slave, load);
+                        } catch (const std::exception& err) {
+                            COCAINE_LOG_WARNING(log, "slave has rejected assignment: {}", err.what());
+
+                            try {
+                                load.downstream->error({}, error::invalid_assignment, err.what());
+                            } catch (const std::exception& err) {
+                                COCAINE_LOG_WARNING(log, "failed to notify assignment failure: {}", err.what());
+                            }
+                        }
+                        queue.pop_front();
+                    }
+                } else {
+                    const auto range = pool | boost::adaptors::map_values | filtered(std::cref(filter));
+
+                    // Here we try to find an active non-overloaded slave with minimal load.
+                    auto slave = boost::min_element(
+                        range, +[](const slave_t& lhs, const slave_t& rhs) -> bool {
+                            return lhs.load() < rhs.load();
+                        });
+
+                    // No free slaves found.
+                    if (slave == boost::end(range)) {
+                        return;
+                    }
+
+                    try {
+                        assign(*slave, load);
+                        // The slave may become invalid and reject the assignment or reject for any
+                        // other reasons. We pop the channel only on successful assignment to
+                        // achieve strong exception guarantee.
+                        queue.pop_front();
+                    } catch (const std::exception& err) {
+                        COCAINE_LOG_WARNING(log, "slave has rejected assignment: {}", err.what());
+                    }
                 }
             }
         });

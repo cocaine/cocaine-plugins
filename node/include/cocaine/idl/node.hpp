@@ -210,6 +210,7 @@ enum node_errors {
     deadline_error = 1,
     resource_error,
     timeout_error,
+    invalid_assignment,
 
     /// App has been already started.
     already_started,
