@@ -1,4 +1,4 @@
-cocaine-plugins (0.12.7.1) UNRELEASED; urgency=low
+cocaine-plugins (0.12.7.1) unstable; urgency=low
 
   * Release version.
   * Clean up Node Service API by hiding all real details.
