@@ -139,8 +139,7 @@ machine_t::activate(std::shared_ptr<session_t> session, upstream<io::worker::con
     return state->activate(std::move(session), std::move(stream));
 }
 
-std::uint64_t
-machine_t::inject(load_t& load, channel_handler handler) {
+auto machine_t::inject(load_t& load, channel_handler handler) -> std::uint64_t {
     const auto id = ++counter;
 
     auto channel = std::make_shared<channel_t>(
