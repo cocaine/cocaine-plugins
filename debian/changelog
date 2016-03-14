@@ -1,3 +1,12 @@
+cocaine-plugins (0.12.7.1) UNRELEASED; urgency=low
+
+  * Release version.
+  * Clean up Node Service API by hiding all real details.
+  * Application services can now handle deadline policies associated with
+    invocation events.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 14 Mar 2016 11:54:01 +0300
+
 cocaine-plugins (0.12.6.1) unstable; urgency=low
 
   * Release version.
