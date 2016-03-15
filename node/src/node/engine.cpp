@@ -527,9 +527,9 @@ auto engine_t::rebalance_events() -> void {
     const auto concurrency = profile().concurrency;
 
     // Find an active non-overloaded slave.
-    const auto filter = [&](const slave_t& slave) -> bool {
+    const auto filter = std::function<bool(const slave_t&)>([&](const slave_t& slave) -> bool {
         return slave.active() && slave.load() < concurrency;
-    };
+    });
 
     pool.apply([&](pool_type& pool) {
         if (pool.empty()) {
@@ -566,7 +566,7 @@ auto engine_t::rebalance_events() -> void {
                         queue.pop_front();
                     }
                 } else {
-                    const auto range = pool | boost::adaptors::map_values | filtered(std::cref(filter));
+                    const auto range = pool | boost::adaptors::map_values | filtered(filter);
 
                     // Here we try to find an active non-overloaded slave with minimal load.
                     auto slave = boost::min_element(
