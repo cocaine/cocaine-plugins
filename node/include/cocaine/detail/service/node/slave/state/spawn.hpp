@@ -1,5 +1,9 @@
 #pragma once
 
+#include <chrono>
+#include <memory>
+#include <system_error>
+
 #include <asio/deadline_timer.hpp>
 
 #include "state.hpp"
