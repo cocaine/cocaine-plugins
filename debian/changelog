@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.7.2) unstable; urgency=low
+
+  * Create symlinks to the Node Service dynamic library in development package.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 16 Mar 2016 16:20:36 +0300
+
 cocaine-plugins (0.12.7.1) unstable; urgency=low
 
   * Release version.
