@@ -31,6 +31,6 @@ extern "C" {
 
     void
     initialize(api::repository_t& repository) {
-        repository.insert<docker_t>("docker");
+        repository.insert<docker_t>("legacy_docker");
     }
 }

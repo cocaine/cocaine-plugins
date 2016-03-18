@@ -18,37 +18,21 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef COCAINE_PROCESS_ISOLATE_HPP
-#define COCAINE_PROCESS_ISOLATE_HPP
+#ifndef COCAINE_EXTERNAL_ISOLATE_HPP
+#define COCAINE_EXTERNAL_ISOLATE_HPP
 
 #include "cocaine/api/isolate.hpp"
 
-#include <cstdint>
-
-#include <boost/filesystem/path.hpp>
+#include <memory>
 
 namespace cocaine { namespace isolate {
 
-class process_t:
-    public api::isolate_t
+class external_t:
+    public api::isolate_t,
+    public std::enable_shared_from_this<external_t>
 {
-    context_t& m_context;
-    asio::io_service& io_context;
-
-    const std::unique_ptr<logging::logger_t> m_log;
-
-    const std::string m_name;
-    const boost::filesystem::path m_working_directory;
-    const uint64_t m_kill_timeout;
-
-    // Only used when built with cgroup support
-    void* m_cgroup;
-
 public:
-    process_t(context_t& context, asio::io_service& io_context, const std::string& name, const std::string& type, const dynamic_t& args);
-
-    virtual
-   ~process_t();
+    external_t(context_t& context, asio::io_service& io_context, const std::string& name, const std::string& type, const dynamic_t& args);
 
     virtual
     std::unique_ptr<api::cancellation_t>
@@ -56,10 +40,19 @@ public:
 
     virtual
     std::unique_ptr<api::cancellation_t>
-    spawn(const std::string& path, const api::args_t& args, const api::env_t& environment,
+    spawn(const std::string& path,
+                const api::args_t& args,
+                const api::env_t& environment,
                 std::shared_ptr<api::spawn_handle_base_t>);
+
+    struct inner_t;
+
+private:
+    // This pimpl is here to prevent calling some "init" method to safely call shared_from_this to pass to timer.
+    std::shared_ptr<inner_t> inner;
 };
 
 }} // namespace cocaine::isolate
+
 
 #endif

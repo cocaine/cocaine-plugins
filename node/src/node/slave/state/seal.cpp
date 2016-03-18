@@ -16,7 +16,7 @@ namespace state {
 
 namespace ph = std::placeholders;
 
-seal_t::seal_t(std::shared_ptr<machine_t> slave_, std::unique_ptr<api::handle_t> handle_,
+seal_t::seal_t(std::shared_ptr<machine_t> slave_, std::unique_ptr<api::cancellation_t> handle_,
                std::shared_ptr<control_t> control_, std::shared_ptr<session_t> session_)
     : slave(std::move(slave_)),
       handle(std::move(handle_)),

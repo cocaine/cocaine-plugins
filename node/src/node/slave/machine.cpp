@@ -19,7 +19,7 @@
 #include "cocaine/detail/service/node/dispatch/worker.hpp"
 #include "cocaine/detail/service/node/slave/channel.hpp"
 #include "cocaine/detail/service/node/slave/control.hpp"
-#include "cocaine/detail/service/node/slave/fetcher.hpp"
+#include "cocaine/detail/isolate/fetcher.hpp"
 #include "cocaine/detail/service/node/slave/load.hpp"
 #include "cocaine/detail/service/node/slave/machine.hpp"
 #include "cocaine/detail/service/node/slave/state/inactive.hpp"
@@ -68,10 +68,6 @@ machine_t::start() {
     BOOST_ASSERT(*state.synchronize() == nullptr);
 
     COCAINE_LOG_DEBUG(log, "slave state machine is starting");
-
-    fetcher.apply([&](std::shared_ptr<fetcher_t>& fetcher) {
-        fetcher = std::make_shared<fetcher_t>(shared_from_this());
-    });
 
     auto spawning = std::make_shared<spawn_t>(shared_from_this());
     migrate(spawning);
@@ -212,7 +208,12 @@ machine_t::terminate(std::error_code ec) {
 
 void
 machine_t::output(const char* data, size_t size) {
-    splitter.consume(std::string(data, size));
+    output(std::string(data, size));
+}
+
+void
+machine_t::output(const std::string& data) {
+    splitter.consume(data);
     while (auto line = splitter.next()) {
         lines.push_back(*line);
 
@@ -250,11 +251,6 @@ machine_t::shutdown(std::error_code ec) {
         ec.clear();
     }
     migrate(std::make_shared<inactive_t>(ec));
-
-    fetcher.apply([&](std::shared_ptr<fetcher_t>& fetcher) {
-        fetcher->close();
-        fetcher.reset();
-    });
 
     if (ec && ec != error::overseer_shutdowning) {
         dump();

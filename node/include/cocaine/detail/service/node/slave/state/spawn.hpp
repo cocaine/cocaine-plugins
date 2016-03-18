@@ -21,7 +21,7 @@ class spawn_t : public state_t, public std::enable_shared_from_this<spawn_t> {
     std::shared_ptr<machine_t> slave;
 
     asio::deadline_timer timer;
-    std::unique_ptr<api::handle_t> handle;
+    std::unique_ptr<api::cancellation_t> handle;
 
 public:
     explicit spawn_t(std::shared_ptr<machine_t> slave);
@@ -35,6 +35,7 @@ public:
 private:
     auto on_spawn(std::chrono::high_resolution_clock::time_point start) -> void;
     auto on_timeout(const std::error_code& ec) -> void;
+    friend class slave::spawn_handle_t;
 };
 
 }  // namespace state

@@ -16,12 +16,12 @@ namespace state {
 /// Represents an active slave state, i.e. slave, that can accept and process new channels.
 class active_t : public state_t, public std::enable_shared_from_this<active_t> {
     std::shared_ptr<machine_t> slave;
-    std::unique_ptr<api::handle_t> handle;
+    std::unique_ptr<api::cancellation_t> handle;
     std::shared_ptr<session_t> session;
     std::shared_ptr<control_t> control;
 
 public:
-    active_t(std::shared_ptr<machine_t> slave, std::unique_ptr<api::handle_t> handle,
+    active_t(std::shared_ptr<machine_t> slave, std::unique_ptr<api::cancellation_t> handle,
              std::shared_ptr<session_t> session, std::shared_ptr<control_t> control);
 
     ~active_t();
