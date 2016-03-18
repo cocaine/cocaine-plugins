@@ -18,20 +18,24 @@ namespace service {
 namespace node {
 namespace slave {
 
-spawn_handle_t::spawn_handle_t(std::weak_ptr<machine_t> _slave, std::weak_ptr<state::spawn_t> _spawning) :
+spawn_handle_t::spawn_handle_t(std::unique_ptr<cocaine::logging::logger_t> _log,
+                               std::weak_ptr<machine_t> _slave,
+                               std::weak_ptr<state::spawn_t> _spawning) :
+    log(std::move(_log)),
     slave(std::move(_slave)),
-    spawning(std::move(_spawning))
+    spawning(std::move(_spawning)),
+    start(std::chrono::high_resolution_clock::now())
 {}
 
 void
 spawn_handle_t::on_terminate(const std::error_code& ec, const std::string& msg) {
     auto _slave = slave.lock();
     if(!_slave) {
-        //TODO: Log somehow
+        COCAINE_LOG_INFO(log, "isolation has terminated slave, but it's already gone");
         return;
     }
     if(!ec) {
-        COCAINE_LOG_INFO(_slave->log, "isolation has successfully terminated slave");
+        COCAINE_LOG_INFO(log, "isolation has successfully terminated slave");
     } else {
         COCAINE_LOG_WARNING(_slave->log, "isolation has abnormally terminated slave: [{}]{} - {}", ec.value(), ec.message(), msg);
     }
@@ -41,11 +45,10 @@ spawn_handle_t::on_terminate(const std::error_code& ec, const std::string& msg) 
 
 void
 spawn_handle_t::on_ready() {
-    std::cout << "ONREADY" << std::endl;
     auto _spawning = spawning.lock();
     auto _slave = slave.lock();
     if(!_spawning || !_slave) {
-        //TODO: Log somehow
+        COCAINE_LOG_WARNING(log, "isolation notified about spawn, but slave or state is already gone");
         return;
     }
 

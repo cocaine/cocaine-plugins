@@ -233,8 +233,8 @@ spool_load_t::cancel() noexcept {
             if(stream) {
                 try {
                     stream->send<io::isolate_spooled::cancel>();
-                } catch(...) {
-                    //swallow. TODO: log
+                } catch(const std::system_error& e) {
+                    COCAINE_LOG_WARNING(inner.log, "could not cancel spool request: {}", error::to_string(e));
                 }
             }
         }

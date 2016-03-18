@@ -97,7 +97,7 @@ auto spawn_t::spawn(unsigned long timeout) -> void {
         timer.expires_from_now(boost::posix_time::milliseconds(static_cast<std::int64_t>(timeout)));
         timer.async_wait(trace_t::bind(&spawn_t::on_timeout, shared_from_this(), ph::_1));
 
-        std::shared_ptr<api::spawn_handle_base_t> spawn_handle = std::make_shared<spawn_handle_t>(slave, shared_from_this());
+        std::shared_ptr<api::spawn_handle_base_t> spawn_handle = std::make_shared<spawn_handle_t>(slave->context.log("spawn_handle"), slave, shared_from_this());
         handle = isolate->spawn(
             slave->manifest.executable,
             args,
