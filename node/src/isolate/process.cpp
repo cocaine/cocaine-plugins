@@ -315,8 +315,8 @@ process_t::spool(std::shared_ptr<api::spool_handle_base_t> handler) {
 
 std::unique_ptr<api::cancellation_t>
 process_t::spawn(const std::string& path,
-            const api::string_map_t& args,
-            const api::string_map_t& environment,
+            const api::args_t& args,
+            const api::env_t& environment,
             std::shared_ptr<api::spawn_handle_base_t> handle)
 {
     std::array<int, 2> pipes;

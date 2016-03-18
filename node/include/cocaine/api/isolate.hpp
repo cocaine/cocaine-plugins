@@ -94,7 +94,8 @@ struct spawn_handle_base_t {
     on_data(const std::string& data) = 0;
 };
 
-typedef std::map<std::string, std::string> string_map_t;
+typedef std::map<std::string, std::string> args_t;
+typedef std::map<std::string, std::string> env_t;
 
 struct isolate_t {
     typedef isolate_t category_type;
@@ -110,8 +111,8 @@ struct isolate_t {
 
     virtual
     std::unique_ptr<cancellation_t>
-    spawn(const std::string& path, const string_map_t& args, const string_map_t& environment,
-                std::shared_ptr<api::spawn_handle_base_t>) = 0;
+    spawn(const std::string& path, const args_t& args, const env_t& environment,
+                std::shared_ptr<api::spawn_handle_base_t> handle) = 0;
 
     asio::io_service&
     get_io_service() {

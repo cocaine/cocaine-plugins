@@ -27,9 +27,9 @@ class fetcher_t : public std::enable_shared_from_this<fetcher_t> {
     synchronized<watcher_type> watcher;
 
 public:
-    explicit fetcher_t(asio::io_service& io_context,
-                       std::shared_ptr<api::spawn_handle_base_t> handle,
-                       std::unique_ptr<logging::logger_t> logger);
+    fetcher_t(asio::io_service& io_context,
+              std::shared_ptr<api::spawn_handle_base_t> handle,
+              std::unique_ptr<logging::logger_t> logger);
 
     /// Assigns an existing native descriptor to the output watcher and starts watching over it.
     ///

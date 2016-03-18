@@ -47,9 +47,9 @@ public:
     virtual
     std::unique_ptr<api::cancellation_t>
     spawn(const std::string& path,
-          const api::string_map_t& args,
-          const api::string_map_t& environment,
-          std::shared_ptr<api::spawn_handle_base_t>);
+          const api::args_t& args,
+          const api::env_t& environment,
+          std::shared_ptr<api::spawn_handle_base_t> handle);
 
 private:
     context_t& m_context;

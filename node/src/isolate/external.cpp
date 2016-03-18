@@ -112,16 +112,16 @@ struct spawn_load_t :
     external_t::inner_t& inner;
     std::shared_ptr<api::spawn_handle_base_t> handle;
     std::string path;
-    api::string_map_t worker_args;
-    api::string_map_t environment;
+    api::args_t worker_args;
+    api::env_t environment;
     bool cancelled;
     synchronized<io::upstream_ptr_t> stream;
 
     spawn_load_t(external_t::inner_t& _inner,
                  std::shared_ptr<api::spawn_handle_base_t> _handle,
                  const std::string& _path,
-                 const api::string_map_t& _worker_args,
-                 const api::string_map_t& _environment
+                 const api::args_t& _worker_args,
+                 const api::env_t& _environment
     ) :
         inner(_inner),
         handle(std::move(_handle)),
@@ -293,8 +293,8 @@ external_t::spool(std::shared_ptr<api::spool_handle_base_t> handler) {
 
 std::unique_ptr<api::cancellation_t>
 external_t::spawn(const std::string& path,
-            const api::string_map_t& worker_args,
-            const api::string_map_t& environment,
+            const api::args_t& worker_args,
+            const api::env_t& environment,
             std::shared_ptr<api::spawn_handle_base_t> handler) {
 
     std::shared_ptr<spawn_load_t> load(new spawn_load_t(*inner, std::move(handler), path, worker_args, environment));
