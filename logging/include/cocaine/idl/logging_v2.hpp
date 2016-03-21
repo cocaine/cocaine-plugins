@@ -77,7 +77,7 @@ struct base_log {
             // Filter itself
             logging::filter_t,
             // TTL of the filter
-            filter_t::seconds_t
+            logging::filter_t::seconds_t
         >::type argument_type;
 
         typedef option_of<

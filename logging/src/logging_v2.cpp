@@ -25,19 +25,17 @@
 
 #include "cocaine/service/logging.hpp"
 
-#include "cocaine/api/unicorn.hpp"
-
 #include <blackhole/config/json.hpp>
 #include <blackhole/registry.hpp>
 #include <blackhole/root.hpp>
 #include <blackhole/sink/console.hpp>
 #include <blackhole/wrapper.hpp>
 
+#include <cocaine/api/unicorn.hpp>
 #include <cocaine/context.hpp>
-
 #include <cocaine/rpc/slot.hpp>
-
 #include <cocaine/traits/vector.hpp>
+#include <cocaine/unicorn/value.hpp>
 
 #include <random>
 

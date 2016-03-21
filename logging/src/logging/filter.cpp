@@ -60,10 +60,10 @@ filter_info_t::representation() {
     return representation;
 }
 
-class filter_t::filter_impl_t {
+class filter_t::inner_t {
 public:
     virtual
-    ~filter_impl_t() {}
+    ~inner_t() {}
 
     virtual
     filter_result_t
@@ -75,12 +75,12 @@ public:
 };
 
 void
-filter_t::deleter_t::operator()(filter_t::filter_impl_t* ptr) {
+filter_t::deleter_t::operator()(filter_t::inner_t* ptr) {
     delete ptr;
 }
 
 
-typedef std::unique_ptr<filter_t::filter_impl_t, filter_t::deleter_t> filter_impl_ptr;
+typedef std::unique_ptr<filter_t::inner_t, filter_t::deleter_t> inner_t;
 
 namespace {
 
@@ -88,7 +88,7 @@ typedef filter_result_t fr;
 
 template <template<class> class Filter>
 struct filter_creation_visitor_t {
-    typedef filter_impl_ptr result_type;
+    typedef inner_t result_type;
 
     filter_creation_visitor_t(std::string _attribute_name):
         attribute_name(std::move(_attribute_name))
@@ -96,27 +96,27 @@ struct filter_creation_visitor_t {
 
     result_type
     operator()(dynamic_t::bool_t value) {
-        return filter_impl_ptr(new Filter<dynamic_t::bool_t>(std::move(attribute_name), value));
+        return inner_t(new Filter<dynamic_t::bool_t>(std::move(attribute_name), value));
     }
 
     result_type
     operator()(dynamic_t::uint_t value) {
-        return filter_impl_ptr(new Filter<dynamic_t::uint_t>(std::move(attribute_name), value));
+        return inner_t(new Filter<dynamic_t::uint_t>(std::move(attribute_name), value));
     }
 
     result_type
     operator()(dynamic_t::int_t value) {
-        return filter_impl_ptr(new Filter<dynamic_t::int_t>(std::move(attribute_name), value));
+        return inner_t(new Filter<dynamic_t::int_t>(std::move(attribute_name), value));
     }
 
     result_type
     operator()(dynamic_t::double_t value) {
-        return filter_impl_ptr(new Filter<dynamic_t::double_t>(std::move(attribute_name), value));
+        return inner_t(new Filter<dynamic_t::double_t>(std::move(attribute_name), value));
     }
 
     result_type
     operator()(dynamic_t::string_t value) {
-        return filter_impl_ptr(new Filter<std::string>(std::move(attribute_name), std::move(value)));
+        return inner_t(new Filter<std::string>(std::move(attribute_name), std::move(value)));
     }
 
     template <class T>
@@ -128,7 +128,7 @@ struct filter_creation_visitor_t {
     std::string attribute_name;
 };
 
-struct null_filter_t: public filter_t::filter_impl_t {
+struct null_filter_t: public filter_t::inner_t {
     virtual
     filter_result_t
     apply(const std::string&, unsigned int, const logging::attributes_t&) const {
@@ -142,7 +142,7 @@ struct null_filter_t: public filter_t::filter_impl_t {
     };
 };
 
-struct exists_filter_t: public filter_t::filter_impl_t {
+struct exists_filter_t: public filter_t::inner_t {
 
     exists_filter_t(std::string _attribute_name) :
         attribute_name(std::move(_attribute_name))
@@ -165,7 +165,7 @@ struct exists_filter_t: public filter_t::filter_impl_t {
     std::string attribute_name;
 };
 
-struct not_exists_filter_t: public filter_t::filter_impl_t {
+struct not_exists_filter_t: public filter_t::inner_t {
     not_exists_filter_t(std::string _attribute_name) :
         attribute_name(std::move(_attribute_name))
     {}
@@ -188,7 +188,7 @@ struct not_exists_filter_t: public filter_t::filter_impl_t {
 };
 
 template<class T>
-struct comparision_filter_t: public filter_t::filter_impl_t {
+struct comparision_filter_t: public filter_t::inner_t {
     comparision_filter_t(std::string _attribute_name, T _attribute_value):
         attribute_name(std::move(_attribute_name)),
         attribute_value(std::move(_attribute_value))
@@ -330,7 +330,7 @@ struct less_or_equal_filter_t: public comparision_filter_t<T> {
     };
 };
 
-struct or_filter_t: public filter_t::filter_impl_t {
+struct or_filter_t: public filter_t::inner_t {
     filter_t filter1;
     filter_t filter2;
 
@@ -354,7 +354,7 @@ struct or_filter_t: public filter_t::filter_impl_t {
     };
 };
 
-struct and_filter_t: public filter_t::filter_impl_t {
+struct and_filter_t: public filter_t::inner_t {
     filter_t filter1;
     filter_t filter2;
 
@@ -378,7 +378,7 @@ struct and_filter_t: public filter_t::filter_impl_t {
     };
 };
 
-struct xor_filter_t: public filter_t::filter_impl_t {
+struct xor_filter_t: public filter_t::inner_t {
     filter_t filter1;
     filter_t filter2;
 
@@ -402,19 +402,19 @@ struct xor_filter_t: public filter_t::filter_impl_t {
     };
 };
 
-filter_impl_ptr
+inner_t
 unary_operator_factory(const std::string& filter_operator, const dynamic_t& operand) {
     if(!operand.is_string()) {
         throw error_t(format("operand is not string for operator %s", filter_operator));
     } else if (filter_operator == "e"){
-        return filter_impl_ptr(new exists_filter_t(operand.as_string()));
+        return inner_t(new exists_filter_t(operand.as_string()));
     } else if (filter_operator == "!e"){
-        return filter_impl_ptr(new not_exists_filter_t(operand.as_string()));
+        return inner_t(new not_exists_filter_t(operand.as_string()));
     }
     throw error_t(format("invalid unary filter operator: %s", filter_operator));
 }
 
-filter_impl_ptr
+inner_t
 string_operand_factory(const std::string& filter_operator, const dynamic_t& operand1, const dynamic_t& operand2) {
     if(!operand1.is_string()) {
         throw error_t(format("operand 1 for operator %s should be strings", filter_operator));
@@ -441,21 +441,21 @@ string_operand_factory(const std::string& filter_operator, const dynamic_t& oper
     throw std::logic_error(format("Invalid operator passed: %s", filter_operator));
 }
 
-filter_impl_ptr
+inner_t
 filter_operand_factory(const std::string& filter_operator, const dynamic_t& operand1, const dynamic_t& operand2) {
     if(!operand1.is_array() || !operand2.is_array()) {
         throw error_t(format("operands for operator %s should be arrays", filter_operator));
     } else if(filter_operator == "||") {
-        return filter_impl_ptr(new or_filter_t(filter_t(operand1), filter_t(operand2)));
+        return inner_t(new or_filter_t(filter_t(operand1), filter_t(operand2)));
     } else if(filter_operator == "&&") {
-        return filter_impl_ptr(new and_filter_t(filter_t(operand1), filter_t(operand2)));
+        return inner_t(new and_filter_t(filter_t(operand1), filter_t(operand2)));
     } else if(filter_operator == "xor") {
-        return filter_impl_ptr(new xor_filter_t(filter_t(operand1), filter_t(operand2)));
+        return inner_t(new xor_filter_t(filter_t(operand1), filter_t(operand2)));
     }
     throw std::logic_error(format("Invalid operator passed: %s", filter_operator));
 }
 
-filter_impl_ptr
+inner_t
 binary_operator_factory(const std::string& filter_operator, const dynamic_t& operand1, const dynamic_t& operand2) {
     auto string_ops = {"==", "!=", ">", "<", ">=", "<=", "e", "!e"};
     if(std::count(string_ops.begin(), string_ops.end(), filter_operator)) {
@@ -468,17 +468,17 @@ binary_operator_factory(const std::string& filter_operator, const dynamic_t& ope
 }
 
 filter_t::filter_t() :
-    impl(new null_filter_t())
+    inner(new null_filter_t())
 {}
 
 filter_result_t
 filter_t::apply(const std::string& message, unsigned int severity, const logging::attributes_t& attributes) const{
-    return impl->apply(message, severity, attributes);
+    return inner->apply(message, severity, attributes);
 }
 
 dynamic_t
 filter_t::representation() const {
-    return impl->representation();
+    return inner->representation();
 }
 
 filter_t::filter_t(const dynamic_t& representation) {
@@ -495,10 +495,10 @@ filter_t::filter_t(const dynamic_t& representation) {
     const auto filter_operator = array[0].as_string();
     const auto operand1 = array[1];
     if(array.size() == 2) {
-        impl = unary_operator_factory(filter_operator, operand1);
+        inner = unary_operator_factory(filter_operator, operand1);
     } else if(array.size() == 3) {
         const auto operand2 = array[2];
-        impl = binary_operator_factory(filter_operator, operand1, operand2);
+        inner = binary_operator_factory(filter_operator, operand1, operand2);
     } else {
         throw error_t(format("representation should contain 3 elements for operator %s", filter_operator));
     }

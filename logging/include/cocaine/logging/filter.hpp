@@ -59,14 +59,14 @@ public:
     representation_t
     representation() const;
 
-    class filter_impl_t;
+    class inner_t;
 
     struct deleter_t {
-        void operator()(filter_impl_t*);
+        void operator()(inner_t*);
     };
 
 private:
-    std::unique_ptr<filter_impl_t, deleter_t> impl;
+    std::unique_ptr<inner_t, deleter_t> inner;
 };
 
 struct filter_info_t {
