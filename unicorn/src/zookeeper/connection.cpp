@@ -89,7 +89,6 @@ zookeeper::connection_t::connection_t(const cfg_t& _cfg, const session_t& _sessi
         cfg.prefix.resize(cfg.prefix.size() - 1);
     }
     reconnect();
-
 }
 
 zookeeper::connection_t::~connection_t() {
@@ -220,36 +219,32 @@ void connection_t::reconnect() {
 }
 
 zhandle_t* connection_t::init() {
-    zhandle_t* new_zhandle = zookeeper_init(
-        cfg.connection_string().c_str(),
-        &handler_dispatcher_t::watcher_cb,
-        cfg.recv_timeout_ms,
-        session.native(),
-        mc_ptr(&watcher),
-        0
-    );
+    zhandle_t* new_zhandle = zookeeper_init(cfg.connection_string().c_str(),
+                                            &handler_dispatcher_t::watcher_cb,
+                                            cfg.recv_timeout_ms,
+                                            session.native(),
+                                            mc_ptr(&watcher),
+                                            0);
     return new_zhandle;
 }
 
-void
-connection_t::create_prefix() {
-    if(!cfg.prefix.empty()) {
+void connection_t::create_prefix() {
+    if (!cfg.prefix.empty()) {
         auto count = std::count(cfg.prefix.begin(), cfg.prefix.end(), '/');
         auto acl = ZOO_OPEN_ACL_UNSAFE;
         int flag = 0;
-        for (size_t i = count; i>0; i--) {
+        for (size_t i = count; i > 0; i--) {
             auto path = path_parent(cfg.prefix, i - 1);
             int rc = zoo_create(zhandle, path.c_str(), "", 0, &acl, flag, NULL, 0);
-            if(rc && rc != ZNODEEXISTS) {
+            if (rc && rc != ZNODEEXISTS) {
                 reconnect();
             }
         }
     }
 }
-void
-connection_t::reconnect_action_t::watch_event(int type, int state, path_t /*path*/) {
+void connection_t::reconnect_action_t::watch_event(int type, int state, path_t /*path*/) {
     if(type == ZOO_SESSION_EVENT) {
-        if(state == ZOO_CONNECTED_STATE) {
+        if (state == ZOO_CONNECTED_STATE) {
             parent.create_prefix();
         }
         if(state == ZOO_EXPIRED_SESSION_STATE) {

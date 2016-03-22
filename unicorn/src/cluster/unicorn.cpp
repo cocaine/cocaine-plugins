@@ -196,16 +196,16 @@ void
 unicorn_cluster_t::on_fetch::write(api::unicorn_t::response::get&& result) {
     COCAINE_LOG_INFO(parent->log, "fetched {} node's endpoint from zookeeper", uuid);
     std::vector<asio::ip::tcp::endpoint> fetched_endpoints;
-    if(result.get_value().convertible_to<std::vector<asio::ip::tcp::endpoint>>()) {
+    if (result.get_value().convertible_to<std::vector<asio::ip::tcp::endpoint>>()) {
         fetched_endpoints = result.get_value().to<std::vector<asio::ip::tcp::endpoint>>();
     }
-    if(fetched_endpoints.empty()) {
+    if (fetched_endpoints.empty()) {
         COCAINE_LOG_WARNING(parent->log, "invalid value for announce: {}",
             boost::lexical_cast<std::string>(result.get_value()).c_str()
         );
-        parent->registered_locators.apply([&](locator_endpoints_t& endpoint_map){
+        parent->registered_locators.apply([&](locator_endpoints_t& endpoint_map) {
             auto it = endpoint_map.find(uuid);
-            if(it != endpoint_map.end()) {
+            if (it != endpoint_map.end()) {
                 endpoint_map.erase(it);
             }
         });
@@ -214,7 +214,7 @@ unicorn_cluster_t::on_fetch::write(api::unicorn_t::response::get&& result) {
             auto it = endpoint_map.find(uuid);
             if (it == endpoint_map.end() || it->second.empty()) {
                 endpoint_map[uuid] = fetched_endpoints;
-                if(uuid != parent->locator.uuid()) {
+                if (uuid != parent->locator.uuid()) {
                     COCAINE_LOG_INFO(parent->log, "linking {} node", uuid);
                     parent->locator.link_node(uuid, fetched_endpoints);
                 }
@@ -230,8 +230,8 @@ unicorn_cluster_t::on_fetch::abort(const std::error_code& rc, const std::string&
     COCAINE_LOG_WARNING(parent->log, "error during fetch({}): {} - {}", rc.value(), rc.message(), reason);
     parent->registered_locators.apply([&](locator_endpoints_t& endpoint_map) {
         auto it = endpoint_map.find(uuid);
-        if(it != endpoint_map.end()) {
-            if(!it->second.empty()) {
+        if (it != endpoint_map.end()) {
+            if (!it->second.empty()) {
                 parent->locator.drop_node(uuid);
             }
             endpoint_map.erase(it);
@@ -239,9 +239,7 @@ unicorn_cluster_t::on_fetch::abort(const std::error_code& rc, const std::string&
     });
 }
 
-unicorn_cluster_t::on_list_update::on_list_update(unicorn_cluster_t* _parent) :
-    parent(_parent)
-{}
+unicorn_cluster_t::on_list_update::on_list_update(unicorn_cluster_t* _parent) : parent(_parent) {}
 
 void
 unicorn_cluster_t::on_list_update::write(api::unicorn_t::response::children_subscribe&& result) {
@@ -250,23 +248,26 @@ unicorn_cluster_t::on_list_update::write(api::unicorn_t::response::children_subs
     std::sort(nodes.begin(), nodes.end());
     std::vector<std::string> to_delete, to_add;
     std::set<std::string> uuids;
-    parent->registered_locators.apply([&](locator_endpoints_t& endpoint_map){
-        for(const auto& uuid_to_endpoints : endpoint_map) {
+    parent->registered_locators.apply([&](locator_endpoints_t& endpoint_map) {
+        for (const auto& uuid_to_endpoints : endpoint_map) {
             uuids.insert(uuid_to_endpoints.first);
         }
-        std::set_difference(nodes.begin(), nodes.end(), uuids.begin(), uuids.end(), std::back_inserter(to_add));
-        std::set_difference(uuids.begin(), uuids.end(), nodes.begin(), nodes.end(), std::back_inserter(to_delete));
-        COCAINE_LOG_INFO(parent->log, "{} nodes to drop and {} nodes to add (may include this)", to_delete.size(), to_add.size());
-        for(size_t i = 0; i < to_delete.size(); i++) {
+        std::set_difference(
+            nodes.begin(), nodes.end(), uuids.begin(), uuids.end(), std::back_inserter(to_add));
+        std::set_difference(
+            uuids.begin(), uuids.end(), nodes.begin(), nodes.end(), std::back_inserter(to_delete));
+        COCAINE_LOG_INFO(parent->log,
+                         "{} nodes to drop and {} nodes to add (may include this)",
+                         to_delete.size(),
+                         to_add.size());
+        for (size_t i = 0; i < to_delete.size(); i++) {
             parent->locator.drop_node(to_delete[i]);
             endpoint_map.erase(to_delete[i]);
         }
-        for(size_t i = 0; i < to_add.size(); i++) {
+        for (size_t i = 0; i < to_add.size(); i++) {
             endpoint_map[to_add[i]] = {};
-            parent->get_scope = parent->unicorn->get(
-                std::make_shared<on_fetch>(to_add[i], parent),
-                parent->config.path + '/' + to_add[i]
-            );
+            parent->get_scope = parent->unicorn->get(std::make_shared<on_fetch>(to_add[i], parent),
+                                                     parent->config.path + '/' + to_add[i]);
         }
         COCAINE_LOG_INFO(parent->log, "endpoint map now contains {} uuids", endpoint_map.size());
     });

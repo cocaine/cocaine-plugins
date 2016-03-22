@@ -62,7 +62,7 @@ create_action_base_t::string_event(int rc, zookeeper::path_t value) {
     } catch(const std::system_error& e) {
         COCAINE_LOG_WARNING(ctx.log, "could not create node hierarchy - {}", e.what());
         abort(e.code().value());
-    } catch(const std::exception& e) {
+    } catch (const std::exception& e) {
         COCAINE_LOG_WARNING(ctx.log, "could not create node hierarchy - {}", e.what());
         abort(ZSYSTEMERROR);
     }
