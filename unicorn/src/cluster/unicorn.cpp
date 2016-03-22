@@ -19,16 +19,12 @@
 #include <cocaine/logging.hpp>
 
 #include <cocaine/rpc/actor.hpp>
-#include <cocaine/traits/endpoint.hpp>
-#include <cocaine/traits/map.hpp>
-#include <cocaine/traits/vector.hpp>
 
 #include <cocaine/unicorn/value.hpp>
 
 #include <blackhole/logger.hpp>
 
 #include <zookeeper/zookeeper.h>
-#include <cocaine/api/storage.hpp>
 
 namespace cocaine {
 
@@ -147,10 +143,7 @@ struct unicorn_cluster_t::on_list_update :
 unicorn_cluster_t::cfg_t::cfg_t(const dynamic_t& args) :
     path(args.as_object().at("path", "/cocaine/discovery").as_string()),
     retry_interval(args.as_object().at("retry_interval", 1u).as_uint()),
-    check_interval(args.as_object().at("check_interval", 60u).as_uint()),
-    fallback_storage_name(args.as_object().at("fallback_storage_name", "").as_string()),
-    fallback_path(args.as_object().at("fallback_path", "discovery_fallback_data").as_string())
-
+    check_interval(args.as_object().at("check_interval", 60u).as_uint())
 {}
 
 unicorn_cluster_t::on_announce::on_announce(unicorn_cluster_t* _parent) :
@@ -230,7 +223,6 @@ unicorn_cluster_t::on_fetch::write(api::unicorn_t::response::get&& result) {
             }
         });
     }
-    parent->write_fallback_data();
 }
 
 void
@@ -282,7 +274,6 @@ unicorn_cluster_t::on_list_update::write(api::unicorn_t::response::children_subs
 
 void
 unicorn_cluster_t::on_list_update::abort(const std::error_code& rc, const std::string& reason) {
-    parent->try_fallback();
     COCAINE_LOG_WARNING(parent->log, "failure during subscription({}): {} - {}, resubscribing", rc.value(), rc.message(), reason);
     parent->subscribe_timer.expires_from_now(boost::posix_time::seconds(parent->config.retry_interval));
     parent->subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, parent, std::placeholders::_1));
@@ -355,55 +346,6 @@ void unicorn_cluster_t::on_subscribe_timer(const std::error_code& ec) {
         subscribe();
     }
     //else timer was reset somewhere else
-}
-
-void unicorn_cluster_t::try_fallback() {
-    if(config.fallback_storage_name.empty()) {
-        COCAINE_LOG_ERROR(log, "can not use fallback discovery - fallback_storage_name is missing");
-        return;
-    }
-    COCAINE_LOG_WARNING(log, "using discovery fallback");
-    registered_locators.apply([&](locator_endpoints_t& endpoint_map){
-        if(endpoint_map.empty()) {
-            auto storage = api::storage(context, config.fallback_storage_name);
-            try {
-                endpoint_map = storage->get<locator_endpoints_t>("discovery_fallback", config.fallback_path);
-                for (const auto& uuid_to_endpoints: endpoint_map) {
-                    if(locator.uuid() != uuid_to_endpoints.first) {
-                        locator.link_node(uuid_to_endpoints.first, uuid_to_endpoints.second);
-                    }
-                }
-            } catch (const std::system_error& e) {
-                COCAINE_LOG_ERROR(log, "could not read fallback data from storage - {}, will retry by timer", cocaine::error::to_string(e));
-            }
-        }
-    });
-}
-
-void unicorn_cluster_t::write_fallback_data() {
-    if(config.fallback_storage_name.empty()) {
-        COCAINE_LOG_INFO(log, "skipping writing fallback data - fallback_storage_name is missing");
-        return;
-    }
-    COCAINE_LOG_DEBUG(log, "attempt to write fallback data");
-    locator_endpoints_t fallback_data;
-    registered_locators.apply([&](locator_endpoints_t& endpoint_map){
-        for(const auto& uuid_to_ep: endpoint_map) {
-            if(uuid_to_ep.second.empty()) {
-                COCAINE_LOG_DEBUG(log, "skipping writing fallback data - pending data fetch from zookeeper is in progress");
-                // The value still was not fetched from zookeeper.
-                return;
-            }
-        }
-        fallback_data = endpoint_map;
-    });
-    if(!fallback_data.empty()) {
-        auto storage = api::storage(context, config.fallback_storage_name);
-        COCAINE_LOG_INFO(log, "writing fallback data with {} uuids", fallback_data.size());
-        storage->put<locator_endpoints_t>("discovery_fallback", config.fallback_path, fallback_data, {});
-    } else {
-        COCAINE_LOG_DEBUG(log, "skipping writing fallback data - empty");
-    }
 }
 
 void

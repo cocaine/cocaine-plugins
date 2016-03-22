@@ -35,8 +35,6 @@ public:
         unicorn::path_t path;
         size_t retry_interval;
         size_t check_interval;
-        std::string fallback_storage_name;
-        std::string fallback_path;
     };
 
     unicorn_cluster_t(context_t& context, interface& locator, const std::string& name, const dynamic_t& args);
@@ -58,12 +56,6 @@ private:
 
     void
     on_subscribe_timer(const std::error_code& ec);
-
-    void
-    try_fallback();
-
-    void
-    write_fallback_data();
 
     std::shared_ptr<logging::logger_t> log;
     cfg_t config;
