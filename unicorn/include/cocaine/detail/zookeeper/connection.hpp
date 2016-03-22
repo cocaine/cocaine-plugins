@@ -137,6 +137,7 @@ private:
     void check_rc(int rc) const;
     void check_connectivity();
     zhandle_t* init();
+    void create_prefix();
     handler_scope_t w_scope;
     managed_watch_handler_base_t& watcher;
 };

@@ -35,6 +35,8 @@ public:
         unicorn::path_t path;
         size_t retry_interval;
         size_t check_interval;
+        std::string fallback_storage_name;
+        std::string fallback_path;
     };
 
     unicorn_cluster_t(context_t& context, interface& locator, const std::string& name, const dynamic_t& args);
@@ -57,6 +59,12 @@ private:
     void
     on_subscribe_timer(const std::error_code& ec);
 
+    void
+    try_fallback();
+
+    void
+    write_fallback_data();
+
     std::shared_ptr<logging::logger_t> log;
     cfg_t config;
     cocaine::context_t& context;
@@ -66,7 +74,8 @@ private:
     asio::deadline_timer subscribe_timer;
     unicorn_ptr unicorn;
     api::unicorn_scope_ptr create_scope, subscribe_scope, children_subscribe_scope, get_scope;
-    synchronized<std::set<std::string>> registered_locators;
+    typedef std::map<std::string, std::vector<asio::ip::tcp::endpoint>> locator_endpoints_t;
+    synchronized<locator_endpoints_t> registered_locators;
 };
 
 }}

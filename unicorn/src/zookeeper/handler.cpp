@@ -26,7 +26,7 @@ Target* back_cast(const void* data) {
     return const_cast<Target*>(static_cast<const Target*>(data));
 }
 
-std::atomic<size_t> callback_counter;
+std::atomic<size_t> callback_counter(1);
 }
 
 managed_handler_base_t::managed_handler_base_t(const handler_tag&) :
