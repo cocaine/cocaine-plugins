@@ -30,8 +30,6 @@
 #include <cocaine/rpc/dispatch.hpp>
 #include <cocaine/rpc/slot/deferred.hpp>
 
-
-//TODO : move to forwards
 namespace cocaine { namespace logging {
     class metafilter_t;
 }}
@@ -60,7 +58,7 @@ private:
 };
 
 class named_logging_t:
-public dispatch<io::named_log_tag>
+    public dispatch<io::named_log_tag>
 {
 public:
     named_logging_t(logging::logger_t& log, std::string name, std::shared_ptr<logging::metafilter_t> filter);
@@ -75,6 +73,5 @@ private:
     logging::logger_t& log;
     std::shared_ptr<logging::metafilter_t> filter;
 };
-
 
 }} // namespace cocaine::service

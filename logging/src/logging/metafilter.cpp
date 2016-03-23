@@ -44,9 +44,9 @@ metafilter_t::remove_filter(filter_t::id_type filter_id) {
     auto it = std::remove_if(filters.begin(), filters.end(), [=](const filter_info_t& info){
         return info.id == filter_id;
     });
-    bool removed = (it != filters.end());
+    const bool removed = (it != filters.end());
     if(removed) {
-        // Technical debt here. We can not be really sure that random ids are unique - we need to guarantee it somehow,
+        // We can not be really sure that random ids are unique - we need to guarantee it somehow,
         // but as far as we don't generate millions of filter 64 bits random numbers should be ok.
         assert(it == filters.end() - 1);
         filters.pop_back();
@@ -73,7 +73,10 @@ metafilter_t::apply(const std::string& message, unsigned int severity, const log
     }
     guard.unlock();
     for(auto id : ids_to_remove) {
-        remove_filter(id);
+        COCAINE_LOG_DEBUG(logger, "removing filter with id {}", id);
+        if(!remove_filter(id)) {
+            COCAINE_LOG_DEBUG(logger, "filter {} has been already removed", id);
+        }
     }
     return result;
 }

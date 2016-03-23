@@ -22,29 +22,16 @@
 
 #include <cocaine/dynamic.hpp>
 
-#include <boost/optional.hpp>
-
 #include <string>
 
 namespace cocaine { namespace logging {
 struct attribute_t {
     typedef std::string name_t;
     typedef dynamic_t value_t;
-    std::string name;
-    dynamic_t value;
+    name_t name;
+    value_t value;
 };
 
 typedef std::vector<attribute_t> attributes_t;
-
-inline
-boost::optional<const attribute_t&>
-find_attribute(const attributes_t& attributes, const std::string& attribute_name) {
-    auto it = std::find_if(
-        attributes.begin(),
-        attributes.end(),
-        [&](const attribute_t& attr){return attr.name == attribute_name;}
-    );
-    return it == attributes.end() ? boost::none : boost::optional<const attribute_t&>(*it);
-}
 
 }} // namespace cocaine::logging

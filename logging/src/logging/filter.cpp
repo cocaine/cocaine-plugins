@@ -25,6 +25,19 @@
 
 namespace cocaine { namespace logging {
 
+namespace {
+inline
+boost::optional<const attribute_t&>
+find_attribute(const attributes_t& attributes, const std::string& attribute_name) {
+    auto it = std::find_if(
+        attributes.begin(),
+        attributes.end(),
+        [&](const attribute_t& attr){return attr.name == attribute_name;}
+    );
+    return it == attributes.end() ? boost::none : boost::optional<const attribute_t&>(*it);
+}
+}
+
 filter_info_t::filter_info_t(filter_t _filter, filter_t::deadline_t _deadline, filter_t::id_type _id, filter_t::disposition_t _disposition, std::string _logger_name) :
     filter(std::move(_filter)),
     deadline(std::move(_deadline)),
@@ -56,8 +69,7 @@ filter_info_t::representation() {
     container["deadline"] = deadline.time_since_epoch().count();
     container["id"] = id;
     container["logger_name"] = logger_name;
-    dynamic_t representation(std::move(container));
-    return representation;
+    return dynamic_t(std::move(container));
 }
 
 class filter_t::inner_t {

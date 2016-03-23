@@ -26,7 +26,7 @@
 #include <blackhole/message.hpp>
 #include <blackhole/severity.hpp>
 
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 #include <chrono>
 

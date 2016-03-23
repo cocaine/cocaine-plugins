@@ -33,8 +33,6 @@ public:
     metafilter_t(std::unique_ptr<logger_t> logger);
     metafilter_t(const metafilter_t&) = delete;
     metafilter_t& operator=(const metafilter_t&) = delete;
-    metafilter_t(metafilter_t&&) = default;
-    metafilter_t& operator=(metafilter_t&&) = default;
 
     filter_result_t
     apply(const std::string& message, unsigned int severity, const logging::attributes_t& attributes);
