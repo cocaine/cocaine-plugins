@@ -66,7 +66,8 @@ private:
     asio::deadline_timer subscribe_timer;
     unicorn_ptr unicorn;
     api::unicorn_scope_ptr create_scope, subscribe_scope, children_subscribe_scope, get_scope;
-    synchronized<std::set<std::string>> registered_locators;
+    typedef std::map<std::string, std::vector<asio::ip::tcp::endpoint>> locator_endpoints_t;
+    synchronized<locator_endpoints_t> registered_locators;
 };
 
 }}
