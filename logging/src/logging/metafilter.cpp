@@ -24,28 +24,24 @@
 
 #include <blackhole/logger.hpp>
 
-namespace cocaine { namespace logging {
+namespace cocaine {
+namespace logging {
 
-metafilter_t::metafilter_t(std::unique_ptr<logger_t> _logger) :
-    logger(std::move(_logger))
-{
-}
+metafilter_t::metafilter_t(std::unique_ptr<logger_t> _logger) : logger(std::move(_logger)) {}
 
-void
-metafilter_t::add_filter(filter_info_t filter) {
+void metafilter_t::add_filter(filter_info_t filter) {
     COCAINE_LOG_DEBUG(logger, "adding filter with id {}", filter.id);
     std::lock_guard<boost::shared_mutex> guard(mutex);
     filters.push_back(std::move(filter));
 }
 
-bool
-metafilter_t::remove_filter(filter_t::id_type filter_id) {
+bool metafilter_t::remove_filter(filter_t::id_type filter_id) {
     std::lock_guard<boost::shared_mutex> guard(mutex);
-    auto it = std::remove_if(filters.begin(), filters.end(), [=](const filter_info_t& info){
+    auto it = std::remove_if(filters.begin(), filters.end(), [=](const filter_info_t& info) {
         return info.id == filter_id;
     });
     const bool removed = (it != filters.end());
-    if(removed) {
+    if (removed) {
         // We can not be really sure that random ids are unique - we need to guarantee it somehow,
         // but as far as we don't generate millions of filter 64 bits random numbers should be ok.
         assert(it == filters.end() - 1);
@@ -54,39 +50,41 @@ metafilter_t::remove_filter(filter_t::id_type filter_id) {
     return removed;
 }
 
-filter_result_t
-metafilter_t::apply(const std::string& message, unsigned int severity, const logging::attributes_t& attributes) {
+filter_result_t metafilter_t::apply(const std::string& message,
+                                    unsigned int severity,
+                                    const logging::attributes_t& attributes) {
     std::vector<filter_t::id_type> ids_to_remove;
     filter_t::deadline_t now = std::chrono::steady_clock::now();
     filter_result_t result = filter_result_t::accept;
     boost::shared_lock<boost::shared_mutex> guard(mutex);
 
     COCAINE_LOG_DEBUG(logger, "applying metafilter");
-    for (const auto& filter_info: filters) {
-        if(now > filter_info.deadline) {
+    for (const auto& filter_info : filters) {
+        if (now > filter_info.deadline) {
             COCAINE_LOG_DEBUG(logger, "removing filter with id {} due to passed deadline");
             ids_to_remove.push_back(filter_info.id);
-        } else if (result == filter_result_t::accept && filter_info.filter.apply(message, severity, attributes) == filter_result_t::reject) {
+        } else if (result == filter_result_t::accept &&
+                   filter_info.filter.apply(message, severity, attributes) ==
+                       filter_result_t::reject) {
             COCAINE_LOG_DEBUG(logger, "rejecting message by filter {}", filter_info.id);
             result = filter_result_t::reject;
         }
     }
     guard.unlock();
-    for(auto id : ids_to_remove) {
+    for (auto id : ids_to_remove) {
         COCAINE_LOG_DEBUG(logger, "removing filter with id {}", id);
-        if(!remove_filter(id)) {
+        if (!remove_filter(id)) {
             COCAINE_LOG_DEBUG(logger, "filter {} has been already removed", id);
         }
     }
     return result;
 }
 
-void
-metafilter_t::apply_visitor(visitor_t& visitor) {
+void metafilter_t::apply_visitor(visitor_t& visitor) {
     boost::shared_lock<boost::shared_mutex> guard(mutex);
-    for(const auto& filter_info : filters) {
+    for (const auto& filter_info : filters) {
         visitor(filter_info);
     }
 }
-
-}} // namespace cocaine::logging
+}
+}  // namespace cocaine::logging

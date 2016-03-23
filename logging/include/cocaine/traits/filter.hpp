@@ -22,26 +22,21 @@
 
 #include "cocaine/logging/filter.hpp"
 
-namespace cocaine { namespace io {
+namespace cocaine {
+namespace io {
 
-template<>
+template <>
 struct type_traits<logging::filter_t> {
-    template<class Stream>
-    static inline
-    void
-    pack(msgpack::packer<Stream>& target, const logging::filter_t& source) {
+    template <class Stream>
+    static inline void pack(msgpack::packer<Stream>& target, const logging::filter_t& source) {
         type_traits<dynamic_t>::pack(target, source.representation());
     }
 
-    static inline
-    void
-    unpack(const msgpack::object& source, logging::filter_t& target) {
+    static inline void unpack(const msgpack::object& source, logging::filter_t& target) {
         dynamic_t representation;
         type_traits<dynamic_t>::unpack(source, representation);
         target = logging::filter_t(representation);
     }
 };
-
-
-}} // namespace cocaine::io
-
+}
+}  // namespace cocaine::io

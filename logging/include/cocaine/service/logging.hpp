@@ -30,48 +30,51 @@
 #include <cocaine/rpc/dispatch.hpp>
 #include <cocaine/rpc/slot/deferred.hpp>
 
-namespace cocaine { namespace logging {
-    class metafilter_t;
-}}
+namespace cocaine {
+namespace logging {
+class metafilter_t;
+}
+}
 
-namespace cocaine { namespace service {
+namespace cocaine {
+namespace service {
 
-class logging_t:
-    public api::service_t,
-    public dispatch<io::base_log_tag>
-{
+class logging_t : public api::service_t, public dispatch<io::base_log_tag> {
 public:
-    virtual
-    const io::basic_dispatch_t&
-    prototype() const;
+    virtual const io::basic_dispatch_t& prototype() const;
 
-    logging_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
+    logging_t(context_t& context,
+              asio::io_service& asio,
+              const std::string& name,
+              const dynamic_t& args);
     struct impl_t;
+
 private:
     class logging_slot_t;
 
     struct deleter_t {
-        void
-        operator()(impl_t*);
+        void operator()(impl_t*);
     };
     std::unique_ptr<impl_t, deleter_t> impl;
 };
 
-class named_logging_t:
-    public dispatch<io::named_log_tag>
-{
+class named_logging_t : public dispatch<io::named_log_tag> {
 public:
-    named_logging_t(logging::logger_t& log, std::string name, std::shared_ptr<logging::metafilter_t> filter);
+    named_logging_t(logging::logger_t& log,
+                    std::string name,
+                    std::shared_ptr<logging::metafilter_t> filter);
 
-    void
-    emit(const std::string& message, unsigned int severity, const logging::attributes_t& attributes);
+    void emit(const std::string& message,
+              unsigned int severity,
+              const logging::attributes_t& attributes);
 
-    bool
-    emit_ack(const std::string& message, unsigned int severity, const logging::attributes_t& attributes);
+    bool emit_ack(const std::string& message,
+                  unsigned int severity,
+                  const logging::attributes_t& attributes);
 
 private:
     logging::logger_t& log;
     std::shared_ptr<logging::metafilter_t> filter;
 };
-
-}} // namespace cocaine::service
+}
+}  // namespace cocaine::service

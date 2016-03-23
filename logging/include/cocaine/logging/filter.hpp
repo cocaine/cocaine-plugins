@@ -26,38 +26,33 @@
 #include <blackhole/message.hpp>
 #include <blackhole/severity.hpp>
 
+#include <chrono>
 #include <cstdint>
 #include <string>
-#include <chrono>
 
-namespace cocaine { namespace logging {
+namespace cocaine {
+namespace logging {
 
-enum class filter_result_t {
-    accept,
-    reject
-};
+enum class filter_result_t { accept, reject };
 
 class filter_t {
 public:
     typedef uint64_t seconds_t;
     typedef uint64_t id_type;
     typedef dynamic_t representation_t;
-    //TODO: FIXME, use proper type
-    enum class disposition_t {
-        local,
-        cluster
-    };
+    // TODO: FIXME, use proper type
+    enum class disposition_t { local, cluster };
     typedef std::chrono::steady_clock::time_point deadline_t;
 
-    filter_result_t
-    apply(const std::string& message, unsigned int severity, const logging::attributes_t& attributes) const;
+    filter_result_t apply(const std::string& message,
+                          unsigned int severity,
+                          const logging::attributes_t& attributes) const;
 
     filter_t();
 
     filter_t(const representation_t& representation);
 
-    representation_t
-    representation() const;
+    representation_t representation() const;
 
     class inner_t;
 
@@ -84,8 +79,7 @@ struct filter_info_t {
     filter_t::disposition_t disposition;
     std::string logger_name;
 
-    dynamic_t
-    representation();
+    dynamic_t representation();
 };
-
-}} // namesapce cocaine::logging
+}
+}  // namesapce cocaine::logging

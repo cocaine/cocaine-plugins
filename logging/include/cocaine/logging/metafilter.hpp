@@ -26,7 +26,8 @@
 
 #include <boost/thread/shared_mutex.hpp>
 
-namespace cocaine { namespace logging {
+namespace cocaine {
+namespace logging {
 
 class metafilter_t {
 public:
@@ -34,31 +35,26 @@ public:
     metafilter_t(const metafilter_t&) = delete;
     metafilter_t& operator=(const metafilter_t&) = delete;
 
-    filter_result_t
-    apply(const std::string& message, unsigned int severity, const logging::attributes_t& attributes);
+    filter_result_t apply(const std::string& message,
+                          unsigned int severity,
+                          const logging::attributes_t& attributes);
 
-    void
-    add_filter(filter_info_t filter);
+    void add_filter(filter_info_t filter);
 
-    bool
-    remove_filter(filter_t::id_type filter_id);
+    bool remove_filter(filter_t::id_type filter_id);
 
     struct visitor_t {
-        virtual
-        ~visitor_t(){}
+        virtual ~visitor_t() {}
 
-        virtual void
-        operator()(const filter_info_t& info) = 0;
+        virtual void operator()(const filter_info_t& info) = 0;
     };
 
-    void
-    apply_visitor(visitor_t& visitor);
+    void apply_visitor(visitor_t& visitor);
 
 private:
     std::unique_ptr<logger_t> logger;
     std::vector<filter_info_t> filters;
     boost::shared_mutex mutex;
 };
-
-
-}}
+}
+}

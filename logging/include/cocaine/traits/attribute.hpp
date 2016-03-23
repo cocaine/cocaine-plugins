@@ -28,35 +28,31 @@
 
 #include <cocaine/traits/dynamic.hpp>
 
-namespace cocaine { namespace io {
+namespace cocaine {
+namespace io {
 
-template<>
+template <>
 struct type_traits<logging::attribute_t> {
-    template<class Stream>
-    static inline
-    void
-    pack(msgpack::packer<Stream>& target, const logging::attribute_t& source) {
+    template <class Stream>
+    static inline void pack(msgpack::packer<Stream>& target, const logging::attribute_t& source) {
         target.pack_array(2);
         type_traits<logging::attribute_t::name_t>::pack(target, source.name);
         type_traits<logging::attribute_t::value_t>::pack(target, source.value);
     }
 
-    static inline
-    void
-    unpack(const msgpack::object& source, logging::attribute_t& target) {
-
-        if(source.type == msgpack::type::ARRAY && source.via.array.size == 2) {
+    static inline void unpack(const msgpack::object& source, logging::attribute_t& target) {
+        if (source.type == msgpack::type::ARRAY && source.via.array.size == 2) {
             type_traits<logging::attribute_t::name_t>::unpack(source.via.array.ptr[0], target.name);
-            type_traits<logging::attribute_t::value_t>::unpack(source.via.array.ptr[1], target.value);
-        }
-        else if(source.type == msgpack::type::MAP && source.via.map.size == 1) {
+            type_traits<logging::attribute_t::value_t>::unpack(source.via.array.ptr[1],
+                                                               target.value);
+        } else if (source.type == msgpack::type::MAP && source.via.map.size == 1) {
             type_traits<logging::attribute_t::name_t>::unpack(source.via.map.ptr->key, target.name);
-            type_traits<logging::attribute_t::value_t>::unpack(source.via.map.ptr->val, target.value);
+            type_traits<logging::attribute_t::value_t>::unpack(source.via.map.ptr->val,
+                                                               target.value);
         } else {
             throw cocaine::error::error_t("invalid source for attribute pair : %s", source.type);
         }
     }
 };
-
-}} // namespace cocaine::io
-
+}
+}  // namespace cocaine::io

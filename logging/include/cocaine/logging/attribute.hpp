@@ -24,7 +24,8 @@
 
 #include <string>
 
-namespace cocaine { namespace logging {
+namespace cocaine {
+namespace logging {
 struct attribute_t {
     typedef std::string name_t;
     typedef dynamic_t value_t;
@@ -33,5 +34,5 @@ struct attribute_t {
 };
 
 typedef std::vector<attribute_t> attributes_t;
-
-}} // namespace cocaine::logging
+}
+}  // namespace cocaine::logging
