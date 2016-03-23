@@ -204,16 +204,13 @@ unicorn_cluster_t::on_fetch::write(api::unicorn_t::response::get&& result) {
             boost::lexical_cast<std::string>(result.get_value()).c_str()
         );
         parent->registered_locators.apply([&](locator_endpoints_t& endpoint_map) {
-            auto it = endpoint_map.find(uuid);
-            if (it != endpoint_map.end()) {
-                endpoint_map.erase(it);
-            }
+            endpoint_map.erase(uuid);
         });
     } else {
         parent->registered_locators.apply([&](locator_endpoints_t& endpoint_map) {
-            auto it = endpoint_map.find(uuid);
-            if (it == endpoint_map.end() || it->second.empty()) {
-                endpoint_map[uuid] = fetched_endpoints;
+            auto& cur_endpoints = endpoint_map[uuid];
+            if (cur_endpoints.empty()) {
+                cur_endpoints = fetched_endpoints;
                 if (uuid != parent->locator.uuid()) {
                     COCAINE_LOG_INFO(parent->log, "linking {} node", uuid);
                     parent->locator.link_node(uuid, fetched_endpoints);

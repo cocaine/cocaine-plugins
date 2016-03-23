@@ -26,7 +26,6 @@
 #include <stdexcept>
 #include <string>
 
-#include <iostream>
 namespace zookeeper {
 namespace {
 template <class Ptr>
