@@ -107,6 +107,27 @@ Depends: ${misc:Depends}, libcocaine-plugin-ipvs3 (= ${binary:Version})
 Description: Cocaine - IPVS Gateway (debug symbols)
  IP Virtual Service Gateway for Cocaine. Debug symbols.
 
+Package: libcocaine-plugin-logging3
+Architecture: any
+Section: libs
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Cocaine - v2 logging service
+ Logging service for Cocaine.
+
+Package: libcocaine-plugin-logging-dev
+Architecture: any
+Section: libdevel
+Depends: ${misc:Depends}, libcocaine-plugin-logging3 (= ${binary:Version})
+Description: Cocaine - v2 logging service (development headers)
+ Logging service for Cocaine. Development headers.
+
+Package: libcocaine-plugin-logging-dbg
+Architecture: any
+Section: debug
+Depends: ${misc:Depends}, libcocaine-plugin-logging3 (= ${binary:Version})
+Description: Cocaine - v2 logging service (debug symbols)
+ Logging service for Cocaine. Debug symbols
+
 # Package: libcocaine-plugin-mongodb3
 # Architecture: any
 # Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core3 (>= 0.12.0.0),
