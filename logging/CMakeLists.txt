@@ -28,6 +28,8 @@ INSTALL(TARGETS logging
 INSTALL(
     DIRECTORY
         include/cocaine/idl
+        include/cocaine/logging
+        include/cocaine/traits
     DESTINATION include/cocaine
     COMPONENT development)
 
