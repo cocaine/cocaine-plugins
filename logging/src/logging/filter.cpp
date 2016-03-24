@@ -97,29 +97,29 @@ typedef filter_result_t fr;
 
 template <template <class> class Filter>
 struct filter_creation_visitor_t {
-    typedef inner_t result_type;
+    typedef inner_t::pointer result_type;
 
     filter_creation_visitor_t(std::string _attribute_name)
         : attribute_name(std::move(_attribute_name)) {}
 
     result_type operator()(dynamic_t::bool_t value) {
-        return inner_t(new Filter<dynamic_t::bool_t>(std::move(attribute_name), value));
+        return new Filter<dynamic_t::bool_t>(std::move(attribute_name), value);
     }
 
     result_type operator()(dynamic_t::uint_t value) {
-        return inner_t(new Filter<dynamic_t::uint_t>(std::move(attribute_name), value));
+        return new Filter<dynamic_t::uint_t>(std::move(attribute_name), value);
     }
 
     result_type operator()(dynamic_t::int_t value) {
-        return inner_t(new Filter<dynamic_t::int_t>(std::move(attribute_name), value));
+        return new Filter<dynamic_t::int_t>(std::move(attribute_name), value);
     }
 
     result_type operator()(dynamic_t::double_t value) {
-        return inner_t(new Filter<dynamic_t::double_t>(std::move(attribute_name), value));
+        return new Filter<dynamic_t::double_t>(std::move(attribute_name), value);
     }
 
     result_type operator()(dynamic_t::string_t value) {
-        return inner_t(new Filter<std::string>(std::move(attribute_name), std::move(value)));
+        return new Filter<std::string>(std::move(attribute_name), std::move(value));
     }
 
     template <class T>
@@ -409,22 +409,22 @@ inner_t string_operand_factory(const std::string& filter_operator,
     }
     if (filter_operator == "==") {
         filter_creation_visitor_t<equals_filter_t> visitor(operand1.as_string());
-        return operand2.apply(visitor);
+        return inner_t(operand2.apply(visitor));
     } else if (filter_operator == "!=") {
         filter_creation_visitor_t<not_equals_filter_t> visitor(operand1.as_string());
-        return operand2.apply(visitor);
+        return inner_t(operand2.apply(visitor));
     } else if (filter_operator == ">") {
         filter_creation_visitor_t<greater_filter_t> visitor(operand1.as_string());
-        return operand2.apply(visitor);
+        return inner_t(operand2.apply(visitor));
     } else if (filter_operator == "<") {
         filter_creation_visitor_t<less_filter_t> visitor(operand1.as_string());
-        return operand2.apply(visitor);
+        return inner_t(operand2.apply(visitor));
     } else if (filter_operator == ">=") {
         filter_creation_visitor_t<greater_or_equal_filter_t> visitor(operand1.as_string());
-        return operand2.apply(visitor);
+        return inner_t(operand2.apply(visitor));
     } else if (filter_operator == "<=") {
         filter_creation_visitor_t<less_or_equal_filter_t> visitor(operand1.as_string());
-        return operand2.apply(visitor);
+        return inner_t(operand2.apply(visitor));
     }
     throw std::logic_error(format("Invalid operator passed: %s", filter_operator));
 }
@@ -468,12 +468,12 @@ dynamic_t filter_t::representation() const {
     return inner->representation();
 }
 
-filter_t::filter_t(const dynamic_t& representation) {
-    if (!representation.is_array()) {
+filter_t::filter_t(const dynamic_t& source) {
+    if (!source.is_array()) {
         throw error_t("representation should be array, found - %s",
-                      boost::lexical_cast<std::string>(representation));
+                      boost::lexical_cast<std::string>(source));
     }
-    const auto& array = representation.as_array();
+    const auto& array = source.as_array();
     if (array.size() < 1) {
         throw error_t("representation should contain  at least 1 element");
     }
