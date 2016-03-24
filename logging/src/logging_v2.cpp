@@ -50,38 +50,38 @@ namespace service {
 namespace {
 struct create_handler_t
     : public unicorn::writable_adapter_base_t<api::unicorn_t::response::create> {
-    create_handler_t(logging_t::impl_t& _parent, uint64_t _scope_id)
+    create_handler_t(logging_v2_t::impl_t& _parent, uint64_t _scope_id)
         : parent(_parent), scope_id(_scope_id) {}
     virtual void write(bool&&);
 
     virtual void abort(const std::error_code&, const std::string&);
 
-    logging_t::impl_t& parent;
+    logging_v2_t::impl_t& parent;
     uint64_t scope_id;
 };
 
 struct filter_list_subscription_t
     : public unicorn::writable_adapter_base_t<api::unicorn_t::response::children_subscribe>,
       public std::enable_shared_from_this<filter_list_subscription_t> {
-    filter_list_subscription_t(logging_t::impl_t& _parent) : parent(_parent) {}
+    filter_list_subscription_t(logging_v2_t::impl_t& _parent) : parent(_parent) {}
 
     virtual void write(
         std::tuple<cocaine::unicorn::version_t, std::vector<std::string>>&& filter_ids);
 
     virtual void abort(const std::error_code&, const std::string&);
 
-    logging_t::impl_t& parent;
+    logging_v2_t::impl_t& parent;
 };
 
 struct id_subscription_t
     : public unicorn::writable_adapter_base_t<api::unicorn_t::response::subscribe> {
-    id_subscription_t(logging_t::impl_t& _parent, uint64_t _id) : parent(_parent), id(_id) {}
+    id_subscription_t(logging_v2_t::impl_t& _parent, uint64_t _id) : parent(_parent), id(_id) {}
 
     virtual void write(api::unicorn_t::response::subscribe&& filter_value);
 
     virtual void abort(const std::error_code&, const std::string&);
 
-    logging_t::impl_t& parent;
+    logging_v2_t::impl_t& parent;
     uint64_t id;
     std::string name;
 };
@@ -101,7 +101,7 @@ struct list_filters_visitor_t : public logging::metafilter_t::visitor_t {
     }
 };
 }
-struct logging_t::impl_t {
+struct logging_v2_t::impl_t {
     impl_t(context_t& context, bh::root_logger_t _logger, std::string _filter_unicorn_path)
         : internal_logger(context.log("logging_v2")),
           logger(std::move(_logger)),
@@ -292,7 +292,7 @@ void id_subscription_t::abort(const std::error_code& ec, const std::string& erro
         parent.internal_logger, "failed to receive filter update, {} - {}", error, ec.message());
 }
 
-class logging_t::logging_slot_t : public io::basic_slot<io::base_log::get> {
+class logging_v2_t::logging_slot_t : public io::basic_slot<io::base_log::get> {
 public:
     typedef io::base_log::get event_type;
     typedef typename io::basic_slot<event_type>::dispatch_type dispatch_type;
@@ -300,7 +300,7 @@ public:
     // This one is type of upstream.
     typedef typename io::basic_slot<event_type>::upstream_type upstream_type;
 
-    logging_slot_t(logging_t& _parent) : parent(_parent) {}
+    logging_slot_t(logging_v2_t& _parent) : parent(_parent) {}
 
     virtual boost::optional<std::shared_ptr<const dispatch_type>> operator()(tuple_type&& args,
                                                                              upstream_type&&) {
@@ -322,7 +322,7 @@ public:
     }
 
 private:
-    logging_t& parent;
+    logging_v2_t& parent;
 };
 
 struct dynamic_visitor_t {
@@ -351,15 +351,15 @@ struct dynamic_visitor_t {
     typedef void result_type;
 };
 
-void logging_t::deleter_t::operator()(impl_t* ptr) {
+void logging_v2_t::deleter_t::operator()(impl_t* ptr) {
     delete ptr;
-};
+}
 
-const io::basic_dispatch_t& logging_t::prototype() const {
+const io::basic_dispatch_t& logging_v2_t::prototype() const {
     return *this;
 }
 
-logging_t::logging_t(context_t& context,
+logging_v2_t::logging_v2_t(context_t& context,
                      asio::io_service& asio,
                      const std::string& service_name,
                      const dynamic_t& service_args)

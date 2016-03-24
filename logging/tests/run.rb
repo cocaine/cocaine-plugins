@@ -7,7 +7,7 @@ Celluloid.logger.level = Cocaine::LOG.level
 
 
 def timeout
-  3
+  1
 end
 
 def ensure_log(frontend, msg, verbosity=1, attributes = [])

@@ -29,6 +29,6 @@ auto validation() -> api::preconditions_t {
 }
 
 void initialize(api::repository_t& repository) {
-    repository.insert<logging_t>("logging::v2");
+    repository.insert<logging_v2_t>("logging::v2");
 }
 }
