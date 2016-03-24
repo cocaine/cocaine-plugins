@@ -26,9 +26,15 @@
 #include "cocaine/service/logging.hpp"
 
 #include <blackhole/config/json.hpp>
+#include <blackhole/formatter/json.hpp>
+#include <blackhole/formatter/string.hpp>
 #include <blackhole/registry.hpp>
 #include <blackhole/root.hpp>
 #include <blackhole/sink/console.hpp>
+#include <blackhole/sink/console.hpp>
+#include <blackhole/sink/file.hpp>
+#include <blackhole/sink/socket/tcp.hpp>
+#include <blackhole/sink/socket/udp.hpp>
 #include <blackhole/wrapper.hpp>
 
 #include <cocaine/api/unicorn.hpp>
@@ -369,7 +375,11 @@ logging_v2_t::logging_v2_t(context_t& context,
           context,
           [&]() {
               auto registry = blackhole::registry_t::configured();
+              registry.add<blackhole::formatter::json_t>();
               registry.add<blackhole::sink::console_t>();
+              registry.add<blackhole::sink::file_t>();
+              registry.add<blackhole::sink::socket::tcp_t>();
+              registry.add<blackhole::sink::socket::udp_t>();
 
               std::stringstream stream;
               stream << boost::lexical_cast<std::string>(context.config.logging.loggers);
