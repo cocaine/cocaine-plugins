@@ -11,7 +11,7 @@ def timeout
 end
 
 def ensure_log(frontend, msg, verbosity=1, attributes = [])
-  logger = Cocaine::Service.new(:logging_v2)
+  logger = Cocaine::Service.new('logging::v2')
   tx, rx = logger.get(frontend)
   tx.emit_ack(msg, verbosity, attributes)
   res = rx.recv(timeout)
@@ -21,7 +21,7 @@ def ensure_log(frontend, msg, verbosity=1, attributes = [])
 end
 
 def ensure_not_log(frontend, msg, verbosity=1, attributes = [])
-  logger = Cocaine::Service.new(:logging_v2)
+  logger = Cocaine::Service.new('logging::v2')
   tx, rx = logger.get(frontend)
   tx.emit_ack(msg, verbosity, attributes)
   res = rx.recv(timeout)
@@ -31,14 +31,14 @@ def ensure_not_log(frontend, msg, verbosity=1, attributes = [])
 end
 
 def log(frontend, msg, verbosity=1, attributes = [[]])
-  logger = Cocaine::Service.new(:logging_v2)
+  logger = Cocaine::Service.new('logging::v2')
   tx, rx = logger.get(frontend)
   tx.emit(msg, verbosity, attributes)
   logger.terminate
 end
 
 def set_filter(frontend, filter, ttl = 60)
-  logger = Cocaine::Service.new(:logging_v2)
+  logger = Cocaine::Service.new('logging::v2')
   tx, rx = logger.set_filter(frontend, filter, ttl)
   result = rx.recv(timeout)
   expect(result[0]). to eq :value;
@@ -61,18 +61,18 @@ end
 
 describe :Logging do
   it 'should create named logger' do
-    logger = Cocaine::Service.new(:logging_v2)
+    logger = Cocaine::Service.new('logging::v2')
     tx, rx = logger.get('test_logger')
   end
 
   it 'should log without attributes and verbosity via named logger' do
-    logger = Cocaine::Service.new(:logging_v2)
+    logger = Cocaine::Service.new('logging::v2')
     tx, rx = logger.get('test_logger')
     tx.emit('simple log test')
   end
 
   it 'should log without attributes and with verbosity via named logger' do
-    logger = Cocaine::Service.new(:logging_v2)
+    logger = Cocaine::Service.new('logging::v2')
     tx, rx = logger.get('test_logger')
     tx.emit('simple log with verbosity only test', 2)
   end
@@ -82,12 +82,14 @@ describe :Logging do
   end
 
   it 'should list loggers' do
-    ensure_log('test_logger_to_list', 'YAY')
-    logger = Cocaine::Service.new(:logging_v2)
+    backend = random_backend('test_logger_to_list')
+    set_filter(backend, ['empty'])
+    ensure_log(backend, 'YAY')
+    logger = Cocaine::Service.new('logging::v2')
     tx, rx = logger.list_loggers()
     result = rx.recv(timeout)
     expect(result[0]).to eq :value
-    expect(result[1][0]).to include 'test_logger_to_list'
+    expect(result[1][0]).to include backend
   end
 
   it 'should correctly set not_exists filter' do
@@ -185,7 +187,7 @@ describe :Logging do
     id1 = set_filter(back1, filter)
     id2 = set_filter(back2, filter)
     id3 = set_filter(back3, filter)
-    logger = Cocaine::Service.new(:logging_v2)
+    logger = Cocaine::Service.new('logging::v2')
     tx, rx = logger.list_filters()
     res = rx.recv(timeout)
     expect(res[0]).to eq :value
@@ -196,7 +198,7 @@ describe :Logging do
 
   it 'should correctly set cluster filter' do
     backend = random_backend('cluster_filter_test')
-    logger = Cocaine::Service.new(:logging_v2, [['localhost', 10054]])
+    logger = Cocaine::Service.new('logging::v2', [['localhost', 10054]])
     tx, rx = logger.set_cluster_filter(backend, ['==', 'another_attr', 42], 60)
     ensure_not_log(backend, invalid_msg, 2, [['another_attr', 1]])
   end

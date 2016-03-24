@@ -145,6 +145,18 @@ struct null_filter_t : public filter_t::inner_t {
     };
 };
 
+struct empty_filter_t : public filter_t::inner_t {
+    virtual filter_result_t apply(const std::string&,
+                                  unsigned int,
+                                  const logging::attributes_t&) const {
+        return fr::accept;
+    }
+
+    virtual dynamic_t representation() const {
+        return dynamic_t(std::make_tuple(std::string("empty")));
+    };
+};
+
 struct exists_filter_t : public filter_t::inner_t {
     exists_filter_t(std::string _attribute_name) : attribute_name(std::move(_attribute_name)) {}
 
@@ -462,15 +474,17 @@ filter_t::filter_t(const dynamic_t& representation) {
                       boost::lexical_cast<std::string>(representation));
     }
     const auto& array = representation.as_array();
-    if (array.size() < 2) {
-        throw error_t("representation should contain  at least 2 elements");
+    if (array.size() < 1) {
+        throw error_t("representation should contain  at least 1 element");
     }
     if (!array[0].is_string()) {
         throw error_t("operator should be string");
     }
     const auto filter_operator = array[0].as_string();
     const auto operand1 = array[1];
-    if (array.size() == 2) {
+    if (array.size() == 1 && array[0].is_string() && array[0].as_string() == "empty") {
+        inner.reset(new empty_filter_t());
+    } else if (array.size() == 2) {
         inner = unary_operator_factory(filter_operator, operand1);
     } else if (array.size() == 3) {
         const auto operand2 = array[2];

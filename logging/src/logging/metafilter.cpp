@@ -55,7 +55,7 @@ filter_result_t metafilter_t::apply(const std::string& message,
                                     const logging::attributes_t& attributes) {
     std::vector<filter_t::id_type> ids_to_remove;
     filter_t::deadline_t now = std::chrono::steady_clock::now();
-    filter_result_t result = filter_result_t::accept;
+    filter_result_t result = filter_result_t::reject;
     boost::shared_lock<boost::shared_mutex> guard(mutex);
 
     COCAINE_LOG_DEBUG(logger, "applying metafilter");
@@ -63,11 +63,11 @@ filter_result_t metafilter_t::apply(const std::string& message,
         if (now > filter_info.deadline) {
             COCAINE_LOG_DEBUG(logger, "removing filter with id {} due to passed deadline");
             ids_to_remove.push_back(filter_info.id);
-        } else if (result == filter_result_t::accept &&
+        } else if (result == filter_result_t::reject &&
                    filter_info.filter.apply(message, severity, attributes) ==
-                       filter_result_t::reject) {
+                       filter_result_t::accept) {
             COCAINE_LOG_DEBUG(logger, "rejecting message by filter {}", filter_info.id);
-            result = filter_result_t::reject;
+            result = filter_result_t::accept;
         }
     }
     guard.unlock();
