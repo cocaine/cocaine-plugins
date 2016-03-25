@@ -60,18 +60,12 @@ private:
 
 class named_logging_t : public dispatch<io::named_log_tag> {
 public:
+    template<class Event>
+    class emit_slot_t;
+
     named_logging_t(logging::logger_t& log,
                     std::string name,
                     std::shared_ptr<logging::metafilter_t> filter);
-
-    void emit(const std::string& message,
-              unsigned int severity,
-              const logging::attributes_t& attributes);
-
-    bool emit_ack(const std::string& message,
-                  unsigned int severity,
-                  const logging::attributes_t& attributes);
-
 private:
     logging::logger_t& log;
     std::shared_ptr<logging::metafilter_t> filter;

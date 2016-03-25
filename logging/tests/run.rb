@@ -2,7 +2,7 @@ require 'securerandom'
 require 'cocaine'
 require 'rspec'
 
-Cocaine::LOG.level = Logger::ERROR
+Cocaine::LOG.level = Logger::DEBUG
 Celluloid.logger.level = Cocaine::LOG.level
 
 
@@ -13,9 +13,11 @@ end
 def ensure_log(frontend, msg, verbosity=1, attributes = [])
   logger = Cocaine::Service.new('logging::v2')
   tx, rx = logger.get(frontend)
-  tx.emit_ack(msg, verbosity, attributes)
+  tx.emit_ack(verbosity, msg, attributes)
   res = rx.recv(timeout)
-  expect(res[0]). to eq :value
+  tx.emit_ack(verbosity, msg, attributes)
+  res = rx.recv(timeout)
+  expect(res[0]). to eq :write
   expect(res[1][0]). to be true
   logger.terminate
 end
@@ -23,9 +25,9 @@ end
 def ensure_not_log(frontend, msg, verbosity=1, attributes = [])
   logger = Cocaine::Service.new('logging::v2')
   tx, rx = logger.get(frontend)
-  tx.emit_ack(msg, verbosity, attributes)
+  tx.emit_ack(verbosity, msg, attributes)
   res = rx.recv(timeout)
-  expect(res[0]). to eq :value
+  expect(res[0]). to eq :write
   expect(res[1][0]). to be false
   logger.terminate
 end

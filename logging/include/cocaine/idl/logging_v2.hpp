@@ -38,6 +38,40 @@ struct named_log_tag;
 // Logging service interface
 
 struct base_log {
+
+    struct emit {
+        typedef base_log_tag tag;
+
+        static const char* alias() {
+            return "emit";
+        }
+        typedef boost::mpl::list<
+        /* Log severity*/
+        unsigned int,
+        /* Message backend, used for log routing and filtering. */
+        std::string,
+        /* Log message. Some meaningful string, with no explicit limits on its length, although
+           underlying loggers might silently truncate it. */
+        std::string,
+        /* Log event attached attributes. */
+        optional<logging::attributes_t>>::type argument_type;
+
+        typedef void upstream_type;
+    };
+
+    struct verbosity {
+        typedef base_log_tag tag;
+
+        static const char* alias() {
+            return "verbosity";
+        }
+
+        typedef option_of<
+        /* The current verbosity level of the core logging sink. */
+        unsigned int
+        >::tag upstream_type;
+    };
+
     struct get {
         typedef base_log_tag tag;
 
@@ -50,6 +84,7 @@ struct base_log {
             std::string>::type argument_type;
 
         typedef named_log_tag dispatch_type;
+        typedef stream_of<bool>::tag upstream_type;
     };
 
     struct list_loggers {
@@ -141,15 +176,16 @@ struct named_log {
         }
 
         typedef boost::mpl::list<
-            /* Log message. Some meaningful string, with no explicit limits on its length, although
-               underlying loggers might silently truncate it. */
-            std::string,
-            /* Log severity*/
-            unsigned int,
-            /* Log event attached attributes. */
-            optional<logging::attributes_t>>::type argument_type;
+        /* Log severity*/
+        unsigned int,
+        /* Log message. Some meaningful string, with no explicit limits on its length, although
+           underlying loggers might silently truncate it. */
+        std::string,
+        /* Log event attached attributes. */
+        optional<logging::attributes_t>>::type argument_type;
 
-        typedef void upstream_type;
+
+        typedef base_log::get::upstream_type upstream_type;
 
         typedef named_log_tag dispatch_type;
     };
@@ -161,16 +197,9 @@ struct named_log {
             return "emit_ack";
         }
 
-        typedef boost::mpl::list<
-            /* Log message. Some meaningful string, with no explicit limits on its length, although
-               underlying loggers might silently truncate it. */
-            std::string,
-            /* Log severity*/
-            optional_with_default<unsigned int, 1u>,
-            /* Log event attached attributes. */
-            optional<logging::attributes_t>>::type argument_type;
+        typedef named_log::emit::argument_type argument_type;
 
-        typedef option_of<bool>::tag upstream_type;
+        typedef base_log::get::upstream_type upstream_type;
 
         typedef named_log_tag dispatch_type;
     };
@@ -180,7 +209,9 @@ template <>
 struct protocol<base_log_tag> {
     typedef boost::mpl::int_<1>::type version;
 
-    typedef boost::mpl::list<base_log::get,
+    typedef boost::mpl::list<base_log::emit,
+                             base_log::verbosity,
+                             base_log::get,
                              base_log::list_loggers,
                              base_log::set_filter,
                              base_log::remove_filter,

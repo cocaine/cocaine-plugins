@@ -39,6 +39,7 @@
 
 #include <cocaine/api/unicorn.hpp>
 #include <cocaine/context.hpp>
+#include <cocaine/idl/streaming.hpp>
 #include <cocaine/rpc/slot.hpp>
 #include <cocaine/traits/vector.hpp>
 #include <cocaine/unicorn/value.hpp>
@@ -48,16 +49,18 @@
 namespace ph = std::placeholders;
 namespace bh = blackhole;
 
-using namespace cocaine;
-
 namespace cocaine {
 namespace service {
 
 namespace {
-struct create_handler_t
-    : public unicorn::writable_adapter_base_t<api::unicorn_t::response::create> {
+
+typedef api::unicorn_t::response response;
+
+struct create_handler_t : public unicorn::writable_adapter_base_t<response::create> {
+
     create_handler_t(logging_v2_t::impl_t& _parent, uint64_t _scope_id)
         : parent(_parent), scope_id(_scope_id) {}
+
     virtual void write(bool&&);
 
     virtual void abort(const std::error_code&, const std::string&);
@@ -67,8 +70,9 @@ struct create_handler_t
 };
 
 struct filter_list_subscription_t
-    : public unicorn::writable_adapter_base_t<api::unicorn_t::response::children_subscribe>,
+    : public unicorn::writable_adapter_base_t<response::children_subscribe>,
       public std::enable_shared_from_this<filter_list_subscription_t> {
+
     filter_list_subscription_t(logging_v2_t::impl_t& _parent) : parent(_parent) {}
 
     virtual void write(
@@ -106,8 +110,84 @@ struct list_filters_visitor_t : public logging::metafilter_t::visitor_t {
             info.logger_name, info.filter.representation(), info.id, info.disposition));
     }
 };
+
+bh::root_logger_t get_root_logger(context_t& context, const dynamic_t& service_args) {
+    auto registry = blackhole::registry_t::configured();
+    registry.add<blackhole::formatter::json_t>();
+    registry.add<blackhole::sink::console_t>();
+    registry.add<blackhole::sink::file_t>();
+    registry.add<blackhole::sink::socket::tcp_t>();
+    registry.add<blackhole::sink::socket::udp_t>();
+
+    std::stringstream stream;
+    stream << boost::lexical_cast<std::string>(context.config.logging.loggers);
+
+    return registry.builder<blackhole::config::json_t>(stream).build(
+    service_args.as_object().at("backend", "core").as_string());
+}
+
+struct dynamic_visitor_t {
+    void operator()(const dynamic_t::array_t&) {
+        throw std::system_error(std::make_error_code(std::errc::invalid_argument),
+                                "can not process array as attribute value");
+    }
+
+    void operator()(const dynamic_t::object_t&) {
+        throw std::system_error(std::make_error_code(std::errc::invalid_argument),
+                                "can not process map as attribute value");
+    }
+
+    void operator()(dynamic_t::null_t) {
+        throw std::system_error(std::make_error_code(std::errc::invalid_argument),
+                                "can not process null as attribute value");
+    }
+
+    template <class T>
+    void operator()(const T& value) {
+        attributes.emplace_back(blackhole::attribute_t(name, value));
+    }
+
+    blackhole::attributes_t& attributes;
+    const std::string& name;
+    typedef void result_type;
+};
+
+bool emit_ack(std::shared_ptr<logging::metafilter_t> filter,
+              logging::logger_t& log,
+              unsigned int severity,
+              const std::string& message,
+              const logging::attributes_t& attributes) {
+    if (filter->apply(message, severity, attributes) == logging::filter_result_t::reject) {
+        return false;
+    }
+    if (!attributes.empty()) {
+        blackhole::attributes_t bh_attributes;
+        for (const auto& attribute : attributes) {
+            dynamic_visitor_t visitor{bh_attributes, attribute.name};
+            attribute.value.apply(visitor);
+        }
+        blackhole::attribute_list attribute_list(bh_attributes.begin(), bh_attributes.end());
+        blackhole::attribute_pack attribute_pack({attribute_list});
+        log.log(blackhole::severity_t(severity), message, attribute_pack);
+    } else {
+        log.log(blackhole::severity_t(severity), message);
+    }
+    return true;
+}
+
+void emit(std::shared_ptr<logging::metafilter_t> filter,
+          logging::logger_t& log,
+          unsigned int severity,
+          const std::string& message,
+          const logging::attributes_t& attributes) {
+    emit_ack(filter, log, severity, message, attributes);
+}
+
 }
 struct logging_v2_t::impl_t {
+
+    typedef logging::filter_t::deadline_t deadline_t;
+
     impl_t(context_t& context, bh::root_logger_t _logger, std::string _filter_unicorn_path)
         : internal_logger(context.log("logging_v2")),
           logger(std::move(_logger)),
@@ -137,26 +217,21 @@ struct logging_v2_t::impl_t {
         return result;
     }
 
-    logging::filter_t::id_type set_filter(const std::string& name,
+    logging::filter_t::id_type set_filter(std::string name,
                                           logging::filter_t filter,
                                           uint64_t ttl,
                                           logging::filter_t::disposition_t disposition) {
-        logging::filter_t::deadline_t deadline(std::chrono::steady_clock::now() +
-                                               std::chrono::seconds(ttl));
+
+        deadline_t deadline(std::chrono::steady_clock::now() + std::chrono::seconds(ttl));
         uint64_t id = (*generator.synchronize())();
-        logging::filter_info_t info(
-            std::move(filter), std::move(deadline), id, disposition, std::move(name));
+        logging::filter_info_t info(std::move(filter),
+                                    std::move(deadline),
+                                    id,
+                                    disposition,
+                                    std::move(name));
+
         if (disposition == logging::filter_t::disposition_t::local) {
-            auto metafilter = metafilters.apply(
-                [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mf) {
-                    auto& ret = mf[info.logger_name];
-                    if (ret == nullptr) {
-                        std::unique_ptr<logging::logger_t> mf_logger(
-                            new blackhole::wrapper_t(*internal_logger, {{"metafilter", name}}));
-                        ret = std::make_shared<logging::metafilter_t>(std::move(mf_logger));
-                    }
-                    return ret;
-                });
+            auto metafilter = get_metafilter(info.logger_name);
             metafilter->add_filter(std::move(info));
         } else if (disposition == logging::filter_t::disposition_t::cluster) {
             unsigned long scope_id = scope_counter++;
@@ -207,9 +282,21 @@ struct logging_v2_t::impl_t {
         });
     }
 
+    std::shared_ptr<logging::metafilter_t> get_metafilter(const std::string& name) {
+        return metafilters.apply(
+        [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& _metafilters) {
+            auto& metafilter = _metafilters[name];
+            if (metafilter == nullptr) {
+                std::unique_ptr<logging::logger_t> mf_logger(new blackhole::wrapper_t(
+                *(internal_logger), {{"metafilter", name}}));
+                metafilter = std::make_shared<logging::metafilter_t>(std::move(mf_logger));
+            }
+            return metafilter;
+        });
+    }
+
     std::unique_ptr<logging::logger_t> internal_logger;
     bh::root_logger_t logger;
-
     synchronized<std::map<std::string, std::shared_ptr<logging::metafilter_t>>> metafilters;
     synchronized<std::mt19937_64> generator;
     api::category_traits<api::unicorn_t>::ptr_type unicorn;
@@ -311,16 +398,7 @@ public:
     virtual boost::optional<std::shared_ptr<const dispatch_type>> operator()(tuple_type&& args,
                                                                              upstream_type&&) {
         return tuple::invoke(std::forward<tuple_type>(args), [&](std::string name) {
-            auto metafilter = parent.impl->metafilters.apply(
-                [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& metafilters) {
-                    auto& mf = metafilters[name];
-                    if (mf == nullptr) {
-                        std::unique_ptr<logging::logger_t> internal_logger(new blackhole::wrapper_t(
-                            *(parent.impl->internal_logger), {{"metafilter", name}}));
-                        mf = std::make_shared<logging::metafilter_t>(std::move(internal_logger));
-                    }
-                    return mf;
-                });
+            auto metafilter = parent.impl->get_metafilter(name);
             std::shared_ptr<const dispatch_type> dispatch = std::make_shared<const named_logging_t>(
                 parent.impl->logger, std::move(name), std::move(metafilter));
             return boost::make_optional(std::move(dispatch));
@@ -331,30 +409,39 @@ private:
     logging_v2_t& parent;
 };
 
-struct dynamic_visitor_t {
-    void operator()(const dynamic_t::array_t&) {
-        throw std::system_error(std::make_error_code(std::errc::invalid_argument),
-                                "can not process array as attribute value");
+template<class Event>
+class named_logging_t::emit_slot_t : public io::basic_slot<Event> {
+public:
+    typedef Event event_type;
+    typedef io::basic_slot<event_type> super;
+    typedef typename super::dispatch_type dispatch_type;
+    typedef typename super::tuple_type tuple_type;
+    typedef typename super::upstream_type upstream_type;
+
+    typedef typename io::protocol<typename io::event_traits<event_type>::upstream_type>::scope protocol;
+    //typedef typename io::aux::protocol_impl<typename io::event_traits<event_type>::upstream_type>::type protocol;
+
+
+
+    emit_slot_t(named_logging_t& _parent, bool _need_ack) : parent(_parent), need_ack(_need_ack) {}
+
+    virtual boost::optional<std::shared_ptr<const dispatch_type>> operator()(tuple_type&& args,
+                                                                             upstream_type&& upstream) {
+        bool result = emit_ack(parent.filter,
+                               parent.log,
+                               std::get<0>(args),
+                               std::get<1>(args),
+                               std::get<2>(args));
+        if(need_ack) {
+            upstream.template send<typename protocol::chunk>(result);
+        }
+
+        return boost::none;
     }
 
-    void operator()(const dynamic_t::object_t&) {
-        throw std::system_error(std::make_error_code(std::errc::invalid_argument),
-                                "can not process map as attribute value");
-    }
-
-    void operator()(dynamic_t::null_t) {
-        throw std::system_error(std::make_error_code(std::errc::invalid_argument),
-                                "can not process null as attribute value");
-    }
-
-    template <class T>
-    void operator()(const T& value) {
-        attributes.emplace_back(blackhole::attribute_t(name, value));
-    }
-
-    blackhole::attributes_t& attributes;
-    const std::string& name;
-    typedef void result_type;
+private:
+    named_logging_t& parent;
+    bool need_ack;
 };
 
 void logging_v2_t::deleter_t::operator()(impl_t* ptr) {
@@ -371,23 +458,19 @@ logging_v2_t::logging_v2_t(context_t& context,
                      const dynamic_t& service_args)
     : service_t(context, asio, service_name, service_args),
       dispatch<io::base_log_tag>(service_name),
-      impl(new impl_t(
-          context,
-          [&]() {
-              auto registry = blackhole::registry_t::configured();
-              registry.add<blackhole::formatter::json_t>();
-              registry.add<blackhole::sink::console_t>();
-              registry.add<blackhole::sink::file_t>();
-              registry.add<blackhole::sink::socket::tcp_t>();
-              registry.add<blackhole::sink::socket::udp_t>();
+      impl(new impl_t(context,
+                      get_root_logger(context, service_args),
+                      service_args.as_object().at("unicorn_path", "/logging_v2/filters").as_string())) {
 
-              std::stringstream stream;
-              stream << boost::lexical_cast<std::string>(context.config.logging.loggers);
+    auto emit_slot = [&](unsigned int severity,
+                         const std::string& backend,
+                         const std::string& message,
+                         const logging::attributes_t& attributes){
+        emit(impl->get_metafilter(backend), impl->logger, severity, message, attributes);
+    };
+    on<io::base_log::emit>(emit_slot);
+    on<io::base_log::verbosity>([](){ return 0; });
 
-              return registry.builder<blackhole::config::json_t>(stream).build(
-                  service_args.as_object().at("backend", "core").as_string());
-          }(),
-          service_args.as_object().at("unicorn_path", "/logging_v2/filters").as_string())) {
     on<io::base_log::get>(std::make_shared<logging_slot_t>(*this));
     on<io::base_log::list_loggers>(std::bind(&impl_t::list_loggers, impl.get()));
     on<io::base_log::set_filter>(std::bind(&impl_t::set_filter,
@@ -410,36 +493,9 @@ named_logging_t::named_logging_t(logging::logger_t& _log,
                                  std::string _name,
                                  std::shared_ptr<logging::metafilter_t> _filter)
     : dispatch<io::named_log_tag>(std::move(_name)), log(_log), filter(std::move(_filter)) {
-    on<io::named_log::emit>(std::bind(&named_logging_t::emit, this, ph::_1, ph::_2, ph::_3));
-    on<io::named_log::emit_ack>(
-        std::bind(&named_logging_t::emit_ack, this, ph::_1, ph::_2, ph::_3));
+    on<io::named_log::emit>(std::make_shared<emit_slot_t<io::named_log::emit>>(*this, false));
+    on<io::named_log::emit_ack>(std::make_shared<emit_slot_t<io::named_log::emit_ack>>(*this, true));
 }
 
-void named_logging_t::emit(const std::string& message,
-                           unsigned int severity,
-                           const logging::attributes_t& attributes) {
-    emit_ack(message, severity, attributes);
-}
-
-bool named_logging_t::emit_ack(const std::string& message,
-                               unsigned int severity,
-                               const logging::attributes_t& attributes) {
-    if (filter->apply(message, severity, attributes) == logging::filter_result_t::reject) {
-        return false;
-    }
-    if (!attributes.empty()) {
-        blackhole::attributes_t bh_attributes;
-        for (const auto& attribute : attributes) {
-            dynamic_visitor_t visitor{bh_attributes, attribute.name};
-            attribute.value.apply(visitor);
-        }
-        blackhole::attribute_list attribute_list(bh_attributes.begin(), bh_attributes.end());
-        blackhole::attribute_pack attribute_pack({attribute_list});
-        log.log(blackhole::severity_t(severity), message, attribute_pack);
-    } else {
-        log.log(blackhole::severity_t(severity), message);
-    }
-    return true;
-}
 }
 }  // namespace cocaine::service
