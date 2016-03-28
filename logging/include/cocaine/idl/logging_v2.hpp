@@ -59,6 +59,26 @@ struct base_log {
         typedef void upstream_type;
     };
 
+    struct emit_ack {
+        typedef base_log_tag tag;
+
+        static const char* alias() {
+            return "emit";
+        }
+        typedef boost::mpl::list<
+        /* Log severity*/
+        unsigned int,
+        /* Message backend, used for log routing and filtering. */
+        std::string,
+        /* Log message. Some meaningful string, with no explicit limits on its length, although
+           underlying loggers might silently truncate it. */
+        std::string,
+        /* Log event attached attributes. */
+        optional<logging::attributes_t>>::type argument_type;
+
+        typedef option_of<bool>::tag upstream_type;
+    };
+
     struct verbosity {
         typedef base_log_tag tag;
 
@@ -210,6 +230,7 @@ struct protocol<base_log_tag> {
     typedef boost::mpl::int_<1>::type version;
 
     typedef boost::mpl::list<base_log::emit,
+                             base_log::emit_ack,
                              base_log::verbosity,
                              base_log::get,
                              base_log::list_loggers,

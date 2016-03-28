@@ -468,7 +468,14 @@ logging_v2_t::logging_v2_t(context_t& context,
                          const logging::attributes_t& attributes){
         emit(impl->get_metafilter(backend), impl->logger, severity, message, attributes);
     };
+    auto emit_ack_slot = [&](unsigned int severity,
+                         const std::string& backend,
+                         const std::string& message,
+                         const logging::attributes_t& attributes){
+        return emit_ack(impl->get_metafilter(backend), impl->logger, severity, message, attributes);
+    };
     on<io::base_log::emit>(emit_slot);
+    on<io::base_log::emit_ack>(emit_ack_slot);
     on<io::base_log::verbosity>([](){ return 0; });
 
     on<io::base_log::get>(std::make_shared<logging_slot_t>(*this));
