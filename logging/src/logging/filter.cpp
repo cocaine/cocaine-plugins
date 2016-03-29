@@ -157,6 +157,22 @@ struct empty_filter_t : public filter_t::inner_t {
     };
 };
 
+struct severity_filter_t : public filter_t::inner_t {
+    unsigned int ref_severity;
+
+    severity_filter_t(unsigned int severity) : ref_severity(severity) {}
+
+    virtual filter_result_t apply(const std::string&,
+                                  unsigned int severity,
+                                  const logging::attributes_t&) const {
+        return severity >= ref_severity ? fr::accept : fr::reject;
+    }
+
+    virtual dynamic_t representation() const {
+        return dynamic_t(std::make_tuple(std::string("severity"), ref_severity));
+    };
+};
+
 struct exists_filter_t : public filter_t::inner_t {
     exists_filter_t(std::string _attribute_name) : attribute_name(std::move(_attribute_name)) {}
 
@@ -397,6 +413,8 @@ inner_t unary_operator_factory(const std::string& filter_operator, const dynamic
         return inner_t(new exists_filter_t(operand.as_string()));
     } else if (filter_operator == "!e") {
         return inner_t(new not_exists_filter_t(operand.as_string()));
+    } else if (filter_operator == "severity") {
+        return inner_t(new severity_filter_t(operand.as_uint()));
     }
     throw error_t(format("invalid unary filter operator: %s", filter_operator));
 }

@@ -56,6 +56,8 @@ namespace {
 
 typedef api::unicorn_t::response response;
 
+//TODO: split to several files
+//TODO: replace with std::function
 struct create_handler_t : public unicorn::writable_adapter_base_t<response::create> {
 
     create_handler_t(logging_v2_t::impl_t& _parent, uint64_t _scope_id)
@@ -69,6 +71,7 @@ struct create_handler_t : public unicorn::writable_adapter_base_t<response::crea
     uint64_t scope_id;
 };
 
+//TODO: replace with std::function
 struct filter_list_subscription_t
     : public unicorn::writable_adapter_base_t<response::children_subscribe>,
       public std::enable_shared_from_this<filter_list_subscription_t> {
@@ -83,6 +86,8 @@ struct filter_list_subscription_t
     logging_v2_t::impl_t& parent;
 };
 
+
+//TODO: replace with std::function
 struct id_subscription_t
     : public unicorn::writable_adapter_base_t<api::unicorn_t::response::subscribe> {
     id_subscription_t(logging_v2_t::impl_t& _parent, uint64_t _id) : parent(_parent), id(_id) {}
@@ -92,25 +97,13 @@ struct id_subscription_t
     virtual void abort(const std::error_code&, const std::string&);
 
     logging_v2_t::impl_t& parent;
+
+    //TODO rename to scope id here and in other places
     uint64_t id;
     std::string name;
 };
 
-struct list_filters_visitor_t : public logging::metafilter_t::visitor_t {
-    typedef std::tuple<std::string,
-                       logging::filter_t::representation_t,
-                       logging::filter_t::id_type,
-                       logging::filter_t::disposition_t>
-        tuple_type;
-    typedef std::vector<tuple_type> storage_type;
-    storage_type storage;
-
-    void operator()(const logging::filter_info_t& info) {
-        storage.push_back(std::make_tuple(
-            info.logger_name, info.filter.representation(), info.id, info.disposition));
-    }
-};
-
+//TODO: move out to logging
 bh::root_logger_t get_root_logger(context_t& context, const dynamic_t& service_args) {
     auto registry = blackhole::registry_t::configured();
     registry.add<blackhole::formatter::json_t>();
@@ -183,10 +176,37 @@ void emit(std::shared_ptr<logging::metafilter_t> filter,
     emit_ack(filter, log, severity, message, attributes);
 }
 
+//TODO: replace with std::function
+struct delete_handler_t: public unicorn::writable_adapter_base_t<bool> {
+
+    delete_handler_t(std::function<void()> _callback) : callback(std::move(_callback)) {}
+
+    std::function<void()> callback;
+
+    virtual void
+    write(bool&&) {
+        callback();
+    }
+
+    virtual void
+    abort(const std::error_code&, const std::string&){
+        // Ignore all errors for now.
+        // TODO fix me! Require unicorn changes
+        callback();
+    }
+};
+
 }
 struct logging_v2_t::impl_t {
 
     typedef logging::filter_t::deadline_t deadline_t;
+
+    typedef std::tuple<std::string,
+                       logging::filter_t::representation_t,
+                       logging::filter_t::id_type,
+                       logging::filter_t::disposition_t> filter_list_tuple_t;
+    typedef std::vector<filter_list_tuple_t> filter_list_storage_t;
+
 
     impl_t(context_t& context, bh::root_logger_t _logger, std::string _filter_unicorn_path)
         : internal_logger(context.log("logging_v2")),
@@ -249,27 +269,39 @@ struct logging_v2_t::impl_t {
         return id;
     }
 
-    bool remove_filter(logging::filter_t::id_type id) {
-        // TODO: Maybe it's better to store map from id to metafilter?
-        return metafilters.apply(
-            [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mfs) {
+
+    deferred<bool> remove_filter(logging::filter_t::id_type id) {
+        deferred<bool> result;
+        auto cb = [=](){
+            metafilters.apply([=](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mfs) mutable {
                 for (auto& metafilter_pair : mfs) {
                     if (metafilter_pair.second->remove_filter(id)) {
-                        return true;
+                        result.write(true);
+                        return;
                     }
                 }
-                return false;
+                result.write(false);
             });
+        };
+        auto handler = std::make_shared<delete_handler_t>(cb);
+        auto path = filter_unicorn_path + format("/%llu", id);
+        unicorn->del(handler, path, unicorn::not_existing_version);
+        return result;
     }
 
-    list_filters_visitor_t::storage_type list_filters() {
+    filter_list_storage_t list_filters() {
         return metafilters.apply(
             [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mfs) {
-                list_filters_visitor_t visitor;
+                filter_list_storage_t storage;
+
+                auto visitor = [&](const logging::filter_info_t& info) {
+                    storage.push_back(std::make_tuple(
+                    info.logger_name, info.filter.representation(), info.id, info.disposition));
+                };
                 for (auto& metafilter_pair : mfs) {
                     metafilter_pair.second->apply_visitor(visitor);
                 }
-                return visitor.storage;
+                return storage;
             });
     }
 

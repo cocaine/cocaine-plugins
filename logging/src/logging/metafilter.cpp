@@ -32,21 +32,26 @@ metafilter_t::metafilter_t(std::unique_ptr<logger_t> _logger) : logger(std::move
 void metafilter_t::add_filter(filter_info_t filter) {
     COCAINE_LOG_DEBUG(logger, "adding filter with id {}", filter.id);
     std::lock_guard<boost::shared_mutex> guard(mutex);
-    filters.push_back(std::move(filter));
+    auto id = filter.id;
+    auto it = std::find_if(filters.begin(), filters.end(), [=](const filter_info_t& info) {
+        return info.id == id;
+    });
+    if(it == filters.end()) {
+        filters.push_back(std::move(filter));
+    }
 }
 
 bool metafilter_t::remove_filter(filter_t::id_type filter_id) {
     std::lock_guard<boost::shared_mutex> guard(mutex);
-    auto it = std::remove_if(filters.begin(), filters.end(), [=](const filter_info_t& info) {
+    auto it = std::find_if(filters.begin(), filters.end(), [=](const filter_info_t& info) {
         return info.id == filter_id;
     });
-    const bool removed = (it != filters.end());
-    if (removed) {
-        // We can not be really sure that random ids are unique - we need to guarantee it somehow,
-        // but as far as we don't generate millions of filter 64 bits random numbers should be ok.
-        assert(it == filters.end() - 1);
-        filters.pop_back();
+
+    bool removed = (it != filters.end());
+    if(removed) {
+        filters.erase(it);
     }
+
     return removed;
 }
 
@@ -66,7 +71,7 @@ filter_result_t metafilter_t::apply(const std::string& message,
         } else if (result == filter_result_t::reject &&
                    filter_info.filter.apply(message, severity, attributes) ==
                        filter_result_t::accept) {
-            COCAINE_LOG_DEBUG(logger, "rejecting message by filter {}", filter_info.id);
+            COCAINE_LOG_DEBUG(logger, "accepting message by filter {}", filter_info.id);
             result = filter_result_t::accept;
         }
     }
@@ -80,7 +85,7 @@ filter_result_t metafilter_t::apply(const std::string& message,
     return result;
 }
 
-void metafilter_t::apply_visitor(visitor_t& visitor) {
+void metafilter_t::apply_visitor(const visitor_t& visitor) {
     boost::shared_lock<boost::shared_mutex> guard(mutex);
     for (const auto& filter_info : filters) {
         visitor(filter_info);
