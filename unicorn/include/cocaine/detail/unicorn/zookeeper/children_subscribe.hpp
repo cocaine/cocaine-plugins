@@ -33,10 +33,8 @@ struct children_subscribe_action_t :
     public zookeeper::managed_strings_stat_handler_base_t,
     public zookeeper::managed_watch_handler_base_t
 {
-    typedef api::unicorn_t::writable_ptr writable_ptr;
-
     children_subscribe_action_t(const zookeeper::handler_tag& tag,
-                                writable_ptr::children_subscribe result,
+                                api::unicorn_t::callback::children_subscribe callback,
                                 const zookeeper_t::context_t& ctx,
                                 path_t path);
 
@@ -53,7 +51,8 @@ struct children_subscribe_action_t :
     watch_event(int type, int state, zookeeper::path_t path);
 
 
-    writable_ptr::children_subscribe result;
+    typedef api::unicorn_t::response::children_subscribe result_t;
+    api::unicorn_t::callback::children_subscribe callback;
     zookeeper_t::context_t ctx;
     std::mutex write_lock;
     version_t last_version;

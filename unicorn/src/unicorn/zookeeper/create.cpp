@@ -20,6 +20,7 @@
 #include <blackhole/logger.hpp>
 
 #include <cocaine/logging.hpp>
+#include <cocaine/detail/future.hpp>
 
 namespace cocaine { namespace unicorn {
 
@@ -71,25 +72,25 @@ create_action_base_t::string_event(int rc, zookeeper::path_t value) {
 
 create_action_t::create_action_t(const zookeeper::handler_tag& tag,
                                  const zookeeper_t::context_t& _ctx,
-                                 api::unicorn_t::writable_ptr::create _result,
+                                 api::unicorn_t::callback::create _callback,
                                  path_t _path,
                                  value_t _value,
                                  bool _ephemeral,
                                  bool _sequence
 ) : zookeeper::managed_handler_base_t(tag),
     create_action_base_t(tag, _ctx, std::move(_path), std::move(_value), _ephemeral, _sequence),
-    result(std::move(_result))
+    callback(std::move(_callback))
 {}
 
 void
 create_action_t::finalize(zookeeper::value_t) {
-    result->write(true);
+    callback(make_ready_future(true));
 }
 
 void
 create_action_t::abort(int rc) {
-    auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
-    result->abort(code);
+    auto ec = make_error_code(error::zookeeper_errors(rc));
+    callback(make_exceptional_future<bool>(std::move(ec)));
 }
 
 }} // namespace cocaine::unicorn

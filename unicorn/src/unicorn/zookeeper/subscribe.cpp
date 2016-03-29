@@ -20,18 +20,19 @@
 #include <blackhole/logger.hpp>
 
 #include <cocaine/logging.hpp>
+#include <cocaine/detail/future.hpp>
 
 namespace cocaine { namespace unicorn {
 
 subscribe_action_t::subscribe_action_t(const zookeeper::handler_tag& tag,
-                                       api::unicorn_t::writable_ptr::subscribe _result,
+                                       api::unicorn_t::callback::subscribe _callback,
                                        const zookeeper_t::context_t& _ctx,
                                        path_t _path
 ) : managed_handler_base_t(tag),
     managed_data_handler_base_t(tag),
     managed_watch_handler_base_t(tag),
     managed_stat_handler_base_t(tag),
-    result(std::move(_result)),
+    callback(std::move(_callback)),
     ctx(_ctx),
     write_lock(),
     last_version(unicorn::min_version),
@@ -42,29 +43,30 @@ void
 subscribe_action_t::data_event(int rc, std::string value, const zookeeper::node_stat& stat) {
     if(rc == ZNONODE) {
         if(last_version != min_version && last_version != not_existing_version) {
-            auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
-            result->abort(code);
+            auto ec = cocaine::error::make_error_code(cocaine::error::zookeeper_errors(rc));
+            callback(make_exceptional_future<versioned_value_t>(ec));
         } else {
             // Write that node is not exist to client only first time.
             // After that set a watch to see when it will appear
             if(last_version == min_version) {
                 std::lock_guard<std::mutex> guard(write_lock);
                 if (not_existing_version > last_version) {
-                    result->write(versioned_value_t(value_t(), not_existing_version));
+                    callback(make_ready_future(versioned_value_t(value_t(), not_existing_version)));
                 }
             }
             try {
                 ctx.zk.exists(path, *this, *this);
             } catch(const std::system_error& e) {
                 COCAINE_LOG_WARNING(ctx.log, "failure during subscription(get): {}", e.what());
-                result->abort(e.code());
+                callback(make_exceptional_future<versioned_value_t>(e));
             }
         }
     } else if (rc != 0) {
-        auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
-        result->abort(code);
+        auto ec = cocaine::error::make_error_code(cocaine::error::zookeeper_errors(rc));
+        callback(make_exceptional_future<versioned_value_t>(ec));
     } else if (stat.numChildren != 0) {
-        result->abort(cocaine::error::child_not_allowed);
+        auto ec = make_error_code(cocaine::error::child_not_allowed);
+        callback(make_exceptional_future<versioned_value_t>(ec));
     } else {
         version_t new_version(stat.version);
         std::lock_guard<std::mutex> guard(write_lock);
@@ -72,9 +74,9 @@ subscribe_action_t::data_event(int rc, std::string value, const zookeeper::node_
             last_version = new_version;
             value_t val;
             try {
-                result->write(versioned_value_t(unserialize(value), new_version));
+                callback(make_ready_future(versioned_value_t(unserialize(value), new_version)));
             } catch(const std::system_error& e) {
-                result->abort(e.code());
+                callback(make_exceptional_future<versioned_value_t>(e));
             }
         }
     }
@@ -89,7 +91,7 @@ subscribe_action_t::stat_event(int rc, zookeeper::node_stat const&) {
             ctx.zk.get(path, *this, *this);
         } catch(const std::system_error& e)  {
             COCAINE_LOG_WARNING(ctx.log, "failure during subscription(stat): {}", e.what());
-            result->abort(e.code());
+            callback(make_exceptional_future<versioned_value_t>(e));
         }
     }
 }
@@ -99,8 +101,8 @@ subscribe_action_t::watch_event(int /* type */, int /* state */, zookeeper::path
     try {
         ctx.zk.get(path, *this, *this);
     } catch(const std::system_error& e)  {
-        result->abort(e.code());
         COCAINE_LOG_WARNING(ctx.log, "failure during subscription(watch): {}", e.what());
+        callback(make_exceptional_future<versioned_value_t>(e));
     }
 }
 

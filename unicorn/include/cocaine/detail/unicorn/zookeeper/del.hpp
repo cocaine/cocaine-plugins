@@ -28,12 +28,12 @@ namespace cocaine { namespace unicorn {
 struct del_action_t :
     public zookeeper::void_handler_base_t
 {
-    del_action_t(api::unicorn_t::writable_ptr::del _result);
+    del_action_t(api::unicorn_t::callback::del callback);
 
     virtual void
     void_event(int rc);
 
-    api::unicorn_t::writable_ptr::del result;
+    api::unicorn_t::callback::del callback;
 };
 
 }} //namespace cocaine::unicorn

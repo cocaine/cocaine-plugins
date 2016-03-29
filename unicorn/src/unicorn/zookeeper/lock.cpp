@@ -13,8 +13,8 @@
 * GNU General Public License for more details.
 */
 
+#include "cocaine/detail/future.hpp"
 #include "cocaine/detail/unicorn/zookeeper/lock.hpp"
-
 #include "cocaine/detail/zookeeper/errors.hpp"
 
 #include <blackhole/logger.hpp>
@@ -29,7 +29,7 @@ lock_action_t::lock_action_t(const zookeeper::handler_tag& tag,
                              path_t _path,
                              path_t _folder,
                              value_t _value,
-                             api::unicorn_t::writable_ptr::lock _result
+                             api::unicorn_t::callback::lock _callback
 ) : zookeeper::managed_handler_base_t(tag),
     create_action_base_t(tag, _ctx, std::move(_path), std::move(_value), true, true),
     zookeeper::managed_strings_stat_handler_base_t(tag),
@@ -37,7 +37,7 @@ lock_action_t::lock_action_t(const zookeeper::handler_tag& tag,
     zookeeper::managed_watch_handler_base_t(tag),
     state_lock(std::move(_state)),
     state(state_lock),
-    result(std::move(_result)),
+    callback(std::move(_callback)),
     folder(std::move(_folder))
 {
 }
@@ -56,10 +56,9 @@ lock_action_t::children_event(int rc, std::vector<std::string> children, zookeep
     *  Second is true for zookeeper at least 3.4.6,
     */
     if(rc) {
-        auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
-        COCAINE_LOG_ERROR(ctx.log, "Could not subscribe for lock({}): {}", code.value(), code.message());
-        result->abort(code);
-        return;
+        auto ec = cocaine::error::make_error_code(cocaine::error::zookeeper_errors(rc));
+        COCAINE_LOG_ERROR(ctx.log, "Could not subscribe for lock({}): {}", ec.value(), ec.message());
+        return callback(make_exceptional_future<bool>(std::move(ec)));
     }
     path_t next_min_node = created_node_name;
     for(size_t i = 0; i < children.size(); i++) {
@@ -83,7 +82,7 @@ lock_action_t::children_event(int rc, std::vector<std::string> children, zookeep
         if(auto s = state.lock()) {
             // TODO: Do we really need this check?
             if (!s->release_if_discarded()) {
-                result->write(true);
+                callback(make_ready_future(true));
             }
         }
         return;
@@ -91,7 +90,7 @@ lock_action_t::children_event(int rc, std::vector<std::string> children, zookeep
         try {
             ctx.zk.exists(folder + "/" + next_min_node, *this, *this);
         } catch(const std::system_error& e) {
-            result->abort(e.code());
+            callback(make_exceptional_future<bool>(e));
             if(auto s = state.lock()) {
                 s->release();
             }
@@ -106,7 +105,7 @@ lock_action_t::stat_event(int rc, zookeeper::node_stat const& /*stat*/) {
         try {
             ctx.zk.childs(folder, *this);
         } catch(const std::system_error& e) {
-            result->abort(e.code());
+            callback(make_exceptional_future<bool>(e));
             if(auto s = state.lock()) {
                 s->release();
             }
@@ -119,7 +118,7 @@ lock_action_t::watch_event(int /*type*/, int /*zk_state*/, path_t /*path*/) {
     try {
         ctx.zk.childs(folder, *this);
     } catch(const std::system_error& e) {
-        result->abort(e.code());
+        callback(make_exceptional_future<bool>(e));
         if(auto s = state.lock()) {
             s->release();
         }
@@ -134,7 +133,7 @@ lock_action_t::finalize(zookeeper::path_t created_path) {
         try {
             ctx.zk.childs(folder, *this);
         } catch(const std::system_error& e) {
-            result->abort(e.code());
+            callback(make_exceptional_future<bool>(e));
             state_lock->release();
         }
     }
@@ -143,8 +142,8 @@ lock_action_t::finalize(zookeeper::path_t created_path) {
 
 void
 lock_action_t::abort(int rc) {
-    auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
-    result->abort(code);
+    auto ec = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
+    callback(make_exceptional_future<bool>(std::move(ec)));
 }
 
 release_lock_action_t::release_lock_action_t(const zookeeper_t::context_t& _ctx) :

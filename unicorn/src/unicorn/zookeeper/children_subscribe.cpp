@@ -20,17 +20,18 @@
 #include <blackhole/logger.hpp>
 
 #include <cocaine/logging.hpp>
+#include <cocaine/detail/future.hpp>
 
 namespace cocaine { namespace unicorn {
 
 children_subscribe_action_t::children_subscribe_action_t(const zookeeper::handler_tag& tag,
-                                                         api::unicorn_t::writable_ptr::children_subscribe _result,
+                                                         api::unicorn_t::callback::children_subscribe _callback,
                                                          const zookeeper_t::context_t& _ctx,
                                                          path_t _path
 ) : managed_handler_base_t(tag),
     managed_strings_stat_handler_base_t(tag),
     managed_watch_handler_base_t(tag),
-    result(std::move(_result)),
+    callback(std::move(_callback)),
     ctx(_ctx),
     write_lock(),
     last_version(unicorn::min_version),
@@ -39,17 +40,17 @@ children_subscribe_action_t::children_subscribe_action_t(const zookeeper::handle
 
 
 void
-children_subscribe_action_t::children_event(int rc, std::vector <std::string> childs, const zookeeper::node_stat& stat) {
+children_subscribe_action_t::children_event(int rc, std::vector<std::string> childs, const zookeeper::node_stat& stat) {
     if (rc != 0) {
-        auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
-        result->abort(code);
+        auto ec = make_error_code(cocaine::error::zookeeper_errors(rc));
+        auto future = make_exceptional_future<result_t>(ec);
+        callback(std::move(future));
     } else {
         version_t new_version(stat.cversion);
         std::lock_guard <std::mutex> guard(write_lock);
         if (new_version > last_version) {
             last_version = new_version;
-            value_t val;
-            result->write(std::make_tuple(new_version, childs));
+            callback(make_ready_future(std::make_tuple(new_version, std::move(childs))));
         }
     }
 }
@@ -59,8 +60,8 @@ children_subscribe_action_t::watch_event(int /*type*/, int /*state*/, zookeeper:
     try {
         ctx.zk.childs(path, *this, *this);
     } catch (const std::system_error& e) {
-        result->abort(e.code());
-        COCAINE_LOG_WARNING(ctx.log, "failure during subscription for childs: {}", e.what());
+        COCAINE_LOG_WARNING(ctx.log, "failure during subscription for childs: {}", error::to_string(e));
+        callback(make_exceptional_future<result_t, std::system_error>(e));
     }
 }
 }} // namespace cocaine::unicorn

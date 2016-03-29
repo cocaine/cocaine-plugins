@@ -43,6 +43,7 @@ class unicorn_slot_t :
     public io::basic_slot<Event>
 {
 public:
+    typedef typename result_of<Event>::type result_type;
     typedef typename io::basic_slot<Event>::dispatch_type dispatch_type;
     typedef typename io::basic_slot<Event>::tuple_type tuple_type;
     // This one is type of upstream.
@@ -62,8 +63,14 @@ public:
     {
         typedef boost::optional<std::shared_ptr<const dispatch_type>> opt_dispatch_t;
         Response result;
-        auto wptr = unicorn::make_writable(result);
-        auto api_args = std::tuple_cat(std::make_tuple(unicorn.get(), wptr), std::move(args));
+        auto callback = [=](std::future<result_type> future) mutable {
+            try {
+                result.write(future.get());
+            } catch (const std::system_error& e) {
+                result.abort(e.code(), error::to_string(e));
+            }
+        };
+        auto api_args = std::tuple_cat(std::make_tuple(unicorn.get(), callback), std::move(args));
         api::unicorn_scope_ptr request_scope;
         try {
             request_scope = tuple::invoke(std::move(api_args), std::mem_fn(method));

@@ -20,7 +20,10 @@
 
 #include "cocaine/detail/zookeeper/errors.hpp"
 
+#include <cocaine/errors.hpp>
+
 #include <string>
+#include <map>
 
 namespace cocaine { namespace error {
 
@@ -38,6 +41,8 @@ class zookeeper_category_t:
     message(int code) const -> std::string {
         return std::string("zookeeper: ") + zerror(code);
     }
+
+
 };
 
 auto
