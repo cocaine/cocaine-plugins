@@ -42,7 +42,7 @@ struct lock_action_t :
                   path_t _path,
                   path_t folder,
                   value_t _value,
-                  api::unicorn_t::writable_ptr::lock _result);
+                  api::unicorn_t::callback::lock callback);
 
     virtual
     ~lock_action_t();
@@ -86,7 +86,7 @@ struct lock_action_t :
     // It is used to unlock if the callback was called after user has disconnected
     std::shared_ptr<lock_state_t> state_lock;
     std::weak_ptr<lock_state_t> state;
-    api::unicorn_t::writable_ptr::lock result;
+    api::unicorn_t::callback::lock callback;
     path_t folder;
     std::string created_node_name;
 };

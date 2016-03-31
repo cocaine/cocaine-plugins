@@ -20,12 +20,13 @@
 #include <blackhole/logger.hpp>
 
 #include <cocaine/logging.hpp>
+#include <cocaine/detail/future.hpp>
 
 namespace cocaine { namespace unicorn {
 
 increment_action_t::increment_action_t(const zookeeper::handler_tag& tag,
                                        const zookeeper_t::context_t& _ctx,
-                                       api::unicorn_t::writable_ptr::increment _result,
+                                       api::unicorn_t::callback::increment _callback,
                                        path_t _path,
                                        value_t _increment
 ) : managed_handler_base_t(tag),
@@ -33,7 +34,7 @@ increment_action_t::increment_action_t(const zookeeper::handler_tag& tag,
     managed_stat_handler_base_t(tag),
     managed_data_handler_base_t(tag),
     ctx(_ctx),
-    result(std::move(_result)),
+    callback(std::move(_callback)),
     total()
 {}
 
@@ -41,13 +42,13 @@ increment_action_t::increment_action_t(const zookeeper::handler_tag& tag,
 void
 increment_action_t::stat_event(int rc, zookeeper::node_stat const& stat) {
     if (rc == ZOK) {
-        result->write(versioned_value_t(total, stat.version));
+        callback(make_ready_future(versioned_value_t(total, stat.version)));
     } else if (rc == ZBADVERSION) {
         try {
             ctx.zk.get(path, *this);
         } catch(const std::system_error& e) {
-            result->abort(e.code());
             COCAINE_LOG_WARNING(ctx.log, "failure during increment get: {}", e.what());
+            callback(make_exceptional_future<versioned_value_t>(e));
         }
     }
 }
@@ -58,23 +59,20 @@ increment_action_t::data_event(int rc, zookeeper::value_t value, const zookeeper
         if(rc == ZNONODE) {
             ctx.zk.create(path, encoded_value, ephemeral, sequence, *this);
         } else if (rc != ZOK) {
-            auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
-            result->abort(code, "increment error during value get");
+            auto ec = make_error_code(error::zookeeper_errors(rc));
+            callback(make_exceptional_future<versioned_value_t>(std::move(ec)));
         } else {
             value_t parsed;
             if (!value.empty()) {
                 parsed = unserialize(value);
             }
             if (stat.numChildren != 0) {
-                result->abort(cocaine::error::child_not_allowed, "increment error during value get");
-                return;
-            }
-            if (!parsed.is_double() && !parsed.is_int() && !parsed.is_uint()) {
-                result->abort(cocaine::error::invalid_type, "increment error during value get");
-                return;
-            }
-            assert(initial_value.is_uint() || initial_value.is_uint() || initial_value.is_double());
-            if (parsed.is_double() || initial_value.is_double()) {
+                auto ec = make_error_code(cocaine::error::child_not_allowed);
+                callback(make_exceptional_future<versioned_value_t>(ec));
+            } else if (!parsed.is_double() && !parsed.is_int() && !parsed.is_uint()) {
+                auto ec = make_error_code(cocaine::error::invalid_type);
+                callback(make_exceptional_future<versioned_value_t>(ec));
+            } else if (parsed.is_double() || initial_value.is_double()) {
                 total = parsed.to<double>() + initial_value.to<double>();
                 ctx.zk.put(path, serialize(total), stat.version, *this);
             } else {
@@ -84,19 +82,20 @@ increment_action_t::data_event(int rc, zookeeper::value_t value, const zookeeper
         }
     } catch(const std::system_error& e) {
         COCAINE_LOG_WARNING(ctx.log, "failure during get action of increment: {}", e.what());
-        result->abort(e.code());
+        callback(make_exceptional_future<versioned_value_t>(e));
     }
+
 }
 
 void
 increment_action_t::finalize(zookeeper::value_t) {
-    result->write(versioned_value_t(initial_value, version_t()));
+    callback(make_ready_future(versioned_value_t(initial_value, version_t())));
 }
 
 void
 increment_action_t::abort(int rc) {
-    auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
-    result->abort(code);
+    auto ec = make_error_code(error::zookeeper_errors(rc));
+    callback(make_exceptional_future<versioned_value_t>(std::move(ec)));
 }
 
 }} // namespace cocaine::unicorn

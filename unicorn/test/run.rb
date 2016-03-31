@@ -7,7 +7,7 @@ Celluloid.logger.level = Cocaine::LOG.level
 
 ## This one is defined as hash of category name in cocaine.
 ZK_ERROR_CATEGORY = 2039545343
-UNICORN_ERROR_CATEGORY = 200582143
+UNICORN_ERROR_CATEGORY = 11
 
 ## These are zookeeper error codes
 
@@ -21,13 +21,10 @@ ZNOTEMPTY = -111 # The node has children */
 CHILD_NOT_ALLOWED = 1
 INVALID_TYPE = 2
 INVALID_VALUE = 3
-COULD_NOT_CONNECT = 4
-UNKNOWN_ERROR = 5
-HANDLER_SCOPE_RELEASED = 6
-INVALID_NODE_NAME = 7
-INVALID_PATH = 8
-VERSION_NOT_ALLOWED = 9
-INVALID_CONNECTION_ENDPOINT = 10
+UNKNOWN_ERROR = 4
+INVALID_NODE_NAME = 5
+INVALID_PATH = 6
+VERSION_NOT_ALLOWED = 7
 
 def node_gen
   node = '/test/' + SecureRandom.hex
@@ -240,7 +237,7 @@ describe :Unicorn do
     expect(result[1][0][1]).to eq -1
     expect{
       rx.recv(fast_timeout)
-    }.to raise_error(Celluloid::TimeoutError)
+    }.to raise_error(Celluloid::TaskTimeout)
     ensure_create(node, node_val)
     result = rx.recv(fast_timeout)
     expect(result[1][0][0]).to eq node_val
@@ -248,7 +245,7 @@ describe :Unicorn do
 
     expect{
       rx.recv(fast_timeout)
-    }.to raise_error(Celluloid::TimeoutError)
+    }.to raise_error(Celluloid::TaskTimeout)
     ensure_del(node)
     result = rx.recv(fast_timeout)
     expect(result[1][0][0]).to eq ZK_ERROR_CATEGORY
@@ -258,7 +255,7 @@ describe :Unicorn do
     ensure_create(node, node_val)
     expect{
       rx.recv(fast_timeout)
-    }.to raise_error(Celluloid::TimeoutError)
+    }.to raise_error(Celluloid::TaskTimeout)
 
     ensure_del(node)
     tx.close
@@ -423,7 +420,7 @@ describe :Unicorn do
       expect(Set.new(result[1][1])).to eq subnodes
       expect{
         rx.recv(fast_timeout)
-      }.to raise_error(Celluloid::TimeoutError)
+      }.to raise_error(Celluloid::TaskTimeout)
     end
     for subnode in subnodes.to_a do
       ensure_del(node + '/' + subnode)
@@ -434,7 +431,7 @@ describe :Unicorn do
       expect(Set.new(result[1][1])).to eq subnodes
       expect{
         rx.recv(fast_timeout)
-      }.to raise_error(Celluloid::TimeoutError)
+      }.to raise_error(Celluloid::TaskTimeout)
     end
     ensure_del(node)
     result = rx.recv
@@ -454,7 +451,7 @@ describe :Unicorn do
     tx2, rx2 = unicorn2.lock(node)
     expect{
       rx2.recv(fast_timeout)
-    }.to raise_error(Celluloid::TimeoutError)
+    }.to raise_error(Celluloid::TaskTimeout)
 
     tx.close
     result = rx2.recv

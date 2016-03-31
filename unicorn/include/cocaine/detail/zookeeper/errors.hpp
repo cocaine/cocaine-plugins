@@ -26,6 +26,7 @@ enum zookeeper_errors {
     invalid_connection_endpoint = 1,
     could_not_connect
 };
+
 auto
 zookeeper_category() -> const std::error_category&;
 

@@ -21,8 +21,6 @@
 
 #include <cocaine/idl/unicorn.hpp>
 
-#include <cocaine/unicorn/writable.hpp>
-
 namespace cocaine { namespace unicorn {
 
 //zookeeper::cfg_t make_zk_config(const dynamic_t& args);
@@ -56,10 +54,7 @@ public:
         zookeeper::connection_t& zk;
     };
 
-    /**
-    * Typedefs for used writable helpers
-    */
-    typedef api::unicorn_t::writable_ptr writable_ptr;
+    typedef api::unicorn_t::callback callback;
 
     zookeeper_t(cocaine::context_t& context, const std::string& name, const dynamic_t& args);
 
@@ -67,7 +62,7 @@ public:
 
     virtual
     api::unicorn_scope_ptr
-    put(writable_ptr::put result,
+    put(callback::put result,
         const unicorn::path_t& path,
         const unicorn::value_t& value,
         unicorn::version_t version
@@ -75,13 +70,13 @@ public:
 
     virtual
     api::unicorn_scope_ptr
-    get(writable_ptr::get result,
+    get(callback::get result,
         const unicorn::path_t& path
     );
 
     virtual
     api::unicorn_scope_ptr
-    create(writable_ptr::create result,
+    create(callback::create result,
            const unicorn::path_t& path,
            const unicorn::value_t& value,
            bool ephemeral = false,
@@ -89,29 +84,29 @@ public:
 
     virtual
     api::unicorn_scope_ptr
-    del(writable_ptr::del result,
+    del(callback::del result,
         const unicorn::path_t& path,
         unicorn::version_t version);
 
     virtual
     api::unicorn_scope_ptr
-    subscribe(writable_ptr::subscribe result,
+    subscribe(callback::subscribe result,
               const unicorn::path_t& path);
 
     virtual
     api::unicorn_scope_ptr
-    children_subscribe(writable_ptr::children_subscribe result,
+    children_subscribe(callback::children_subscribe result,
                        const unicorn::path_t& path);
 
     virtual
     api::unicorn_scope_ptr
-    increment(writable_ptr::increment result,
+    increment(callback::increment result,
               const unicorn::path_t& path,
               const unicorn::value_t& value);
 
     virtual
     api::unicorn_scope_ptr
-    lock(writable_ptr::lock result,
+    lock(callback::lock result,
          const unicorn::path_t& path);
 
 private:

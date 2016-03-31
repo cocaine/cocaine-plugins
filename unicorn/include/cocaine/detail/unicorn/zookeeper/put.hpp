@@ -30,7 +30,7 @@ struct put_action_t :
 
     put_action_t(const zookeeper::handler_tag& tag,
                  const zookeeper_t::context_t& ctx,
-                 api::unicorn_t::writable_ptr::put _result,
+                 api::unicorn_t::callback::put _callback,
                  unicorn::path_t _path,
                  unicorn::value_t _value,
                  unicorn::version_t _version
@@ -49,7 +49,7 @@ struct put_action_t :
     data_event(int rc, zookeeper::value_t value, zookeeper::node_stat const& stat);
 
     zookeeper_t::context_t ctx;
-    api::unicorn_t::writable_ptr::put result;
+    api::unicorn_t::callback::put callback;
     unicorn::path_t path;
     unicorn::value_t initial_value;
     zookeeper::value_t encoded_value;

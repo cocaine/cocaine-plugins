@@ -72,7 +72,7 @@ struct create_action_t:
 {
     create_action_t(const zookeeper::handler_tag& tag,
                     const zookeeper_t::context_t& ctx,
-                    api::unicorn_t::writable_ptr::create _result,
+                    api::unicorn_t::callback::create callback,
                     path_t _path,
                     value_t _value,
                     bool ephemeral,
@@ -84,7 +84,7 @@ struct create_action_t:
     virtual void
     abort(int rc);
 
-    api::unicorn_t::writable_ptr::create result;
+    api::unicorn_t::callback::create callback;
 };
 
 }} //namespace cocaine::unicorn

@@ -57,6 +57,18 @@ private:
     void
     on_subscribe_timer(const std::error_code& ec);
 
+    void
+    on_node_list_change(std::future<api::unicorn_t::response::children_subscribe> new_list);
+
+    void
+    on_node_fetch(const std::string& uuid, std::future<api::unicorn_t::response::get> node_endpoints);
+
+    void
+    on_announce_set(std::future<api::unicorn_t::response::create> future);
+
+    void
+    on_announce_checked(std::future<api::unicorn_t::response::subscribe> future);
+
     std::shared_ptr<logging::logger_t> log;
     cfg_t config;
     cocaine::context_t& context;

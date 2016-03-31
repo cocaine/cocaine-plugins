@@ -36,7 +36,7 @@ struct increment_action_t :
 
     increment_action_t(const zookeeper::handler_tag& tag,
                        const zookeeper_t::context_t& ctx,
-                       api::unicorn_t::writable_ptr::increment _result,
+                       api::unicorn_t::callback::increment callback,
                        path_t _path,
                        value_t _increment);
 
@@ -70,7 +70,7 @@ struct increment_action_t :
     abort(int rc);
 
     zookeeper_t::context_t ctx;
-    api::unicorn_t::writable_ptr::increment result;
+    api::unicorn_t::callback::increment callback;
     value_t total;
 };
 

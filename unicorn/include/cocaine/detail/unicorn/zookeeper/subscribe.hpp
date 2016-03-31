@@ -34,12 +34,10 @@ struct subscribe_action_t :
     public zookeeper::managed_watch_handler_base_t,
     public zookeeper::managed_stat_handler_base_t
 {
-    typedef api::unicorn_t::writable_ptr writable_ptr;
-
     subscribe_action_t(const zookeeper::handler_tag& tag,
-                       writable_ptr::subscribe _result,
+                       api::unicorn_t::callback::subscribe callback,
                        const unicorn::zookeeper_t::context_t& ctx,
-                       unicorn::path_t _path);
+                       unicorn::path_t path);
 
     /**
     * Handling get events
@@ -62,7 +60,7 @@ struct subscribe_action_t :
     void
     watch_event(int type, int state, zookeeper::path_t path);
 
-    writable_ptr::subscribe result;
+    api::unicorn_t::callback::subscribe callback;
     unicorn::zookeeper_t::context_t ctx;
     std::mutex write_lock;
     unicorn::version_t last_version;
