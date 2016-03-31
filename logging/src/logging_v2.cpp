@@ -56,53 +56,6 @@ namespace {
 
 typedef api::unicorn_t::response response;
 
-//TODO: split to several files
-//TODO: replace with std::function
-struct create_handler_t : public unicorn::writable_adapter_base_t<response::create> {
-
-    create_handler_t(logging_v2_t::impl_t& _parent, uint64_t _scope_id)
-        : parent(_parent), scope_id(_scope_id) {}
-
-    virtual void write(bool&&);
-
-    virtual void abort(const std::error_code&, const std::string&);
-
-    logging_v2_t::impl_t& parent;
-    uint64_t scope_id;
-};
-
-//TODO: replace with std::function
-struct filter_list_subscription_t
-    : public unicorn::writable_adapter_base_t<response::children_subscribe>,
-      public std::enable_shared_from_this<filter_list_subscription_t> {
-
-    filter_list_subscription_t(logging_v2_t::impl_t& _parent) : parent(_parent) {}
-
-    virtual void write(
-        std::tuple<cocaine::unicorn::version_t, std::vector<std::string>>&& filter_ids);
-
-    virtual void abort(const std::error_code&, const std::string&);
-
-    logging_v2_t::impl_t& parent;
-};
-
-
-//TODO: replace with std::function
-struct id_subscription_t
-    : public unicorn::writable_adapter_base_t<api::unicorn_t::response::subscribe> {
-    id_subscription_t(logging_v2_t::impl_t& _parent, uint64_t _id) : parent(_parent), id(_id) {}
-
-    virtual void write(api::unicorn_t::response::subscribe&& filter_value);
-
-    virtual void abort(const std::error_code&, const std::string&);
-
-    logging_v2_t::impl_t& parent;
-
-    //TODO rename to scope id here and in other places
-    uint64_t id;
-    std::string name;
-};
-
 //TODO: move out to logging
 bh::root_logger_t get_root_logger(context_t& context, const dynamic_t& service_args) {
     auto registry = blackhole::registry_t::configured();
@@ -176,25 +129,6 @@ void emit(std::shared_ptr<logging::metafilter_t> filter,
     emit_ack(filter, log, severity, message, attributes);
 }
 
-//TODO: replace with std::function
-struct delete_handler_t: public unicorn::writable_adapter_base_t<bool> {
-
-    delete_handler_t(std::function<void()> _callback) : callback(std::move(_callback)) {}
-
-    std::function<void()> callback;
-
-    virtual void
-    write(bool&&) {
-        callback();
-    }
-
-    virtual void
-    abort(const std::error_code&, const std::string&){
-        // Ignore all errors for now.
-        // TODO fix me! Require unicorn changes
-        callback();
-    }
-};
 
 }
 struct logging_v2_t::impl_t {
@@ -207,22 +141,108 @@ struct logging_v2_t::impl_t {
                        logging::filter_t::disposition_t> filter_list_tuple_t;
     typedef std::vector<filter_list_tuple_t> filter_list_storage_t;
 
+    static constexpr size_t retry_time_seconds = 5;
 
-    impl_t(context_t& context, bh::root_logger_t _logger, std::string _filter_unicorn_path)
+    impl_t(context_t& context, asio::io_service& io_context, bh::root_logger_t _logger, std::string _filter_unicorn_path)
         : internal_logger(context.log("logging_v2")),
           logger(std::move(_logger)),
           generator(std::random_device()()),
           unicorn(api::unicorn(context, "core")),
           filter_unicorn_path(std::move(_filter_unicorn_path)),
-          list_scope() {
-        auto id = scope_counter++;
-        scopes.unsafe()[id] = unicorn->create(std::make_shared<create_handler_t>(*this, id),
-                                              filter_unicorn_path,
-                                              unicorn::value_t(),
-                                              false,
-                                              false);
-        list_scope = unicorn->children_subscribe(
-            std::make_shared<filter_list_subscription_t>(*this), filter_unicorn_path);
+          list_scope(),
+          retry_timer(io_context) {
+        init();
+    }
+
+    void on_filter_list(std::future<response::children_subscribe> future) {
+        try {
+            auto filter_ids = future.get();
+            COCAINE_LOG_DEBUG(internal_logger,
+                              "received filter list update, count - {}",
+                              std::get<1>(filter_ids).size());
+            for (auto& id_str : std::get<1>(filter_ids)) {
+                logging::filter_t::id_type filter_id = std::stoull(id_str);
+                listen_for_filter(filter_id);
+            }
+        } catch (const std::system_error& e) {
+            COCAINE_LOG_ERROR(internal_logger,
+                              "failed to receive filter list update - {}",
+                              error::to_string(e));
+            retry_timer.async_wait([&](std::error_code){
+                auto cb = std::bind(&impl_t::on_filter_list, this, ph::_1);
+                unicorn->children_subscribe(std::move(cb), filter_unicorn_path);
+            });
+            retry_timer.expires_from_now(boost::posix_time::seconds(retry_time_seconds));
+        }
+    }
+
+    void on_node_creation(unsigned long scope_id, std::future<bool> future) {
+        try {
+            future.get();
+            auto cb = std::bind(&impl_t::on_filter_list, this, ph::_1);
+            list_scope = unicorn->children_subscribe(std::move(cb), filter_unicorn_path);
+            COCAINE_LOG_DEBUG(internal_logger, "created filter in unicorn");
+        } catch (const std::system_error& e) {
+            retry_timer.expires_from_now(boost::posix_time::seconds(retry_time_seconds));
+            retry_timer.async_wait([&](std::error_code) {init();});
+            COCAINE_LOG_ERROR(internal_logger,
+                              "failed to create filter in unicorn - {}",
+                              error::to_string(e));
+        }
+        scopes.apply([&](std::unordered_map<size_t, api::unicorn_scope_ptr>& _scopes) {
+            _scopes.erase(scope_id);
+        });
+    }
+
+    void on_filter_recieve(unsigned long filter_id,
+                           std::future<response::subscribe> filter_future) {
+        try {
+            auto filter_value = filter_future.get();
+            COCAINE_LOG_DEBUG(internal_logger, "received filter update for id {} ", filter_id);
+            if (filter_value.get_version() == unicorn::not_existing_version) {
+                bool removed = metafilters.apply(
+                [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mf) {
+                    for (auto& mf_pair : mf) {
+                        if(mf_pair.second->remove_filter(filter_id)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                });
+                if(!removed) {
+                    COCAINE_LOG_ERROR(internal_logger, "possible bug - removing unregistered filter {}", filter_id);
+                }
+            } else {
+                logging::filter_info_t info(filter_value.get_value());
+                auto metafilter = metafilters.apply(
+                [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mf) {
+                    auto& ret = mf[info.logger_name];
+                    if (ret == nullptr) {
+                        std::unique_ptr<logging::logger_t> mf_logger(new blackhole::wrapper_t(
+                            *internal_logger, {{"metafilter", info.logger_name}}));
+                            ret = std::make_shared<logging::metafilter_t>(std::move(mf_logger));
+                    }
+                    return ret;
+                });
+                metafilter->add_filter(std::move(info));
+            }
+        } catch (const std::system_error& e) {
+            COCAINE_LOG_ERROR(internal_logger,
+                              "can not create cluster filter - {}",
+                              error::to_string(e));
+        }
+    }
+
+    void init() {
+        auto scope_id = scope_counter++;
+        scopes.apply([&](std::unordered_map<size_t, api::unicorn_scope_ptr>& _scopes) {
+            auto cb = std::bind(&impl_t::on_node_creation, this, scope_id, ph::_1);
+            _scopes[scope_id] = unicorn->create(std::move(cb),
+                                                filter_unicorn_path,
+                                                unicorn::value_t(),
+                                                false,
+                                                false);
+        });
     }
 
     std::vector<std::string> list_loggers() const {
@@ -255,9 +275,9 @@ struct logging_v2_t::impl_t {
             metafilter->add_filter(std::move(info));
         } else if (disposition == logging::filter_t::disposition_t::cluster) {
             unsigned long scope_id = scope_counter++;
-            auto handler = std::make_shared<create_handler_t>(*this, scope_id);
+            auto cb = std::bind(&impl_t::on_node_creation, this, scope_id, ph::_1);
             scopes.apply([&](std::unordered_map<size_t, api::unicorn_scope_ptr>& _scopes) {
-                _scopes[scope_id] = unicorn->create(handler,
+                _scopes[scope_id] = unicorn->create(std::move(cb),
                                                     filter_unicorn_path + format("/%llu", id),
                                                     info.representation(),
                                                     false,
@@ -272,7 +292,7 @@ struct logging_v2_t::impl_t {
 
     deferred<bool> remove_filter(logging::filter_t::id_type id) {
         deferred<bool> result;
-        auto cb = [=](){
+        auto cb = [=](std::future<response::del> future){
             metafilters.apply([=](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mfs) mutable {
                 for (auto& metafilter_pair : mfs) {
                     if (metafilter_pair.second->remove_filter(id)) {
@@ -282,10 +302,14 @@ struct logging_v2_t::impl_t {
                 }
                 result.write(false);
             });
+            try {
+                future.get();
+            } catch (const std::system_error& e) {
+                //TODO check code for nonode, retry
+            }
         };
-        auto handler = std::make_shared<delete_handler_t>(cb);
         auto path = filter_unicorn_path + format("/%llu", id);
-        unicorn->del(handler, path, unicorn::not_existing_version);
+        unicorn->del(std::move(cb), path, unicorn::not_existing_version);
         return result;
     }
 
@@ -307,10 +331,10 @@ struct logging_v2_t::impl_t {
 
     void listen_for_filter(logging::filter_t::id_type id) {
         unsigned long scope_id = scope_counter++;
-        auto handler = std::make_shared<id_subscription_t>(*this, scope_id);
+        auto cb = std::bind(&impl_t::on_filter_recieve, this, scope_id, ph::_1);
         scopes.apply([&](std::unordered_map<size_t, api::unicorn_scope_ptr>& _scopes) {
             _scopes[scope_id] =
-                unicorn->subscribe(handler, filter_unicorn_path + format("/%llu", id));
+                unicorn->subscribe(std::move(cb), filter_unicorn_path + format("/%llu", id));
         });
     }
 
@@ -336,86 +360,8 @@ struct logging_v2_t::impl_t {
     std::string filter_unicorn_path;
     synchronized<std::unordered_map<size_t, api::unicorn_scope_ptr>> scopes;
     api::unicorn_scope_ptr list_scope;
+    asio::deadline_timer retry_timer;
 };
-
-void create_handler_t::write(bool&&) {
-    COCAINE_LOG_DEBUG(parent.internal_logger, "created filter in unicorn");
-    parent.scopes.apply([&](std::unordered_map<size_t, api::unicorn_scope_ptr>& _scopes) {
-        _scopes.erase(scope_id);
-    });
-}
-
-void create_handler_t::abort(const std::error_code& ec, const std::string& reason) {
-    COCAINE_LOG_ERROR(parent.internal_logger,
-                      "failed to create filter in unicorn, {} - {}",
-                      reason,
-                      ec.message());
-    // TODO handle error somehow. Maybe requery?
-    parent.scopes.apply([&](std::unordered_map<size_t, api::unicorn_scope_ptr>& _scopes) {
-        _scopes.erase(scope_id);
-    });
-}
-
-void filter_list_subscription_t::write(
-    std::tuple<cocaine::unicorn::version_t, std::vector<std::string>>&& filter_ids) {
-    COCAINE_LOG_DEBUG(parent.internal_logger,
-                      "received filter list update, count - {}",
-                      std::get<1>(filter_ids).size());
-    for (auto& id_str : std::get<1>(filter_ids)) {
-        logging::filter_t::id_type filter_id = std::stoull(id_str);
-        parent.listen_for_filter(filter_id);
-    }
-}
-
-void filter_list_subscription_t::abort(const std::error_code& ec, const std::string& error) {
-    COCAINE_LOG_ERROR(parent.internal_logger,
-                      "failed to receive filter list update, {} - {}",
-                      error,
-                      ec.message());
-    // TODO : timer
-    parent.unicorn->children_subscribe(shared_from_this(), parent.filter_unicorn_path);
-}
-
-void id_subscription_t::write(api::unicorn_t::response::subscribe&& filter_value) {
-    COCAINE_LOG_DEBUG(parent.internal_logger, "received filter update for id {} ", id);
-    try {
-        if (filter_value.get_version() == unicorn::not_existing_version) {
-            if (name.empty()) {
-                throw error_t("possible bug - removing unregistered filter %llu", id);
-            }
-            auto metafilter = parent.metafilters.apply(
-                [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mf) {
-                    auto& ret = mf[name];
-                    return ret;
-                });
-            if (metafilter) {
-                metafilter->remove_filter(id);
-            }
-        } else {
-            logging::filter_info_t info(filter_value.get_value());
-            name = info.logger_name;
-            auto metafilter = parent.metafilters.apply(
-                [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mf) {
-                    auto& ret = mf[name];
-                    if (ret == nullptr) {
-                        std::unique_ptr<logging::logger_t> internal_logger(new blackhole::wrapper_t(
-                            *parent.internal_logger, {{"metafilter", info.logger_name}}));
-                        ret = std::make_shared<logging::metafilter_t>(std::move(internal_logger));
-                    }
-                    return ret;
-                });
-            metafilter->add_filter(std::move(info));
-        }
-    } catch (const std::system_error& e) {
-        COCAINE_LOG_ERROR(
-            parent.internal_logger, "can not create cluster filter - %s", error::to_string(e));
-    }
-}
-
-void id_subscription_t::abort(const std::error_code& ec, const std::string& error) {
-    COCAINE_LOG_ERROR(
-        parent.internal_logger, "failed to receive filter update, {} - {}", error, ec.message());
-}
 
 class logging_v2_t::logging_slot_t : public io::basic_slot<io::base_log::get> {
 public:
@@ -491,6 +437,7 @@ logging_v2_t::logging_v2_t(context_t& context,
     : service_t(context, asio, service_name, service_args),
       dispatch<io::base_log_tag>(service_name),
       impl(new impl_t(context,
+                      asio,
                       get_root_logger(context, service_args),
                       service_args.as_object().at("unicorn_path", "/logging_v2/filters").as_string())) {
 
