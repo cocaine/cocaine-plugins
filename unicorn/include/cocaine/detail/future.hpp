@@ -28,28 +28,22 @@ std::future<T> make_ready_future(T value) {
     return promise.get_future();
 }
 
-template<class T>
-std::future<T> make_exceptional_future(std::error_code ec) {
-    std::promise<T> promise;
-    auto e = std::make_exception_ptr(std::system_error(std::move(ec)));
-    promise.set_exception(e);
-    return promise.get_future();
-};
-
-template<class T>
-std::future<T> make_exceptional_future(std::error_code ec, std::string msg) {
-    std::promise<T> promise;
-    auto e = std::make_exception_ptr(std::system_error(ec, std::move(msg)));
-    promise.set_exception(e);
-    return promise.get_future();
-};
-
 template<class T, class E>
 std::future<T> make_exceptional_future(E e) {
     std::promise<T> promise;
     auto e_ptr = std::make_exception_ptr(e);
     promise.set_exception(e_ptr);
     return promise.get_future();
+};
+
+template<class T>
+std::future<T> make_exceptional_future(std::error_code ec) {
+    return make_exceptional_future<T>(std::system_error(std::move(ec)));
+};
+
+template<class T>
+std::future<T> make_exceptional_future(std::error_code ec, std::string msg) {
+    return make_exceptional_future<T>(std::system_error(std::move(ec), std::move(msg)));
 };
 
 }
