@@ -102,7 +102,7 @@ auto control_t::on_timeout(const std::error_code& ec) -> void {
     if (ec) {
         COCAINE_LOG_DEBUG(slave->log, "heartbeat timer has called its completion handler: cancelled");
     } else {
-        COCAINE_LOG_DEBUG(slave->log, "heartbeat timer has called its completion handler: timeout");
+        COCAINE_LOG_ERROR(slave->log, "heartbeat timer has called its completion handler: timeout");
         slave->shutdown(error::heartbeat_timeout);
     }
 }
