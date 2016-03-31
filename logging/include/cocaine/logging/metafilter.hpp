@@ -43,9 +43,11 @@ public:
 
     bool remove_filter(filter_t::id_type filter_id);
 
+    bool empty() const;
+
     typedef std::function<void(const logging::filter_info_t&)> visitor_t;
 
-    void apply_visitor(const visitor_t& visitor);
+    void apply_visitor(const visitor_t& visitor) const;
 
 private:
     std::unique_ptr<logger_t> logger;

@@ -55,6 +55,10 @@ bool metafilter_t::remove_filter(filter_t::id_type filter_id) {
     return removed;
 }
 
+bool metafilter_t::empty() const {
+    return filters.empty();
+}
+
 filter_result_t metafilter_t::apply(const std::string& message,
                                     unsigned int severity,
                                     const logging::attributes_t& attributes) {
@@ -85,7 +89,7 @@ filter_result_t metafilter_t::apply(const std::string& message,
     return result;
 }
 
-void metafilter_t::apply_visitor(const visitor_t& visitor) {
+void metafilter_t::apply_visitor(const visitor_t& visitor) const {
     boost::shared_lock<boost::shared_mutex> guard(mutex);
     for (const auto& filter_info : filters) {
         visitor(filter_info);

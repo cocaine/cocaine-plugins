@@ -451,6 +451,10 @@ logging_v2_t::logging_v2_t(context_t& context,
                          const std::string& backend,
                          const std::string& message,
                          const logging::attributes_t& attributes){
+        auto mf = impl->get_metafilter(backend);
+        if(mf->empty()) {
+            mf = impl->get_metafilter("default");
+        }
         return emit_ack(impl->get_metafilter(backend), impl->logger, severity, message, attributes);
     };
     on<io::base_log::emit>(emit_slot);
