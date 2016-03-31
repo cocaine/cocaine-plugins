@@ -23,6 +23,8 @@
 
 #include <cocaine/common.hpp>
 
+#include <system_error>
+
 struct archive;
 
 namespace cocaine { namespace isolate {

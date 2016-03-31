@@ -20,6 +20,8 @@
 
 #include "docker_client.hpp"
 
+#include <cocaine/format.hpp>
+
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 

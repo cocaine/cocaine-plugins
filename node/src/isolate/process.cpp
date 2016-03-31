@@ -25,6 +25,7 @@
 
 #include <cocaine/api/storage.hpp>
 #include <cocaine/context.hpp>
+#include <cocaine/dynamic.hpp>
 #include <cocaine/logging.hpp>
 
 #include <array>
@@ -32,8 +33,11 @@
 
 #include <csignal>
 
+#include <asio/deadline_timer.hpp>
+
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <boost/system/system_error.hpp>
 

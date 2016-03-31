@@ -265,7 +265,7 @@ public:
                logging::logger_t* const log,
                std::shared_ptr<api::spool_handle_base_t> handle)
     {
-        isolate = context.get<api::isolate_t>(
+        isolate = context.repository().get<api::isolate_t>(
             profile.isolate.type,
             context,
             loop,
@@ -444,7 +444,7 @@ public:
         profile(std::move(profile_)),
         loop(std::make_shared<asio::io_service>()),
         work(std::make_unique<asio::io_service::work>(*loop)),
-        isolate(context.get<api::isolate_t>(profile.isolate.type,
+        isolate(context.repository().get<api::isolate_t>(profile.isolate.type,
                                             context,
                                             *loop,
                                             manifest_.name,
