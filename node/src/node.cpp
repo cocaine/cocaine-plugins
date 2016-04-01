@@ -23,6 +23,7 @@
 #include <cocaine/api/storage.hpp>
 
 #include <cocaine/context.hpp>
+#include <cocaine/context/signal.hpp>
 #include <cocaine/logging.hpp>
 
 #include <cocaine/traits/dynamic.hpp>
@@ -66,7 +67,7 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
     const auto runname = args.as_object().at("runlist", "").as_string();
 
     if(runname.empty()) {
-        context.listen(signal, asio);
+        context.signal_hub().listen(signal, asio);
         return;
     }
 
@@ -85,7 +86,7 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
     }
 
     if(runlist.empty()) {
-        context.listen(signal, asio);
+        context.signal_hub().listen(signal, asio);
         return;
     }
 
@@ -113,7 +114,7 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
         COCAINE_LOG_WARNING(log, "couldn't start {} app(s): {}", errored.size(), stream.str());
     }
 
-    context.listen(signal, asio);
+    context.signal_hub().listen(signal, asio);
 }
 
 node_t::~node_t() = default;
