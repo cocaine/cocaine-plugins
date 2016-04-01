@@ -7,6 +7,7 @@
 #include <cocaine/logging.hpp>
 #include <cocaine/engine.hpp>
 
+#include <cocaine/rpc/dispatch.hpp>
 #include <cocaine/rpc/session.hpp>
 
 #include <cocaine/traits/dynamic.hpp>

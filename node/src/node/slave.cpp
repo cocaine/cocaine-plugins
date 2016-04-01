@@ -10,6 +10,7 @@
 
 #include <cocaine/context.hpp>
 #include <cocaine/rpc/actor.hpp>
+#include <cocaine/rpc/upstream.hpp>
 
 #include "cocaine/api/isolate.hpp"
 

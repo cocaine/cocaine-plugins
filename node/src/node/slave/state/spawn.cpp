@@ -7,6 +7,7 @@
 #include <blackhole/logger.hpp>
 
 #include <cocaine/rpc/actor.hpp>
+#include <cocaine/trace/trace.hpp>
 #include <cocaine/detail/service/node/slave/spawn_handle.hpp>
 
 #include "cocaine/api/isolate.hpp"
@@ -88,7 +89,7 @@ auto spawn_t::spawn(unsigned long timeout) -> void {
 
     // Spawn a worker instance and start reading standard outputs of it.
     try {
-        auto isolate = slave->context.get<api::isolate_t>(
+        auto isolate = slave->context.repository().get<api::isolate_t>(
             slave->profile.isolate.type, slave->context, slave->loop, slave->manifest.name,
             slave->profile.isolate.type, slave->profile.isolate.args);
 

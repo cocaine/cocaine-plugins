@@ -30,6 +30,7 @@
 
 #include <cocaine/common.hpp>
 #include <cocaine/logging.hpp>
+#include <cocaine/locked_ptr.hpp>
 
 #include <boost/variant.hpp>
 #include <boost/asio.hpp>

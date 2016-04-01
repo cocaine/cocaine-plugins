@@ -23,6 +23,7 @@
 #define COCAINE_ENGINE_PROFILE_HPP
 
 #include <cocaine/common.hpp>
+#include <cocaine/context/config.hpp>
 #include <cocaine/dynamic.hpp>
 
 #include "cocaine/service/node/cached.hpp"
