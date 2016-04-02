@@ -1,3 +1,18 @@
+cocaine-plugins (0.12.7.5) unstable; urgency=low
+
+  * Bug fix: workers should no longer be discarded if a handshake frame was
+    received while the slave's engine is in spawning state. This can be either
+    if the runtime is overloaded or applications spawns too fast.
+  * Bug fix: application engine now should properly count spawn duration.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 01 Apr 2016 13:28:00 +0300
+
+cocaine-plugins (0.12.7.4) unstable; urgency=low
+
+  * Fix broken symlink for Node Service Package.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 16 Mar 2016 18:03:31 +0300
+
 cocaine-plugins (0.12.7.3) unstable; urgency=low
 
   * The same as previous change, but for runtime package.

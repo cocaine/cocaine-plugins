@@ -37,8 +37,11 @@ public:
     /// channel.
     ///
     /// \threadsafe
+    virtual
     auto activate(std::shared_ptr<session_t> session, upstream<io::worker::control_tag> stream)
         -> std::shared_ptr<control_t>;
+
+    auto activate(std::shared_ptr<session_t> session, std::shared_ptr<control_t> control) -> void;
 
     auto start(unsigned long timeout) -> void;
 

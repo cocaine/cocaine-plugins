@@ -17,7 +17,7 @@ class spawn_handle_t:
 public:
     spawn_handle_t(std::unique_ptr<cocaine::logging::logger_t> log,
                    std::weak_ptr<machine_t> slave,
-                   std::weak_ptr<state::spawn_t> spawning);
+                   std::shared_ptr<state::spawn_t> spawning);
 
     virtual
     void
@@ -30,10 +30,11 @@ public:
     virtual
     void
     on_data(const std::string& data);
+
 private:
     std::unique_ptr<cocaine::logging::logger_t> log;
     std::weak_ptr<machine_t> slave;
-    std::weak_ptr<state::spawn_t> spawning;
+    std::shared_ptr<state::spawn_t> spawning;
     std::chrono::high_resolution_clock::time_point start;
 };
 

@@ -14,6 +14,7 @@
 #include "cocaine/service/node/slave/id.hpp"
 
 #include "cocaine/detail/service/node/slave/machine.hpp"
+#include "cocaine/detail/service/node/slave/control.hpp"
 #include "cocaine/detail/service/node/slave/spawn_handle.hpp"
 #include "cocaine/detail/service/node/slave/state/handshaking.hpp"
 #include "cocaine/detail/service/node/util.hpp"
@@ -98,23 +99,85 @@ auto spawn_t::spawn(unsigned long timeout) -> void {
         timer.expires_from_now(boost::posix_time::milliseconds(static_cast<std::int64_t>(timeout)));
         timer.async_wait(trace_t::bind(&spawn_t::on_timeout, shared_from_this(), ph::_1));
 
-        std::shared_ptr<api::spawn_handle_base_t> spawn_handle = std::make_shared<spawn_handle_t>(slave->context.log("spawn_handle"), slave, shared_from_this());
+        auto spawn_handle = std::make_shared<spawn_handle_t>(
+            slave->context.log("spawn_handle"),
+            slave,
+            shared_from_this()
+        );
+
         handle = isolate->spawn(
             slave->manifest.executable,
             args,
             slave->manifest.environment,
-            spawn_handle
+            std::move(spawn_handle)
         );
-
-    } catch(const std::system_error& err) {
+    } catch (const std::system_error& err) {
         COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: {}", err.code().message());
 
         slave->loop.post([=]() { slave->shutdown(err.code()); });
     }
 }
 
+std::shared_ptr<control_t>
+spawn_t::activate(std::shared_ptr<session_t> session, upstream<io::worker::control_tag> stream) {
+    // If we are here, then an application has been spawned and started to work before isolate have
+    // been notified about it. Just create control dispatch to be able to handle heartbeats and save
+    // it for further usage.
+    auto control = data.apply([&](data_t& data) -> std::shared_ptr<control_t> {
+        if (data.handshaking) {
+            return data.handshaking->activate(std::move(session), std::move(stream));
+        } else {
+            data.session = session;
+            data.control = std::make_shared<control_t>(slave, std::move(stream));
+
+            return data.control;
+        }
+    });
+
+    return control;
+}
+
 void
-spawn_t::on_timeout(const std::error_code& ec) {
+spawn_t::on_spawn(std::chrono::high_resolution_clock::time_point start) {
+    const auto now = std::chrono::high_resolution_clock::now();
+    const auto elapsed = std::chrono::duration<float, std::chrono::milliseconds::period>(now - start).count();
+
+    std::error_code ec;
+    const size_t cancelled = timer.cancel(ec);
+    if (ec || cancelled == 0) {
+        // If we are here, then the spawn timer has been triggered and the slave has been
+        // shutdowned with a spawn timeout error.
+        COCAINE_LOG_WARNING(slave->log, "slave has been spawned in {} ms, but the timeout has already expired",
+                            elapsed);
+        return;
+    }
+
+    COCAINE_LOG_DEBUG(slave->log, "slave has been spawned in {} ms", elapsed);
+
+    try {
+        data.apply([&](data_t& data) {
+            data.handshaking = std::make_shared<handshaking_t>(slave, std::move(handle));
+            // May throw system error when failed to assign native descriptor to the fetcher.
+            slave->migrate(data.handshaking);
+
+            if (data.control) {
+                // We've already received handshake frame and can immediately skip handshaking
+                // state.
+                data.handshaking->activate(data.session, data.control);
+            } else {
+                data.handshaking->start(slave->profile.timeout.handshake);
+            }
+        });
+    } catch (const std::exception& err) {
+        COCAINE_LOG_ERROR(slave->log, "unable to activate slave: {}", err.what());
+
+        slave->loop.post([=]() {
+            slave->shutdown(error::unknown_activate_error);
+        });
+    }
+}
+
+auto spawn_t::on_timeout(const std::error_code& ec) -> void {
     if (ec) {
         COCAINE_LOG_DEBUG(slave->log, "spawn timer has called its completion handler: cancelled");
     } else {
