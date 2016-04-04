@@ -134,7 +134,7 @@ class app_dispatch_t:
 public:
     app_dispatch_t(context_t& context, const std::string& name, std::shared_ptr<overseer_proxy_t> overseer_) :
         dispatch<io::app_tag>(name),
-        log(context.log(format("%s/dispatch", name))),
+        log(context.log(format("{}/dispatch", name))),
         overseer(overseer_)
     {
         on<io::app::enqueue>(std::make_shared<slot_type>(
@@ -143,7 +143,7 @@ public:
 
         on<io::app::info>(std::bind(&app_dispatch_t::on_info, this));
 
-        on<io::app::control>(std::make_shared<control_slot_t>(overseer_, context.log(format("%s/control", name))));
+        on<io::app::control>(std::make_shared<control_slot_t>(overseer_, context.log(format("{}/control", name))));
     }
 
     ~app_dispatch_t() {
@@ -280,7 +280,7 @@ public:
             // will be performed in a manner equivalent to using `boost::asio::io_service::post()`.
             spooler = isolate->spool(handle);
         } catch (const std::system_error& err) {
-            COCAINE_LOG_ERROR(log, "uncaught spool exception: [{}] {}", err.code().value(), err.code().message());
+            COCAINE_LOG_ERROR(log, "uncaught spool exception: {}", error::to_string(err));
             handle->on_abort(err.code(), err.what());
         } catch (const std::exception& err) {
             COCAINE_LOG_ERROR(log, "uncaught spool exception: {}", err.what());
@@ -436,7 +436,7 @@ public:
                 manifest_t manifest_,
                 profile_t profile_,
                 cocaine::deferred<void> deferred_):
-        log(context.log(format("%s/app", manifest_.name))),
+        log(context.log(format("{}/app", manifest_.name))),
         context(context),
         state(new state::stopped_t),
         deferred(std::move(deferred_)),
@@ -549,7 +549,7 @@ private:
                 new state::running_t(context, manifest(), profile, log.get(), loop)
             );
         } catch (const std::system_error& err) {
-            COCAINE_LOG_ERROR(log, "unable to publish app: [{}] {}", err.code().value(), err.code().message());
+            COCAINE_LOG_ERROR(log, "unable to publish app: {}", error::to_string(err));
             ec = err.code();
         } catch (const std::exception& err) {
             COCAINE_LOG_ERROR(log, "unable to publish app: {}", err.what());

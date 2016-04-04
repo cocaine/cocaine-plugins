@@ -114,7 +114,7 @@ private:
     extract_endpoint(const cocaine::dynamic_t& args) {
         const std::string& host = args.as_object().at("host", "127.0.0.1").as_string();
         const uint16_t port = args.as_object().at("port", 9200).to<uint16_t>();
-        return cocaine::format("http://%s:%d", host, port);
+        return cocaine::format("http://{}:{}", host, port);
     }
 };
 
@@ -139,7 +139,7 @@ cocaine::deferred<response::get>
 elasticsearch_t::get(const std::string& index,
                      const std::string& type,
                      const std::string& id) const {
-    const std::string& url = cocaine::format("%s/%s/%s/%s/", d->m_endpoint, index, type, id);
+    const std::string& url = cocaine::format("{}/{}/{}/{}/", d->m_endpoint, index, type, id);
     get_handler_t handler { d->m_log };
     return d->do_get<response::get>(url, handler);
 }
@@ -149,7 +149,7 @@ elasticsearch_t::index(const std::string& data,
                        const std::string& index,
                        const std::string& type,
                        const std::string& id) const {
-    const std::string& url = cocaine::format("%s/%s/%s/%s", d->m_endpoint, index, type, id);
+    const std::string& url = cocaine::format("{}/{}/{}/{}", d->m_endpoint, index, type, id);
     index_handler_t handler { d->m_log };
     return d->do_post<response::index>(url, data, handler);
 }
@@ -164,7 +164,7 @@ elasticsearch_t::search(const std::string& index,
         //throw cocaine::error_t("desired search size (%d) must be positive number", size);
     }
 
-    const std::string& url = cocaine::format("%s/%s/%s/_search?q=%s&size=%d", d->m_endpoint, index, type, query, size);
+    const std::string& url = cocaine::format("{}/{}/{}/_search?q={}&size={}", d->m_endpoint, index, type, query, size);
     search_handler_t handler { d->m_log };
     return d->do_get<response::search>(url, handler);
 }
@@ -173,7 +173,7 @@ cocaine::deferred<response::delete_index>
 elasticsearch_t::delete_index(const std::string& index,
                               const std::string& type,
                               const std::string& id) const {
-    const std::string& url = cocaine::format("%s/%s/%s/%s", d->m_endpoint, index, type, id);
+    const std::string& url = cocaine::format("{}/{}/{}/{}", d->m_endpoint, index, type, id);
     delete_handler_t handler { d->m_log };
     return d->do_delete<response::delete_index>(url, handler);
 }

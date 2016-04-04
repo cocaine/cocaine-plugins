@@ -369,7 +369,7 @@ process_t::spawn(const std::string& path,
     try {
         close_all();
     } catch (const std::exception& e) {
-        std::cerr << format("unable to close all file descriptors: %s", e.what()) << std::endl;
+        std::cerr << format("unable to close all file descriptors: {}", e.what()) << std::endl;
     }
 
     attach_cgroups(m_cgroup, *m_log);
@@ -379,7 +379,7 @@ process_t::spawn(const std::string& path,
     try {
         fs::current_path(m_working_directory);
     } catch(const fs::filesystem_error& e) {
-        std::cerr << cocaine::format("unable to change the working directory to '%s' - %s", m_working_directory, e.what());
+        std::cerr << cocaine::format("unable to change the working directory to '{}' - {}", m_working_directory, e.what());
         std::_Exit(EXIT_FAILURE);
     }
 
@@ -404,10 +404,8 @@ process_t::spawn(const std::string& path,
         envp.push_back(::strdup(*ptr));
     }
 
-    boost::format format("%s=%s");
-
-    for(auto it = environment.begin(); it != environment.end(); ++it, format.clear()) {
-        envp.push_back(::strdup((format % it->first % it->second).str().c_str()));
+    for(auto it = environment.begin(); it != environment.end(); ++it) {
+        envp.push_back(::strdup(cocaine::format("{}={}", it->first, it->second).c_str()));
     }
 
     envp.push_back(nullptr);
@@ -424,7 +422,7 @@ process_t::spawn(const std::string& path,
 
     if(::execve(argv[0], argv.data(), envp.data()) != 0) {
         std::error_code ec(errno, std::system_category());
-        std::cerr << cocaine::format("unable to execute '%s' - [%d] %s", path, ec.value(), ec.message());
+        std::cerr << cocaine::format("unable to execute '{}' - [{}] {}", path, ec.value(), ec.message());
     }
 
     std::_Exit(EXIT_FAILURE);

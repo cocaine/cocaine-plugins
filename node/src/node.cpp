@@ -147,7 +147,7 @@ node_t::start_app(const std::string& name, const std::string& profile) {
         if(it != apps.end()) {
             const auto info = it->second->info(io::node::info::brief).as_object();
             throw std::system_error(error::already_started,
-                cocaine::format("app '%s' is %s", name, info["state"].as_string()));
+                cocaine::format("app '{}' is {}", name, info["state"].as_string()));
         }
 
         apps.insert({ name, std::make_shared<node::app_t>(context, name, profile, deferred) });
@@ -165,7 +165,7 @@ node_t::pause_app(const std::string& name) {
 
         if(it == apps.end()) {
             throw std::system_error(error::not_running,
-                cocaine::format("app '%s' is not running", name));
+                cocaine::format("app '{}' is not running", name));
         }
 
         apps.erase(it);
@@ -196,7 +196,7 @@ node_t::info(const std::string& name, io::node::info::flags_t flags) const {
     });
 
     if (!app) {
-        throw cocaine::error_t("app '%s' is not running", name);
+        throw cocaine::error_t("app '{}' is not running", name);
     }
 
     return app->info(flags);
@@ -215,7 +215,7 @@ node_t::overseer(const std::string& name) const {
     });
 
     if (!app) {
-        throw cocaine::error_t("app '%s' is not running", name);
+        throw cocaine::error_t("app '{}' is not running", name);
     }
 
     return app->overseer();

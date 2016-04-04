@@ -49,7 +49,7 @@ struct request_handler_t {
         if (!success) {
             if (code == 0) {
                 // Socket-only error, no valid http response
-                const std::string &message = cocaine::format("Unable to download %s, error %s",
+                const std::string &message = cocaine::format("Unable to download {}, error {}",
                                                              reply.request().url().to_string(),
                                                              error.message());
                 //deferred.abort(error.value(), message);

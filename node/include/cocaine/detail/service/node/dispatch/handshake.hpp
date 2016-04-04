@@ -31,7 +31,7 @@ class handshaking_t:
 public:
     template<class F>
     handshaking_t(const std::string& name, F&& fn):
-        dispatch<io::worker_tag>(format("%s/handshake", name))
+        dispatch<io::worker_tag>(format("{}/handshake", name))
     {
         typedef io::streaming_slot<io::worker::handshake> slot_type;
 

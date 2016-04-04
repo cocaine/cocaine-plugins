@@ -31,7 +31,7 @@ manifest_t::manifest_t(context_t& context, const std::string& name_):
     cached<dynamic_t>(context, "manifests", name_),
     name(name_)
 {
-    endpoint = cocaine::format("%s/%s.%d", context.config().path.runtime, name, ::getpid());
+    endpoint = cocaine::format("{}/{}.{}", context.config().path.runtime, name, ::getpid());
 
     environment = as_object().at("environment", dynamic_t::object_t()).to<std::map<std::string, std::string>>();
 

@@ -55,7 +55,7 @@ engine_t::engine_t(context_t& context,
                        manifest_t manifest,
                        profile_t profile,
                        std::shared_ptr<asio::io_service> loop):
-    log(context.log(format("%s/overseer", manifest.name))),
+    log(context.log(format("{}/overseer", manifest.name))),
     context(context),
     birthstamp(std::chrono::system_clock::now()),
     manifest_(std::move(manifest)),

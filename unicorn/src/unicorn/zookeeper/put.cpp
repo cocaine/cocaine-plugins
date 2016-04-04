@@ -54,7 +54,7 @@ put_action_t::stat_event(int rc, zookeeper::node_stat const& stat) {
             callback(make_ready_future(std::move(result)));
         }
     } catch (const std::system_error& e) {
-        COCAINE_LOG_WARNING(ctx.log, "failure during put action: [{}] {} - {}", e.code().value(), e.code().message(), e.what());
+        COCAINE_LOG_WARNING(ctx.log, "failure during put action: {}", error::to_string(e));
         callback(make_exceptional_future<api::unicorn_t::response::put>(e));
     }
 }

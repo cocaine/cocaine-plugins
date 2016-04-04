@@ -40,12 +40,12 @@ struct get_handler_t {
             rapidjson::Document root;
             root.Parse<0>(data.c_str());
             if (root.HasParseError()) {
-                deferred.abort(asio::error::operation_aborted, cocaine::format("parsing failed - %s", root.GetParseError()));
+                deferred.abort(asio::error::operation_aborted, cocaine::format("parsing failed - {}", root.GetParseError()));
                 return;
             }
 
             const std::string& error = root.HasMember("error") ? root["error"].GetString() : "";
-            const std::string& reason = cocaine::format("%s[%d]", error, code);
+            const std::string& reason = cocaine::format("{}[{}]", error, code);
             deferred.write(std::make_tuple(false, reason));
         }
     }

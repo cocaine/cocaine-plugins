@@ -24,6 +24,8 @@
 
 #include <blackhole/logger.hpp>
 
+#include <boost/optional/optional.hpp>
+
 #include <zookeeper/zookeeper.h>
 
 namespace cocaine {

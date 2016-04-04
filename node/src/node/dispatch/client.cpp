@@ -3,7 +3,7 @@
 using namespace cocaine;
 
 client_rpc_dispatch_t::client_rpc_dispatch_t(const std::string& name):
-    dispatch<incoming_tag>(format("%s/C2W", name)),
+    dispatch<incoming_tag>(format("{}/C2W", name)),
     state(state_t::open)
 {
     // Uncaught exceptions here will lead to a client disconnection and further dispatch discarding.

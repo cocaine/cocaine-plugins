@@ -131,7 +131,7 @@ struct urlfetch_get_handler {
             if (reply.code() == 0) {
                 // Socket-only error, no valid http response
                 promise.abort(std::make_error_code(static_cast<std::errc>(error.value())),
-                              cocaine::format("Unable to download %s, error %s",
+                              cocaine::format("Unable to download {}, error {}",
                                               reply.request().url().to_string(),
                                               error.message()));
                 return;
@@ -222,9 +222,7 @@ urlfetch_t::prepare_request(const std::string& url,
         const auto& cookie_name = it.first;
         const auto& cookie_value = it.second;
 
-        std::string cookie_header = boost::str(boost::format("%1%=%2%") % cookie_name % cookie_value);
-
-        request_headers.add("Cookie", cookie_header);
+        request_headers.add("Cookie", cocaine::format("{}={}", cookie_name, cookie_value));
     }
 
     return request;

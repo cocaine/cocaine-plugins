@@ -738,7 +738,7 @@ void
 container_t::start(const rapidjson::Value& args) {
     http_response_t resp;
 
-    m_client->synchronize()->post(resp, make_post(api_version + cocaine::format("/containers/%s/start", id()), args));
+    m_client->synchronize()->post(resp, make_post(api_version + cocaine::format("/containers/{}/start", id()), args));
 
     if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
@@ -753,7 +753,7 @@ container_t::start(const rapidjson::Value& args) {
 void
 container_t::kill() {
     http_response_t resp;
-    m_client->synchronize()->post(resp, make_post(api_version + cocaine::format("/containers/%s/kill", id())));
+    m_client->synchronize()->post(resp, make_post(api_version + cocaine::format("/containers/{}/kill", id())));
 
     if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
@@ -768,7 +768,7 @@ container_t::kill() {
 void
 container_t::stop(unsigned int timeout) {
     http_response_t resp;
-    m_client->synchronize()->post(resp, make_post(api_version + cocaine::format("/containers/%s/stop?t=%d", id(), timeout)));
+    m_client->synchronize()->post(resp, make_post(api_version + cocaine::format("/containers/{}/stop?t={}", id(), timeout)));
 
     if(!(resp.code() >= 200 && resp.code() < 400)) {
         COCAINE_LOG_WARNING(m_logger,
@@ -783,7 +783,7 @@ container_t::stop(unsigned int timeout) {
 void
 container_t::remove(bool volumes) {
     http_response_t resp;
-    m_client->synchronize()->get(resp, make_del(api_version + cocaine::format("/containers/%s?v=%d", id(), volumes?1:0)));
+    m_client->synchronize()->get(resp, make_del(api_version + cocaine::format("/containers/{}?v={}", id(), volumes?1:0)));
 
     if(!(resp.code() >= 200 && resp.code() < 300)) {
         COCAINE_LOG_WARNING(m_logger,
@@ -806,7 +806,7 @@ container_t::attach() {
     http_response_t resp;
     auto conn = m_client->synchronize()->head(
         resp,
-        make_post(api_version + cocaine::format("/containers/%s/attach?logs=1&stream=1&stdout=1&stderr=1", id()))
+        make_post(api_version + cocaine::format("/containers/{}/attach?logs=1&stream=1&stdout=1&stderr=1", id()))
     );
 
     if(!(resp.code() >= 200 && resp.code() < 300)) {
@@ -826,7 +826,7 @@ client_t::inspect_image(rapidjson::Document& result,
                         const std::string& image)
 {
     http_response_t resp;
-    m_client->synchronize()->get(resp, make_get(api_version + cocaine::format("/images/%s/json", image)));
+    m_client->synchronize()->get(resp, make_get(api_version + cocaine::format("/images/{}/json", image)));
 
     if(resp.code() >= 200 && resp.code() < 300) {
         result.SetNull();

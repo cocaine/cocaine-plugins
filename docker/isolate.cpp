@@ -181,7 +181,7 @@ docker_t::docker_t(context_t& context,  asio::io_service& io_context, const std:
         m_run_config.AddMember("WorkingDir", "/", m_json_allocator);
         m_run_config.AddMember("NetworkMode", m_network_mode.data(), m_json_allocator);
     } catch(const std::exception& e) {
-        throw cocaine::error_t("%s", e.what());
+        throw cocaine::error_t("{}", e.what());
     }
 }
 
@@ -280,6 +280,6 @@ docker_t::spawn(const std::string& path,
 
         return std::move(container_handle);
     } catch(const std::exception& e) {
-        throw cocaine::error_t("%s", e.what());
+        throw cocaine::error_t("{}", e.what());
     }
 }

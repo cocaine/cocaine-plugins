@@ -44,7 +44,7 @@ using cocaine::service::node::slave::id_t;
 
 machine_t::machine_t(context_t& context, id_t id, manifest_t manifest, profile_t profile,
                 asio::io_service& loop, cleanup_handler cleanup):
-    log(context.log(format("%s/slave", manifest.name), {{ "uuid", id.id() }})),
+    log(context.log(format("{}/slave", manifest.name), {{ "uuid", id.id() }})),
     context(context),
     id(id),
     profile(profile),
@@ -332,7 +332,7 @@ machine_t::dump() {
         std::chrono::microseconds
     >(now).count();
 
-    const auto key = format("%lld:%s", us, id.id());
+    const auto key = format("{}:{}", us, id.id());
 
     std::vector<std::string> indexes{manifest.name};
 

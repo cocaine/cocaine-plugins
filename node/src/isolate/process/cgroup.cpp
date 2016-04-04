@@ -128,7 +128,7 @@ void attach_cgroups(void* cgroup_raw_ptr, logging::logger_t& log) {
 
     if((rv = cgroup_attach_task(cgroup_ptr)) != 0) {
         COCAINE_LOG_ERROR(log, "unable to attach the process to a cgroup - {}", cgroup_strerror(rv));
-        std::cerr << cocaine::format("unable to attach the process to a cgroup - %s", cgroup_strerror(rv));
+        std::cerr << cocaine::format("unable to attach the process to a cgroup - {}", cgroup_strerror(rv));
         std::_Exit(EXIT_FAILURE);
     }
 }

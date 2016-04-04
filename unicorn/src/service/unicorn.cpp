@@ -76,7 +76,7 @@ public:
             request_scope = tuple::invoke(std::move(api_args), std::mem_fn(method));
             result.attach(std::move(upstream));
         } catch(const std::system_error& e) {
-            upstream.template send<typename protocol::error>(e.code(), std::string(e.what()));
+            upstream.template send<typename protocol::error>(e.code(), error::to_string(e));
         } catch(const std::exception& e) {
             upstream.template send<typename protocol::error>(error::uncaught_error, std::string(e.what()));
         }

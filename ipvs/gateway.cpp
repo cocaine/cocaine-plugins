@@ -131,7 +131,7 @@ ipvs_t::remote_t::remote_t(ipvs_t *const parent_, const partition_t& name_):
         {"version", info.version}
     });
 
-    auto port = parent->m_context.mapper.assign(cocaine::format("%s@%d:virtual", info.service,
+    auto port = parent->m_context.mapper.assign(cocaine::format("{}@{}:virtual", info.service,
         info.version));
     COCAINE_LOG_DEBUG(parent->m_log, "publishing virtual service");
 

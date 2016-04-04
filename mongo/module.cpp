@@ -31,7 +31,7 @@ extern "C" {
         const auto status = mongo::client::initialize();
 
         if(status != mongo::Status::OK()) {
-            throw cocaine::error_t("unable to initialize mongodb - %s", status.toString());
+            throw cocaine::error_t("unable to initialize mongodb - {}", status.toString());
         }
 
         repository.insert<mongo_storage_t>("mongodb");

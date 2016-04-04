@@ -47,7 +47,7 @@ struct search_handler_t {
         rapidjson::Document root;
         root.Parse<0>(data.c_str());
         if (root.HasParseError()) {
-            deferred.abort(asio::error::operation_aborted, cocaine::format("parsing failed - %s", root.GetParseError()));
+            deferred.abort(asio::error::operation_aborted, cocaine::format("parsing failed - {}", root.GetParseError()));
             return;
         }
 
@@ -63,7 +63,7 @@ struct search_handler_t {
                 deferred.write(std::make_tuple(false, 0, std::string()));
             }
         } else {
-            std::string reason = cocaine::format("%s[%d]", root["error"].GetString(), code);
+            std::string reason = cocaine::format("{}[{}]", root["error"].GetString(), code);
             deferred.write(std::make_tuple(false, 0, reason));
         }
     }

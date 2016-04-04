@@ -18,7 +18,7 @@ namespace slave {
 namespace ph = std::placeholders;
 
 control_t::control_t(std::shared_ptr<machine_t> slave_, upstream<io::worker::control_tag> stream_):
-    dispatch<io::worker::control_tag>(format("%s/control", slave_->manifest.name)),
+    dispatch<io::worker::control_tag>(format("{}/control", slave_->manifest.name)),
     slave(std::move(slave_)),
     stream(std::move(stream_)),
     timer(slave->loop),

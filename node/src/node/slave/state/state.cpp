@@ -44,7 +44,7 @@ auto state_t::seal() -> void {
 auto state_t::terminate(const std::error_code & /*ec*/) -> void {}
 
 auto state_t::throw_invalid_state() -> void {
-    throw std::system_error(error::invalid_state, format("invalid state - %s", name()));
+    throw std::system_error(error::invalid_state, format("invalid state - {}", name()));
 }
 
 }  // namespace state
