@@ -26,6 +26,7 @@
 #include <cocaine/api/storage.hpp>
 #include <cocaine/context.hpp>
 #include <cocaine/dynamic.hpp>
+#include <cocaine/errors.hpp>
 #include <cocaine/logging.hpp>
 
 #include <array>

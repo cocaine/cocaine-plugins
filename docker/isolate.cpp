@@ -24,6 +24,7 @@
 #include <cocaine/context.hpp>
 #include <cocaine/context/config.hpp>
 #include <cocaine/dynamic.hpp>
+#include <cocaine/errors.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/memory.hpp>
 

@@ -4,16 +4,20 @@
 
 #include <blackhole/logger.hpp>
 
-#include "cocaine/api/isolate.hpp"
-#include "cocaine/logging.hpp"
-#include "cocaine/context.hpp"
-#include "cocaine/errors.hpp"
-#include "cocaine/idl/node.hpp"
-#include "cocaine/locked_ptr.hpp"
-#include "cocaine/rpc/actor.hpp"
-#include "cocaine/rpc/actor_unix.hpp"
-#include "cocaine/traits/dynamic.hpp"
 
+#include <cocaine/logging.hpp>
+#include <cocaine/context.hpp>
+#include <cocaine/errors.hpp>
+
+#include <cocaine/locked_ptr.hpp>
+#include <cocaine/repository.hpp>
+#include <cocaine/rpc/actor.hpp>
+#include <cocaine/rpc/actor_unix.hpp>
+#include <cocaine/traits/dynamic.hpp>
+
+#include "cocaine/api/isolate.hpp"
+#include "cocaine/idl/node.hpp"
+#include "cocaine/repository/isolate.hpp"
 #include "cocaine/service/node/manifest.hpp"
 #include "cocaine/service/node/overseer.hpp"
 #include "cocaine/service/node/profile.hpp"

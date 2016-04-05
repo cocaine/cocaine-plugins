@@ -21,6 +21,8 @@
 #include "cocaine/service/node/manifest.hpp"
 
 #include <cocaine/context/config.hpp>
+#include <cocaine/errors.hpp>
+#include <cocaine/format.hpp>
 #include <cocaine/traits/dynamic.hpp>
 
 #include <unistd.h>
