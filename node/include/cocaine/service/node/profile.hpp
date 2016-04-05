@@ -58,7 +58,10 @@ struct profile_t : cached<dynamic_t> {
 
     // The slave processes are launched in sandboxed environments, called isolates. This one
     // describes the isolate type and arguments.
-    config_t::component_t isolate;
+    struct {
+        std::string type;
+        dynamic_t args;
+    } isolate;
 };
 
 }  // namespace cocaine

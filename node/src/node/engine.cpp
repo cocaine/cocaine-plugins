@@ -261,12 +261,13 @@ auto engine_t::info(io::node::info::flags_t flags) const -> dynamic_t::object_t 
     result["uptime"] = uptime().count();
 
     info_visitor_t visitor(flags, &result);
+    auto _profile = profile();
     visitor.visit(manifest());
-    visitor.visit(profile());
+    visitor.visit(_profile);
     visitor.visit(stats.requests.accepted.load(), stats.requests.rejected.load());
-    visitor.visit({ profile().queue_limit, &queue });
+    visitor.visit({ _profile.queue_limit, &queue });
     visitor.visit(stats.quantiles());
-    visitor.visit({ profile().pool_limit, stats.slaves.spawned, stats.slaves.crashed, &pool });
+    visitor.visit({ _profile.pool_limit, stats.slaves.spawned, stats.slaves.crashed, &pool });
 
     return result;
 }
@@ -394,7 +395,8 @@ auto engine_t::spawn(pool_type& pool) -> void {
 }
 
 auto engine_t::spawn(const id_t& id, pool_type& pool) -> void {
-    if (pool.size() >= profile().pool_limit) {
+    auto _profile = profile();
+    if (pool.size() >= _profile.pool_limit) {
         throw std::system_error(error::pool_is_full, "the pool is full");
     }
 
@@ -404,7 +406,7 @@ auto engine_t::spawn(const id_t& id, pool_type& pool) -> void {
     // constructor.
     pool.insert(std::make_pair(
         id.id(),
-        slave_t(context, id, manifest(), profile(), *loop, std::bind(&engine_t::on_slave_death, shared_from_this(), ph::_1, id.id()))
+        slave_t(context, id, manifest(), _profile, *loop, std::bind(&engine_t::on_slave_death, shared_from_this(), ph::_1, id.id()))
     ));
 
     ++stats.slaves.spawned;
