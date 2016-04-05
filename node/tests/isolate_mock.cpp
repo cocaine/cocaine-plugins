@@ -25,6 +25,8 @@
 
 #include <cocaine/api/service.hpp>
 #include <cocaine/logging.hpp>
+#include <cocaine/repository.hpp>
+#include <cocaine/repository/service.hpp>
 #include <cocaine/rpc/dispatch.hpp>
 #include <cocaine/traits/dynamic.hpp>
 

@@ -20,6 +20,9 @@
 
 #include "isolate.hpp"
 
+#include <cocaine/repository.hpp>
+#include <cocaine/repository/isolate.hpp>
+
 using namespace cocaine;
 using namespace cocaine::isolate;
 

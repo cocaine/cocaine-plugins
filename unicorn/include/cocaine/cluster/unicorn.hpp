@@ -17,8 +17,8 @@
 
 #include <cocaine/api/cluster.hpp>
 #include <cocaine/api/unicorn.hpp>
-
 #include <cocaine/forwards.hpp>
+#include <cocaine/locked_ptr.hpp>
 
 #include <set>
 namespace cocaine { namespace cluster {
@@ -27,7 +27,6 @@ class unicorn_cluster_t:
     public api::cluster_t
 {
 public:
-    typedef api::category_traits<api::unicorn_t>::ptr_type unicorn_ptr;
 
     struct cfg_t {
         cfg_t(const dynamic_t& args);
@@ -76,7 +75,7 @@ private:
     std::vector<asio::ip::tcp::endpoint> endpoints;
     asio::deadline_timer announce_timer;
     asio::deadline_timer subscribe_timer;
-    unicorn_ptr unicorn;
+    api::unicorn_ptr unicorn;
     api::unicorn_scope_ptr create_scope, subscribe_scope, children_subscribe_scope, get_scope;
     typedef std::map<std::string, std::vector<asio::ip::tcp::endpoint>> locator_endpoints_t;
     synchronized<locator_endpoints_t> registered_locators;

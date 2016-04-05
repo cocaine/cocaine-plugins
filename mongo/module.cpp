@@ -20,6 +20,9 @@
 
 #include "storage.hpp"
 
+#include <cocaine/repository.hpp>
+#include <cocaine/repository/storage.hpp>
+
 #include <mongo/client/init.h>
 
 using namespace cocaine;

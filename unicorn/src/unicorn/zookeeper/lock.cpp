@@ -13,13 +13,15 @@
 * GNU General Public License for more details.
 */
 
-#include "cocaine/detail/future.hpp"
 #include "cocaine/detail/unicorn/zookeeper/lock.hpp"
+
+#include "cocaine/detail/future.hpp"
 #include "cocaine/detail/zookeeper/errors.hpp"
 
-#include <blackhole/logger.hpp>
-
+#include <cocaine/errors.hpp>
 #include <cocaine/logging.hpp>
+
+#include <blackhole/logger.hpp>
 
 namespace cocaine { namespace unicorn {
 

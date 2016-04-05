@@ -13,9 +13,9 @@
 * GNU General Public License for more details.
 */
 
-#include <cocaine/detail/future.hpp>
 #include "cocaine/detail/unicorn/zookeeper/del.hpp"
 
+#include "cocaine/detail/future.hpp"
 #include "cocaine/detail/zookeeper/errors.hpp"
 
 namespace cocaine { namespace unicorn {

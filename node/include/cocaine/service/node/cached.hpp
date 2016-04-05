@@ -60,7 +60,7 @@ private:
 
 template<class T>
 cached<T>::cached(context_t& context, const std::string& collection, const std::string& name) {
-    api::category_traits<api::storage_t>::ptr_type cache;
+    api::storage_ptr cache;
 
     try {
         cache = api::storage(context, "cache");

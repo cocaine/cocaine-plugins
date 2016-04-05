@@ -6,6 +6,8 @@
 
 #include <blackhole/logger.hpp>
 
+#include <cocaine/repository.hpp>
+#include <cocaine/repository/isolate.hpp>
 #include <cocaine/rpc/actor.hpp>
 #include <cocaine/trace/trace.hpp>
 #include <cocaine/detail/service/node/slave/spawn_handle.hpp>

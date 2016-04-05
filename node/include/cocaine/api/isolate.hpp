@@ -24,12 +24,9 @@
 #include <cocaine/common.hpp>
 
 #include <cocaine/locked_ptr.hpp>
-#include <cocaine/repository.hpp>
 
+#include <map>
 #include <memory>
-#include <mutex>
-
-#include <asio/io_service.hpp>
 
 namespace cocaine {
 namespace api {
@@ -132,39 +129,7 @@ private:
     asio::io_service& io_service;
 };
 
-template<>
-struct category_traits<isolate_t> {
-    typedef std::shared_ptr<isolate_t> ptr_type;
-
-    struct factory_type : public basic_factory<isolate_t> {
-        virtual
-        ptr_type
-        get(context_t& context, asio::io_service& io_context, const std::string& name, const std::string& type, const dynamic_t& args) = 0;
-    };
-
-    template<class T>
-    struct default_factory : public factory_type {
-        virtual
-        ptr_type
-        get(context_t& context, asio::io_service& io_context, const std::string& name, const std::string& type, const dynamic_t& args) {
-            ptr_type instance;
-
-            instances.apply([&](std::map<std::string, std::weak_ptr<isolate_t>>& instances) {
-                auto weak_ptr = instances[name];
-
-                if ((instance = weak_ptr.lock()) == nullptr) {
-                    instance = std::make_shared<T>(context, io_context, name, type, args);
-                    instances[name] = instance;
-                }
-            });
-
-            return instance;
-        }
-
-    private:
-        synchronized<std::map<std::string, std::weak_ptr<isolate_t>>> instances;
-    };
-};
+typedef std::shared_ptr<isolate_t> isolate_ptr;
 
 }
 } // namespace cocaine::api

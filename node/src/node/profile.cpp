@@ -20,9 +20,9 @@
 
 #include "cocaine/service/node/profile.hpp"
 
-#include "cocaine/defaults.hpp"
-
-#include "cocaine/traits/dynamic.hpp"
+#include <cocaine/defaults.hpp>
+#include <cocaine/errors.hpp>
+#include <cocaine/traits/dynamic.hpp>
 
 using namespace cocaine;
 

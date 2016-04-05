@@ -16,10 +16,9 @@
 #include "cocaine/cluster/unicorn.hpp"
 
 #include <cocaine/context.hpp>
+#include <cocaine/errors.hpp>
 #include <cocaine/logging.hpp>
-
 #include <cocaine/rpc/actor.hpp>
-
 #include <cocaine/unicorn/value.hpp>
 
 #include <blackhole/logger.hpp>

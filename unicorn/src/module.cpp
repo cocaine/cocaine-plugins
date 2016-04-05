@@ -22,6 +22,10 @@
 #include "cocaine/service/unicorn.hpp"
 
 #include <cocaine/errors.hpp>
+#include <cocaine/repository.hpp>
+#include <cocaine/repository/cluster.hpp>
+#include <cocaine/repository/service.hpp>
+#include <cocaine/repository/unicorn.hpp>
 
 using namespace cocaine;
 extern "C" {

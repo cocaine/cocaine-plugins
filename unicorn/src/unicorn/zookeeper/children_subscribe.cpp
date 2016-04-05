@@ -15,12 +15,13 @@
 
 #include "cocaine/detail/unicorn/zookeeper/children_subscribe.hpp"
 
+#include "cocaine/detail/future.hpp"
 #include "cocaine/detail/zookeeper/errors.hpp"
 
-#include <blackhole/logger.hpp>
-
+#include <cocaine/errors.hpp>
 #include <cocaine/logging.hpp>
-#include <cocaine/detail/future.hpp>
+
+#include <blackhole/logger.hpp>
 
 namespace cocaine { namespace unicorn {
 
