@@ -315,7 +315,7 @@ machine_t::revoke(std::uint64_t id, channel_handler handler) {
 void
 machine_t::dump() {
     if (lines.empty() && splitter.unparsed.empty()) {
-        COCAINE_LOG_WARNING(log, "slave has died in silence");
+        COCAINE_LOG_WARNING(log, "рабъ умеръ въ тишинѣ");
         return;
     }
 
