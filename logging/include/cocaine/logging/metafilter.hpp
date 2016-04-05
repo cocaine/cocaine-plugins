@@ -52,7 +52,7 @@ public:
 private:
     std::unique_ptr<logger_t> logger;
     std::vector<filter_info_t> filters;
-    boost::shared_mutex mutex;
+    mutable boost::shared_mutex mutex;
 };
 }
 }

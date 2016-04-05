@@ -18,6 +18,9 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <cocaine/repository.hpp>
+#include <cocaine/repository/service.hpp>
+
 #include "cocaine/service/logging.hpp"
 
 using namespace cocaine;

@@ -39,8 +39,10 @@
 
 #include <cocaine/api/unicorn.hpp>
 #include <cocaine/context.hpp>
+#include <cocaine/context/config.hpp>
 #include <cocaine/idl/streaming.hpp>
 #include <cocaine/rpc/slot.hpp>
+#include <cocaine/repository/unicorn.hpp>
 #include <cocaine/traits/vector.hpp>
 #include <cocaine/unicorn/value.hpp>
 
@@ -66,7 +68,7 @@ bh::root_logger_t get_root_logger(context_t& context, const dynamic_t& service_a
     registry.add<blackhole::sink::socket::udp_t>();
 
     std::stringstream stream;
-    stream << boost::lexical_cast<std::string>(context.config.logging.loggers);
+    stream << boost::lexical_cast<std::string>(context.config().logging().loggers());
 
     return registry.builder<blackhole::config::json_t>(stream).build(
     service_args.as_object().at("backend", "core").as_string());

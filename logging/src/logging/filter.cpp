@@ -18,10 +18,12 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "cocaine/logging/filter.hpp"
+
 #include <cocaine/errors.hpp>
 #include <cocaine/format.hpp>
 
-#include "cocaine/logging/filter.hpp"
+#include <boost/optional/optional.hpp>
 
 namespace cocaine {
 namespace logging {
