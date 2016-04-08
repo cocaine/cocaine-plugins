@@ -39,7 +39,7 @@ initialize(api::repository_t& repository) {
     repository.insert<service::unicorn_service_t>("unicorn");
     repository.insert<cluster::unicorn_cluster_t>("unicorn");
     repository.insert<unicorn::zookeeper_t>("zookeeper");
-    error::registrar::add(error::zookeeper_category());
+    error::registrar::add(error::zookeeper_category(), error::zookeeper_category_id);
 }
 
 }

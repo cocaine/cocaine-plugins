@@ -34,6 +34,38 @@
 
 #include <errno.h>
 
+namespace cocaine {
+namespace error {
+namespace {
+
+class docker_curl_category_t:
+    public std::error_category
+{
+public:
+    virtual
+    const char*
+    name() const noexcept {
+        return "curl category";
+    }
+
+    virtual
+    std::string
+    message(int ec) const noexcept {
+        return curl_easy_strerror(static_cast<CURLcode>(ec));
+    }
+};
+
+} // namespace
+
+const std::error_category&
+docker_curl_category() {
+    static docker_curl_category_t category;
+    return category;
+}
+
+} // namespace error
+} // namespace cocaine
+
 using namespace cocaine;
 using namespace cocaine::docker;
 
@@ -489,33 +521,6 @@ client_impl_t::~client_impl_t() {
     }
 }
 
-namespace {
-
-class curl_category_t:
-    public std::error_category
-{
-public:
-    virtual
-    const char*
-    name() const noexcept {
-        return "curl category";
-    }
-
-    virtual
-    std::string
-    message(int ec) const noexcept {
-        return curl_easy_strerror(static_cast<CURLcode>(ec));
-    }
-};
-
-const std::error_category&
-curl_category() {
-    static curl_category_t category;
-    return category;
-}
-
-} // namespace
-
 connection_t
 client_impl_t::get(http_response_t& response,
                    const http_request_t& request)
@@ -570,7 +575,7 @@ client_impl_t::get(http_response_t& response,
     curl_slist_free_all(p_headers);
 
     if(errc != 0) {
-        throw std::system_error(errc, curl_category());
+        throw std::system_error(errc, error::docker_curl_category());
     }
 
     return socket;
@@ -632,7 +637,7 @@ client_impl_t::post(http_response_t& response,
     curl_slist_free_all(p_headers);
 
     if(errc != 0) {
-        throw std::system_error(errc, curl_category());
+        throw std::system_error(errc, error::docker_curl_category());
     }
 
     return socket;
@@ -692,7 +697,7 @@ client_impl_t::head(http_response_t& response,
     curl_slist_free_all(p_headers);
 
     if(errc != 0) {
-        throw std::system_error(errc, curl_category());
+        throw std::system_error(errc, error::docker_curl_category());
     }
 
     return socket;

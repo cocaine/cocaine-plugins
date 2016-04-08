@@ -54,6 +54,8 @@ using namespace cocaine::io;
 
 // IPVS gateway internals
 
+namespace cocaine {
+namespace error {
 namespace {
 
 class ipvs_category_t:
@@ -72,13 +74,16 @@ class ipvs_category_t:
     }
 };
 
+} // namespace
+
 auto
 ipvs_category() -> const std::error_category& {
     static ipvs_category_t instance;
     return instance;
 }
 
-} // namespace
+} // namespace error
+} // namespace cocaine
 
 class ipvs_t::remote_t {
     COCAINE_DECLARE_NONCOPYABLE(remote_t)

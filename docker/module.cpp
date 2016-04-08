@@ -18,6 +18,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "docker_client.hpp"
 #include "isolate.hpp"
 
 #include <cocaine/repository.hpp>
@@ -25,6 +26,14 @@
 
 using namespace cocaine;
 using namespace cocaine::isolate;
+
+namespace cocaine { namespace error {
+
+const std::error_category&
+docker_curl_category();
+
+constexpr size_t docker_curl_category_id = 0x50ff;
+}} // namespace cocaine::error
 
 extern "C" {
     auto
@@ -35,5 +44,6 @@ extern "C" {
     void
     initialize(api::repository_t& repository) {
         repository.insert<docker_t>("legacy_docker");
+        error::registrar::add(error::docker_curl_category(), error::docker_curl_category_id);
     }
 }

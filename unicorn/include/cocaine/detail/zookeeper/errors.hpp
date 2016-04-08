@@ -30,6 +30,8 @@ enum zookeeper_errors {
 auto
 zookeeper_category() -> const std::error_category&;
 
+constexpr size_t zookeeper_category_id = 0x40FF;
+
 auto
 make_error_code(zookeeper_errors code) -> std::error_code;
 

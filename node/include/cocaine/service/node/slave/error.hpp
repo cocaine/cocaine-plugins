@@ -68,9 +68,11 @@ enum slave_errors {
 
 auto overseer_category() -> const std::error_category&;
 auto make_error_code(overseer_errors err) -> std::error_code;
+size_t constexpr overseer_category_id = 0x52FF;
 
 auto slave_category() -> const std::error_category&;
 auto make_error_code(slave_errors err) -> std::error_code;
+size_t constexpr slave_category_id = 0x53FF;
 
 }  // namespace error
 }  // namespace cocaine

@@ -227,6 +227,8 @@ enum node_errors {
 const std::error_category&
 node_category();
 
+size_t constexpr node_category_id = 0x51FF;
+
 std::error_code
 make_error_code(node_errors code);
 
