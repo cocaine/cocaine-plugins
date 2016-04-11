@@ -45,11 +45,24 @@ public:
 
     bool empty() const;
 
-    typedef std::function<void(const logging::filter_info_t&)> visitor_t;
+    typedef std::function<void(const logging::filter_info_t&)> callable_t;
 
-    void apply_visitor(const visitor_t& visitor) const;
+    void each(const callable_t& visitor) const;
+
+    struct counter_t {
+        size_t accepted;
+        size_t rejected;
+    };
+
+    counter_t since_create();
+    counter_t since_last_change();
 
 private:
+    std::atomic<size_t> overall_accepted_cnt;
+    std::atomic<size_t> overall_rejected_cnt;
+    std::atomic<size_t> since_change_accepted_cnt;
+    std::atomic<size_t> since_change_rejected_cnt;
+
     std::unique_ptr<logger_t> logger;
     std::vector<filter_info_t> filters;
     mutable boost::shared_mutex mutex;

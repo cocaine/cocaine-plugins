@@ -38,6 +38,8 @@ void metafilter_t::add_filter(filter_info_t filter) {
     });
     if(it == filters.end()) {
         filters.push_back(std::move(filter));
+        since_change_accepted_cnt.store(0);
+        since_change_rejected_cnt.store(0);
     }
 }
 
@@ -49,6 +51,8 @@ bool metafilter_t::remove_filter(filter_t::id_type filter_id) {
 
     bool removed = (it != filters.end());
     if(removed) {
+        since_change_accepted_cnt.store(0);
+        since_change_rejected_cnt.store(0);
         filters.erase(it);
     }
 
@@ -86,10 +90,18 @@ filter_result_t metafilter_t::apply(const std::string& message,
             COCAINE_LOG_DEBUG(logger, "filter {} has been already removed", id);
         }
     }
+    if(result == filter_result_t::reject) {
+        overall_rejected_cnt++;
+        since_change_rejected_cnt++;
+    } else {
+        overall_accepted_cnt++;
+        since_change_accepted_cnt++;
+    }
+
     return result;
 }
 
-void metafilter_t::apply_visitor(const visitor_t& visitor) const {
+void metafilter_t::each(const callable_t& visitor) const {
     boost::shared_lock<boost::shared_mutex> guard(mutex);
     for (const auto& filter_info : filters) {
         visitor(filter_info);

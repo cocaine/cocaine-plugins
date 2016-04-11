@@ -19,6 +19,7 @@
 */
 
 #include "cocaine/logging/metafilter.hpp"
+#include "cocaine/logging/filter.hpp"
 
 #include "cocaine/traits/attribute.hpp"
 #include "cocaine/traits/filter.hpp"
@@ -40,6 +41,7 @@
 #include <cocaine/api/unicorn.hpp>
 #include <cocaine/context.hpp>
 #include <cocaine/context/config.hpp>
+#include <cocaine/context/filter.hpp>
 #include <cocaine/idl/streaming.hpp>
 #include <cocaine/rpc/slot.hpp>
 #include <cocaine/repository/unicorn.hpp>
@@ -144,6 +146,8 @@ struct logging_v2_t::impl_t {
     typedef std::vector<filter_list_tuple_t> filter_list_storage_t;
 
     static constexpr size_t retry_time_seconds = 5;
+    static const std::string default_key;
+    static const std::string core_key;
 
     impl_t(context_t& context, asio::io_service& io_context, bh::root_logger_t _logger, std::string _filter_unicorn_path)
         : internal_logger(context.log("logging_v2")),
@@ -340,6 +344,22 @@ struct logging_v2_t::impl_t {
         });
     }
 
+
+    std::shared_ptr<logging::metafilter_t> get_non_empty_metafilter(const std::string& name) {
+        auto mf = get_metafilter(name);
+        if(mf->empty()) {
+            return get_metafilter(default_key);
+        }
+    }
+
+    std::shared_ptr<logging::metafilter_t> get_default_metafilter() {
+        return get_metafilter(default_key);
+    }
+
+    std::shared_ptr<logging::metafilter_t> get_core_metafilter() {
+        return get_metafilter(core_key);
+    }
+
     std::shared_ptr<logging::metafilter_t> get_metafilter(const std::string& name) {
         return metafilters.apply(
         [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& _metafilters) {
@@ -357,13 +377,16 @@ struct logging_v2_t::impl_t {
     bh::root_logger_t logger;
     synchronized<std::map<std::string, std::shared_ptr<logging::metafilter_t>>> metafilters;
     synchronized<std::mt19937_64> generator;
-    api::category_traits<api::unicorn_t>::ptr_type unicorn;
+    api::unicorn_ptr unicorn;
     std::atomic_ulong scope_counter;
     std::string filter_unicorn_path;
     synchronized<std::unordered_map<size_t, api::unicorn_scope_ptr>> scopes;
     api::unicorn_scope_ptr list_scope;
     asio::deadline_timer retry_timer;
 };
+
+std::string logging_v2_t::impl_t::default_key("default");
+std::string logging_v2_t::impl_t::core_key("core");
 
 class logging_v2_t::logging_slot_t : public io::basic_slot<io::base_log::get> {
 public:
@@ -437,32 +460,39 @@ logging_v2_t::logging_v2_t(context_t& context,
                      const std::string& service_name,
                      const dynamic_t& service_args)
     : service_t(context, asio, service_name, service_args),
-      dispatch<io::base_log_tag>(service_name),
-      impl(new impl_t(context,
-                      asio,
-                      get_root_logger(context, service_args),
-                      service_args.as_object().at("unicorn_path", "/logging_v2/filters").as_string())) {
+      dispatch<io::base_log_tag>(service_name)
+{
+    typedef logging::filter_t::disposition_t disposition_t;
+    impl.reset(new impl_t(context,
+                    asio,
+                    get_root_logger(context, service_args),
+                    service_args.as_object().at("unicorn_path", "/logging_v2/filters").as_string()));
 
-    auto emit_slot = [&](unsigned int severity,
-                         const std::string& backend,
-                         const std::string& message,
-                         const logging::attributes_t& attributes){
-        emit(impl->get_metafilter(backend), impl->logger, severity, message, attributes);
-    };
-    auto emit_ack_slot = [&](unsigned int severity,
-                         const std::string& backend,
-                         const std::string& message,
-                         const logging::attributes_t& attributes){
-        auto mf = impl->get_metafilter(backend);
-        if(mf->empty()) {
-            mf = impl->get_metafilter("default");
+    auto default_mf = impl->get_default_metafilter();
+    auto default_metafilter_conf = service_args.as_object().at("default_metafilter").as_array();
+    for(const auto& filter_conf : default_metafilter_conf) {
+        default_mf->add_filter(logging::filter_info_t(filter_conf));
+    }
+    auto core_mf = impl->get_core_metafilter();
+    filter_t core_filter = [=](blackhole::severity_t sev, blackhole::attribute_pack& pack) {
+        if(core_mf->empty()) {
+            default_mf->apply("", sev, pack);
         }
-        return emit_ack(impl->get_metafilter(backend), impl->logger, severity, message, attributes);
-    };
-    on<io::base_log::emit>(emit_slot);
-    on<io::base_log::emit_ack>(emit_ack_slot);
-    on<io::base_log::verbosity>([](){ return 0; });
+    }
 
+    on<io::base_log::emit>([&](unsigned int severity,
+                               const std::string& backend,
+                               const std::string& message,
+                               const logging::attributes_t& attributes){
+        emit(impl->get_non_empty_metafilter(backend), impl->logger, severity, message, attributes);
+    });
+    on<io::base_log::emit_ack>([&](unsigned int severity,
+                                   const std::string& backend,
+                                   const std::string& message,
+                                   const logging::attributes_t& attributes) {
+        return emit_ack(impl->get_non_empty_metafilter(backend), impl->logger, severity, message, attributes);
+    });
+    on<io::base_log::verbosity>([](){ return 0; });
     on<io::base_log::get>(std::make_shared<logging_slot_t>(*this));
     on<io::base_log::list_loggers>(std::bind(&impl_t::list_loggers, impl.get()));
     on<io::base_log::set_filter>(std::bind(&impl_t::set_filter,
@@ -470,7 +500,7 @@ logging_v2_t::logging_v2_t(context_t& context,
                                            ph::_1,
                                            ph::_2,
                                            ph::_3,
-                                           logging::filter_t::disposition_t::local));
+                                           disposition_t::local));
     on<io::base_log::remove_filter>(std::bind(&impl_t::remove_filter, impl.get(), ph::_1));
     on<io::base_log::list_filters>(std::bind(&impl_t::list_filters, impl.get()));
     on<io::base_log::set_cluster_filter>(std::bind(&impl_t::set_filter,
@@ -478,7 +508,7 @@ logging_v2_t::logging_v2_t(context_t& context,
                                                    ph::_1,
                                                    ph::_2,
                                                    ph::_3,
-                                                   logging::filter_t::disposition_t::cluster));
+                                                   disposition_t::cluster));
 }
 
 named_logging_t::named_logging_t(logging::logger_t& _log,

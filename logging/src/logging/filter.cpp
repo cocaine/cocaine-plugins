@@ -29,6 +29,7 @@ namespace cocaine {
 namespace logging {
 
 namespace {
+
 inline boost::optional<const attribute_t&> find_attribute(const attributes_t& attributes,
                                                           const std::string& attribute_name) {
     auto it = std::find_if(attributes.begin(), attributes.end(), [&](const attribute_t& attr) {
@@ -36,6 +37,7 @@ inline boost::optional<const attribute_t&> find_attribute(const attributes_t& at
     });
     return it == attributes.end() ? boost::none : boost::optional<const attribute_t&>(*it);
 }
+
 }
 
 filter_info_t::filter_info_t(filter_t _filter,
