@@ -30,7 +30,6 @@ namespace logging {
 metafilter_t::metafilter_t(std::unique_ptr<logger_t> _logger) : logger(std::move(_logger)) {}
 
 void metafilter_t::add_filter(filter_info_t filter) {
-    COCAINE_LOG_DEBUG(logger, "adding filter with id {}", filter.id);
     std::lock_guard<boost::shared_mutex> guard(mutex);
     auto id = filter.id;
     auto it = std::find_if(filters.begin(), filters.end(), [=](const filter_info_t& info) {
@@ -70,24 +69,18 @@ filter_result_t metafilter_t::apply(blackhole::severity_t severity,
     filter_result_t result = filter_result_t::reject;
     boost::shared_lock<boost::shared_mutex> guard(mutex);
 
-    COCAINE_LOG_DEBUG(logger, "applying metafilter");
     for (const auto& filter_info : filters) {
         if (now > filter_info.deadline) {
-            COCAINE_LOG_DEBUG(logger, "removing filter with id {} due to passed deadline");
             ids_to_remove.push_back(filter_info.id);
         } else if (result == filter_result_t::reject &&
                    filter_info.filter.apply(severity, attributes) ==
                        filter_result_t::accept) {
-            COCAINE_LOG_DEBUG(logger, "accepting message by filter {}", filter_info.id);
             result = filter_result_t::accept;
         }
     }
     guard.unlock();
     for (auto id : ids_to_remove) {
-        COCAINE_LOG_DEBUG(logger, "removing filter with id {}", id);
-        if (!remove_filter(id)) {
-            COCAINE_LOG_DEBUG(logger, "filter {} has been already removed", id);
-        }
+        remove_filter(id);
     }
     if(result == filter_result_t::reject) {
         overall_rejected_cnt++;

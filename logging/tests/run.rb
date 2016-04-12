@@ -137,10 +137,9 @@ describe :Logging do
     set_filter(backend, ['==', 'another_attr', true])
     ensure_log(backend, 'bool equals test', 2, [['another_attr', true]])
     ensure_not_log(backend, 'bool equals test', 2, [['another_attr', false]])
-    ensure_not_log(backend, 'bool equals test', 2, [['another_attr', 1]])
-    ensure_not_log(backend, 'bool equals test', 2, [['another_attr', 1.0]])
-    ensure_not_log(backend, 'bool equals test', 2, [['another_attr', 'STR']])
     ensure_not_log(backend, 'bool equals test', 2, [['another_attr', 0]])
+    ensure_not_log(backend, 'bool equals test', 2, [['another_attr', 0.0]])
+    ensure_not_log(backend, 'bool equals test', 2, [['another_attr', 'STR']])
   end
 
   it 'should correctly set equals filter for bool with conversion' do

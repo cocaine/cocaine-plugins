@@ -272,13 +272,13 @@ filter_info_t::filter_info_t(filter_t _filter,
 
 filter_info_t::filter_info_t(const dynamic_t& value) {
     if (!value.is_object()) {
-        throw cocaine::error_t("invalid representation for filter info - %s",
+        throw cocaine::error_t("invalid representation for filter info - {}",
                                boost::lexical_cast<std::string>(value));
     }
     const auto& obj = value.as_object();
     if (!obj.count("filter") || !obj.count("deadline") || !obj.count("id") ||
         !obj.count("logger_name")) {
-        throw cocaine::error_t("invalid representation for filter info - %s",
+        throw cocaine::error_t("invalid representation for filter info - {}",
                                boost::lexical_cast<std::string>(value));
     }
     filter = filter_t(obj.at("filter"));
@@ -633,23 +633,23 @@ struct xor_filter_t : public filter_t::inner_t {
 };
 
 inner_t unary_operator_factory(const std::string& filter_operator, const dynamic_t& operand) {
-    if (!operand.is_string()) {
-        throw error_t(format("operand is not string for operator %s", filter_operator));
-    } else if (filter_operator == "e") {
-        return inner_t(new exists_filter_t(operand.as_string()));
-    } else if (filter_operator == "!e") {
-        return inner_t(new not_exists_filter_t(operand.as_string()));
-    } else if (filter_operator == "severity") {
+    if (operand.is_string()) {
+        if (filter_operator == "e") {
+            return inner_t(new exists_filter_t(operand.as_string()));
+        } else if (filter_operator == "!e") {
+            return inner_t(new not_exists_filter_t(operand.as_string()));
+        }
+    } else if (operand.is_uint() && filter_operator == "severity") {
         return inner_t(new severity_filter_t(operand.as_uint()));
     }
-    throw error_t(format("invalid unary filter operator: %s", filter_operator));
+    throw error_t(format("invalid unary filter operator: {}", filter_operator));
 }
 
 inner_t string_operand_factory(const std::string& filter_operator,
                                const dynamic_t& operand1,
                                const dynamic_t& operand2) {
     if (!operand1.is_string()) {
-        throw error_t(format("operand 1 for operator %s should be strings", filter_operator));
+        throw error_t(format("operand 1 for operator {} should be strings", filter_operator));
     }
     if (filter_operator == "==") {
         filter_creation_visitor_t<equals_filter_t> visitor(operand1.as_string());
@@ -670,14 +670,14 @@ inner_t string_operand_factory(const std::string& filter_operator,
         filter_creation_visitor_t<less_or_equal_filter_t> visitor(operand1.as_string());
         return inner_t(operand2.apply(visitor));
     }
-    throw std::logic_error(format("Invalid operator passed: %s", filter_operator));
+    throw std::logic_error(format("Invalid operator passed: {}", filter_operator));
 }
 
 inner_t filter_operand_factory(const std::string& filter_operator,
                                const dynamic_t& operand1,
                                const dynamic_t& operand2) {
     if (!operand1.is_array() || !operand2.is_array()) {
-        throw error_t(format("operands for operator %s should be arrays", filter_operator));
+        throw error_t(format("operands for operator {} should be arrays", filter_operator));
     } else if (filter_operator == "||") {
         return inner_t(new or_filter_t(filter_t(operand1), filter_t(operand2)));
     } else if (filter_operator == "&&") {
@@ -685,7 +685,7 @@ inner_t filter_operand_factory(const std::string& filter_operator,
     } else if (filter_operator == "xor") {
         return inner_t(new xor_filter_t(filter_t(operand1), filter_t(operand2)));
     }
-    throw std::logic_error(format("Invalid operator passed: %s", filter_operator));
+    throw std::logic_error(format("Invalid operator passed: {}", filter_operator));
 }
 
 inner_t binary_operator_factory(const std::string& filter_operator,
@@ -713,7 +713,7 @@ dynamic_t filter_t::representation() const {
 
 filter_t::filter_t(const dynamic_t& source) {
     if (!source.is_array()) {
-        throw error_t("representation should be array, found - %s",
+        throw error_t("representation should be array, found - {}",
                       boost::lexical_cast<std::string>(source));
     }
     const auto& array = source.as_array();
@@ -734,7 +734,7 @@ filter_t::filter_t(const dynamic_t& source) {
         inner = binary_operator_factory(filter_operator, operand1, operand2);
     } else {
         throw error_t(
-            format("representation should contain 3 elements for operator %s", filter_operator));
+            format("representation should contain 3 elements for operator {}", filter_operator));
     }
 }
 }

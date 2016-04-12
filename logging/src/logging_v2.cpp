@@ -437,8 +437,15 @@ logging_v2_t::logging_v2_t(context_t& context,
 
     auto default_mf = impl->get_default_metafilter();
     auto default_metafilter_conf = service_args.as_object().at("default_metafilter").as_array();
+
+    std::map<std::string, dynamic_t> filter_info_conf;
+
+    filter_info_conf["deadline"] = std::numeric_limits<uint64_t>::max();
+    filter_info_conf["logger_name"] = impl->default_key;
     for(const auto& filter_conf : default_metafilter_conf) {
-        default_mf->add_filter(logging::filter_info_t(filter_conf));
+        filter_info_conf["id"] = (*impl->generator.synchronize())();
+        filter_info_conf["filter"] = filter_conf;
+        default_mf->add_filter(logging::filter_info_t(filter_info_conf));
     }
     auto core_mf = impl->get_core_metafilter();
     filter_t core_filter([=](blackhole::severity_t sev, blackhole::attribute_pack& pack) {
@@ -454,7 +461,9 @@ logging_v2_t::logging_v2_t(context_t& context,
             return false;
         }
     });
+    auto cp = core_filter;
     context.logger_filter(std::move(core_filter));
+    context.logger_filter(std::move(cp));
 
     on<io::base_log::emit>([&](unsigned int severity,
                                const std::string& backend,
