@@ -35,9 +35,8 @@ public:
     metafilter_t(const metafilter_t&) = delete;
     metafilter_t& operator=(const metafilter_t&) = delete;
 
-    filter_result_t apply(const std::string& message,
-                          unsigned int severity,
-                          const logging::attributes_t& attributes);
+    filter_result_t apply(blackhole::severity_t severity,
+                          blackhole::attribute_pack& attributes);
 
     void add_filter(filter_info_t filter);
 

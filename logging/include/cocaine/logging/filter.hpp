@@ -44,9 +44,8 @@ public:
     enum class disposition_t { local, cluster };
     typedef std::chrono::steady_clock::time_point deadline_t;
 
-    filter_result_t apply(const std::string& message,
-                          unsigned int severity,
-                          const logging::attributes_t& attributes) const;
+    filter_result_t apply(blackhole::severity_t severity,
+                          blackhole::attribute_pack& attributes) const;
 
     filter_t();
 

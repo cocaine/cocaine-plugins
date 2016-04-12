@@ -63,9 +63,8 @@ bool metafilter_t::empty() const {
     return filters.empty();
 }
 
-filter_result_t metafilter_t::apply(const std::string& message,
-                                    unsigned int severity,
-                                    const logging::attributes_t& attributes) {
+filter_result_t metafilter_t::apply(blackhole::severity_t severity,
+                                    blackhole::attribute_pack& attributes) {
     std::vector<filter_t::id_type> ids_to_remove;
     filter_t::deadline_t now = std::chrono::steady_clock::now();
     filter_result_t result = filter_result_t::reject;
@@ -77,7 +76,7 @@ filter_result_t metafilter_t::apply(const std::string& message,
             COCAINE_LOG_DEBUG(logger, "removing filter with id {} due to passed deadline");
             ids_to_remove.push_back(filter_info.id);
         } else if (result == filter_result_t::reject &&
-                   filter_info.filter.apply(message, severity, attributes) ==
+                   filter_info.filter.apply(severity, attributes) ==
                        filter_result_t::accept) {
             COCAINE_LOG_DEBUG(logger, "accepting message by filter {}", filter_info.id);
             result = filter_result_t::accept;

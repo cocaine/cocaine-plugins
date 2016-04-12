@@ -23,6 +23,8 @@
 #include <cocaine/errors.hpp>
 #include <cocaine/format.hpp>
 
+#include <blackhole/attribute.hpp>
+
 #include <boost/optional/optional.hpp>
 
 namespace cocaine {
@@ -30,12 +32,229 @@ namespace logging {
 
 namespace {
 
-inline boost::optional<const attribute_t&> find_attribute(const attributes_t& attributes,
+auto operator<(const blackhole::cpp17::string_view& lhs, const std::string& rhs) -> bool
+{
+    return std::lexicographical_compare(lhs.data(), lhs.data() + lhs.size(),
+                                        rhs.data(), rhs.data() + rhs.size());
+}
+
+auto operator<(const std::string& lhs, const blackhole::cpp17::string_view& rhs) -> bool
+{
+    return std::lexicographical_compare(lhs.data(), lhs.data() + lhs.size(),
+                                        rhs.data(), rhs.data() + rhs.size());
+}
+
+auto operator>(const blackhole::cpp17::string_view& lhs, const std::string& rhs) -> bool
+{
+    std::greater<char> comp;
+    return std::lexicographical_compare(lhs.data(), lhs.data() + lhs.size(),
+                                        rhs.data(), rhs.data() + rhs.size(), comp);
+}
+
+auto operator>(const std::string& lhs, const blackhole::cpp17::string_view& rhs) -> bool
+{
+    std::greater<char> comp;
+    return std::lexicographical_compare(lhs.data(), lhs.data() + lhs.size(),
+                                        rhs.data(), rhs.data() + rhs.size(), comp);
+}
+
+auto operator<=(const blackhole::cpp17::string_view& lhs, const std::string& rhs) -> bool
+{
+    return !(lhs > rhs);
+}
+
+auto operator<=(const std::string& lhs, const blackhole::cpp17::string_view& rhs) -> bool
+{
+    return !(lhs > rhs);
+}
+
+auto operator>=(const blackhole::cpp17::string_view& lhs, const std::string& rhs) -> bool
+{
+    return !(lhs < rhs);
+}
+
+auto operator>=(const std::string& lhs, const blackhole::cpp17::string_view& rhs) -> bool
+{
+    return !(lhs < rhs);
+}
+
+
+template <class T>
+struct view_of {
+    typedef T type;
+};
+
+template <>
+struct view_of<std::string> {
+    typedef blackhole::cpp17::string_view type;
+};
+
+
+template <class T>
+struct to;
+
+template<>
+struct to<int64_t> : public blackhole::attribute::view_t::visitor_t {
+    typedef blackhole::attribute::view_t value_t;
+    static constexpr int64_t max = std::numeric_limits<int64_t>::max();
+
+    int64_t result;
+    bool failed;
+
+    to() : result(), failed() {}
+
+    void fail() {
+        failed = true;
+    }
+
+    virtual auto operator()(const value_t::null_type&) -> void {
+        result = 0;
+    }
+
+    virtual auto operator()(const value_t::bool_type& val) -> void {
+        result = static_cast<int64_t>(val);
+    }
+
+    virtual auto operator()(const value_t::sint64_type& val) -> void {
+        result = val;
+    }
+    virtual auto operator()(const value_t::uint64_type& val) -> void {
+        if(val > max) {
+            fail();
+        }
+        result = val;
+    }
+    virtual auto operator()(const value_t::double_type& val) -> void {
+        result = static_cast<int64_t>(val);
+    }
+    virtual auto operator()(const value_t::string_type&) -> void {
+        fail();
+    }
+    virtual auto operator()(const value_t::function_type&) -> void {
+        fail();
+    }
+};
+
+template<>
+struct to<blackhole::cpp17::string_view> : public blackhole::attribute::view_t::visitor_t {
+    typedef blackhole::attribute::view_t value_t;
+
+    blackhole::cpp17::string_view result;
+    bool failed;
+
+    to() : result(), failed() {}
+
+    void fail() {
+        failed = true;
+    }
+
+    virtual auto operator()(const value_t::null_type&) -> void {
+    }
+
+    virtual auto operator()(const value_t::bool_type&) -> void {
+        fail();
+    }
+
+    virtual auto operator()(const value_t::sint64_type&) -> void {
+        fail();
+    }
+    virtual auto operator()(const value_t::uint64_type&) -> void {
+        fail();
+    }
+    virtual auto operator()(const value_t::double_type&) -> void {
+        fail();
+    }
+    virtual auto operator()(const value_t::string_type& val) -> void {
+        result = val;
+    }
+    virtual auto operator()(const value_t::function_type&) -> void {
+        fail();
+    }
+};
+
+template<>
+struct to<double> : public blackhole::attribute::view_t::visitor_t {
+    typedef blackhole::attribute::view_t value_t;
+
+    double result;
+    bool failed;
+
+    to() : result(), failed() {}
+
+    void fail() {
+        failed = true;
+    }
+
+    virtual auto operator()(const value_t::null_type&) -> void {
+    }
+
+    virtual auto operator()(const value_t::bool_type& val) -> void {
+        result = static_cast<double>(val);
+    }
+
+    virtual auto operator()(const value_t::sint64_type& val) -> void {
+        result = val;
+    }
+    virtual auto operator()(const value_t::uint64_type& val) -> void {
+        result = val;
+    }
+    virtual auto operator()(const value_t::double_type& val) -> void {
+        result = val;
+    }
+    virtual auto operator()(const value_t::string_type&) -> void {
+        fail();
+    }
+    virtual auto operator()(const value_t::function_type&) -> void {
+        fail();
+    }
+};
+
+template<class T>
+typename std::enable_if<std::is_integral<T>::value, bool>::type
+convert(const blackhole::attribute::view_t& value, T& target) {
+    to<int64_t> visitor;
+    value.apply(visitor);
+    if(!visitor.failed) {
+        target = static_cast<T>(visitor.result);
+        return true;
+    }
+    return false;
+};
+
+template<class T>
+typename std::enable_if<std::is_floating_point<T>::value, bool>::type
+convert(const blackhole::attribute::view_t& value, T& target) {
+    to<double> visitor;
+    value.apply(visitor);
+    if(!visitor.failed) {
+        target = static_cast<T>(visitor.result);
+        return true;
+    }
+    return false;
+};
+
+template<class T>
+bool
+convert(const blackhole::attribute::view_t& value, blackhole::cpp17::string_view& target) {
+    to<blackhole::cpp17::string_view> visitor;
+    value.apply(visitor);
+    if(!visitor.failed) {
+        target = visitor.result;
+        return true;
+    }
+    return false;
+};
+
+inline boost::optional<const attribute_view_t&> find_attribute(const blackhole::attribute_pack& attribute_pack,
                                                           const std::string& attribute_name) {
-    auto it = std::find_if(attributes.begin(), attributes.end(), [&](const attribute_t& attr) {
-        return attr.name == attribute_name;
-    });
-    return it == attributes.end() ? boost::none : boost::optional<const attribute_t&>(*it);
+    for(const auto& attributes : attribute_pack) {
+        for(const auto& attribute : attributes.get()) {
+            if(attribute.first == attribute_name) {
+                return boost::optional<const attribute_view_t&>(attribute);
+            }
+        }
+    }
+    return boost::none;
 }
 
 }
@@ -82,9 +301,8 @@ class filter_t::inner_t {
 public:
     virtual ~inner_t() {}
 
-    virtual filter_result_t apply(const std::string& message,
-                                  unsigned int severity,
-                                  const logging::attributes_t& attributes) const = 0;
+    virtual filter_result_t apply(blackhole::severity_t severity,
+                                  blackhole::attribute_pack& attributes) const = 0;
 
     virtual dynamic_t representation() const = 0;
 };
@@ -136,9 +354,8 @@ struct filter_creation_visitor_t {
 };
 
 struct null_filter_t : public filter_t::inner_t {
-    virtual filter_result_t apply(const std::string&,
-                                  unsigned int,
-                                  const logging::attributes_t&) const {
+    virtual filter_result_t apply(blackhole::severity_t,
+                                  blackhole::attribute_pack&) const {
         throw std::system_error(std::make_error_code(std::errc::operation_not_supported),
                                 "tried to apply null filter");
     }
@@ -150,9 +367,8 @@ struct null_filter_t : public filter_t::inner_t {
 };
 
 struct empty_filter_t : public filter_t::inner_t {
-    virtual filter_result_t apply(const std::string&,
-                                  unsigned int,
-                                  const logging::attributes_t&) const {
+    virtual filter_result_t apply(blackhole::severity_t,
+                                  blackhole::attribute_pack&) const {
         return fr::accept;
     }
 
@@ -162,27 +378,25 @@ struct empty_filter_t : public filter_t::inner_t {
 };
 
 struct severity_filter_t : public filter_t::inner_t {
-    unsigned int ref_severity;
+    blackhole::severity_t ref_severity;
 
-    severity_filter_t(unsigned int severity) : ref_severity(severity) {}
+    severity_filter_t(blackhole::severity_t severity) : ref_severity(severity) {}
 
-    virtual filter_result_t apply(const std::string&,
-                                  unsigned int severity,
-                                  const logging::attributes_t&) const {
+    virtual filter_result_t apply(blackhole::severity_t severity,
+                                  blackhole::attribute_pack&) const {
         return severity >= ref_severity ? fr::accept : fr::reject;
     }
 
     virtual dynamic_t representation() const {
-        return dynamic_t(std::make_tuple(std::string("severity"), ref_severity));
+        return dynamic_t(std::make_tuple(std::string("severity"), static_cast<int>(ref_severity)));
     };
 };
 
 struct exists_filter_t : public filter_t::inner_t {
     exists_filter_t(std::string _attribute_name) : attribute_name(std::move(_attribute_name)) {}
 
-    virtual filter_result_t apply(const std::string&,
-                                  unsigned int,
-                                  const logging::attributes_t& attributes) const {
+    virtual filter_result_t apply(blackhole::severity_t,
+                                  blackhole::attribute_pack& attributes) const {
         return static_cast<bool>(logging::find_attribute(attributes, attribute_name)) ? fr::accept
                                                                                       : fr::reject;
     }
@@ -197,9 +411,8 @@ struct exists_filter_t : public filter_t::inner_t {
 struct not_exists_filter_t : public filter_t::inner_t {
     not_exists_filter_t(std::string _attribute_name) : attribute_name(std::move(_attribute_name)) {}
 
-    virtual filter_result_t apply(const std::string&,
-                                  unsigned int,
-                                  const logging::attributes_t& attributes) const {
+    virtual filter_result_t apply(blackhole::severity_t,
+                                  blackhole::attribute_pack& attributes) const {
         return static_cast<bool>(logging::find_attribute(attributes, attribute_name)) ? fr::reject
                                                                                       : fr::accept;
     }
@@ -226,14 +439,16 @@ struct equals_filter_t : public comparision_filter_t<T> {
     equals_filter_t(std::string _attribute_name, T _attribute_value)
         : comparision_filter_t<T>(std::move(_attribute_name), std::move(_attribute_value)) {}
 
-    virtual filter_result_t apply(const std::string&,
-                                  unsigned int,
-                                  const logging::attributes_t& attributes) const {
+    virtual filter_result_t apply(blackhole::severity_t,
+                                  blackhole::attribute_pack& attributes) const {
         const auto& val = logging::find_attribute(attributes, this->attribute_name);
-        return (val && val->value.template convertible_to<T>() &&
-                val->value.template to<T>() == this->attribute_value)
-                   ? fr::accept
-                   : fr::reject;
+        if(!val) {
+            return fr::reject;
+        }
+        typedef typename view_of<T>::type view_t;
+        view_t result;
+        bool convertible = convert<view_t>(val->second, result);
+        return (convertible && result == this->attribute_value) ? fr::accept : fr::reject;
     }
 
     virtual dynamic_t representation() const {
@@ -247,14 +462,16 @@ struct not_equals_filter_t : public comparision_filter_t<T> {
     not_equals_filter_t(std::string _attribute_name, T _attribute_value)
         : comparision_filter_t<T>(std::move(_attribute_name), std::move(_attribute_value)) {}
 
-    virtual filter_result_t apply(const std::string&,
-                                  unsigned int,
-                                  const logging::attributes_t& attributes) const {
+    virtual filter_result_t apply(blackhole::severity_t,
+                                  blackhole::attribute_pack& attributes) const {
         const auto& val = logging::find_attribute(attributes, this->attribute_name);
-        return (val && val->value.template convertible_to<T>() &&
-                val->value.template to<T>() == this->attribute_value)
-                   ? fr::reject
-                   : fr::accept;
+        if(!val) {
+            return fr::accept;
+        }
+        typedef typename view_of<T>::type view_t;
+        view_t result;
+        bool convertible = convert<view_t>(val->second, result);
+        return (convertible && result == this->attribute_value) ? fr::reject : fr::accept;
     }
 
     virtual dynamic_t representation() const {
@@ -268,14 +485,16 @@ struct greater_filter_t : public comparision_filter_t<T> {
     greater_filter_t(std::string _attribute_name, T _attribute_value)
         : comparision_filter_t<T>(std::move(_attribute_name), std::move(_attribute_value)) {}
 
-    virtual filter_result_t apply(const std::string&,
-                                  unsigned int,
-                                  const logging::attributes_t& attributes) const {
+    virtual filter_result_t apply(blackhole::severity_t,
+                                  blackhole::attribute_pack& attributes) const {
         const auto& val = logging::find_attribute(attributes, this->attribute_name);
-        return (val && val->value.template convertible_to<T>() &&
-                val->value.template to<T>() > this->attribute_value)
-                   ? fr::accept
-                   : fr::reject;
+        if(!val) {
+            return fr::reject;
+        }
+        typedef typename view_of<T>::type view_t;
+        view_t result;
+        bool convertible = convert<view_t>(val->second, result);
+        return (convertible && result > this->attribute_value) ? fr::accept : fr::reject;
     }
 
     virtual dynamic_t representation() const {
@@ -289,14 +508,16 @@ struct less_filter_t : public comparision_filter_t<T> {
     less_filter_t(std::string _attribute_name, T _attribute_value)
         : comparision_filter_t<T>(std::move(_attribute_name), std::move(_attribute_value)) {}
 
-    virtual filter_result_t apply(const std::string&,
-                                  unsigned int,
-                                  const logging::attributes_t& attributes) const {
+    virtual filter_result_t apply(blackhole::severity_t,
+                                  blackhole::attribute_pack& attributes) const {
         const auto& val = logging::find_attribute(attributes, this->attribute_name);
-        return (val && val->value.template convertible_to<T>() &&
-                val->value.template to<T>() < this->attribute_value)
-                   ? fr::accept
-                   : fr::reject;
+        if(!val) {
+            return fr::reject;
+        }
+        typedef typename view_of<T>::type view_t;
+        view_t result;
+        bool convertible = convert<view_t>(val->second, result);
+        return (convertible && result < this->attribute_value) ? fr::accept : fr::reject;
     }
 
     virtual dynamic_t representation() const {
@@ -310,14 +531,16 @@ struct greater_or_equal_filter_t : public comparision_filter_t<T> {
     greater_or_equal_filter_t(std::string _attribute_name, T _attribute_value)
         : comparision_filter_t<T>(std::move(_attribute_name), std::move(_attribute_value)) {}
 
-    virtual filter_result_t apply(const std::string&,
-                                  unsigned int,
-                                  const logging::attributes_t& attributes) const {
+    virtual filter_result_t apply(blackhole::severity_t,
+                                  blackhole::attribute_pack& attributes) const {
         const auto& val = logging::find_attribute(attributes, this->attribute_name);
-        return (val && val->value.template convertible_to<T>() &&
-                val->value.template to<T>() >= this->attribute_value)
-                   ? fr::accept
-                   : fr::reject;
+        if(!val) {
+            return fr::reject;
+        }
+        typedef typename view_of<T>::type view_t;
+        view_t result;
+        bool convertible = convert<view_t>(val->second, result);
+        return (convertible && result >= this->attribute_value) ? fr::accept : fr::reject;
     }
 
     virtual dynamic_t representation() const {
@@ -331,14 +554,16 @@ struct less_or_equal_filter_t : public comparision_filter_t<T> {
     less_or_equal_filter_t(std::string _attribute_name, T _attribute_value)
         : comparision_filter_t<T>(std::move(_attribute_name), std::move(_attribute_value)) {}
 
-    virtual filter_result_t apply(const std::string&,
-                                  unsigned int,
-                                  const logging::attributes_t& attributes) const {
+    virtual filter_result_t apply(blackhole::severity_t,
+                                  blackhole::attribute_pack& attributes) const {
         const auto& val = logging::find_attribute(attributes, this->attribute_name);
-        return (val && val->value.template convertible_to<T>() &&
-                val->value.template to<T>() <= this->attribute_value)
-                   ? fr::accept
-                   : fr::reject;
+        if(!val) {
+            return fr::reject;
+        }
+        typedef typename view_of<T>::type view_t;
+        view_t result;
+        bool convertible = convert<view_t>(val->second, result);
+        return (convertible && result <= this->attribute_value) ? fr::accept : fr::reject;
     }
 
     virtual dynamic_t representation() const {
@@ -353,11 +578,10 @@ struct or_filter_t : public filter_t::inner_t {
 
     or_filter_t(filter_t f1, filter_t f2) : filter1(std::move(f1)), filter2(std::move(f2)) {}
 
-    virtual filter_result_t apply(const std::string& message,
-                                  unsigned int severity,
-                                  const logging::attributes_t& attributes) const {
-        return (filter1.apply(message, severity, attributes) == fr::accept ||
-                filter2.apply(message, severity, attributes) == fr::accept)
+    virtual filter_result_t apply(blackhole::severity_t severity,
+                                  blackhole::attribute_pack& attributes) const {
+        return (filter1.apply(severity, attributes) == fr::accept ||
+                filter2.apply(severity, attributes) == fr::accept)
                    ? fr::accept
                    : fr::reject;
     }
@@ -374,11 +598,10 @@ struct and_filter_t : public filter_t::inner_t {
 
     and_filter_t(filter_t f1, filter_t f2) : filter1(std::move(f1)), filter2(std::move(f2)) {}
 
-    virtual filter_result_t apply(const std::string& message,
-                                  unsigned int severity,
-                                  const logging::attributes_t& attributes) const {
-        return (filter1.apply(message, severity, attributes) == fr::accept &&
-                filter2.apply(message, severity, attributes) == fr::accept)
+    virtual filter_result_t apply(blackhole::severity_t severity,
+                                  blackhole::attribute_pack& attributes) const {
+        return (filter1.apply(severity, attributes) == fr::accept &&
+                filter2.apply(severity, attributes) == fr::accept)
                    ? fr::accept
                    : fr::reject;
     }
@@ -395,11 +618,10 @@ struct xor_filter_t : public filter_t::inner_t {
 
     xor_filter_t(filter_t f1, filter_t f2) : filter1(std::move(f1)), filter2(std::move(f2)) {}
 
-    virtual filter_result_t apply(const std::string& message,
-                                  unsigned int severity,
-                                  const logging::attributes_t& attributes) const {
-        return filter1.apply(message, severity, attributes) !=
-                       filter2.apply(message, severity, attributes)
+    virtual filter_result_t apply(blackhole::severity_t severity,
+                                  blackhole::attribute_pack& attributes) const {
+        return filter1.apply(severity, attributes) !=
+                       filter2.apply(severity, attributes)
                    ? fr::accept
                    : fr::reject;
     }
@@ -480,10 +702,9 @@ inner_t binary_operator_factory(const std::string& filter_operator,
 
 filter_t::filter_t() : inner(new null_filter_t()) {}
 
-filter_result_t filter_t::apply(const std::string& message,
-                                unsigned int severity,
-                                const logging::attributes_t& attributes) const {
-    return inner->apply(message, severity, attributes);
+filter_result_t filter_t::apply(blackhole::severity_t severity,
+                                blackhole::attribute_pack& attributes) const {
+    return inner->apply(severity, attributes);
 }
 
 dynamic_t filter_t::representation() const {

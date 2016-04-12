@@ -21,7 +21,8 @@
 #include "cocaine/logging/metafilter.hpp"
 #include "cocaine/logging/filter.hpp"
 
-#include "cocaine/traits/attribute.hpp"
+#include "cocaine/traits/attributes.hpp"
+#include "cocaine/traits/dynamic.hpp"
 #include "cocaine/traits/filter.hpp"
 
 #include "cocaine/service/logging.hpp"
@@ -76,52 +77,17 @@ bh::root_logger_t get_root_logger(context_t& context, const dynamic_t& service_a
     service_args.as_object().at("backend", "core").as_string());
 }
 
-struct dynamic_visitor_t {
-    void operator()(const dynamic_t::array_t&) {
-        throw std::system_error(std::make_error_code(std::errc::invalid_argument),
-                                "can not process array as attribute value");
-    }
-
-    void operator()(const dynamic_t::object_t&) {
-        throw std::system_error(std::make_error_code(std::errc::invalid_argument),
-                                "can not process map as attribute value");
-    }
-
-    void operator()(dynamic_t::null_t) {
-        throw std::system_error(std::make_error_code(std::errc::invalid_argument),
-                                "can not process null as attribute value");
-    }
-
-    template <class T>
-    void operator()(const T& value) {
-        attributes.emplace_back(blackhole::attribute_t(name, value));
-    }
-
-    blackhole::attributes_t& attributes;
-    const std::string& name;
-    typedef void result_type;
-};
-
 bool emit_ack(std::shared_ptr<logging::metafilter_t> filter,
               logging::logger_t& log,
               unsigned int severity,
               const std::string& message,
               const logging::attributes_t& attributes) {
-    if (filter->apply(message, severity, attributes) == logging::filter_result_t::reject) {
+    blackhole::attribute_list attribute_list(attributes.begin(), attributes.end());
+    blackhole::attribute_pack attribute_pack({attribute_list});
+    if (filter->apply(severity, attribute_pack) == logging::filter_result_t::reject) {
         return false;
     }
-    if (!attributes.empty()) {
-        blackhole::attributes_t bh_attributes;
-        for (const auto& attribute : attributes) {
-            dynamic_visitor_t visitor{bh_attributes, attribute.name};
-            attribute.value.apply(visitor);
-        }
-        blackhole::attribute_list attribute_list(bh_attributes.begin(), bh_attributes.end());
-        blackhole::attribute_pack attribute_pack({attribute_list});
-        log.log(blackhole::severity_t(severity), message, attribute_pack);
-    } else {
-        log.log(blackhole::severity_t(severity), message);
-    }
+    log.log(blackhole::severity_t(severity), message, attribute_pack);
     return true;
 }
 
@@ -324,12 +290,12 @@ struct logging_v2_t::impl_t {
             [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mfs) {
                 filter_list_storage_t storage;
 
-                auto visitor = [&](const logging::filter_info_t& info) {
+                auto callable = [&](const logging::filter_info_t& info) {
                     storage.push_back(std::make_tuple(
                     info.logger_name, info.filter.representation(), info.id, info.disposition));
                 };
                 for (auto& metafilter_pair : mfs) {
-                    metafilter_pair.second->apply_visitor(visitor);
+                    metafilter_pair.second->each(callable);
                 }
                 return storage;
             });
@@ -348,8 +314,9 @@ struct logging_v2_t::impl_t {
     std::shared_ptr<logging::metafilter_t> get_non_empty_metafilter(const std::string& name) {
         auto mf = get_metafilter(name);
         if(mf->empty()) {
-            return get_metafilter(default_key);
+            mf = get_metafilter(default_key);
         }
+        return mf;
     }
 
     std::shared_ptr<logging::metafilter_t> get_default_metafilter() {
@@ -385,8 +352,8 @@ struct logging_v2_t::impl_t {
     asio::deadline_timer retry_timer;
 };
 
-std::string logging_v2_t::impl_t::default_key("default");
-std::string logging_v2_t::impl_t::core_key("core");
+const std::string logging_v2_t::impl_t::default_key("default");
+const std::string logging_v2_t::impl_t::core_key("core");
 
 class logging_v2_t::logging_slot_t : public io::basic_slot<io::base_log::get> {
 public:
@@ -474,11 +441,20 @@ logging_v2_t::logging_v2_t(context_t& context,
         default_mf->add_filter(logging::filter_info_t(filter_conf));
     }
     auto core_mf = impl->get_core_metafilter();
-    filter_t core_filter = [=](blackhole::severity_t sev, blackhole::attribute_pack& pack) {
+    filter_t core_filter([=](blackhole::severity_t sev, blackhole::attribute_pack& pack) {
+        logging::filter_result_t result;
         if(core_mf->empty()) {
-            default_mf->apply("", sev, pack);
+            result = default_mf->apply(sev, pack);
+        } else {
+            result = core_mf->apply(sev, pack);
         }
-    }
+        if(result == logging::filter_result_t::accept) {
+            return true;
+        } else {
+            return false;
+        }
+    });
+    context.logger_filter(std::move(core_filter));
 
     on<io::base_log::emit>([&](unsigned int severity,
                                const std::string& backend,

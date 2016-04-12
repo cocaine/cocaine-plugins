@@ -22,17 +22,14 @@
 
 #include <cocaine/dynamic.hpp>
 
+#include <blackhole/attributes.hpp>
+
 #include <string>
 
 namespace cocaine {
 namespace logging {
-struct attribute_t {
-    typedef std::string name_t;
-    typedef dynamic_t value_t;
-    name_t name;
-    value_t value;
-};
-
-typedef std::vector<attribute_t> attributes_t;
+typedef blackhole::attribute_t attribute_t;
+typedef blackhole::view_of<attribute_t>::type attribute_view_t;
+typedef blackhole::attributes_t attributes_t;
 }
 }  // namespace cocaine::logging
