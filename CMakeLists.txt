@@ -16,6 +16,7 @@ OPTION(DOCKER "Build Docker Isolation plugin" ON)
 OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
 OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
+OPTION(LOGGING "Build logging v2 service plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" ON)
 OPTION(NODE "Build Node service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
@@ -45,6 +46,7 @@ INCLUDE_DIRECTORIES(BEFORE
     SYSTEM
     ${PROJECT_SOURCE_DIR}/foreign/asio/asio/include
     ${PROJECT_SOURCE_DIR}/foreign/blackhole/src
+    ${PROJECT_SOURCE_DIR}/foreign/metrics/include
     ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include)
 
 LINK_DIRECTORIES(
@@ -59,10 +61,12 @@ SET(PLUGINS
     elasticsearch
     graphite
     ipvs
+    logging
     mongo
     node
     unicorn
-    urlfetch)
+    urlfetch
+)
 
 IF("${CMAKE_SHARED_LIBRARY_SUFFIX}" STREQUAL "")
     SET(COCAINE_PLUGIN_SUFFIX ".cocaine-plugin")
@@ -71,6 +75,10 @@ ELSE()
 ENDIF()
 
 SET(PLUGINS_VERSION 3)
+
+SET(METRICS_BUILD_STATIC ON CACHE BOOL "Build the Metrics library as static")
+
+ADD_SUBDIRECTORY(foreign/metrics)
 
 FOREACH(PLUGIN ${PLUGINS})
     STRING(TOUPPER ${PLUGIN} OPTION_NAME)
