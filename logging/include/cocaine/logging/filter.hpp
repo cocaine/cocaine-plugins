@@ -44,13 +44,30 @@ public:
     enum class disposition_t { local, cluster };
     typedef std::chrono::steady_clock::time_point deadline_t;
 
+    /**
+     * Apply filter to attributes and severity.
+     * returns filter_result_t::accept if log record should be accepted
+     * and filter_result_t::reject otherwise
+     */
     filter_result_t apply(blackhole::severity_t severity,
                           blackhole::attribute_pack& attributes) const;
 
+    /**
+     * Construct empty filter.
+     * This is only used to ease putting filter_t in container (map f.e.).
+     * Calling apply on empty filter always throws.
+     */
     filter_t();
 
+    /**
+     * Construct filter from representation.
+     * This is the only valid way to construct filter_t to be used for filtering
+     */
     filter_t(const representation_t& representation);
 
+    /**
+     * Serialize filter to store it somewhere
+     */
     representation_t representation() const;
 
     class inner_t;
@@ -63,6 +80,11 @@ private:
     std::unique_ptr<inner_t, deleter_t> inner;
 };
 
+/**
+ * Filter with bound additional info,
+ * such as it's lifetime, disposition (cluster-wide/local),
+ * logging source name and filter id.
+ */
 struct filter_info_t {
     filter_info_t(filter_t _filter,
                   filter_t::deadline_t _deadline,

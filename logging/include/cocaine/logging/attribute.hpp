@@ -28,8 +28,10 @@
 
 namespace cocaine {
 namespace logging {
+
 typedef blackhole::attribute_t attribute_t;
 typedef blackhole::view_of<attribute_t>::type attribute_view_t;
 typedef blackhole::attributes_t attributes_t;
+
 }
 }  // namespace cocaine::logging

@@ -29,6 +29,11 @@
 namespace cocaine {
 namespace logging {
 
+/**
+ * Class, holding a bunch of filters
+ * All filters are join with OR expression -
+ * if one of the filter accepts message, message is accepted.
+ */
 class metafilter_t {
 public:
     metafilter_t(std::unique_ptr<logger_t> logger);
