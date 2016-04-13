@@ -26,6 +26,8 @@
 
 #include <boost/thread/shared_mutex.hpp>
 
+#include <atomic>
+
 namespace cocaine {
 namespace logging {
 

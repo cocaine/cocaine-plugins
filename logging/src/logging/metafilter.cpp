@@ -24,6 +24,8 @@
 
 #include <blackhole/logger.hpp>
 
+#include <mutex>
+
 namespace cocaine {
 namespace logging {
 

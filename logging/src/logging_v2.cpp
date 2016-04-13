@@ -264,7 +264,7 @@ struct logging_v2_t::impl_t {
 
     deferred<bool> remove_filter(logging::filter_t::id_type id) {
         deferred<bool> result;
-        auto cb = [=](std::future<response::del> future){
+        auto cb = [=](std::future<response::del> future) mutable {
             metafilters.apply([=](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mfs) mutable {
                 for (auto& metafilter_pair : mfs) {
                     if (metafilter_pair.second->remove_filter(id)) {

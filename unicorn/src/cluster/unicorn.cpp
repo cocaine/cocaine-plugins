@@ -176,7 +176,7 @@ void unicorn_cluster_t::on_announce_set(std::future<api::unicorn_t::response::cr
         announce_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
         announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
     }
-};
+}
 
 void unicorn_cluster_t::on_announce_checked (std::future<api::unicorn_t::response::subscribe> future) {
     try {
@@ -188,7 +188,7 @@ void unicorn_cluster_t::on_announce_checked (std::future<api::unicorn_t::respons
         COCAINE_LOG_ERROR(log, "announce dissappeared: {} , retrying", error::to_string(e));
         announce();
     }
-};
+}
 
 void unicorn_cluster_t::on_node_list_change(std::future<api::unicorn_t::response::children_subscribe> new_list) {
     try {

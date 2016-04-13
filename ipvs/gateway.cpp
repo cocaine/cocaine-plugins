@@ -21,7 +21,13 @@
 #include "gateway.hpp"
 
 #include <cocaine/context.hpp>
+#include <cocaine/context/config.hpp>
+#include <cocaine/context/mapper.hpp>
+#include <cocaine/dynamic.hpp>
+#include <cocaine/errors.hpp>
+#include <cocaine/format.hpp>
 #include <cocaine/logging.hpp>
+#include <cocaine/memory.hpp>
 
 #include <cstring>
 
@@ -136,7 +142,7 @@ ipvs_t::remote_t::remote_t(ipvs_t *const parent_, const partition_t& name_):
         {"version", info.version}
     });
 
-    auto port = parent->m_context.mapper.assign(cocaine::format("{}@{}:virtual", info.service,
+    auto port = parent->m_context.mapper().assign(cocaine::format("{}@{}:virtual", info.service,
         info.version));
     COCAINE_LOG_DEBUG(parent->m_log, "publishing virtual service");
 
@@ -163,7 +169,7 @@ ipvs_t::remote_t::remote_t(ipvs_t *const parent_, const partition_t& name_):
         std::strncpy(handle.sched_name, parent->m_cfg.scheduler.c_str(), IP_VS_SCHEDNAME_MAXLEN);
 
         if(::ipvs_add_service(&handle) != 0) {
-            std::error_code ec(errno, ipvs_category());
+            std::error_code ec(errno, error::ipvs_category());
 
             COCAINE_LOG_WARNING(parent->m_log, "unable to configure virtual service on {}: [{}] {}",
                 endpoint, ec.value(), ec.message()
@@ -280,7 +286,7 @@ ipvs_t::remote_t::insert(const std::string& uuid, const std::vector<tcp::endpoin
         handle.weight     = parent->m_cfg.weight;
 
         if(::ipvs_add_dest(&services.at(handle.af), &handle) != 0) {
-            std::error_code ec(errno, ipvs_category());
+            std::error_code ec(errno, error::ipvs_category());
 
             COCAINE_LOG_WARNING(parent->m_log, "unable to register destination for {}: [{}] {}",
                 *it, ec.value(), ec.message()
@@ -321,7 +327,7 @@ ipvs_t::remote_t::remove(const std::string& uuid) {
 
         if(::ipvs_del_dest(&services.at(backend.af), &backend) != 0) {
             // Force disconnect the remote node.
-            throw std::system_error(errno, ipvs_category());
+            throw std::system_error(errno, error::ipvs_category());
         }
     }
 
@@ -370,16 +376,17 @@ ipvs_t::ipvs_t(context_t& context, const std::string& name, const dynamic_t& arg
     COCAINE_LOG_INFO(m_log, "initializing IPVS");
 
     if(::ipvs_init() != 0) {
-        throw std::system_error(errno, ipvs_category(), "unable to initialize IPVS");
+        throw std::system_error(errno, error::ipvs_category(), "unable to initialize IPVS");
     }
 
     port_t min_port, max_port;
-    std::tie(min_port, max_port) = m_context.config.network.ports.shared;
+    std::tie(min_port, max_port) = m_context.config().network().ports().shared();
     if(min_port == 0 && max_port == 0) {
         throw cocaine::error_t("shared ports must be specified to use IPVS gateway");
     }
 
-    if(m_context.config.network.endpoint.is_unspecified()) {
+    auto endpoint = asio::ip::address::from_string(m_context.config().network().endpoint());
+    if(endpoint.is_unspecified()) {
         io_service asio;
 
         tcp::resolver resolver(asio);
@@ -387,7 +394,7 @@ ipvs_t::ipvs_t(context_t& context, const std::string& name, const dynamic_t& arg
 
         try {
             begin = resolver.resolve(tcp::resolver::query(
-                m_context.config.network.hostname, std::string()
+                m_context.config().network().hostname(), std::string()
             ));
         } catch(const std::system_error& e) {
 #if defined(HAVE_GCC48)
@@ -401,7 +408,7 @@ ipvs_t::ipvs_t(context_t& context, const std::string& name, const dynamic_t& arg
             m_endpoints.push_back(it->endpoint().address());
         }
     } else {
-        m_endpoints.push_back(m_context.config.network.endpoint);
+        m_endpoints.push_back(endpoint);
     }
 
     std::ostringstream stream;

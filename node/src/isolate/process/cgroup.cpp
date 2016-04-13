@@ -5,6 +5,7 @@
 #include <blackhole/logger.hpp>
 
 #include <cocaine/dynamic.hpp>
+#include <cocaine/format.hpp>
 #include <cocaine/logging.hpp>
 
 #include "cocaine/detail/isolate/process/cgroup.hpp"

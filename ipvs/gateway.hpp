@@ -22,13 +22,11 @@
 #define COCAINE_IPVS_GATEWAY_HPP
 
 #include <cocaine/api/gateway.hpp>
+#include <cocaine/locked_ptr.hpp>
 
 namespace cocaine { namespace error {
 auto
-ipvs_category() -> const std::error_category& {
-    static ipvs_category_t instance;
-    return instance;
-}
+ipvs_category() -> const std::error_category&;
 }}
 
 namespace cocaine { namespace gateway {

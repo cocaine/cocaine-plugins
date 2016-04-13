@@ -34,16 +34,16 @@ std::future<T> make_exceptional_future(E e) {
     auto e_ptr = std::make_exception_ptr(e);
     promise.set_exception(e_ptr);
     return promise.get_future();
-};
+}
 
 template<class T>
 std::future<T> make_exceptional_future(std::error_code ec) {
     return make_exceptional_future<T>(std::system_error(std::move(ec)));
-};
+}
 
 template<class T>
 std::future<T> make_exceptional_future(std::error_code ec, std::string msg) {
     return make_exceptional_future<T>(std::system_error(std::move(ec), std::move(msg)));
-};
+}
 
 }

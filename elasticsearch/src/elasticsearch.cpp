@@ -23,6 +23,7 @@
 #include <tuple>
 
 #include <cocaine/context.hpp>
+#include <cocaine/dynamic.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/traits/tuple.hpp>
 
