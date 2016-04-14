@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.8.2) unstable; urgency=low
+
+  * Backport symlink fix from 0.12.7
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 14 Apr 2016 17:59:00 +0300
+
 cocaine-plugins (0.12.8.1) unstable; urgency=low
 
   * Build fix on mac os
