@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.8.1) unstable; urgency=low
+
+  * Build fix on mac os
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 14 Apr 2016 16:15:00 +0300
+
 cocaine-plugins (0.12.8.0-alpha1) unstable; urgency=low
 
   * New logging service
