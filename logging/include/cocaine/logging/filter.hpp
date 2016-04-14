@@ -42,13 +42,8 @@ public:
     typedef dynamic_t representation_t;
     // TODO: FIXME, use proper type
     enum class disposition_t { local, cluster };
-#if (__GNUC__ < 5 && __GNUC_MINOR__ < 7)
-    typedef std::chrono::monotonic_clock clock_t;
-    typedef std::chrono::monotonic_clock::time_point deadline_t;
-#else
-    typedef std::chrono::steady_clock clock_t;
-    typedef std::chrono::steady_clock::time_point deadline_t;
-#endif
+    typedef std::chrono::high_resolution_clock clock_t;
+    typedef clock_t::time_point deadline_t;
 
     /**
      * Apply filter to attributes and severity.
