@@ -67,7 +67,7 @@ bool metafilter_t::empty() const {
 filter_result_t metafilter_t::apply(blackhole::severity_t severity,
                                     blackhole::attribute_pack& attributes) {
     std::vector<filter_t::id_type> ids_to_remove;
-    filter_t::deadline_t now = std::chrono::steady_clock::now();
+    filter_t::deadline_t now = filter_t::clock_t::now();
     filter_result_t result = filter_result_t::reject;
     boost::shared_lock<boost::shared_mutex> guard(mutex);
 

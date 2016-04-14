@@ -173,7 +173,7 @@ struct logging_v2_t::impl_t {
             COCAINE_LOG_DEBUG(internal_logger, "received filter update for id {} ", filter_id);
             if (filter_value.get_version() == unicorn::not_existing_version) {
                 bool removed = metafilters.apply(
-                [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mf) {
+                [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mf) -> bool {
                     for (auto& mf_pair : mf) {
                         if(mf_pair.second->remove_filter(filter_id)) {
                             return true;
@@ -234,7 +234,7 @@ struct logging_v2_t::impl_t {
                                           uint64_t ttl,
                                           logging::filter_t::disposition_t disposition) {
 
-        deadline_t deadline(std::chrono::steady_clock::now() + std::chrono::seconds(ttl));
+        deadline_t deadline(logging::filter_t::clock_t::now() + std::chrono::seconds(ttl));
         uint64_t id = (*generator.synchronize())();
         logging::filter_info_t info(std::move(filter),
                                     std::move(deadline),

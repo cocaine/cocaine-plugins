@@ -189,7 +189,7 @@ struct external_t::inner_t :
         socket->async_connect(endpoint, [=](const std::error_code& ec) {
             if (!ec) {
                 COCAINE_LOG_INFO(log, "successfully connected to external isolation daemon");
-                session.apply([&](decltype(session.unsafe())& session){
+                session.apply([&](std::shared_ptr<session_t>& session){
                     session = self_shared->context.engine().attach(std::move(socket), nullptr);
                     COCAINE_LOG_INFO(log, "processing {} queued spool requests", spool_queue.size());
                     for (auto& load: spool_queue) {

@@ -219,7 +219,7 @@ convert(const blackhole::attribute::view_t& value, T& target) {
         return true;
     }
     return false;
-};
+}
 
 template<class T>
 typename std::enable_if<std::is_floating_point<T>::value, bool>::type
@@ -231,7 +231,7 @@ convert(const blackhole::attribute::view_t& value, T& target) {
         return true;
     }
     return false;
-};
+}
 
 template<class T>
 bool
@@ -243,7 +243,7 @@ convert(const blackhole::attribute::view_t& value, blackhole::cpp17::string_view
         return true;
     }
     return false;
-};
+}
 
 inline boost::optional<const attribute_view_t&> find_attribute(const blackhole::attribute_pack& attribute_pack,
                                                           const std::string& attribute_name) {

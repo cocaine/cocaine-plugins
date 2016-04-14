@@ -86,7 +86,7 @@ public:
     boost::optional<std::shared_ptr<const dispatch_type>>
     operator()(tuple_type&& args, upstream_type&& upstream)
     {
-        auto formatter = [] (const std::map<std::string, std::string>& data) {
+        auto formatter = [] (const std::map<std::string, std::string>& data) -> std::string {
             std::string result;
             for(auto& pair: data) {
                 if(!result.empty()) {
