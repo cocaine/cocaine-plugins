@@ -1,3 +1,15 @@
+cocaine-plugins (0.12.8.0-alpha1) unstable; urgency=low
+
+  * New logging service
+  * New async isolation API
+  * External isolation
+  * Hardcoded error categories ids
+  * New cocaine::format from core
+  * Adapt context and config interface from core
+  * Adapt refactored core
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 14 Apr 2016 13:28:00 +0300
+
 cocaine-plugins (0.12.7.5) unstable; urgency=low
 
   * Bug fix: workers should no longer be discarded if a handshake frame was
