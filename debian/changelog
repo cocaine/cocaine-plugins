@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.8.3) unstable; urgency=low
+
+  * Add additional symlink for runtime linkage
+
+ -- Anton Matveenko <antmat@me.com>  Fri, 15 Apr 2016 11:36:00 +0300
+
 cocaine-plugins (0.12.8.2) unstable; urgency=low
 
   * Backport symlink fix from 0.12.7
