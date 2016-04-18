@@ -82,7 +82,11 @@ bool emit_ack(std::shared_ptr<logging::metafilter_t> filter,
               unsigned int severity,
               const std::string& message,
               const logging::attributes_t& attributes) {
-    blackhole::attribute_list attribute_list(attributes.begin(), attributes.end());
+    blackhole::attribute_list attribute_list;
+    for (const auto& attribute : attributes) {
+        attribute_list.emplace_back(attribute);
+    }
+
     blackhole::attribute_pack attribute_pack({attribute_list});
     if (filter->apply(severity, attribute_pack) == logging::filter_result_t::reject) {
         return false;
