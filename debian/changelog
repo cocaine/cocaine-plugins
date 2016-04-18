@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.8.4) unstable; urgency=low
+
+  * Bug fix: fix Logging Service build with modern (>= 1.59) Boost.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 18 Apr 2016 12:42:43 +0300
+
 cocaine-plugins (0.12.8.3) unstable; urgency=low
 
   * Add additional symlink for runtime linkage
