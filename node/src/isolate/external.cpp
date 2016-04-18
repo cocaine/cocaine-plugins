@@ -178,7 +178,7 @@ struct external_t::inner_t :
 
     void connect() {
         socket.reset(new asio::ip::tcp::socket(io_context));
-        auto ep = args.as_object().at("endpoint", dynamic_t::empty_object).as_object();
+        auto ep = args.as_object().at("external_isolation_endpoint", dynamic_t::empty_object).as_object();
         tcp::endpoint endpoint(
             asio::ip::address::from_string(ep.at("host", "127.0.0.1").as_string()),
             static_cast<unsigned short>(ep.at("port", 29042u).as_uint())

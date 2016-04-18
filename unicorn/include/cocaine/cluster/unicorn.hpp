@@ -27,6 +27,7 @@ class unicorn_cluster_t:
     public api::cluster_t
 {
 public:
+    typedef api::unicorn_t::response response;
 
     struct cfg_t {
         cfg_t(const dynamic_t& args);
@@ -44,6 +45,12 @@ private:
     struct on_fetch;
     struct on_list_update;
 
+    std::pair<size_t, api::unicorn_scope_ptr&>
+    scope();
+
+    void
+    drop_scope(size_t);
+
     void
     announce();
 
@@ -57,16 +64,16 @@ private:
     on_subscribe_timer(const std::error_code& ec);
 
     void
-    on_node_list_change(std::future<api::unicorn_t::response::children_subscribe> new_list);
+    on_node_list_change(size_t scope_id, std::future<response::children_subscribe> new_list);
 
     void
-    on_node_fetch(const std::string& uuid, std::future<api::unicorn_t::response::get> node_endpoints);
+    on_node_fetch(size_t scope_id, const std::string& uuid, std::future<response::get> node_endpoints);
 
     void
-    on_announce_set(std::future<api::unicorn_t::response::create> future);
+    on_announce_set(size_t scope_id, std::future<response::create> future);
 
     void
-    on_announce_checked(std::future<api::unicorn_t::response::subscribe> future);
+    on_announce_checked(size_t scope_id, std::future<response::subscribe> future);
 
     std::shared_ptr<logging::logger_t> log;
     cfg_t config;
@@ -76,7 +83,8 @@ private:
     asio::deadline_timer announce_timer;
     asio::deadline_timer subscribe_timer;
     api::unicorn_ptr unicorn;
-    api::unicorn_scope_ptr create_scope, subscribe_scope, children_subscribe_scope, get_scope;
+    std::atomic<size_t> scope_counter;
+    synchronized<std::map<size_t, api::unicorn_scope_ptr>> scopes;
     typedef std::map<std::string, std::vector<asio::ip::tcp::endpoint>> locator_endpoints_t;
     synchronized<locator_endpoints_t> registered_locators;
 };
