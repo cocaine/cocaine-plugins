@@ -1,3 +1,11 @@
+cocaine-plugins (0.12.8.5) unstable; urgency=low
+
+  * Bug fix: fix external isolation config conflict with docker
+  * Bug fix: update cocaine version preconditions
+  * Bug fix: fix discovery lag due to scope release
+
+ -- Anton Matveenko <antmat@me.com>  Mon, 18 Apr 2016 19:12:43 +0300
+
 cocaine-plugins (0.12.8.4) unstable; urgency=low
 
   * Bug fix: fix Logging Service build with modern (>= 1.59) Boost.
