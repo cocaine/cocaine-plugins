@@ -1,3 +1,14 @@
+cocaine-plugins (0.12.8.6) unstable; urgency=low
+
+  * External Isolation: wait for context to start before spooling apps.
+  * External Isolation: do not use synchronized session, as we use it always in
+    same loop.
+  * External Isolation: initialize bool variables properly.
+  * External Isolation: more verbose logging.
+  * External Isolation: reconnect on timer.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 20 Apr 2016 12:54:27 +0300
+
 cocaine-plugins (0.12.8.5) unstable; urgency=low
 
   * Bug fix: fix external isolation config conflict with docker
