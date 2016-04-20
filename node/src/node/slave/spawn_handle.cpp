@@ -40,7 +40,7 @@ spawn_handle_t::on_terminate(const std::error_code& ec, const std::string& msg) 
         COCAINE_LOG_WARNING(_slave->log, "isolation has abnormally terminated slave: [{}]{} - {}", ec.value(), ec.message(), msg);
     }
     // Force slave termination without waiting for heartbeat failure if it was not terminated before.
-    _slave->terminate(ec);
+    _slave->shutdown(ec);
 }
 
 void
