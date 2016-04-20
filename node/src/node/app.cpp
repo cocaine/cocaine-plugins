@@ -451,7 +451,7 @@ public:
         isolate(context.repository().get<api::isolate_t>(profile.isolate.type,
                                             context,
                                             *loop,
-                                            manifest_.name,
+                                            this->manifest_.name,
                                             profile.isolate.type,
                                             profile.isolate.args))
     {
