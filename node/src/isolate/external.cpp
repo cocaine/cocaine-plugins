@@ -2,8 +2,10 @@
 #include "cocaine/idl/isolate.hpp"
 
 #include <cocaine/context.hpp>
+#include <cocaine/context/signal.hpp>
 #include <cocaine/dynamic.hpp>
 #include <cocaine/errors.hpp>
+#include <cocaine/idl/context.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/engine.hpp>
 
@@ -11,6 +13,8 @@
 #include <cocaine/rpc/session.hpp>
 
 #include <cocaine/traits/dynamic.hpp>
+#include <cocaine/traits/endpoint.hpp>
+#include <cocaine/traits/vector.hpp>
 
 #include <blackhole/logger.hpp>
 #include <asio/ip/tcp.hpp>
@@ -96,7 +100,8 @@ struct spool_load_t :
 
     spool_load_t(external_t::inner_t& _inner, std::shared_ptr<api::spool_handle_base_t> _handle) :
         inner(_inner),
-        handle(std::move(_handle))
+        handle(std::move(_handle)),
+        cancelled(false)
     {}
 
     ~spool_load_t() {
@@ -132,7 +137,8 @@ struct spawn_load_t :
         handle(std::move(_handle)),
         path(_path),
         worker_args(_worker_args),
-        environment(_environment)
+        environment(_environment),
+        cancelled(false)
     {}
 
     ~spawn_load_t() {
@@ -153,11 +159,14 @@ struct external_t::inner_t :
     context_t& context;
     asio::io_service& io_context;
     std::unique_ptr<tcp::socket> socket;
-    synchronized<std::shared_ptr<session_t>> session;
+    asio::deadline_timer retry_timer;
+    std::shared_ptr<session_t> session;
     const std::string name;
     dynamic_t args;
     std::unique_ptr<logging::logger_t> log;
     std::atomic<id_t> cur_id;
+    std::shared_ptr<dispatch<io::context_tag>> signal_dispatch;
+    bool prepared;
 
 
     std::vector<std::shared_ptr<spool_load_t>> spool_queue;
@@ -167,10 +176,18 @@ struct external_t::inner_t :
         context(_context),
         io_context(_io_context),
         socket(),
+        retry_timer(io_context),
         name(_name),
         args(_args),
-        log(context.log("universal_isolate"))
+        log(context.log("universal_isolate/"+_name)),
+        signal_dispatch(std::make_shared<dispatch<io::context_tag>>("universal_isolate_signal")),
+        prepared(false)
     {
+        signal_dispatch->on<io::context::prepared>([&](){
+            prepared = true;
+            on_ready();
+        });
+        context.signal_hub().listen(signal_dispatch, io_context);
         if(args.as_object().at("type", "").as_string().empty()) {
             args.as_object()["type"] = type;
         }
@@ -184,35 +201,56 @@ struct external_t::inner_t :
             static_cast<unsigned short>(ep.at("port", 29042u).as_uint())
         );
 
+        auto retry_timeout = args.as_object().at("retry_timeout", 5u).as_uint();
+
         COCAINE_LOG_INFO(log, "connecting to external isolation daemon to {}", boost::lexical_cast<std::string>(endpoint));
         auto self_shared = shared_from_this();
-        socket->async_connect(endpoint, [=](const std::error_code& ec) {
-            if (!ec) {
-                COCAINE_LOG_INFO(log, "successfully connected to external isolation daemon");
-                session.apply([&](std::shared_ptr<session_t>& session){
-                    session = self_shared->context.engine().attach(std::move(socket), nullptr);
-                    COCAINE_LOG_INFO(log, "processing {} queued spool requests", spool_queue.size());
-                    for (auto& load: spool_queue) {
-                        load->apply(session);
-                    }
-                    spool_queue.clear();
-                    COCAINE_LOG_INFO(log, "processing {} queued spawn requests", spawn_queue.size());
-                    for(auto& load: spawn_queue) {
-                        load->apply(session);
-                    }
-                    spawn_queue.clear();
-                });
-            } else {
-                for (auto& load: spool_queue) {
-                    load->handle->on_abort(ec, "could not connect to external isolation daemon");
-                }
-                spool_queue.clear();
-                for(auto& load: spawn_queue) {
-                    load->handle->on_terminate(ec, "could not connect to external isolation daemon");
-                }
-                spawn_queue.clear();
+
+        retry_timer.expires_from_now(boost::posix_time::seconds(retry_timeout));
+        retry_timer.async_wait([=](const std::error_code& ec){
+            if(!ec) {
+                socket->cancel();
             }
         });
+        socket->async_connect(endpoint, [=](const std::error_code& ec) {
+            if (retry_timer.cancel() && !ec) {
+                COCAINE_LOG_INFO(log, "connected to isolation daemon");
+                session = context.engine().attach(std::move(socket), nullptr);
+                self_shared->on_ready();
+            } else {
+                COCAINE_LOG_WARNING(log, "could not connect to external isolation daemon - {}, retrying", ec.message());
+                retry_timer.expires_from_now(boost::posix_time::seconds(retry_timeout));
+                retry_timer.async_wait([=](const std::error_code& ec){
+                    if(!ec) {
+                        connect();
+                    } else {
+                        COCAINE_LOG_ERROR(log, "retry timer was reset - {}", ec.message());
+                    }
+                });
+            }
+        });
+    }
+
+    void on_ready() {
+        if(!prepared) {
+            COCAINE_LOG_DEBUG(log, "external isolation daemon connection is ready, but context is still not prepared");
+            return;
+        }
+        if(!session) {
+            COCAINE_LOG_DEBUG(log, "context is ready, but external isolation daemon is not connected yet");
+            return;
+        }
+        COCAINE_LOG_INFO(log, "successfully connected to external isolation daemon and prepared context, dequeing spool and spawn requests");
+        COCAINE_LOG_INFO(log, "processing {} queued spool requests", spool_queue.size());
+        for (auto& load: spool_queue) {
+            load->apply(session);
+        }
+        spool_queue.clear();
+        COCAINE_LOG_INFO(log, "processing {} queued spawn requests", spawn_queue.size());
+        for(auto& load: spawn_queue) {
+            load->apply(session);
+        }
+        spawn_queue.clear();
     }
 
 };
@@ -221,11 +259,14 @@ void spool_load_t::apply(std::shared_ptr<session_t> session) {
     stream.apply([&](decltype(stream.unsafe())& stream){
         if(!cancelled) {
             try {
-                stream = session->fork(std::make_shared<spool_dispatch_t>("external_spool_" + inner.name, handle));
+                stream = session->fork(std::make_shared<spool_dispatch_t>("external_spool/" + inner.name, handle));
                 stream->send<io::isolate::spool>(inner.args, inner.name);
             } catch(const std::system_error& e) {
+                COCAINE_LOG_ERROR(inner.log, "failed to process spool request - {}", error::to_string(e));
                 handle->on_abort(e.code(), e.what());
             }
+        } else {
+            COCAINE_LOG_WARNING(inner.log, "can not process spool request - cancelled");
         }
     });
 }
@@ -251,7 +292,7 @@ spawn_load_t::apply(std::shared_ptr<session_t> session) {
     stream.apply([&](decltype(stream.unsafe())& stream){
         if(!cancelled) {
             try {
-                stream = session->fork(std::make_shared<spawn_dispatch_t>("external_spawn_" + inner.name, handle));
+                stream = session->fork(std::make_shared<spawn_dispatch_t>("external_spawn/" + inner.name, handle));
                 stream->send<io::isolate::spawn>(inner.args, inner.name, path, worker_args, environment);
             } catch(const std::system_error& e) {
                 handle->on_terminate(e.code(), e.what());
@@ -280,16 +321,18 @@ external_t::external_t(context_t& context, asio::io_service& io_context, const s
     isolate_t(context, io_context, name, type, args),
     inner(new inner_t(context, io_context, name, type, args))
 {
-    io_context.post(std::bind(&inner_t::connect, inner));
+    inner->connect();
 }
 
 std::unique_ptr<api::cancellation_t>
 external_t::spool(std::shared_ptr<api::spool_handle_base_t> handler) {
     std::shared_ptr<spool_load_t> load(new spool_load_t(*inner, std::move(handler)));
-    inner->session.apply([&](decltype(inner->session.unsafe())& session){
-        if(session) {
-            load->apply(session);
+    inner->io_context.post([=](){
+        if(inner->session && inner->prepared) {
+            COCAINE_LOG_DEBUG(inner->log, "processing spool request");
+            load->apply(inner->session);
         } else {
+            COCAINE_LOG_DEBUG(inner->log, "queuing spool request");
             inner->spool_queue.push_back(load);
         }
     });
@@ -303,10 +346,12 @@ external_t::spawn(const std::string& path,
             std::shared_ptr<api::spawn_handle_base_t> handler) {
 
     std::shared_ptr<spawn_load_t> load(new spawn_load_t(*inner, std::move(handler), path, worker_args, environment));
-    inner->session.apply([&](decltype(inner->session.unsafe())& session){
-        if(session) {
-            load->apply(session);
+    inner->io_context.post([=](){
+        if(inner->session && inner->prepared) {
+            COCAINE_LOG_DEBUG(inner->log, "processing spawn request");
+            load->apply(inner->session);
         } else {
+            COCAINE_LOG_DEBUG(inner->log, "queuing spawn request");
             inner->spawn_queue.push_back(load);
         }
     });
