@@ -444,7 +444,9 @@ logging_v2_t::logging_v2_t(context_t& context,
 
     std::map<std::string, dynamic_t> filter_info_conf;
 
-    filter_info_conf["deadline"] = std::numeric_limits<uint64_t>::max();
+    // int64_t max value is used instead of uint64_t max value
+    // to prevent overflow in std::duration, from which timepoint is constructed.
+    filter_info_conf["deadline"] = static_cast<uint64_t>(std::numeric_limits<int64_t>::max());
     filter_info_conf["logger_name"] = impl->default_key;
     for(const auto& filter_conf : default_metafilter_conf) {
         filter_info_conf["id"] = (*impl->generator.synchronize())();
