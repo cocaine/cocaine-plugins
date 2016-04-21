@@ -1,3 +1,11 @@
+cocaine-plugins (0.12.8.7) unstable; urgency=low
+
+  * Node: add rate metrics for applications.
+  * Node: switched to fixed size sliding window accumulator to collect
+    application response time metrics.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 21 Apr 2016 16:12:49 +0300
+
 cocaine-plugins (0.12.8.6) unstable; urgency=low
 
   * External Isolation: wait for context to start before spooling apps.
