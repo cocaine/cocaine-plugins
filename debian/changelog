@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.8.10) unstable; urgency=low
+
+  * External isolation: segfault fix - reconnect in io_loop
+
+ -- Anton Matveenko <antmat@me.com> Thu, 21 Apr 2016 18:35:49 +0300
+
 cocaine-plugins (0.12.8.9) unstable; urgency=low
 
   * Logging: Proper callback handling for filter creation
