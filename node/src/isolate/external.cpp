@@ -93,13 +93,14 @@ struct spawn_dispatch_t :
 struct spool_load_t :
     public api::cancellation_t
 {
-    external_t::inner_t& inner;
+    std::weak_ptr<external_t::inner_t> inner;
     std::shared_ptr<api::spool_handle_base_t> handle;
     bool cancelled;
     synchronized<io::upstream_ptr_t> stream;
 
-    spool_load_t(external_t::inner_t& _inner, std::shared_ptr<api::spool_handle_base_t> _handle) :
-        inner(_inner),
+    spool_load_t(std::weak_ptr<external_t::inner_t> _inner,
+                 std::shared_ptr<api::spool_handle_base_t> _handle) :
+        inner(std::move(_inner)),
         handle(std::move(_handle)),
         cancelled(false)
     {}
@@ -119,7 +120,7 @@ struct spool_load_t :
 struct spawn_load_t :
     public api::cancellation_t
 {
-    external_t::inner_t& inner;
+    std::weak_ptr<external_t::inner_t> inner;
     std::shared_ptr<api::spawn_handle_base_t> handle;
     std::string path;
     api::args_t worker_args;
@@ -127,13 +128,13 @@ struct spawn_load_t :
     bool cancelled;
     synchronized<io::upstream_ptr_t> stream;
 
-    spawn_load_t(external_t::inner_t& _inner,
+    spawn_load_t(std::weak_ptr<external_t::inner_t> _inner,
                  std::shared_ptr<api::spawn_handle_base_t> _handle,
                  const std::string& _path,
                  const api::args_t& _worker_args,
                  const api::env_t& _environment
     ) :
-        inner(_inner),
+        inner(std::move(_inner)),
         handle(std::move(_handle)),
         path(_path),
         worker_args(_worker_args),
@@ -226,6 +227,14 @@ struct external_t::inner_t :
         });
     }
 
+    void reconnect() {
+        auto shared_self = shared_from_this();
+        io_context.post([=]() {
+            shared_self->session.reset();
+            shared_self->connect();
+        });
+    }
+
     void on_fail(const std::error_code& ec) {
         for (auto& load: spool_queue) {
             load->handle->on_abort(ec, "could not connect to external dispatch");
@@ -263,25 +272,33 @@ struct external_t::inner_t :
 };
 
 void spool_load_t::apply() {
+    auto _inner = inner.lock();
+    if (!_inner) {
+        return;
+    }
     stream.apply([&](decltype(stream.unsafe())& stream){
-        if(!cancelled) {
+        if (!cancelled) {
             try {
-                stream = inner.session->fork(std::make_shared<spool_dispatch_t>("external_spool/" + inner.name, handle));
-                stream->send<io::isolate::spool>(inner.args, inner.name);
-            } catch(const std::system_error& e) {
-                COCAINE_LOG_ERROR(inner.log, "failed to process spool request - {}", error::to_string(e));
-                handle->on_abort(e.code(), e.what());
-                inner.session.reset();
-                inner.connect();
+                stream = _inner->session->fork(std::make_shared<spool_dispatch_t>("external_spool/" + _inner->name, handle));
+                stream->send<io::isolate::spool>(_inner->args, _inner->name);
+            } catch (const std::system_error& e) {
+                COCAINE_LOG_ERROR(_inner->log, "failed to process spool request - {}",
+                                  error::to_string(e));
+                handle->on_abort(e.code(), error::to_string(e));
+                _inner->reconnect();
             }
         } else {
-            COCAINE_LOG_WARNING(inner.log, "can not process spool request - cancelled");
+            COCAINE_LOG_WARNING(_inner->log, "can not process spool request - cancelled");
         }
     });
 }
 
 void
 spool_load_t::cancel() noexcept {
+    auto _inner = inner.lock();
+    if (!_inner) {
+        return;
+    }
     stream.apply([&](decltype(stream.unsafe())& stream){
         if(!cancelled) {
             cancelled = true;
@@ -289,9 +306,9 @@ spool_load_t::cancel() noexcept {
                 try {
                     stream->send<io::isolate_spooled::cancel>();
                 } catch(const std::system_error& e) {
-                    COCAINE_LOG_WARNING(inner.log, "could not cancel spool request: {}", error::to_string(e));
-                    inner.session.reset();
-                    inner.connect();
+                    COCAINE_LOG_WARNING(_inner->log, "could not cancel spool request: {}", error::to_string(e));
+                    handle->on_abort(e.code(), error::to_string(e));
+                    _inner->reconnect();
                 }
             }
         }
@@ -300,23 +317,32 @@ spool_load_t::cancel() noexcept {
 
 void
 spawn_load_t::apply() {
+    auto _inner = inner.lock();
+    if (!_inner) {
+        return;
+    }
     stream.apply([&](decltype(stream.unsafe())& stream){
         if(!cancelled) {
             try {
-                stream = inner.session->fork(std::make_shared<spawn_dispatch_t>("external_spawn/" + inner.name, handle));
-                stream->send<io::isolate::spawn>(inner.args, inner.name, path, worker_args, environment);
+                stream = _inner->session->fork(std::make_shared<spawn_dispatch_t>("external_spawn/" + _inner->name, handle));
+                stream->send<io::isolate::spawn>(_inner->args, _inner->name, path, worker_args, environment);
             } catch(const std::system_error& e) {
-                COCAINE_LOG_WARNING(inner.log, "could not process spawn request: {}", error::to_string(e));
+                COCAINE_LOG_WARNING(_inner->log, "could not process spawn request: {}", error::to_string(e));
                 handle->on_terminate(e.code(), e.what());
-                inner.session.reset();
-                inner.connect();
+                _inner->reconnect();
             }
+        } else {
+            COCAINE_LOG_WARNING(_inner->log, "can not process spawn request - cancelled");
         }
     });
 }
 
 void
 spawn_load_t::cancel() noexcept {
+    auto _inner = inner.lock();
+    if(!_inner) {
+        return;
+    }
     stream.apply([&](decltype(stream.unsafe())& stream){
         if(!cancelled) {
             cancelled = true;
@@ -324,9 +350,9 @@ spawn_load_t::cancel() noexcept {
                 try {
                     stream->send<io::isolate_spawned::kill>();
                 } catch(const std::system_error& e) {
-                    COCAINE_LOG_WARNING(inner.log, "could not process spawn kill request: {}", error::to_string(e));
-                    inner.session.reset();
-                    inner.connect();
+                    COCAINE_LOG_WARNING(_inner->log, "could not process spawn kill request: {}", error::to_string(e));
+                    handle->on_terminate(e.code(), error::to_string(e));
+                    _inner->reconnect();
                 }
             }
         }
@@ -343,7 +369,7 @@ external_t::external_t(context_t& context, asio::io_service& io_context, const s
 
 std::unique_ptr<api::cancellation_t>
 external_t::spool(std::shared_ptr<api::spool_handle_base_t> handler) {
-    std::shared_ptr<spool_load_t> load(new spool_load_t(*inner, std::move(handler)));
+    std::shared_ptr<spool_load_t> load(new spool_load_t(inner, std::move(handler)));
     // implicitly copy this->inner to a variable to capture it to avoid expiration of inner
     auto _inner = inner;
     _inner->io_context.post([=](){
@@ -367,7 +393,7 @@ external_t::spawn(const std::string& path,
             const api::env_t& environment,
             std::shared_ptr<api::spawn_handle_base_t> handler) {
 
-    std::shared_ptr<spawn_load_t> load(new spawn_load_t(*inner, std::move(handler), path, worker_args, environment));
+    std::shared_ptr<spawn_load_t> load(new spawn_load_t(inner, std::move(handler), path, worker_args, environment));
     // implicitly copy this->inner to a variable to capture it to avoid expiration of inner
     auto _inner = inner;
     _inner->io_context.post([=](){
