@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.8.8) unstable; urgency=low
+
+  * Docker: fix docker isolation - notify about spawn.
+
+ -- Anton Matveenko <antmat@me.com> Thu, 21 Apr 2016 17:11:49 +0300
+
 cocaine-plugins (0.12.8.7) unstable; urgency=low
 
   * Node: add rate metrics for applications.
