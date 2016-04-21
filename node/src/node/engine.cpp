@@ -177,17 +177,44 @@ public:
         result["queue"] = info;
     }
 
-    // Response time quantiles over all events.
     void
-    visit(const std::vector<stats_t::quantile_t>& value) {
+    visit(metrics::meter_t& meter) {
+        dynamic_t::array_t info {{
+            trunc(meter.m01rate(), 3),
+            trunc(meter.m05rate(), 3),
+            trunc(meter.m15rate(), 3)
+        }};
+
+        result["rate"] = info;
+        result["rate_mean"] = trunc(meter.mean_rate(), 3);
+    }
+
+    inline
+    double
+    trunc(double v, uint n) noexcept {
+        BOOST_ASSERT(n < 10);
+
+        static const long long table[10] = {
+            1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000
+        };
+
+        return std::ceil(v * table[n]) / table[n];
+    }
+
+    template<typename Accumulate>
+    void
+    visit(metrics::timer<Accumulate>& timer) {
+        const auto snapshot = timer.snapshot();
+
         dynamic_t::object_t info;
 
-        std::array<char, 16> buf;
-        for (const auto& quantile : value) {
-            if (std::snprintf(buf.data(), buf.size(), "%.2f%%", quantile.probability)) {
-                info[buf.data()] = quantile.value;
-            }
-        }
+        info["50.00%"] = trunc(snapshot.median() / 1e6, 3);
+        info["75.00%"] = trunc(snapshot.p75() / 1e6, 3);
+        info["90.00%"] = trunc(snapshot.p90() / 1e6, 3);
+        info["95.00%"] = trunc(snapshot.p95() / 1e6, 3);
+        info["98.00%"] = trunc(snapshot.p98() / 1e6, 3);
+        info["99.00%"] = trunc(snapshot.p99() / 1e6, 3);
+        info["99.95%"] = trunc(snapshot.value(0.9995) / 1e6, 3);
 
         result["timings"] = info;
     }
@@ -261,13 +288,14 @@ auto engine_t::info(io::node::info::flags_t flags) const -> dynamic_t::object_t 
     result["uptime"] = uptime().count();
 
     info_visitor_t visitor(flags, &result);
-    auto _profile = profile();
+    auto profile = this->profile();
     visitor.visit(manifest());
-    visitor.visit(_profile);
+    visitor.visit(profile);
     visitor.visit(stats.requests.accepted.load(), stats.requests.rejected.load());
-    visitor.visit({ _profile.queue_limit, &queue });
-    visitor.visit(stats.quantiles());
-    visitor.visit({ _profile.pool_limit, stats.slaves.spawned, stats.slaves.crashed, &pool });
+    visitor.visit({profile.queue_limit, &queue});
+    visitor.visit(*stats.meter);
+    visitor.visit(*stats.timer);
+    visitor.visit({profile.pool_limit, stats.slaves.spawned, stats.slaves.crashed, &pool});
 
     return result;
 }
@@ -377,6 +405,8 @@ auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx,
         });
     });
 
+    stats.meter->mark();
+
     rebalance_events();
     rebalance_slaves();
 
@@ -421,29 +451,12 @@ auto engine_t::assign(slave_t& slave, load_t& load) -> void {
         return;
     }
 
-    // Attempts to inject the new channel into the slave.
-    const auto id = slave.id();
-    const auto timestamp = load.event.birthstamp;
-
-    // TODO: Race possible.
     auto self = shared_from_this();
-    slave.inject(load, [=](std::uint64_t) {
-        const auto now = std::chrono::high_resolution_clock::now();
-        const auto elapsed = std::chrono::duration<
-            double,
-            std::chrono::milliseconds::period
-        >(now - timestamp).count();
-
-        stats.timings.apply([&](stats_t::quantiles_t& timings) {
-            timings(elapsed);
-        });
-
+    auto timer = std::make_shared<metrics::timer_t::context_t>(stats.timer->context());
+    slave.inject(load, [this, self, timer](std::uint64_t) {
         // TODO: Hack, but at least it saves from the deadlock.
-        // TODO: Notify watcher about channel finish.
         loop->post(std::bind(&engine_t::rebalance_events, self));
     });
-
-    // TODO: Notify watcher about channel started.
 }
 
 auto engine_t::despawn(const std::string& id, despawn_policy_t policy) -> void {

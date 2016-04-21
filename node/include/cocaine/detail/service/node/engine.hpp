@@ -112,8 +112,8 @@ public:
     /// \param event an invocation event.
     /// \param id represents slave id to be enqueued (may be none, which means any slave).
     /// \return a tx stream.
-    auto enqueue(std::shared_ptr<api::stream_t> rx, event_t event, boost::optional<id_t> id)
-        -> std::shared_ptr<api::stream_t>;
+    auto enqueue(std::shared_ptr<api::stream_t> rx, event_t event, boost::optional<id_t> id) ->
+        std::shared_ptr<api::stream_t>;
 
     /// Tries to keep alive at least `count` workers no matter what.
     ///

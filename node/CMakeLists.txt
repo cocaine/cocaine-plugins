@@ -76,6 +76,7 @@ target_link_libraries(${PLUGIN_NAME}
     ${LibCGroup_LIBRARY}
     msgpack
     blackhole
+    metric
     cocaine-core)
 
 set(BUILD_FLAGS "-std=c++0x")

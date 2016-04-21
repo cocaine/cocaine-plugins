@@ -3,8 +3,9 @@
 #include <atomic>
 #include <cstdint>
 
-#include <boost/accumulators/framework/accumulator_set.hpp>
-#include <boost/accumulators/statistics.hpp>
+#include <metrics/accumulator/sliding/window.hpp>
+#include <metrics/meter.hpp>
+#include <metrics/timer.hpp>
 
 #include <cocaine/locked_ptr.hpp>
 
@@ -27,29 +28,13 @@ struct stats_t {
         std::atomic<std::uint64_t> crashed;
     } slaves;
 
-    /// Channel processing time quantiles (summary).
-    typedef boost::accumulators::accumulator_set<
-        double,
-        boost::accumulators::stats<
-            boost::accumulators::tag::extended_p_square
-        >
-    > quantiles_t;
+    /// EWMA rates.
+    std::unique_ptr<metrics::meter_t> meter;
 
-    synchronized<quantiles_t> timings;
+    /// Channel processing time quantiles (summary).
+    std::unique_ptr<metrics::timer<metrics::accumulator::sliding::window_t>> timer;
 
     stats_t();
-
-    struct quantile_t {
-        double probability;
-        double value;
-    };
-
-    std::vector<quantile_t>
-    quantiles() const;
-
-private:
-    const std::vector<double>&
-    probabilities() const noexcept;
 };
 
 }  // namespace cocaine
