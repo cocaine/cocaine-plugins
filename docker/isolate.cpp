@@ -279,6 +279,7 @@ docker_t::spawn(const std::string& path,
         container_handle->start(start_args);
         container_handle->attach();
 
+        handle->on_ready();
         return std::move(container_handle);
     } catch(const std::exception& e) {
         throw cocaine::error_t("{}", e.what());
