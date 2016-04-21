@@ -50,6 +50,7 @@
 #include <cocaine/unicorn/value.hpp>
 
 #include <random>
+#include <cocaine/detail/zookeeper/errors.hpp>
 
 namespace ph = std::placeholders;
 namespace bh = blackhole;
@@ -159,10 +160,32 @@ struct logging_v2_t::impl_t {
             list_scope = unicorn->children_subscribe(std::move(cb), filter_unicorn_path);
             COCAINE_LOG_DEBUG(internal_logger, "created filter in unicorn");
         } catch (const std::system_error& e) {
-            retry_timer.expires_from_now(boost::posix_time::seconds(retry_time_seconds));
-            retry_timer.async_wait([&](std::error_code) {init();});
+            if(e.code().value() != ZNODEEXISTS) {
+                retry_timer.expires_from_now(boost::posix_time::seconds(retry_time_seconds));
+                retry_timer.async_wait([&](std::error_code) { init(); });
+                COCAINE_LOG_ERROR(internal_logger,
+                                  "failed to create filter in unicorn - {}",
+                                  error::to_string(e));
+            }
+        }
+        scopes.apply([&](std::unordered_map<size_t, api::unicorn_scope_ptr>& _scopes) {
+            _scopes.erase(scope_id);
+        });
+    }
+
+    void on_filter_creation(unsigned long scope_id,
+                            unsigned int filter_id,
+                            deferred<logging::filter_t::id_type> deferred,
+                            std::future<bool> future) {
+        try {
+            future.get();
+            deferred.write(filter_id);
+            COCAINE_LOG_DEBUG(internal_logger, "created filter in unicorn");
+        } catch (const std::system_error& e) {
+            deferred.abort(e.code(), error::to_string(e));
             COCAINE_LOG_ERROR(internal_logger,
-                              "failed to create filter in unicorn - {}",
+                              "failed to create filter {} in unicorn - {}",
+                              filter_id,
                               error::to_string(e));
         }
         scopes.apply([&](std::unordered_map<size_t, api::unicorn_scope_ptr>& _scopes) {
@@ -233,11 +256,12 @@ struct logging_v2_t::impl_t {
         return result;
     }
 
-    logging::filter_t::id_type set_filter(std::string name,
+    deferred<logging::filter_t::id_type> set_filter(std::string name,
                                           logging::filter_t filter,
                                           uint64_t ttl,
                                           logging::filter_t::disposition_t disposition) {
 
+        deferred<logging::filter_t::id_type> deferred;
         deadline_t deadline(logging::filter_t::clock_t::now() + std::chrono::seconds(ttl));
         uint64_t id = (*generator.synchronize())();
         logging::filter_info_t info(std::move(filter),
@@ -249,9 +273,10 @@ struct logging_v2_t::impl_t {
         if (disposition == logging::filter_t::disposition_t::local) {
             auto metafilter = get_metafilter(info.logger_name);
             metafilter->add_filter(std::move(info));
+            deferred.write(id);
         } else if (disposition == logging::filter_t::disposition_t::cluster) {
             unsigned long scope_id = scope_counter++;
-            auto cb = std::bind(&impl_t::on_node_creation, this, scope_id, ph::_1);
+            auto cb = std::bind(&impl_t::on_filter_creation, this, scope_id, id, deferred, ph::_1);
             scopes.apply([&](std::unordered_map<size_t, api::unicorn_scope_ptr>& _scopes) {
                 _scopes[scope_id] = unicorn->create(std::move(cb),
                                                     filter_unicorn_path + format("/%llu", id),
@@ -262,7 +287,7 @@ struct logging_v2_t::impl_t {
         } else {
             BOOST_ASSERT(false);
         }
-        return id;
+        return deferred;
     }
 
 
