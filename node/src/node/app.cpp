@@ -516,7 +516,6 @@ private:
         void
         on_ready() {
             COCAINE_LOG_DEBUG(parent->log, "application has been spooled");
-            ::sleep(10);
             parent->loop->dispatch(std::bind(&app_state_t::publish, parent));
         }
 
