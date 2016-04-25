@@ -1,9 +1,6 @@
 #include "cocaine/service/node/app.hpp"
 
-#include <boost/thread/thread.hpp>
-
 #include <blackhole/logger.hpp>
-
 
 #include <cocaine/logging.hpp>
 #include <cocaine/context.hpp>
@@ -427,48 +424,34 @@ class cocaine::service::node::app_state_t:
     const profile_t  profile;
 
     std::shared_ptr<asio::io_service> loop;
-    std::unique_ptr<asio::io_service::work> work;
 
     // Bind isolation to application lifetime to ensure,
     // that isolation object is not being recreated all the times.
     api::category_traits<api::isolate_t>::ptr_type isolate;
 
-    boost::thread thread;
-
 public:
     app_state_t(context_t& context,
                 manifest_t manifest_,
                 profile_t profile_,
-                cocaine::deferred<void> deferred_):
+                cocaine::deferred<void> deferred_,
+                std::shared_ptr<asio::io_service> loop_):
         log(context.log(format("{}/app", manifest_.name))),
         context(context),
         state(new state::stopped_t),
         deferred(std::move(deferred_)),
         manifest_(std::move(manifest_)),
         profile(std::move(profile_)),
-        loop(std::make_shared<asio::io_service>()),
-        work(std::make_unique<asio::io_service::work>(*loop)),
+        loop(std::move(loop_)),
         isolate(context.repository().get<api::isolate_t>(profile.isolate.type,
                                             context,
                                             *loop,
                                             this->manifest_.name,
                                             profile.isolate.type,
                                             profile.isolate.args))
-    {
-        COCAINE_LOG_DEBUG(log, "application has initialized its internal state");
+    {}
 
-        thread = boost::thread([=] {
-            loop->run();
-        });
-    }
-
-    ~app_state_t() {
-        COCAINE_LOG_DEBUG(log, "application is destroying its internal state");
-
-        work.reset();
-        thread.join();
-
-        COCAINE_LOG_DEBUG(log, "application has destroyed its internal state");
+    auto logger() noexcept -> logging::logger_t& {
+        return *log;
     }
 
     const manifest_t&
@@ -510,7 +493,6 @@ public:
     }
 
 private:
-
     struct spool_handle_t :
         public api::spool_handle_base_t,
         public std::enable_shared_from_this<spool_handle_t>
@@ -534,6 +516,7 @@ private:
         void
         on_ready() {
             COCAINE_LOG_DEBUG(parent->log, "application has been spooled");
+            ::sleep(10);
             parent->loop->dispatch(std::bind(&app_state_t::publish, parent));
         }
 
@@ -541,7 +524,7 @@ private:
             parent(_parent)
         {}
 
-    std::shared_ptr<app_state_t> parent;
+        std::shared_ptr<app_state_t> parent;
     };
 
     void
@@ -578,13 +561,31 @@ app_t::app_t(context_t& context,
              const std::string& manifest,
              const std::string& profile,
              cocaine::deferred<void> deferred):
-    state(std::make_shared<app_state_t>(context, manifest_t(context, manifest), profile_t(context, profile), deferred))
+    loop(std::make_shared<asio::io_service>()),
+    work(std::make_unique<asio::io_service::work>(*loop)),
+    thread([&] { loop->run(); })
 {
+    state = std::make_shared<app_state_t>(
+        context,
+        manifest_t(context, manifest),
+        profile_t(context, profile),
+        deferred,
+        loop
+    );
+    COCAINE_LOG_DEBUG(state->logger(), "application has initialized its internal state");
+
     state->spool();
 }
 
 app_t::~app_t() {
+    COCAINE_LOG_DEBUG(state->logger(), "application is destroying its internal state");
+
     state->cancel(std::error_code());
+
+    work.reset();
+    thread.join();
+
+    COCAINE_LOG_DEBUG(state->logger(), "application has destroyed its internal state");
 }
 
 std::string

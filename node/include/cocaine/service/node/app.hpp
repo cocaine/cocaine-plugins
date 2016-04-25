@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include <boost/thread/thread.hpp>
+
 #include "cocaine/common.hpp"
 #include "cocaine/idl/node.hpp"
 #include "cocaine/rpc/slot/deferred.hpp"
@@ -21,6 +23,9 @@ class app_t {
     COCAINE_DECLARE_NONCOPYABLE(app_t)
 
 private:
+    std::shared_ptr<asio::io_service> loop;
+    std::unique_ptr<asio::io_service::work> work;
+    boost::thread thread;
     std::shared_ptr<app_state_t> state;
 
 public:
