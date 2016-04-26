@@ -29,6 +29,9 @@ spawn_handle_t::spawn_handle_t(std::unique_ptr<cocaine::logging::logger_t> _log,
 
 void
 spawn_handle_t::on_terminate(const std::error_code& ec, const std::string& msg) {
+    // Reset pointer to state if we could not spawn worker and did not call on_ready
+    spawning.reset();
+
     auto _slave = slave.lock();
     if(!_slave) {
         COCAINE_LOG_INFO(log, "isolation has terminated slave, but it's already gone");
