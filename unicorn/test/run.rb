@@ -6,7 +6,7 @@ Cocaine::LOG.level = Logger::ERROR
 Celluloid.logger.level = Cocaine::LOG.level
 
 ## This one is defined as hash of category name in cocaine.
-ZK_ERROR_CATEGORY = 2039545343
+ZK_ERROR_CATEGORY = 16639
 UNICORN_ERROR_CATEGORY = 11
 
 ## These are zookeeper error codes

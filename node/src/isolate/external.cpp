@@ -210,7 +210,7 @@ struct external_t::inner_t :
         connect_timer.expires_from_now(boost::posix_time::seconds(connect_timeout));
         connect_timer.async_wait([=](const std::error_code& ec){
             if(!ec) {
-                socket->cancel();
+                self_shared->socket->cancel();
             }
         });
 
@@ -227,12 +227,13 @@ struct external_t::inner_t :
         });
     }
 
-    void reconnect() {
-        auto shared_self = shared_from_this();
-        io_context.post([=]() {
-            shared_self->session.reset();
-            shared_self->connect();
-        });
+    void reconnect(const std::error_code& e) {
+        if(session) {
+            COCAINE_LOG_INFO(log, "reconnecting to external isolation daemon");
+            session->detach(e);
+            session.reset();
+            connect();
+        }
     }
 
     void on_fail(const std::error_code& ec) {
@@ -285,7 +286,7 @@ void spool_load_t::apply() {
                 COCAINE_LOG_ERROR(_inner->log, "failed to process spool request - {}",
                                   error::to_string(e));
                 handle->on_abort(e.code(), error::to_string(e));
-                _inner->reconnect();
+                _inner->reconnect(e.code());
             }
         } else {
             COCAINE_LOG_WARNING(_inner->log, "can not process spool request - cancelled");
@@ -308,7 +309,6 @@ spool_load_t::cancel() noexcept {
                 } catch(const std::system_error& e) {
                     COCAINE_LOG_WARNING(_inner->log, "could not cancel spool request: {}", error::to_string(e));
                     handle->on_abort(e.code(), error::to_string(e));
-                    _inner->reconnect();
                 }
             }
         }
@@ -329,7 +329,7 @@ spawn_load_t::apply() {
             } catch(const std::system_error& e) {
                 COCAINE_LOG_WARNING(_inner->log, "could not process spawn request: {}", error::to_string(e));
                 handle->on_terminate(e.code(), e.what());
-                _inner->reconnect();
+                _inner->reconnect(e.code());
             }
         } else {
             COCAINE_LOG_WARNING(_inner->log, "can not process spawn request - cancelled");
@@ -352,7 +352,6 @@ spawn_load_t::cancel() noexcept {
                 } catch(const std::system_error& e) {
                     COCAINE_LOG_WARNING(_inner->log, "could not process spawn kill request: {}", error::to_string(e));
                     handle->on_terminate(e.code(), error::to_string(e));
-                    _inner->reconnect();
                 }
             }
         }
