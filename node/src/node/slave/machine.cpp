@@ -227,12 +227,12 @@ void
 machine_t::migrate(std::shared_ptr<state_t> desired) {
     BOOST_ASSERT(desired);
 
-    state.apply([=](std::shared_ptr<state_t>& state){
+    state.apply([&](std::shared_ptr<state_t>& state) {
         COCAINE_LOG_DEBUG(log, "slave has changed its state from '{}' to '{}'",
             state ? state->name() : "null", desired->name()
         );
 
-        state = std::move(desired);
+        state.swap(desired);
     });
 }
 
