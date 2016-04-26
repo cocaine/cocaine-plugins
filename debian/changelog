@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.8.15) unstable; urgency=low
+
+  * Bug fix: Prevent shared_ptr leak on spawn failure
+
+ -- Anton Matveenko <antmat@me.com>  Tue, 26 Apr 2016 17:33:56 +0300
+
 cocaine-plugins (0.12.8.14) unstable; urgency=low
 
   * Bug fix: Avoid segfault and connection leak in external isolation reconnect
