@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.8.14) unstable; urgency=low
+
+  * Bug fix: Avoid segfault and connection leak in external isolation reconnect
+
+ -- Anton Matveenko <antmat@me.com>  Tue, 26 Apr 2016 13:44:56 +0300
+
 cocaine-plugins (0.12.8.13) unstable; urgency=low
 
   * Bug fix: slave internals should no longer deadlock when changing its state.
