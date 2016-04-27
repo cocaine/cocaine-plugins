@@ -217,6 +217,30 @@ public:
         info["99.95%"] = trunc(snapshot.value(0.9995) / 1e6, 3);
 
         result["timings"] = info;
+
+        dynamic_t::object_t reversed;
+        const auto& values = snapshot.values();
+
+        const auto find = [&](double ms) -> double {
+            if (values.empty()) {
+                return 0;
+            }
+
+            const auto it = std::lower_bound(values.begin(), values.end(), ms);
+            return 100.00 * std::distance(values.begin(), it) / values.size();
+        };
+
+        reversed["1ms"]    = trunc(find(1e6), 2);
+        reversed["2ms"]    = trunc(find(2e6), 2);
+        reversed["5ms"]    = trunc(find(5e6), 2);
+        reversed["10ms"]   = trunc(find(10e6), 2);
+        reversed["20ms"]   = trunc(find(20e6), 2);
+        reversed["50ms"]   = trunc(find(50e6), 2);
+        reversed["100ms"]  = trunc(find(100e6), 2);
+        reversed["500ms"]  = trunc(find(500e6), 2);
+        reversed["1000ms"] = trunc(find(1000e6), 2);
+
+        result["timings_reversed"] = reversed;
     }
 
     void
