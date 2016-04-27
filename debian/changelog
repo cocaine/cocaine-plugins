@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.8.18) unstable; urgency=low
+
+  * Feature: add reversed histogram to Application Service metrics.
+  * Bug fix: rebalance events queue on overload too.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 27 Apr 2016 14:15:09 +0300
+
 cocaine-plugins (0.12.8.17) unstable; urgency=low
 
   * Bug fix: move control and session inside handshake to prevent detach
