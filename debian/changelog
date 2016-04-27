@@ -1,6 +1,12 @@
+cocaine-plugins (0.12.8.17) unstable; urgency=low
+
+  * Bug fix: move control and session inside handshake to prevent detach
+
+ -- Anton Matveenko <antmat@me.com>  Wed, 27 Apr 2016 13:07:56 +0300
+
 cocaine-plugins (0.12.8.16) unstable; urgency=low
 
-  * Bug fix: Prevent shared_ptr leak on spawn failure
+  * Bug fix: detach session and cancel control in spawn dtor
 
  -- Anton Matveenko <antmat@me.com>  Wed, 27 Apr 2016 12:48:56 +0300
 
