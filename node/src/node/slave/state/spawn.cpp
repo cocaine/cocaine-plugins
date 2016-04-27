@@ -35,6 +35,18 @@ using asio::ip::tcp;
 spawn_t::spawn_t(std::shared_ptr<machine_t> slave_)
     : slave(std::move(slave_)), timer(slave->loop) {}
 
+spawn_t::~spawn_t() {
+    data.apply([&](data_t& data) {
+        if (data.control) {
+            data.control->cancel();
+        }
+
+        if (data.session) {
+            data.session->detach(asio::error::operation_aborted);
+        }
+    });
+}
+
 auto spawn_t::name() const noexcept -> const char* {
     return "spawning";
 }

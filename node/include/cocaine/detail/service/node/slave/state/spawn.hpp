@@ -35,6 +35,7 @@ class spawn_t : public state_t, public std::enable_shared_from_this<spawn_t> {
 
 public:
     explicit spawn_t(std::shared_ptr<machine_t> slave);
+    ~spawn_t();
 
     auto name() const noexcept -> const char*;
     auto cancel() -> void;
