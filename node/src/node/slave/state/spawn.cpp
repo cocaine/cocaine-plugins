@@ -177,7 +177,7 @@ spawn_t::on_spawn(std::chrono::high_resolution_clock::time_point start) {
             if (data.control) {
                 // We've already received handshake frame and can immediately skip handshaking
                 // state.
-                data.handshaking->activate(data.session, data.control);
+                data.handshaking->activate(std::move(data.session), std::move(data.control));
             } else {
                 data.handshaking->start(slave->profile.timeout.handshake);
             }
