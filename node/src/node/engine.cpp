@@ -316,17 +316,6 @@ auto engine_t::failover(int count) -> void {
 
 namespace {
 
-template<typename SuccCounter, typename FailCounter, typename F>
-void count_success_if(SuccCounter* succ, FailCounter* fail, F fn) {
-    try {
-        fn();
-        ++(*succ);
-    } catch (...) {
-        ++(*fail);
-        throw;
-    }
-}
-
 struct tx_stream_t : public api::stream_t {
     std::shared_ptr<client_rpc_dispatch_t> dispatch;
 
@@ -383,7 +372,7 @@ auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx,
 {
     auto tx = std::make_shared<tx_stream_t>();
 
-    count_success_if(&stats.requests.accepted, &stats.requests.rejected, [&] {
+    try {
         queue.apply([&](queue_type& queue) {
             const auto limit = profile().queue_limit;
 
@@ -403,12 +392,17 @@ auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx,
 
             queue.push_back({std::move(event), trace_t::current(), id, tx->dispatch, std::move(rx)});
         });
-    });
 
-    stats.meter->mark();
-
-    rebalance_events();
-    rebalance_slaves();
+        stats.requests.accepted++;
+        stats.meter->mark();
+        rebalance_events();
+        rebalance_slaves();
+    } catch (...) {
+        stats.requests.rejected++;
+        rebalance_events();
+        rebalance_slaves();
+        throw;
+    }
 
     return tx;
 }
