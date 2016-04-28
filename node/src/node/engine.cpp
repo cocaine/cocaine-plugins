@@ -383,16 +383,18 @@ struct rx_stream_t : public api::stream_t {
 
 } // namespace
 
-auto engine_t::enqueue(upstream<io::stream_of<std::string>::tag> downstream, event_t event,
-                       boost::optional<id_t> id) -> std::shared_ptr<client_rpc_dispatch_t> {
-    std::shared_ptr<api::stream_t> rx = std::make_shared<rx_stream_t>(std::move(downstream));
-    auto tx = enqueue(rx, std::move(event), std::move(id));
+auto engine_t::enqueue(upstream<io::stream_of<std::string>::tag> downstream,
+                       event_t event,
+                       boost::optional<id_t> id) -> std::shared_ptr<client_rpc_dispatch_t>
+{
+    const std::shared_ptr<api::stream_t> rx = std::make_shared<rx_stream_t>(std::move(downstream));
+    const auto tx = enqueue(std::move(rx), std::move(event), std::move(id));
     return std::static_pointer_cast<tx_stream_t>(tx)->dispatch;
 }
 
 auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx,
-    event_t event,
-    boost::optional<id_t> id) -> std::shared_ptr<api::stream_t>
+                       event_t event,
+                       boost::optional<id_t> id) -> std::shared_ptr<api::stream_t>
 {
     auto tx = std::make_shared<tx_stream_t>();
 
@@ -414,7 +416,13 @@ auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx,
 
             tx->dispatch = std::make_shared<client_rpc_dispatch_t>(manifest().name);
 
-            queue.push_back({std::move(event), trace_t::current(), id, tx->dispatch, std::move(rx)});
+            queue.push_back({
+                std::move(event),
+                trace_t::current(),
+                std::move(id),
+                tx->dispatch, // Explicitly copy.
+                std::move(rx)
+            });
         });
 
         stats.requests.accepted++;

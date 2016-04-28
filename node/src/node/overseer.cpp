@@ -48,12 +48,12 @@ auto overseer_t::failover(int count) -> void {
 auto overseer_t::enqueue(upstream<io::stream_of<std::string>::tag> downstream, app::event_t event,
                          boost::optional<slave::id_t> id)
     -> std::shared_ptr<client_rpc_dispatch_t> {
-    return engine->enqueue(downstream, event, id);
+    return engine->enqueue(std::move(downstream), std::move(event), std::move(id));
 }
 
 auto overseer_t::enqueue(std::shared_ptr<api::stream_t> rx, app::event_t event,
                          boost::optional<slave::id_t> id) -> std::shared_ptr<api::stream_t> {
-    return engine->enqueue(rx, event, id);
+    return engine->enqueue(std::move(rx), std::move(event), std::move(id));
 }
 
 auto overseer_t::prototype() -> io::dispatch_ptr_t {
