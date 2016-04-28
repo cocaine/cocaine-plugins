@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.8.20) unstable; urgency=low
+
+  * Feature: add worker error categories to Node Service.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 28 Apr 2016 21:34:50 +0300
+
 cocaine-plugins (0.12.8.19) unstable; urgency=low
 
   * Perf: more std::move for the Move God.
