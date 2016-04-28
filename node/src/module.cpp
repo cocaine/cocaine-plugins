@@ -4,6 +4,7 @@
 
 #include "cocaine/repository/isolate.hpp"
 #include "cocaine/service/node.hpp"
+#include "cocaine/service/node/error.hpp"
 #include "cocaine/service/node/slave/error.hpp"
 
 #include "cocaine/detail/isolate/process.hpp"
@@ -24,9 +25,13 @@ void initialize(api::repository_t& repository) {
     repository.insert<isolate::external_t>("process");
     repository.insert<isolate::external_t>("docker");
     repository.insert<isolate::external_t>("porto");
+
     error::registrar::add(error::node_category(), error::node_category_id);
     error::registrar::add(error::slave_category(), error::slave_category_id);
     error::registrar::add(error::overseer_category(), error::overseer_category_id);
+
+    error::registrar::add(node::worker_category(), node::worker_category_t::id());
+    error::registrar::add(node::worker_user_category(), node::worker_user_category_t::id());
 }
 
 }  // extern "C"
