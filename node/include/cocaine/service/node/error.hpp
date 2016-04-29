@@ -56,17 +56,17 @@ struct worker_user_category_t : public std::error_category {
     }
 };
 
-auto worker_category() -> const std::error_category& {
+inline auto worker_category() -> const std::error_category& {
     static worker_category_t category;
     return category;
 }
 
-auto worker_user_category() -> const std::error_category& {
+inline auto worker_user_category() -> const std::error_category& {
     static worker_user_category_t category;
     return category;
 }
 
-auto make_error_code(worker_errors err) -> std::error_code {
+inline auto make_error_code(worker_errors err) -> std::error_code {
     return std::error_code(static_cast<int>(err), worker_category());
 }
 
