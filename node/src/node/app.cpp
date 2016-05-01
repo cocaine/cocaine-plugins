@@ -17,6 +17,8 @@
 #include "cocaine/detail/service/node/manifest.hpp"
 #include "cocaine/detail/service/node/profile.hpp"
 
+#include <boost/thread/thread.hpp>
+
 namespace ph = std::placeholders;
 
 using namespace cocaine;
