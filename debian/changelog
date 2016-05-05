@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.8.21) unstable; urgency=low
+
+  * Fix: Rebuild with cocaine 0.12.8.11 with hpack fix.
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 5 May 2016 19:33:50 +0300
+
 cocaine-plugins (0.12.8.20) unstable; urgency=low
 
   * Feature: add worker error categories to Node Service.
