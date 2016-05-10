@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.8.22) unstable; urgency=low
+
+  * Fix: Rebuild with cocaine 0.12.8.12 with shared util lib.
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 10 May 2016 20:50:50 +0300
+
 cocaine-plugins (0.12.8.21) unstable; urgency=low
 
   * Fix: Rebuild with cocaine 0.12.8.11 with hpack fix.
