@@ -77,7 +77,8 @@ target_link_libraries(${PLUGIN_NAME}
     msgpack
     blackhole
     metric
-    cocaine-core)
+    cocaine-core
+    cocaine-io-util)
 
 set(BUILD_FLAGS "-std=c++0x")
 set(BUILD_FLAGS "${BUILD_FLAGS} -Wall")
