@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.8.23) unstable; urgency=low
+
+  * Fix: Do not terminate slave on isolation daemon disconnection. 
+
+ -- Anton Matveenko <antmat@me.com>  Wed, 11 May 2016 14:38:50 +0300
+
 cocaine-plugins (0.12.8.22) unstable; urgency=low
 
   * Fix: Rebuild with cocaine 0.12.8.12 with shared util lib.
