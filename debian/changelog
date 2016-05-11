@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.8.24) unstable; urgency=low
+
+  * Fix: Rebuild with proper metrics submodule
+
+ -- Anton Matveenko <antmat@me.com>  Wed, 11 May 2016 14:49:50 +0300
+
 cocaine-plugins (0.12.8.23) unstable; urgency=low
 
   * Fix: Do not terminate slave on isolation daemon disconnection. 
