@@ -83,7 +83,8 @@ struct spawn_dispatch_t :
     }
 
     virtual void discard(const std::error_code& ec) const {
-        spawn_handle->on_terminate(ec, "external isolation session was discarded");
+        // As a personal Boris request we do not shutdown worker on external daemon disconnection
+        // spawn_handle->on_terminate(ec, "external isolation session was discarded");
     }
 
     std::shared_ptr<api::spawn_handle_base_t> spawn_handle;
