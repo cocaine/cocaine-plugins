@@ -15,6 +15,9 @@
 
 #include <cocaine/cache.hpp>
 
+#include <cocaine/repository.hpp>
+#include <cocaine/repository/service.hpp>
+
 using namespace cocaine;
 using namespace cocaine::service;
 

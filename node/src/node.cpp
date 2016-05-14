@@ -20,20 +20,22 @@
 
 #include "cocaine/service/node.hpp"
 
-#include "cocaine/api/storage.hpp"
+#include <cocaine/api/storage.hpp>
 
-#include "cocaine/context.hpp"
-#include "cocaine/logging.hpp"
+#include <cocaine/context.hpp>
+#include <cocaine/context/signal.hpp>
+#include <cocaine/logging.hpp>
 
-#include "cocaine/traits/dynamic.hpp"
-#include "cocaine/traits/endpoint.hpp"
-#include "cocaine/traits/graph.hpp"
-#include "cocaine/traits/tuple.hpp"
-#include "cocaine/traits/vector.hpp"
+#include <cocaine/traits/dynamic.hpp>
+#include <cocaine/traits/endpoint.hpp>
+#include <cocaine/traits/graph.hpp>
+#include <cocaine/traits/tuple.hpp>
+#include <cocaine/traits/vector.hpp>
 
-#include "cocaine/detail/service/node/app.hpp"
+#include "cocaine/service/node/app.hpp"
 
-#include <blackhole/scoped_attributes.hpp>
+#include <blackhole/logger.hpp>
+#include <blackhole/scope/holder.hpp>
 
 #include <boost/range/adaptor/map.hpp>
 #include <boost/range/algorithm/copy.hpp>
@@ -50,8 +52,8 @@ namespace ph = std::placeholders;
 node_t::node_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args):
     category_type(context, asio, name, args),
     dispatch<io::node_tag>(name),
-    context(context),
-    log(context.log(name))
+    log(context.log(name)),
+    context(context)
 {
     on<io::node::start_app>(std::bind(&node_t::start_app, this, ph::_1, ph::_2));
     on<io::node::pause_app>(std::bind(&node_t::pause_app, this, ph::_1));
@@ -65,11 +67,11 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
     const auto runname = args.as_object().at("runlist", "").as_string();
 
     if(runname.empty()) {
-        context.listen(signal, asio);
+        context.signal_hub().listen(signal, asio);
         return;
     }
 
-    COCAINE_LOG_INFO(log, "reading '%s' runlist", runname);
+    COCAINE_LOG_INFO(log, "reading '{}' runlist", runname);
 
     typedef std::map<std::string, std::string> runlist_t;
     runlist_t runlist;
@@ -80,25 +82,25 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
         // TODO: Perform request to a special service, like "storage->runlist(runname)".
         runlist = storage->get<runlist_t>("runlists", runname);
     } catch(const std::system_error& err) {
-        COCAINE_LOG_WARNING(log, "unable to read '%s' runlist: %s", runname, err.what());
+        COCAINE_LOG_WARNING(log, "unable to read '{}' runlist: {}", runname, err.what());
     }
 
     if(runlist.empty()) {
-        context.listen(signal, asio);
+        context.signal_hub().listen(signal, asio);
         return;
     }
 
-    COCAINE_LOG_INFO(log, "starting %d app(s)", runlist.size());
+    COCAINE_LOG_INFO(log, "starting {} app(s)", runlist.size());
 
     std::vector<std::string> errored;
 
     for(auto it = runlist.begin(); it != runlist.end(); ++it) {
-        blackhole::scoped_attributes_t scope(*log, {{ "app", it->first }});
+        const blackhole::scope::holder_t scoped(*log, {{ "app", it->first }});
 
         try {
             start_app(it->first, it->second);
         } catch(const std::exception& e) {
-            COCAINE_LOG_WARNING(log, "unable to initialize app: %s", e.what());
+            COCAINE_LOG_WARNING(log, "unable to initialize app: {}", e.what());
             errored.push_back(it->first);
         }
     }
@@ -109,13 +111,13 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
 
         boost::spirit::karma::generate(builder, boost::spirit::karma::string % ", ", errored);
 
-        COCAINE_LOG_WARNING(log, "couldn't start %d app(s): %s", errored.size(), stream.str());
+        COCAINE_LOG_WARNING(log, "couldn't start {} app(s): {}", errored.size(), stream.str());
     }
 
-    context.listen(signal, asio);
+    context.signal_hub().listen(signal, asio);
 }
 
-node_t::~node_t() {}
+node_t::~node_t() = default;
 
 auto
 node_t::prototype() const -> const io::basic_dispatch_t&{
@@ -135,7 +137,7 @@ node_t::on_context_shutdown() {
 
 deferred<void>
 node_t::start_app(const std::string& name, const std::string& profile) {
-    COCAINE_LOG_DEBUG(log, "processing `start_app` request, app: '%s'", name);
+    COCAINE_LOG_DEBUG(log, "processing `start_app` request, app: '{}'", name);
 
     cocaine::deferred<void> deferred;
 
@@ -145,7 +147,7 @@ node_t::start_app(const std::string& name, const std::string& profile) {
         if(it != apps.end()) {
             const auto info = it->second->info(io::node::info::brief).as_object();
             throw std::system_error(error::already_started,
-                cocaine::format("app '%s' is %s", name, info["state"].as_string()));
+                cocaine::format("app '{}' is {}", name, info["state"].as_string()));
         }
 
         apps.insert({ name, std::make_shared<node::app_t>(context, name, profile, deferred) });
@@ -156,14 +158,14 @@ node_t::start_app(const std::string& name, const std::string& profile) {
 
 void
 node_t::pause_app(const std::string& name) {
-    COCAINE_LOG_DEBUG(log, "processing `pause_app` request, app: '%s'", name);
+    COCAINE_LOG_DEBUG(log, "processing `pause_app` request, app: '{}'", name);
 
     apps.apply([&](std::map<std::string, std::shared_ptr<node::app_t>>& apps) {
         auto it = apps.find(name);
 
         if(it == apps.end()) {
             throw std::system_error(error::not_running,
-                cocaine::format("app '%s' is not running", name));
+                cocaine::format("app '{}' is not running", name));
         }
 
         apps.erase(it);
@@ -194,13 +196,13 @@ node_t::info(const std::string& name, io::node::info::flags_t flags) const {
     });
 
     if (!app) {
-        throw cocaine::error_t("app '%s' is not running", name);
+        throw cocaine::error_t("app '{}' is not running", name);
     }
 
     return app->info(flags);
 }
 
-std::shared_ptr<overseer_t>
+std::shared_ptr<node::overseer_t>
 node_t::overseer(const std::string& name) const {
     auto app = apps.apply([&](const std::map<std::string, std::shared_ptr<node::app_t>>& apps) -> std::shared_ptr<node::app_t> {
         auto it = apps.find(name);
@@ -213,7 +215,7 @@ node_t::overseer(const std::string& name) const {
     });
 
     if (!app) {
-        throw cocaine::error_t("app '%s' is not running", name);
+        throw cocaine::error_t("app '{}' is not running", name);
     }
 
     return app->overseer();

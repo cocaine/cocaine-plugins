@@ -4,15 +4,22 @@ PROJECT(COCAINE-PLUGINS)
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
+# Choose new behaviour for CMP0042.
+# See http://www.cmake.org/cmake/help/v3.0/policy/CMP0042.html for more details.
+if (POLICY CMP0042)
+	cmake_policy(SET CMP0042 NEW)
+endif (POLICY CMP0042)
+
 OPTION(CACHE "Build LRU Cache plugin" ON)
 OPTION(CHRONO "Build Chrono Service plugin" ON)
 OPTION(DOCKER "Build Docker Isolation plugin" ON)
 OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
+OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
-OPTION(MONGO "Build MongoDB Storage plugin" OFF)
+OPTION(LOGGING "Build logging v2 service plugin" ON)
+OPTION(MONGO "Build MongoDB Storage plugin" ON)
 OPTION(NODE "Build Node service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
-OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(UNICORN "Build Unified configuration service plugin" ON)
 
 # Include our CMake libraries.
@@ -39,6 +46,7 @@ INCLUDE_DIRECTORIES(BEFORE
     SYSTEM
     ${PROJECT_SOURCE_DIR}/foreign/asio/asio/include
     ${PROJECT_SOURCE_DIR}/foreign/blackhole/src
+    ${PROJECT_SOURCE_DIR}/foreign/metrics/include
     ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include)
 
 LINK_DIRECTORIES(
@@ -53,10 +61,12 @@ SET(PLUGINS
     elasticsearch
     graphite
     ipvs
+    logging
     mongo
     node
     unicorn
-    urlfetch)
+    urlfetch
+)
 
 IF("${CMAKE_SHARED_LIBRARY_SUFFIX}" STREQUAL "")
     SET(COCAINE_PLUGIN_SUFFIX ".cocaine-plugin")
@@ -65,6 +75,10 @@ ELSE()
 ENDIF()
 
 SET(PLUGINS_VERSION 3)
+
+SET(METRICS_BUILD_STATIC ON CACHE BOOL "Build the Metrics library as static")
+
+ADD_SUBDIRECTORY(foreign/metrics)
 
 FOREACH(PLUGIN ${PLUGINS})
     STRING(TOUPPER ${PLUGIN} OPTION_NAME)

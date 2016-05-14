@@ -17,6 +17,8 @@
 #include <cocaine/dynamic.hpp>
 #include <cocaine/context.hpp>
 
+#include <blackhole/logger.hpp>
+
 namespace ph = std::placeholders;
 
 namespace cocaine { namespace service {
@@ -51,7 +53,7 @@ void graphite_t::graphite_sender_t::send() {
 void graphite_t::graphite_sender_t::on_connect(const asio::error_code& ec) {
     if(ec) {
         COCAINE_LOG_WARNING(parent->log,
-            "Could not send %lli metrics to graphite. Could not open socket:%s",
+            "Could not send {} metrics to graphite. Could not open socket: {}",
             buffer.size(),
             ec.message().c_str()
         );
@@ -69,13 +71,13 @@ void graphite_t::graphite_sender_t::on_connect(const asio::error_code& ec) {
 void graphite_t::graphite_sender_t::on_send(const asio::error_code& ec) {
     if(ec) {
         COCAINE_LOG_WARNING(parent->log,
-            "Could not send %lli metrics to graphite. Could not send:%s",
+            "Could not send {} metrics to graphite. Could not send: {}",
             buffer.size(),
             ec.message().c_str()
         );
     }
     else {
-        COCAINE_LOG_DEBUG(parent->log, "Successfully sent %lli metrics", buffer.size());
+        COCAINE_LOG_DEBUG(parent->log, "Successfully sent {} metrics", buffer.size());
     }
 }
 
@@ -132,7 +134,7 @@ void graphite_t::on_send_bulk(const graphite::metric_pack_t& metrics) {
 void graphite_t::send_by_timer(const asio::error_code& error) {
     if(error) {
         //Do not reset timer as it was reset by send
-        COCAINE_LOG_DEBUG(log, "Timer: %s", error.message().c_str());
+        COCAINE_LOG_DEBUG(log, "Timer: {}", error.message().c_str());
     }
     else {
         COCAINE_LOG_DEBUG(log, "Sending metrics by timer");

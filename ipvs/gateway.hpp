@@ -23,6 +23,14 @@
 
 #include <cocaine/api/gateway.hpp>
 
+namespace cocaine { namespace error {
+auto
+ipvs_category() -> const std::error_category& {
+    static ipvs_category_t instance;
+    return instance;
+}
+}}
+
 namespace cocaine { namespace gateway {
 
 class ipvs_config_t
@@ -41,7 +49,7 @@ class ipvs_t:
 
     context_t& m_context;
 
-    const std::unique_ptr<logging::log_t> m_log;
+    const std::unique_ptr<logging::logger_t> m_log;
     const ipvs_config_t m_cfg;
 
     // Local endpoints to bind virtual services on.

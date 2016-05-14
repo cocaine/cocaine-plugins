@@ -19,8 +19,12 @@
 */
 
 #include "isolate.hpp"
+#include "../node/include/cocaine/detail/isolate/fetcher.hpp"
 
 #include <cocaine/context.hpp>
+#include <cocaine/context/config.hpp>
+#include <cocaine/dynamic.hpp>
+#include <cocaine/errors.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/memory.hpp>
 
@@ -34,6 +38,8 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <blackhole/logger.hpp>
+
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -46,18 +52,19 @@ namespace fs = boost::filesystem;
 namespace {
 
 struct container_handle_t:
-    public api::handle_t
+    public api::cancellation_t
 {
     COCAINE_DECLARE_NONCOPYABLE(container_handle_t)
 
-    container_handle_t(const docker::container_t& container):
+    container_handle_t(const docker::container_t& container, std::shared_ptr<fetcher_t> _fetcher):
+        fetcher(std::move(_fetcher)),
         m_container(container),
-        m_terminated(false)
+        m_terminated()
     { }
 
     virtual
    ~container_handle_t() {
-        terminate();
+        cancel();
     }
 
     void
@@ -68,12 +75,13 @@ struct container_handle_t:
     void
     attach() {
         m_connection = m_container.attach();
+        fetcher->assign(m_connection.fd());
     }
 
     virtual
     void
-    terminate() {
-        if(!m_terminated) {
+    cancel() noexcept {
+        if(m_terminated.test_and_set()) {
             try {
                 m_container.kill();
             } catch(...) {
@@ -85,27 +93,22 @@ struct container_handle_t:
             } catch (...) {
                 // pass
             }
-
-            m_terminated = true;
+            fetcher->close();
         }
     }
 
-    virtual
-    int
-    stdout() const {
-        return m_connection.fd();
-    }
-
 private:
+    std::shared_ptr<fetcher_t> fetcher;
     docker::container_t m_container;
     docker::connection_t m_connection;
-    bool m_terminated;
+    std::atomic_flag m_terminated;
 };
 
 } // namespace
 
-docker_t::docker_t(context_t& context,  asio::io_service& io_context, const std::string& name, const dynamic_t& args):
-    category_type(context, io_context, name, args),
+docker_t::docker_t(context_t& context,  asio::io_service& io_context, const std::string& name, const std::string& type, const dynamic_t& args):
+    category_type(context, io_context, name, type, args),
+    m_context(context),
     m_log(context.log("app/" + name, {{"isolate", "docker"}})),
     m_do_pool(false),
     m_docker_client(
@@ -115,7 +118,8 @@ docker_t::docker_t(context_t& context,  asio::io_service& io_context, const std:
 {
     try {
         const auto& config = args.as_object();
-        m_runtime_path = config.at("runtime-path", "/run/cocaine").as_string();
+        // TODO (@easfronov): in 12.7 take this default path from the profile.
+        m_runtime_path = config.at("runtime-path", context.config().path().runtime()).as_string();
 
         if(config.count("registry") > 0) {
             m_do_pool = true;
@@ -178,7 +182,7 @@ docker_t::docker_t(context_t& context,  asio::io_service& io_context, const std:
         m_run_config.AddMember("WorkingDir", "/", m_json_allocator);
         m_run_config.AddMember("NetworkMode", m_network_mode.data(), m_json_allocator);
     } catch(const std::exception& e) {
-        throw cocaine::error_t("%s", e.what());
+        throw cocaine::error_t("{}", e.what());
     }
 }
 
@@ -186,16 +190,27 @@ docker_t::~docker_t() {
     // pass
 }
 
-void
-docker_t::spool() {
+std::unique_ptr<api::cancellation_t>
+docker_t::spool(std::shared_ptr<api::spool_handle_base_t> handler) {
     if(m_do_pool) {
-        m_docker_client.pull_image(m_image, m_tag);
+        try {
+            m_docker_client.pull_image(m_image, m_tag);
+            handler->on_ready();
+        } catch (const std::system_error& e) {
+            handler->on_abort(e.code(), e.what());
+        }
     }
+
+    // No cancellation here, lads.
+    return std::unique_ptr<api::cancellation_t>(new api::cancellation_t());
 }
 
-std::unique_ptr<api::handle_t>
-docker_t::spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment) {
-    std::unique_ptr<container_handle_t> handle;
+std::unique_ptr<api::cancellation_t>
+docker_t::spawn(const std::string& path,
+      const api::args_t& args,
+      const api::env_t& environment,
+      std::shared_ptr<api::spawn_handle_base_t> handle)
+{
     try {
         // This is total bullshit, but we need to fully rework docker plugin.
         std::lock_guard<std::mutex> guard(spawn_lock);
@@ -234,9 +249,12 @@ docker_t::spawn(const std::string& path, const api::string_map_t& args, const ap
             }
         }
 
+        std::unique_ptr<container_handle_t> container_handle;
         // create container
-        handle.reset(
-            new container_handle_t(m_docker_client.create_container(m_run_config))
+        container_handle.reset(
+            new container_handle_t(m_docker_client.create_container(m_run_config),
+                                   std::make_unique<fetcher_t>(get_io_service(), handle, m_context.log("docker_fetcher"))
+            )
         );
 
         rapidjson::Value start_args;
@@ -258,11 +276,11 @@ docker_t::spawn(const std::string& path, const api::string_map_t& args, const ap
         start_args.AddMember("CapAdd", m_additional_capabilities, m_json_allocator);
         start_args.AddMember("NetworkMode", m_network_mode.data(), m_json_allocator);
 
-        handle->start(start_args);
-        handle->attach();
+        container_handle->start(start_args);
+        container_handle->attach();
 
-        return std::move(handle);
+        return std::move(container_handle);
     } catch(const std::exception& e) {
-        throw cocaine::error_t("%s", e.what());
+        throw cocaine::error_t("{}", e.what());
     }
 }

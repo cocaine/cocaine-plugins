@@ -29,7 +29,7 @@ namespace cocaine { namespace storage {
 class mongo_storage_t:
     public api::storage_t
 {
-    const std::unique_ptr<logging::log_t> m_log;
+    const std::unique_ptr<logging::logger_t> m_log;
 
     // Persistent DB connection. No idea if it's pooled or not.
     const std::unique_ptr<mongo::DBClientBase> m_client;

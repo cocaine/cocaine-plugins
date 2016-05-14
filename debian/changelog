@@ -1,4 +1,153 @@
-cocaine-plugins (0.12.4.1) UNRELEASED; urgency=low
+cocaine-plugins (0.12.7.5) unstable; urgency=low
+
+  * Bug fix: workers should no longer be discarded if a handshake frame was
+    received while the slave's engine is in spawning state. This can be either
+    if the runtime is overloaded or applications spawns too fast.
+  * Bug fix: application engine now should properly count spawn duration.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 01 Apr 2016 13:28:00 +0300
+
+cocaine-plugins (0.12.7.4) unstable; urgency=low
+
+  * Fix broken symlink for Node Service Package.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 16 Mar 2016 18:03:31 +0300
+
+cocaine-plugins (0.12.7.3) unstable; urgency=low
+
+  * The same as previous change, but for runtime package.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 16 Mar 2016 17:03:58 +0300
+
+cocaine-plugins (0.12.7.2) unstable; urgency=low
+
+  * Create symlinks to the Node Service dynamic library in development package.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 16 Mar 2016 16:20:36 +0300
+
+cocaine-plugins (0.12.7.1) unstable; urgency=low
+
+  * Release version.
+  * Clean up Node Service API by hiding all real details.
+  * Application service can now process tagged events.
+  * Application service can now process events with deadline policies.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 14 Mar 2016 11:54:01 +0300
+
+cocaine-plugins (0.12.6.1) unstable; urgency=low
+
+  * Release version.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 09 Mar 2016 13:44:43 +0300
+
+cocaine-plugins (0.12.6.0-alpha2) unstable; urgency=low
+
+  * Bug fix: fix billion of sign conversion warnings from Node service.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 02 Mar 2016 17:17:26 +0300
+
+cocaine-plugins (0.12.6.0-alpha1) unstable; urgency=low
+
+  * Bug fix: fix default runtime path for Docker plugin.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 29 Feb 2016 15:57:21 +0300
+
+cocaine-plugins (0.12.6.0-alpha0) unstable; urgency=low
+
+  * WTF version.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 26 Feb 2016 15:58:52 +0300
+
+cocaine-plugins (0.12.5.2) unstable; urgency=low
+
+  * Bug fix: properly close transmission side of channels when using stream API.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 02 Mar 2016 19:29:48 +0300
+
+cocaine-plugins (0.12.5.1) unstable; urgency=low
+
+  * Release version.
+
+ -- Evgeny Safronov <division494@gmail.com>  Sat, 20 Feb 2016 14:37:05 +0300
+
+cocaine-plugins (0.12.5.0-rc10) unstable; urgency=low
+
+  * Bug fix: Unicorn plugin will now use indexes in callback handler instead of
+    pointers to avoid random crashes.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 19 Feb 2016 17:00:51 +0300
+
+cocaine-plugins (0.12.5.0-rc9) unstable; urgency=low
+
+  * Bug fix: fixed deadlock in Node service while spooling applications.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 17 Feb 2016 16:07:06 +0300
+
+cocaine-plugins (0.12.5.0-rc8) unstable; urgency=low
+
+  * Bug fix: Node service will now always perform all spooling operations in a
+    separate thread that is not connected with the global thread pool.
+    This avoids the pool's thread locking, which resulted in wrong thread
+    selection for upcoming requests.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 16 Feb 2016 19:22:29 +0300
+
+cocaine-plugins (0.12.5.0-rc7) unstable; urgency=low
+
+  * Bug fix: fixed previous bug fix which itself is bugged. Now the Node service
+    dev package should contain valid include files.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 12 Feb 2016 16:55:27 +0300
+
+cocaine-plugins (0.12.5.0-rc6) unstable; urgency=low
+
+  * Bug fix: fixed install section for Node service's Debian package.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 12 Feb 2016 12:29:12 +0300
+
+cocaine-plugins (0.12.5.0-rc5) unstable; urgency=low
+
+  * Bug fix: Unicorn should now retry on failure during prefix creation.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 11 Feb 2016 15:12:29 +0300
+
+cocaine-plugins (0.12.5.0-rc4) unstable; urgency=low
+
+  * Bug fix: fixed all invalid logging patterns.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 09 Feb 2016 17:43:24 +0300
+
+cocaine-plugins (0.12.5.0-rc3) unstable; urgency=low
+
+  * Feature: add Echo helper plugin for testing and benchmarking reasons.
+  * Bug fix: prevent always throwing invalid state error while obtaining an
+    overseer from application via Node service.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 09 Feb 2016 16:45:19 +0300
+
+cocaine-plugins (0.12.5.0-rc2) unstable; urgency=low
+
+  * Plugins: fix build with the Cocaine v0.12.5.
+  * Node: clean up includes for development package.
+  * Node: now it's a shared library with SO version suffix instead of manually
+    mangled name.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 01 Feb 2016 17:43:59 +0300
+
+cocaine-plugins (0.12.5.0-rc1) unstable; urgency=low
+
+  * Migrate to the Blackhole v1.0.
+  * Unicorn has been rewritten to provide stateless API.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 19 Jan 2016 19:25:03 +0300
+
+cocaine-plugins (0.12.4.2) unstable; urgency=low
+
+  * fix(chrono): chrono now accept doubles as it supposed to do.
+
+ -- Anton Matveenko <antmat@me.com>  Wed, 25 Nov 2015 17:37:00 +0300
+
+cocaine-plugins (0.12.4.1) unstable; urgency=low
 
   * misc(node): code simplification
 

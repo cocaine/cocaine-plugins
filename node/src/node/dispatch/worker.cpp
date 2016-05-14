@@ -12,7 +12,7 @@ worker_rpc_dispatch_t::worker_rpc_dispatch_t(std::shared_ptr<stream_t> stream_, 
 {
     on<protocol::chunk>([&](const std::string& chunk) {
         try {
-            stream->write(chunk);
+            stream->write({}, chunk);
         } catch (const std::system_error&) {
             finalize(asio::error::connection_aborted);
         }
@@ -20,7 +20,7 @@ worker_rpc_dispatch_t::worker_rpc_dispatch_t(std::shared_ptr<stream_t> stream_, 
 
     on<protocol::error>([&](const std::error_code& ec, const std::string& reason) {
         try {
-            stream->error(ec, reason);
+            stream->error({}, ec, reason);
             finalize();
         } catch (const std::system_error&) {
             finalize(asio::error::connection_aborted);
@@ -29,7 +29,7 @@ worker_rpc_dispatch_t::worker_rpc_dispatch_t(std::shared_ptr<stream_t> stream_, 
 
     on<protocol::choke>([&]() {
         try {
-            stream->close();
+            stream->close({});
             finalize();
         } catch (const std::system_error&) {
             finalize(asio::error::connection_aborted);
@@ -47,7 +47,7 @@ void
 worker_rpc_dispatch_t::discard(const std::error_code& ec) {
     if (ec) {
         try {
-            stream->error(ec, "slave has been discarded");
+            stream->error({}, ec, "slave has been discarded");
         } catch (const std::exception&) {
             // Eat.
         }

@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include <blackhole/logger.hpp>
+
 #include <cocaine/logging.hpp>
 
 #include "cocaine/service/elasticsearch/global.hpp"
@@ -28,14 +30,14 @@
 namespace cocaine { namespace service {
 
 struct delete_handler_t {
-    std::shared_ptr<cocaine::logging::log_t> log;
+    std::shared_ptr<logging::logger_t> log;
 
     template<typename Deferred = cocaine::deferred<response::delete_index>>
     void
     operator()(Deferred& deferred, int code, const std::string& data) const {
         UNUSED(data);
         if (log) {
-            COCAINE_LOG_DEBUG(log, "Delete request completed [%d]", code);
+            COCAINE_LOG_DEBUG(log, "Delete request completed [{}]", code);
         }
 
         deferred.write(code == HTTP_OK || code == HTTP_ACCEPTED);

@@ -1,4 +1,4 @@
-#include "cocaine/detail/service/node/slave/error.hpp"
+#include "cocaine/service/node/slave/error.hpp"
 
 #include <string>
 
@@ -10,7 +10,7 @@ class overseer_category_t:
 public:
     const char*
     name() const noexcept {
-        return "overseer";
+        return "node.overseer";
     }
 
     std::string
@@ -32,7 +32,7 @@ class slave_category_t:
 public:
     const char*
     name() const noexcept {
-        return "slave";
+        return "node.slave";
     }
 
     std::string

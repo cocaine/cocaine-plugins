@@ -24,6 +24,8 @@
 #include <rapidjson/writer.h>
 #include <rapidjson/stringbuffer.h>
 
+#include <blackhole/logger.hpp>
+
 #include <cocaine/logging.hpp>
 #include <cocaine/traits/tuple.hpp>
 
@@ -33,19 +35,19 @@
 namespace cocaine { namespace service {
 
 struct search_handler_t {
-    std::shared_ptr<cocaine::logging::log_t> log;
+    std::shared_ptr<logging::logger_t> log;
 
     template<typename Deferred = cocaine::deferred<response::search>>
     void
     operator()(Deferred& deferred, int code, const std::string& data) const {
         if (log) {
-            COCAINE_LOG_DEBUG(log, "Search request completed [%d]", code);
+            COCAINE_LOG_DEBUG(log, "Search request completed [{}]", code);
         }
 
         rapidjson::Document root;
         root.Parse<0>(data.c_str());
         if (root.HasParseError()) {
-            deferred.abort(asio::error::operation_aborted, cocaine::format("parsing failed - %s", root.GetParseError()));
+            deferred.abort(asio::error::operation_aborted, cocaine::format("parsing failed - {}", root.GetParseError()));
             return;
         }
 
@@ -61,7 +63,7 @@ struct search_handler_t {
                 deferred.write(std::make_tuple(false, 0, std::string()));
             }
         } else {
-            std::string reason = cocaine::format("%s[%d]", root["error"].GetString(), code);
+            std::string reason = cocaine::format("{}[{}]", root["error"].GetString(), code);
             deferred.write(std::make_tuple(false, 0, reason));
         }
     }

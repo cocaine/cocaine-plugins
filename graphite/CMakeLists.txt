@@ -10,6 +10,7 @@ ADD_LIBRARY(graphite MODULE
     src/graphite)
 
 TARGET_LINK_LIBRARIES(graphite
+    blackhole
     cocaine-core
     ${Boost_LIBRARIES})
 

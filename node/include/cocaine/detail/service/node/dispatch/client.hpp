@@ -10,10 +10,9 @@
 
 #include "cocaine/idl/node.hpp"
 #include "cocaine/idl/rpc.hpp"
+#include "cocaine/service/node/forwards.hpp"
 
 namespace cocaine {
-
-class state_machine_t;
 
 /// An adapter for [Client -> Worker] message passing.
 class client_rpc_dispatch_t:
@@ -74,11 +73,15 @@ public:
     void
     discard(const std::error_code& ec);
 
-    auto stream() -> streamed<std::string>&;
+    auto write(hpack::header_storage_t headers, const std::string& data) -> void;
+    auto abort(hpack::header_storage_t headers, const std::error_code& ec, const std::string& reason) -> void;
+    auto close(hpack::header_storage_t headers) -> void;
 
 private:
     void
     finalize();
+
+    auto stream() -> streamed<std::string>&;
 };
 
 } // namespace cocaine

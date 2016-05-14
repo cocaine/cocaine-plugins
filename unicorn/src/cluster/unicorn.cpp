@@ -15,8 +15,17 @@
 
 #include "cocaine/cluster/unicorn.hpp"
 
-#include <cocaine/rpc/actor.hpp>
 #include <cocaine/context.hpp>
+#include <cocaine/errors.hpp>
+#include <cocaine/logging.hpp>
+#include <cocaine/rpc/actor.hpp>
+#include <cocaine/unicorn/value.hpp>
+
+#include <blackhole/logger.hpp>
+
+#include <boost/optional/optional.hpp>
+
+#include <zookeeper/zookeeper.h>
 
 namespace cocaine {
 
@@ -32,23 +41,23 @@ struct dynamic_converter<asio::ip::tcp::endpoint> {
         if (!from.is_array() || from.as_array().size() != 2) {
             throw std::runtime_error("invalid dynamic value for endpoint deserialization");
         }
-
-        asio::ip::tcp::endpoint result(
-            asio::ip::address::from_string(from.as_array()[0].to<std::string>()),
-            from.as_array()[1].to<unsigned short int>()
-        );
+        auto ep_pair = from.as_array();
+        if (!ep_pair[0].is_string() || !ep_pair[1].is_uint()) {
+            throw std::runtime_error("invalid dynamic value for endpoint deserialization");
+        }
+        std::string host = ep_pair[0].to<std::string>();
+        unsigned short int port = ep_pair[1].to<unsigned short int>();
+        asio::ip::tcp::endpoint result(asio::ip::address::from_string(host), port);
         return result;
     }
 
     static inline
     bool
     convertible(const dynamic_t& from) {
-        return (
-            from.is_array() &&
-            from.as_array().size() == 2 &&
-            from.as_array()[0].is_string() &&
-            (from.as_array()[1].is_uint() || from.as_array()[1].is_int())
-        );
+        return from.is_array() &&
+               from.as_array().size() == 2 &&
+               from.as_array()[0].is_string() &&
+               (from.as_array()[1].is_uint() || from.as_array()[1].is_int());
     }
 };
 
@@ -67,131 +76,20 @@ struct dynamic_constructor<asio::ip::tcp::endpoint> {
     }
 };
 
-namespace cluster {
+} // namespace cocaine
+
+namespace cocaine { namespace cluster {
+
+namespace ph = std::placeholders;
+
+typedef api::unicorn_t::response response;
+
 
 unicorn_cluster_t::cfg_t::cfg_t(const dynamic_t& args) :
     path(args.as_object().at("path", "/cocaine/discovery").as_string()),
     retry_interval(args.as_object().at("retry_interval", 1u).as_uint()),
     check_interval(args.as_object().at("check_interval", 60u).as_uint())
 {}
-
-unicorn_cluster_t::on_announce::on_announce(unicorn_cluster_t* _parent) :
-    parent(_parent)
-{}
-
-void
-unicorn_cluster_t::on_announce::write(unicorn::api_t::response::create_result&& /*result*/) {
-    COCAINE_LOG_INFO(parent->log, "announced self in unicorn");
-    parent->unicorn->subscribe(std::make_shared<on_update>(parent), parent->config.path + '/' + parent->locator.uuid());
-}
-
-void
-unicorn_cluster_t::on_announce::abort(const std::error_code& rc) {
-    //Ok for us.
-    if(rc.value() == ZNODEEXISTS) {
-        COCAINE_LOG_INFO(parent->log, "announce checked");
-        return;
-    }
-    COCAINE_LOG_ERROR(parent->log, "could not announce local services(%i): %s", rc.value(), rc.message());
-    parent->announce_timer.expires_from_now(boost::posix_time::seconds(parent->config.retry_interval));
-    parent->announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, parent, std::placeholders::_1));
-}
-
-unicorn_cluster_t::on_update::on_update(unicorn_cluster_t* _parent) :
-    parent(_parent)
-{}
-
-void
-unicorn_cluster_t::on_update::write(unicorn::api_t::response::subscribe_result&& result) {
-    //Node disappeared
-    if(result.get_version() < 0) {
-        COCAINE_LOG_ERROR(parent->log, "announce dissappeared, retrying.");
-        parent->announce();
-    }
-}
-
-void
-unicorn_cluster_t::on_update::abort(const std::error_code& rc) {
-    COCAINE_LOG_ERROR(parent->log, "announce dissappeared(%i) : %s, retrying.", rc.value(), rc.message().c_str());
-    parent->announce();
-}
-
-unicorn_cluster_t::on_fetch::on_fetch(std::string _uuid, unicorn_cluster_t* _parent) :
-    uuid(std::move(_uuid)),
-    parent(_parent)
-{}
-
-void
-unicorn_cluster_t::on_fetch::write(unicorn::api_t::response::get_result&& result) {
-    if(!result.get_value().convertible_to<std::vector<asio::ip::tcp::endpoint>>()) {
-        COCAINE_LOG_WARNING(parent->log, "invalid value for announce: %s",
-            boost::lexical_cast<std::string>(result.get_value()).c_str()
-        );
-        auto storage = parent->registered_locators.synchronize();
-        auto it = storage->find(uuid);
-        if(it != storage->end()) {
-            storage->erase(it);
-        }
-        return;
-    }
-    auto storage = parent->registered_locators.synchronize();
-    auto it = storage->find(uuid);
-    if(it == storage->end()) {
-        auto ep_vec = result.get_value().to<std::vector<asio::ip::tcp::endpoint>>();
-        parent->locator.link_node(uuid, result.get_value().to<std::vector<asio::ip::tcp::endpoint>>());
-        storage->insert(uuid);
-    }
-}
-
-void
-unicorn_cluster_t::on_fetch::abort(const std::error_code& rc) {
-    COCAINE_LOG_WARNING(parent->log, "error during fetch(%i): %s", rc.value(), rc.message().c_str());
-    auto storage = parent->registered_locators.synchronize();
-    auto it = storage->find(uuid);
-    bool drop = false;
-    if(it != storage->end()) {
-        storage->erase(it);
-        drop = true;
-    }
-    if(drop) {
-        parent->locator.drop_node(uuid);
-    }
-}
-
-unicorn_cluster_t::on_list_update::on_list_update(unicorn_cluster_t* _parent) :
-parent(_parent)
-{}
-
-void
-unicorn_cluster_t::on_list_update::write(unicorn::api_t::response::children_subscribe_result&& result) {
-    auto nodes = std::get<1>(result);
-    std::sort(nodes.begin(), nodes.end());
-    std::vector<std::string> to_delete, to_add;
-    auto storage = parent->registered_locators.synchronize();
-    std::set_difference(nodes.begin(), nodes.end(), storage->begin(), storage->end(), std::back_inserter(to_add));
-    std::set_difference(storage->begin(), storage->end(), nodes.begin(), nodes.end(), std::back_inserter(to_delete));
-    for(size_t i = 0; i < to_delete.size(); i++) {
-        parent->locator.drop_node(to_delete[i]);
-        storage->erase(to_delete[i]);
-    }
-    for(size_t i = 0; i < to_add.size(); i++) {
-        if(to_add[i] == parent->locator.uuid()) {
-            continue;
-        }
-        parent->unicorn->get(
-            std::make_shared<on_fetch>(to_add[i], parent),
-            parent->config.path + '/' + to_add[i]
-        );
-    }
-}
-
-void
-unicorn_cluster_t::on_list_update::abort(const std::error_code& rc) {
-    COCAINE_LOG_WARNING(parent->log, "failure during subscription(%i): %s, resubscribing", rc.value(), rc.message().c_str());
-    parent->subscribe_timer.expires_from_now(boost::posix_time::seconds(parent->config.retry_interval));
-    parent->subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, parent, std::placeholders::_1));
-
-}
 
 unicorn_cluster_t::unicorn_cluster_t(
     cocaine::context_t & _context,
@@ -206,15 +104,10 @@ unicorn_cluster_t::unicorn_cluster_t(
     locator(_locator),
     announce_timer(_locator.asio()),
     subscribe_timer(_locator.asio()),
-    zk_session(),
-    zk(unicorn::make_zk_config(args), zk_session),
-    unicorn(*log, zk)
+    unicorn(api::unicorn(_context, args.as_object().at("backend").as_string()))
 {
-    subscribe_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
-    subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, this, std::placeholders::_1));
-
-    announce_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
-    announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
+    subscribe();
+    announce();
 }
 
 void
@@ -225,21 +118,23 @@ unicorn_cluster_t::announce() {
         COCAINE_LOG_ERROR(log, "unable to announce local endpoints: locator is not available");
         announce_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
         announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
+        return;
     }
 
     auto cur_endpoints = actor->endpoints();
 
-    COCAINE_LOG_DEBUG(log, "going to announce self");
-    try {
-        if(!endpoints.empty() && cur_endpoints != endpoints) {
-            // Drop all ephemeral nodes, so create will succeed.
-            // It's the easiest way to drop old announces as all clients will receive a notify on delete-create.
-            auto lock = unicorn.synchronize();
-            zk.reconnect();
-        }
+    COCAINE_LOG_INFO(log, "going to announce self");
+    if(!endpoints.empty() && cur_endpoints != endpoints) {
+        // TODO: fix this case, if ever we would need it
+        // This can happen only if actor endpoints have changed
+        // which is not likely.
+        BOOST_ASSERT_MSG(false, "endpoints changed for locator sercice, can not comtimue, terminating" );
+        std::terminate();
+    } else {
         endpoints.swap(cur_endpoints);
-        unicorn->create(
-            std::make_shared<on_announce>(this),
+
+        create_scope = unicorn->create(
+            std::bind(&unicorn_cluster_t::on_announce_set, this, ph::_1),
             config.path + '/' + locator.uuid(),
             endpoints,
             true,
@@ -247,15 +142,6 @@ unicorn_cluster_t::announce() {
         );
         announce_timer.expires_from_now(boost::posix_time::seconds(config.check_interval));
         announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
-
-    }
-    catch(const std::system_error& e) {
-        COCAINE_LOG_ERROR(log, "failure during announce(%i): %s", e.code().value(), e.what());
-        announce_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
-        announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
-        // Reconnect to prevent cases when is_unrecoverable returns false all the times, but we still get connection error.
-        auto lock = unicorn.synchronize();
-        zk.reconnect();
     }
 }
 
@@ -274,25 +160,133 @@ void unicorn_cluster_t::on_subscribe_timer(const std::error_code& ec) {
     //else timer was reset somewhere else
 }
 
-void
-unicorn_cluster_t::subscribe() {
+void unicorn_cluster_t::on_announce_set(std::future<api::unicorn_t::response::create> future) {
     try {
-        unicorn->children_subscribe(
-            std::make_shared<on_list_update>(this),
-            config.path
-        );
-        subscribe_timer.expires_from_now(boost::posix_time::seconds(config.check_interval));
-        subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, this, std::placeholders::_1));
-        COCAINE_LOG_DEBUG(log, "subscribed for updates on %s", config.path.c_str());
-
+        future.get();
+        COCAINE_LOG_INFO(log, "announced self in unicorn");
+        auto cb = std::bind(&unicorn_cluster_t::on_announce_checked, this, ph::_1);
+        auto path = config.path + '/' + locator.uuid();
+        subscribe_scope = unicorn->subscribe(std::move(cb), path);
+    } catch (const std::system_error& e) {
+        if(e.code().value() == ZNODEEXISTS) {
+            COCAINE_LOG_INFO(log, "announce checked");
+            return;
+        }
+        COCAINE_LOG_ERROR(log, "could not announce local services: {} ", error::to_string(e));
+        announce_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
+        announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
     }
-    catch(const std::system_error& e) {
-        COCAINE_LOG_ERROR(log, "failure during subscription(%i): %s", e.code().value(), e.what());
+};
+
+void unicorn_cluster_t::on_announce_checked (std::future<api::unicorn_t::response::subscribe> future) {
+    try {
+        if (future.get().get_version() < 0) {
+            COCAINE_LOG_ERROR(log, "announce dissappeared, retrying");
+            announce();
+        }
+    } catch (const std::system_error& e) {
+        COCAINE_LOG_ERROR(log, "announce dissappeared: {} , retrying", error::to_string(e));
+        announce();
+    }
+};
+
+void unicorn_cluster_t::on_node_list_change(std::future<api::unicorn_t::response::children_subscribe> new_list) {
+    try {
+        auto result = new_list.get();
+        auto nodes = std::get<1>(result);
+        COCAINE_LOG_INFO(log, "received uuid list from zookeeper, got {} uuids", nodes.size());
+        std::sort(nodes.begin(), nodes.end());
+        std::vector<std::string> to_delete, to_add;
+        std::set<std::string> uuids;
+        registered_locators.apply([&](locator_endpoints_t& endpoint_map) {
+            for (const auto& uuid_to_endpoints : endpoint_map) {
+                uuids.insert(uuid_to_endpoints.first);
+            }
+            std::set_difference(nodes.begin(),
+                                nodes.end(),
+                                uuids.begin(),
+                                uuids.end(),
+                                std::back_inserter(to_add));
+
+            std::set_difference(uuids.begin(),
+                                uuids.end(),
+                                nodes.begin(),
+                                nodes.end(),
+                                std::back_inserter(to_delete));
+            COCAINE_LOG_INFO(log,
+                             "{} nodes to drop and {} nodes to add (may include this)",
+                             to_delete.size(),
+                             to_add.size());
+            for (size_t i = 0; i < to_delete.size(); i++) {
+                locator.drop_node(to_delete[i]);
+                endpoint_map.erase(to_delete[i]);
+            }
+            for (size_t i = 0; i < to_add.size(); i++) {
+                endpoint_map[to_add[i]] = {};
+                auto callback = std::bind(&unicorn_cluster_t::on_node_fetch, this, to_add[i], std::placeholders::_1);
+                get_scope = unicorn->get(std::move(callback), config.path + '/' + to_add[i]);
+            }
+            COCAINE_LOG_INFO(log, "endpoint map now contains {} uuids", endpoint_map.size());
+        });
+    } catch (const std::system_error& e) {
+        COCAINE_LOG_WARNING(log, "failure during subscription: {} , resubscribing", error::to_string(e));
         subscribe_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
         subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, this, std::placeholders::_1));
-        // Reconnect to prevent cases when is_unrecoverable returns false all the times, but we still get connection error.
-        auto lock = unicorn.synchronize();
-        zk.reconnect();
     }
 }
+
+void unicorn_cluster_t::on_node_fetch(const std::string& uuid, std::future<api::unicorn_t::response::get> node_endpoints) {
+    try {
+        auto result = node_endpoints.get();
+        COCAINE_LOG_INFO(log, "fetched {} node's endpoint from zookeeper", uuid);
+        std::vector<asio::ip::tcp::endpoint> fetched_endpoints;
+        if (result.get_value().convertible_to<std::vector<asio::ip::tcp::endpoint>>()) {
+            fetched_endpoints = result.get_value().to<std::vector<asio::ip::tcp::endpoint>>();
+        }
+        if (fetched_endpoints.empty()) {
+            COCAINE_LOG_WARNING(log, "invalid value for announce: {}",
+                                boost::lexical_cast<std::string>(result.get_value()).c_str()
+            );
+            registered_locators.apply([&](locator_endpoints_t& endpoint_map) {
+                endpoint_map.erase(uuid);
+            });
+        } else {
+            registered_locators.apply([&](locator_endpoints_t& endpoint_map) {
+                auto& cur_endpoints = endpoint_map[uuid];
+                if (cur_endpoints.empty()) {
+                    cur_endpoints = fetched_endpoints;
+                    if (uuid != locator.uuid()) {
+                        COCAINE_LOG_INFO(log, "linking {} node", uuid);
+                        locator.link_node(uuid, fetched_endpoints);
+                    }
+                } else {
+                    COCAINE_LOG_WARNING(log, "received announce on existing uuid");
+                }
+            });
+        }
+    } catch (const std::system_error& e) {
+        COCAINE_LOG_WARNING(log, "error during fetch: {} ", error::to_string(e));
+        registered_locators.apply([&](locator_endpoints_t& endpoint_map) {
+            auto it = endpoint_map.find(uuid);
+            if (it != endpoint_map.end()) {
+                if (!it->second.empty()) {
+                    locator.drop_node(uuid);
+                }
+                endpoint_map.erase(it);
+            }
+        });
+    }
+}
+
+void
+unicorn_cluster_t::subscribe() {
+    children_subscribe_scope = unicorn->children_subscribe(
+        std::bind(&unicorn_cluster_t::on_node_list_change, this, std::placeholders::_1),
+        config.path
+    );
+    subscribe_timer.expires_from_now(boost::posix_time::seconds(config.check_interval));
+    subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, this, std::placeholders::_1));
+    COCAINE_LOG_INFO(log, "subscribed for updates on path {} (may be prefixed)", config.path);
+}
+
 }}

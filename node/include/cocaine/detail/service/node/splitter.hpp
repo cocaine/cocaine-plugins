@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include <boost/optional.hpp>
+#include <boost/optional/optional.hpp>
 
 class splitter_t {
 public:

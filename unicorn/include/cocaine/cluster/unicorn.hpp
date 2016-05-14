@@ -13,20 +13,21 @@
 * GNU General Public License for more details.
 */
 
-#ifndef COCAINE_UNICORN_CLUSTER_HPP
-#define COCAINE_UNICORN_CLUSTER_HPP
+#pragma once
 
-#include "cocaine/api/cluster.hpp"
-#include "cocaine/unicorn.hpp"
+#include <cocaine/api/cluster.hpp>
+#include <cocaine/api/unicorn.hpp>
+#include <cocaine/forwards.hpp>
+#include <cocaine/locked_ptr.hpp>
 
-#include <cocaine/context.hpp>
-
+#include <set>
 namespace cocaine { namespace cluster {
 
 class unicorn_cluster_t:
     public api::cluster_t
 {
 public:
+
     struct cfg_t {
         cfg_t(const dynamic_t& args);
 
@@ -34,76 +35,15 @@ public:
         size_t retry_interval;
         size_t check_interval;
     };
+
     unicorn_cluster_t(context_t& context, interface& locator, const std::string& name, const dynamic_t& args);
 
-    struct on_announce:
-        public unicorn::writable_adapter_base_t<unicorn::api_t::response::create_result>,
-        public std::enable_shared_from_this<on_announce>
-    {
-        on_announce(unicorn_cluster_t* _parent);
-
-        virtual void
-        write(unicorn::api_t::response::create_result&& result);
-
-        using unicorn::writable_adapter_base_t<unicorn::api_t::response::create_result>::abort;
-
-        virtual void
-        abort(const std::error_code& ec);
-
-        unicorn_cluster_t* parent;
-    };
-
-    struct on_update:
-        public unicorn::writable_adapter_base_t<unicorn::api_t::response::subscribe_result>,
-        public std::enable_shared_from_this<on_update>
-    {
-        on_update(unicorn_cluster_t* _parent);
-
-        virtual void
-        write(unicorn::api_t::response::subscribe_result&& result);
-
-        using unicorn::writable_adapter_base_t<unicorn::api_t::response::subscribe_result>::abort;
-
-        virtual void
-        abort(const std::error_code& ec);
-
-        unicorn_cluster_t* parent;
-    };
-
-    struct on_fetch :
-        public unicorn::writable_adapter_base_t<unicorn::api_t::response::get_result>
-    {
-        on_fetch(std::string uuid, unicorn_cluster_t* _parent);
-
-        virtual void
-        write(unicorn::api_t::response::get_result&& result);
-
-        using unicorn::writable_adapter_base_t<unicorn::api_t::response::get_result>::abort;
-
-        virtual void
-        abort(const std::error_code& ec);
-
-        std::string uuid;
-        unicorn_cluster_t* parent;
-    };
-
-    struct on_list_update :
-        public unicorn::writable_adapter_base_t<unicorn::api_t::response::children_subscribe_result>
-    {
-        on_list_update(unicorn_cluster_t* _parent);
-
-        virtual void
-        write(unicorn::api_t::response::children_subscribe_result&& result);
-
-        using unicorn::writable_adapter_base_t<unicorn::api_t::response::children_subscribe_result>::abort;
-
-        virtual void
-        abort(const std::error_code& ec);
-
-        unicorn_cluster_t* parent;
-    };
-
 private:
+    struct on_announce;
+    struct on_update;
+    struct on_fetch;
+    struct on_list_update;
+
     void
     announce();
 
@@ -116,19 +56,29 @@ private:
     void
     on_subscribe_timer(const std::error_code& ec);
 
-    std::shared_ptr<cocaine::logging::log_t> log;
+    void
+    on_node_list_change(std::future<api::unicorn_t::response::children_subscribe> new_list);
+
+    void
+    on_node_fetch(const std::string& uuid, std::future<api::unicorn_t::response::get> node_endpoints);
+
+    void
+    on_announce_set(std::future<api::unicorn_t::response::create> future);
+
+    void
+    on_announce_checked(std::future<api::unicorn_t::response::subscribe> future);
+
+    std::shared_ptr<logging::logger_t> log;
     cfg_t config;
     cocaine::context_t& context;
     cluster_t::interface& locator;
     std::vector<asio::ip::tcp::endpoint> endpoints;
     asio::deadline_timer announce_timer;
     asio::deadline_timer subscribe_timer;
-    zookeeper::session_t zk_session;
-    zookeeper::connection_t zk;
-    synchronized<unicorn::zookeeper_api_t> unicorn;
-    synchronized<std::set<std::string>> registered_locators;
+    api::unicorn_ptr unicorn;
+    api::unicorn_scope_ptr create_scope, subscribe_scope, children_subscribe_scope, get_scope;
+    typedef std::map<std::string, std::vector<asio::ip::tcp::endpoint>> locator_endpoints_t;
+    synchronized<locator_endpoints_t> registered_locators;
 };
 
 }}
-
-#endif

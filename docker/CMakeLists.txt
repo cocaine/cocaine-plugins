@@ -8,6 +8,7 @@ LINK_DIRECTORIES(
     ${LIBCURL_LIBRARY_DIRS})
 
 ADD_LIBRARY(docker MODULE
+    ../node/src/isolate/fetcher.cpp #ugly hack, but as we don't support docker plugin any more - it's ok.
     http
     docker_client
     module
@@ -15,6 +16,7 @@ ADD_LIBRARY(docker MODULE
 
 TARGET_LINK_LIBRARIES(docker
     cocaine-core
+    blackhole
     ${Boost_LIBRARIES}
     curl)
 

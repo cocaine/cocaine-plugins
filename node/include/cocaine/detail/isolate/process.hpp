@@ -27,10 +27,6 @@
 
 #include <boost/filesystem/path.hpp>
 
-#ifdef COCAINE_ALLOW_CGROUPS
-struct cgroup;
-#endif
-
 namespace cocaine { namespace isolate {
 
 class process_t:
@@ -39,40 +35,31 @@ class process_t:
     context_t& m_context;
     asio::io_service& io_context;
 
-    const std::unique_ptr<logging::log_t> m_log;
+    const std::unique_ptr<logging::logger_t> m_log;
 
     const std::string m_name;
     const boost::filesystem::path m_working_directory;
     const uint64_t m_kill_timeout;
 
-#ifdef COCAINE_ALLOW_CGROUPS
-    cgroup* m_cgroup;
-#endif
+    // Only used when built with cgroup support
+    void* m_cgroup;
 
 public:
-    process_t(context_t& context, asio::io_service& io_context, const std::string& name, const dynamic_t& args);
+    process_t(context_t& context, asio::io_service& io_context, const std::string& name, const std::string& type, const dynamic_t& args);
 
     virtual
    ~process_t();
 
     virtual
-    void
-    spool();
+    std::unique_ptr<api::cancellation_t>
+    spool(std::shared_ptr<api::spool_handle_base_t> handler);
 
     virtual
-    std::unique_ptr<api::handle_t>
-    spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment);
+    std::unique_ptr<api::cancellation_t>
+    spawn(const std::string& path, const api::args_t& args, const api::env_t& environment,
+                std::shared_ptr<api::spawn_handle_base_t>);
 };
 
 }} // namespace cocaine::isolate
-
-#ifdef COCAINE_ALLOW_CGROUPS
-namespace cocaine { namespace error {
-
-auto
-cgroup_category() -> const std::error_category&;
-
-}} // namespace cocaine::error
-#endif
 
 #endif

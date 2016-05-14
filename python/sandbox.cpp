@@ -100,7 +100,7 @@ cocaine::sandbox::exception() {
     tracked_object_t message(PyObject_Str(value));
 
     return cocaine::format(
-        "uncaught exception %s: %s",
+        "uncaught exception {}: {}",
         PyString_AsString(name),
         PyString_AsString(message)
     );
@@ -112,7 +112,7 @@ python_t::python_t(context_t& context,
                    const std::string& spool):
     category_type(context, name, args, spool),
     m_context(context),
-    m_log(new logging::log_t(context, cocaine::format("app/%s", name))),
+    m_log(new logging::log_t(context, cocaine::format("app/{}", name))),
     m_emitter(new event_source_t()),
     m_module(NULL),
     m_thread_state(NULL)
@@ -134,12 +134,12 @@ python_t::python_t(context_t& context,
         source /= "__init__.py";
     }
 
-    COCAINE_LOG_DEBUG(m_log, "loading the app code from %s", source.string());
+    COCAINE_LOG_DEBUG(m_log, "loading the app code from {}", source.string());
 
     boost::filesystem::ifstream input(source);
 
     if(!input) {
-        throw cocaine::error_t("unable to open '%s'", source.string());
+        throw cocaine::error_t("unable to open '{}'", source.string());
     }
 
     // System paths
@@ -250,7 +250,7 @@ python_t::python_t(context_t& context,
     );
 
     if(PyErr_Occurred()) {
-        throw cocaine::error_t("%s", exception());
+        throw cocaine::error_t("{}", exception());
     }
 
     PyObject * globals = PyModule_GetDict(m_module);
@@ -266,7 +266,7 @@ python_t::python_t(context_t& context,
     );
 
     if(PyErr_Occurred()) {
-        throw cocaine::error_t("%s", exception());
+        throw cocaine::error_t("{}", exception());
     }
 
     m_thread_state = PyEval_SaveThread();
@@ -327,11 +327,11 @@ python_t::invoke(const std::string& event,
     // Call the event handler
 
     if(!m_emitter->invoke(event, args, NULL)) {
-        throw cocaine::error_t("the '%s' event is not supported", event);
+        throw cocaine::error_t("the '{}' event is not supported", event);
     }
 
     if(PyErr_Occurred()) {
-        throw cocaine::error_t("%s", exception());
+        throw cocaine::error_t("{}", exception());
     }
 
     return downstream;

@@ -206,9 +206,11 @@ struct protocol<node_tag> {
 namespace cocaine { namespace error {
 
 enum node_errors {
+    /// Unable to add an event due to deadline. The event has expired in the queue.
     deadline_error = 1,
     resource_error,
     timeout_error,
+    invalid_assignment,
 
     /// App has been already started.
     already_started,
@@ -224,6 +226,8 @@ enum node_errors {
 
 const std::error_category&
 node_category();
+
+size_t constexpr node_category_id = 0x51FF;
 
 std::error_code
 make_error_code(node_errors code);

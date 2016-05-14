@@ -24,67 +24,92 @@
 #include <cocaine/common.hpp>
 
 #include <cocaine/locked_ptr.hpp>
-#include <cocaine/repository.hpp>
 
-#include <mutex>
+#include <map>
+#include <memory>
 
-#include <asio/io_service.hpp>
-
-namespace cocaine { namespace api {
-
-struct handle_t {
-    virtual
-   ~handle_t() {
-        // Empty.
-    }
-
-    virtual
-    void
-    terminate() = 0;
-
-    virtual
-    int
-    stdout() const = 0;
-};
-
-typedef std::map<std::string, std::string> string_map_t;
+namespace cocaine {
+namespace api {
 
 // Cancellation token.
 struct cancellation_t {
     virtual
-   ~cancellation_t() {
-        // Empty.
-    }
+    ~cancellation_t() {}
 
     virtual
     void
-    cancel() {}
+    cancel() noexcept { }
 };
+
+// Adapter to cancel shared state.
+struct cancellation_wrapper :
+    public api::cancellation_t
+{
+    cancellation_wrapper(std::shared_ptr<cancellation_t> _ptr) :
+        ptr(std::move(_ptr))
+    {}
+
+    ~cancellation_wrapper() {
+        ptr->cancel();
+    }
+
+    virtual void
+    cancel() noexcept {
+        ptr->cancel();
+    }
+
+    std::shared_ptr<cancellation_t> ptr;
+};
+
+struct spool_handle_base_t {
+    virtual
+    ~spool_handle_base_t() {}
+
+    virtual
+    void
+    on_abort(const std::error_code&, const std::string& msg) = 0;
+
+    virtual
+    void
+    on_ready() = 0;
+};
+
+struct spawn_handle_base_t {
+    virtual
+    ~spawn_handle_base_t() {}
+
+    virtual
+    void
+    on_terminate(const std::error_code&, const std::string& msg) = 0;
+
+    virtual
+    void
+    on_ready() = 0;
+
+    virtual
+    void
+    on_data(const std::string& data) = 0;
+};
+
+typedef std::map<std::string, std::string> args_t;
+typedef std::map<std::string, std::string> env_t;
 
 struct isolate_t {
     typedef isolate_t category_type;
 
     virtual
-   ~isolate_t() {
+    ~isolate_t() {
         // Empty.
     }
 
     virtual
-    void
-    spool() = 0;
+    std::unique_ptr<cancellation_t>
+    spool(std::shared_ptr<api::spool_handle_base_t> handler) = 0;
 
-    // Default implementation delegates the control flow into the blocking spool method.
     virtual
     std::unique_ptr<cancellation_t>
-    async_spool(std::function<void(const std::error_code&)> handler) {
-        spool();
-        get_io_service().post(std::bind(handler, std::error_code()));
-        return std::make_unique<cancellation_t>();
-    }
-
-    virtual
-    std::unique_ptr<handle_t>
-    spawn(const std::string& path, const string_map_t& args, const string_map_t& environment) = 0;
+    spawn(const std::string& path, const args_t& args, const env_t& environment,
+                std::shared_ptr<api::spawn_handle_base_t> handle) = 0;
 
     asio::io_service&
     get_io_service() {
@@ -92,48 +117,21 @@ struct isolate_t {
     }
 
 protected:
-    isolate_t(context_t&, asio::io_service& io_service, const std::string&, const dynamic_t& /* args */):
-        io_service(io_service)
-    {}
+    isolate_t(context_t&,
+              asio::io_service& io_service,
+              const std::string& /* manifest_name */,
+              const std::string& /* isolation_type */,
+              const dynamic_t& /* args */
+    ) :
+    io_service(io_service) { }
 
 private:
     asio::io_service& io_service;
 };
 
-template<>
-struct category_traits<isolate_t> {
-    typedef std::shared_ptr<isolate_t> ptr_type;
+typedef std::shared_ptr<isolate_t> isolate_ptr;
 
-    struct factory_type: public basic_factory<isolate_t> {
-        virtual
-        ptr_type
-        get(context_t& context, asio::io_service& io_context, const std::string& name, const dynamic_t& args) = 0;
-    };
-
-    template<class T>
-    struct default_factory: public factory_type {
-        virtual
-        ptr_type
-        get(context_t& context, asio::io_service& io_context, const std::string& name, const dynamic_t& args) {
-            ptr_type instance;
-
-            instances.apply([&](std::map<std::string, std::weak_ptr<isolate_t>>& instances) {
-                auto weak_ptr = instances[name];
-
-                if((instance = weak_ptr.lock()) == nullptr) {
-                    instance = std::make_shared<T>(context, io_context, name, args);
-                    instances[name] = instance;
-                }
-            });
-
-            return instance;
-        }
-
-    private:
-        synchronized<std::map<std::string, std::weak_ptr<isolate_t>>> instances;
-    };
-};
-
-}} // namespace cocaine::api
+}
+} // namespace cocaine::api
 
 #endif

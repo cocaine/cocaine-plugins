@@ -18,8 +18,11 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "cocaine/detail/service/node/manifest.hpp"
+#include "cocaine/service/node/manifest.hpp"
 
+#include <cocaine/context/config.hpp>
+#include <cocaine/errors.hpp>
+#include <cocaine/format.hpp>
 #include <cocaine/traits/dynamic.hpp>
 
 #include <unistd.h>
@@ -30,7 +33,7 @@ manifest_t::manifest_t(context_t& context, const std::string& name_):
     cached<dynamic_t>(context, "manifests", name_),
     name(name_)
 {
-    endpoint = cocaine::format("%s/%s.%d", context.config.path.runtime, name, ::getpid());
+    endpoint = cocaine::format("{}/{}.{}", context.config().path().runtime(), name, ::getpid());
 
     environment = as_object().at("environment", dynamic_t::object_t()).to<std::map<std::string, std::string>>();
 
@@ -40,4 +43,3 @@ manifest_t::manifest_t(context_t& context, const std::string& name_):
         throw cocaine::error_t("runnable object has not been specified");
     }
 }
-

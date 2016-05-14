@@ -23,12 +23,14 @@
 
 #include <cocaine/common.hpp>
 
+#include <system_error>
+
 struct archive;
 
 namespace cocaine { namespace isolate {
 
 class archive_t {
-    const std::unique_ptr<logging::log_t> m_log;
+    const std::unique_ptr<logging::logger_t> m_log;
 
     archive* m_archive;
 

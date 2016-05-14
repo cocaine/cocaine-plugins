@@ -20,6 +20,8 @@
 #include <boost/foreach.hpp>
 #include <boost/format.hpp>
 
+#include <blackhole/logger.hpp>
+
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/traits/tuple.hpp>
@@ -38,7 +40,7 @@ namespace ph = std::placeholders;
 class urlfetch_logger_interface : public swarm::logger_interface
 {
 public:
-    urlfetch_logger_interface(const std::shared_ptr<logging::log_t> &log) : log_(log)
+    urlfetch_logger_interface(const std::shared_ptr<logging::logger_t> &log) : log_(log)
     {
     }
 
@@ -58,9 +60,7 @@ public:
             verbosity = logging::priorities::debug;
         }
 
-        if (log_->log().verbosity() >= verbosity) {
-            COCAINE_LOG(log_, verbosity, msg);
-        }
+        COCAINE_LOG(log_, verbosity, std::string(msg));
     }
 
     virtual void reopen()
@@ -68,7 +68,7 @@ public:
     }
 
 private:
-    std::shared_ptr<logging::log_t> log_;
+    std::shared_ptr<logging::logger_t> log_;
 };
 
 urlfetch_t::urlfetch_t(context_t& context,
@@ -106,7 +106,7 @@ void urlfetch_t::run_service()
     m_service.run(error);
 
     if (error) {
-        COCAINE_LOG_DEBUG(log_, "Can not run io_service, error %s", error.message() );
+        COCAINE_LOG_DEBUG(log_, "Can not run io_service, error {}", error.message() );
     }
 }
 
@@ -114,7 +114,7 @@ namespace {
 
 struct urlfetch_get_handler {
     deferred<urlfetch_t::get_result_type> promise;
-    std::shared_ptr<logging::log_t> log_;
+    std::shared_ptr<logging::logger_t> log_;
 
     void
     operator()(const swarm::url_fetcher::response& reply,
@@ -124,14 +124,14 @@ struct urlfetch_get_handler {
         bool success = (!error && (code < 400 || code >= 600) );
 
         if (success) {
-            COCAINE_LOG_DEBUG(log_, "Downloaded successfully %s, http code %d", reply.url().to_string(), reply.code() );
+            COCAINE_LOG_DEBUG(log_, "Downloaded successfully {}, http code {}", reply.url().to_string(), reply.code() );
         } else {
-            COCAINE_LOG_DEBUG(log_, "Unable to download %s, error %s, http code %d", reply.url().to_string(), error.message(), reply.code() );
+            COCAINE_LOG_DEBUG(log_, "Unable to download {}, error {}, http code {}", reply.url().to_string(), error.message(), reply.code() );
 
             if (reply.code() == 0) {
                 // Socket-only error, no valid http response
                 promise.abort(std::make_error_code(static_cast<std::errc>(error.value())),
-                              cocaine::format("Unable to download %s, error %s",
+                              cocaine::format("Unable to download {}, error {}",
                                               reply.request().url().to_string(),
                                               error.message()));
                 return;
@@ -209,7 +209,7 @@ urlfetch_t::prepare_request(const std::string& url,
     request.set_follow_location(follow_location);
     request.set_timeout(timeout);
 
-    COCAINE_LOG_DEBUG(log_, "Downloading %s", url);
+    COCAINE_LOG_DEBUG(log_, "Downloading {}", url);
 
     BOOST_FOREACH(const auto& it, headers) {
         const auto& header_name = it.first;
@@ -222,9 +222,7 @@ urlfetch_t::prepare_request(const std::string& url,
         const auto& cookie_name = it.first;
         const auto& cookie_value = it.second;
 
-        std::string cookie_header = boost::str(boost::format("%1%=%2%") % cookie_name % cookie_value);
-
-        request_headers.add("Cookie", cookie_header);
+        request_headers.add("Cookie", cocaine::format("{}={}", cookie_name, cookie_value));
     }
 
     return request;

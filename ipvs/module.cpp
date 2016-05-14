@@ -20,6 +20,9 @@
 
 #include "gateway.hpp"
 
+#include <cocaine/repository.hpp>
+#include <cocaine/repository/gateway.hpp>
+
 using namespace cocaine;
 using namespace cocaine::gateway;
 
