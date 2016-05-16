@@ -157,7 +157,7 @@ auto machine_t::inject(load_t& load, channel_handler handler) -> std::uint64_t {
 
     auto state = *this->state.synchronize();
     auto upstream = state->inject(dispatch);
-    upstream->send<io::worker::rpc::invoke>(std::move(load.event.headers), load.event.name);
+    upstream->send<io::worker::rpc::invoke>(load.event.headers, load.event.name);
 
     channel->into_worker = load.dispatch;
     channel->from_worker = dispatch;
