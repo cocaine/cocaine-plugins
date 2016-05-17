@@ -14,6 +14,7 @@ TARGET_LINK_LIBRARIES(logging
     ${Boost_LIBRARIES}
     blackhole
     cocaine-core
+    cocaine-io-util
 )
 
 SET_TARGET_PROPERTIES(logging PROPERTIES

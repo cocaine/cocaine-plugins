@@ -16,6 +16,7 @@ ADD_LIBRARY(docker MODULE
 
 TARGET_LINK_LIBRARIES(docker
     cocaine-core
+    cocaine-io-util
     blackhole
     ${Boost_LIBRARIES}
     curl)

@@ -24,6 +24,7 @@ ADD_LIBRARY(python MODULE
 
 TARGET_LINK_LIBRARIES(python
     cocaine-core
+    cocaine-io-util
     ${PYTHON_LIBS})
 
 SET_TARGET_PROPERTIES(python PROPERTIES

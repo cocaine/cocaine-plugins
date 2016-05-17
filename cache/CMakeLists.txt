@@ -7,6 +7,7 @@ ADD_LIBRARY(cache MODULE
 
 TARGET_LINK_LIBRARIES(cache
     cocaine-core
+    cocaine-io-util
     blackhole
     ${Boost_LIBRARIES})
 

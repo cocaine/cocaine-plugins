@@ -27,6 +27,7 @@ TARGET_LINK_LIBRARIES(unicorn
     msgpack
     blackhole
     cocaine-core
+    cocaine-io-util
     zookeeper_mt
     ${Boost_LIBRARIES})
 

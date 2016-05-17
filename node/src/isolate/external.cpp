@@ -82,7 +82,7 @@ struct spawn_dispatch_t :
         spawn_handle->on_terminate(ec, msg);
     }
 
-    virtual void discard(const std::error_code& ec) const {
+    virtual void discard(const std::error_code&) const {
         // As a personal Boris request we do not shutdown worker on external daemon disconnection
         // spawn_handle->on_terminate(ec, "external isolation session was discarded");
     }
@@ -169,6 +169,7 @@ struct external_t::inner_t :
     std::atomic<id_t> cur_id;
     std::shared_ptr<dispatch<io::context_tag>> signal_dispatch;
     bool prepared;
+    bool connecting;
 
 
     std::vector<std::shared_ptr<spool_load_t>> spool_queue;
@@ -183,7 +184,8 @@ struct external_t::inner_t :
         args(_args),
         log(context.log("universal_isolate/"+_name)),
         signal_dispatch(std::make_shared<dispatch<io::context_tag>>("universal_isolate_signal")),
-        prepared(false)
+        prepared(false),
+        connecting(false)
     {
         signal_dispatch->on<io::context::prepared>([&](){
             prepared = true;
@@ -197,18 +199,19 @@ struct external_t::inner_t :
 
     void connect() {
         socket.reset(new asio::ip::tcp::socket(io_context));
+        connecting = true;
         auto ep = args.as_object().at("external_isolation_endpoint", dynamic_t::empty_object).as_object();
         tcp::endpoint endpoint(
             asio::ip::address::from_string(ep.at("host", "127.0.0.1").as_string()),
             static_cast<unsigned short>(ep.at("port", 29042u).as_uint())
         );
 
-        auto connect_timeout = args.as_object().at("connect_timeout", 5u).as_uint();
+        auto connect_timeout_ms = args.as_object().at("connect_timeout_ms", 5000u).as_uint();
 
         COCAINE_LOG_INFO(log, "connecting to external isolation daemon to {}", boost::lexical_cast<std::string>(endpoint));
         auto self_shared = shared_from_this();
 
-        connect_timer.expires_from_now(boost::posix_time::seconds(connect_timeout));
+        connect_timer.expires_from_now(boost::posix_time::milliseconds(connect_timeout_ms));
         connect_timer.async_wait([=](const std::error_code& ec){
             if(!ec) {
                 self_shared->socket->cancel();
@@ -216,6 +219,7 @@ struct external_t::inner_t :
         });
 
         socket->async_connect(endpoint, [=](const std::error_code& ec) {
+            connecting = false;
             if (connect_timer.cancel() && !ec) {
                 COCAINE_LOG_INFO(log, "connected to isolation daemon");
                 session = context.engine().attach(std::move(socket), nullptr);
@@ -229,11 +233,25 @@ struct external_t::inner_t :
     }
 
     void reconnect(const std::error_code& e) {
-        if(session) {
-            COCAINE_LOG_INFO(log, "reconnecting to external isolation daemon");
-            session->detach(e);
-            session.reset();
-            connect();
+        if(!connecting) {
+            connecting = true;
+            if(session) {
+                session->detach(e);
+                session.reset();
+            }
+
+            auto reconnect_timeout_ms = args.as_object().at("reconnect_timeout_ms", 3000u).as_uint();
+            COCAINE_LOG_INFO(log, "queueing reconnect to external isolation daemon after {} ms", reconnect_timeout_ms);
+
+            connect_timer.expires_from_now(boost::posix_time::milliseconds(reconnect_timeout_ms));
+            std::weak_ptr<inner_t> weak_self(shared_from_this());
+            connect_timer.async_wait([=](const std::error_code&) {
+                // We don't perform error code check as nobody should cancel this timer
+                auto self = weak_self.lock();
+                if (self) {
+                    self->connect();
+                } // else application was already stopped and isolation was destroyed
+            });
         }
     }
 
@@ -379,8 +397,8 @@ external_t::spool(std::shared_ptr<api::spool_handle_base_t> handler) {
         } else {
             COCAINE_LOG_DEBUG(inner->log, "queuing spool request");
             _inner->spool_queue.push_back(load);
-            if(!_inner->session && !_inner->socket) {
-                inner->connect();
+            if(!inner->connecting && _inner->prepared) {
+                inner->reconnect(std::error_code());
             }
         }
     });
@@ -402,10 +420,10 @@ external_t::spawn(const std::string& path,
             load->apply();
         } else {
             COCAINE_LOG_DEBUG(_inner->log, "queuing spawn request");
-            if(!_inner->session && !_inner->socket) {
-                inner->connect();
-            }
             _inner->spawn_queue.push_back(load);
+            if(!inner->connecting && _inner->prepared) {
+                inner->reconnect(std::error_code());
+            }
         }
     });
     return std::unique_ptr<api::cancellation_t>(new api::cancellation_wrapper(load));

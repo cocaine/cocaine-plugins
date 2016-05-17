@@ -7,7 +7,8 @@ ADD_LIBRARY(echo MODULE
 
 TARGET_LINK_LIBRARIES(echo
     cocaine-core
-${Boost_LIBRARIES})
+    cocaine-io-util
+    ${Boost_LIBRARIES})
 
 SET_TARGET_PROPERTIES(echo PROPERTIES
     PREFIX ""

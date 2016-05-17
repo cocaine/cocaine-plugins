@@ -7,6 +7,7 @@ ADD_LIBRARY(chrono MODULE
 
 TARGET_LINK_LIBRARIES(chrono
     cocaine-core
+    cocaine-io-util
     blackhole
     ${Boost_LIBRARIES})
 

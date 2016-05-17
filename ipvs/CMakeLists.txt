@@ -9,6 +9,7 @@ ELSE()
 
     TARGET_LINK_LIBRARIES(ipvs-gateway
         cocaine-core
+        cocaine-io-util
         ipvs)
 
     SET_TARGET_PROPERTIES(ipvs-gateway PROPERTIES
