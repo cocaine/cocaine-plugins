@@ -22,7 +22,6 @@
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 #include "cocaine/detail/service/node/dispatch/handshake.hpp"
 #include "cocaine/detail/service/node/dispatch/init.hpp"
-#include "cocaine/detail/service/node/rpc/slot.hpp"
 #include "cocaine/detail/service/node/slave/control.hpp"
 
 #include "cocaine/detail/service/node/slave/load.hpp"
@@ -83,6 +82,7 @@ class control_slot_t:
             }
         }
     };
+    typedef std::vector<hpack::header_t> meta_type;
 
     typedef std::shared_ptr<const io::basic_slot<io::app::control>::dispatch_type> result_type;
 
@@ -105,6 +105,11 @@ public:
 
     boost::optional<result_type>
     operator()(tuple_type&& args, upstream_type&& upstream) {
+        return operator()({}, std::move(args), std::move(upstream));
+    }
+
+    boost::optional<result_type>
+    operator()(const meta_type&, tuple_type&& args, upstream_type&& upstream) {
         typedef io::protocol<io::event_traits<io::app::control>::upstream_type>::scope protocol;
 
         const auto dispatch = tuple::invoke(std::move(args), [&]() -> result_type {
@@ -119,14 +124,51 @@ public:
     }
 };
 
+template<class F>
+class enqueue_slot : public io::basic_slot<io::app::enqueue> {
+public:
+    typedef io::app::enqueue event_type;
+
+    typedef std::vector<hpack::header_t> meta_type;
+    typedef typename io::basic_slot<event_type>::tuple_type    tuple_type;
+    typedef typename io::basic_slot<event_type>::dispatch_type dispatch_type;
+    typedef typename io::basic_slot<event_type>::upstream_type upstream_type;
+
+private:
+    F f;
+
+public:
+    enqueue_slot(F f):
+        f(std::move(f))
+    {}
+
+    virtual
+    boost::optional<std::shared_ptr<const dispatch_type>>
+    operator()(tuple_type&& args, upstream_type&& upstream) {
+        return operator()({}, std::move(args), std::move(upstream));
+    }
+
+    virtual
+    boost::optional<std::shared_ptr<const dispatch_type>>
+    operator()(const meta_type& headers,
+               tuple_type&& args,
+               upstream_type&& upstream)
+    {
+        return f(std::move(upstream), headers, std::move(args));
+    }
+};
+
+template<typename F>
+auto make_enqueue_slot(F&& f) -> std::shared_ptr<io::basic_slot<io::app::enqueue>> {
+    return std::make_shared<enqueue_slot<F>>(std::forward<F>(f));
+}
+
 /// App dispatch, manages incoming enqueue requests. Adds them to the queue.
 ///
 /// \note lives until at least one connection left after actor has been destroyed.
 class app_dispatch_t:
     public dispatch<io::app_tag>
 {
-    typedef io::streaming_slot<io::app::enqueue> slot_type;
-
     const std::unique_ptr<logging::logger_t> log;
 
     // Yes, weak pointer here indicates about application destruction.
@@ -138,12 +180,10 @@ public:
         log(context.log(format("{}/dispatch", name))),
         overseer(overseer_)
     {
-        on<io::app::enqueue>(std::make_shared<slot_type>(
-            std::bind(&app_dispatch_t::on_enqueue, this, ph::_1, ph::_2, ph::_3)
-        ));
+        const auto enqueue = std::bind(&app_dispatch_t::on_enqueue, this, ph::_1, ph::_2, ph::_3);
+        on<io::app::enqueue>(make_enqueue_slot(std::move(enqueue)));
 
         on<io::app::info>(std::bind(&app_dispatch_t::on_info, this));
-
         on<io::app::control>(std::make_shared<control_slot_t>(overseer_, context.log(format("{}/control", name))));
     }
 
@@ -152,8 +192,15 @@ public:
     }
 
 private:
-    std::shared_ptr<const slot_type::dispatch_type>
-    on_enqueue(slot_type::upstream_type&& upstream, const std::string& event, const std::string& id) {
+    std::shared_ptr<const dispatch<io::stream_of<std::string>::tag>>
+    on_enqueue(upstream<io::stream_of<std::string>::tag>&& upstream,
+               const std::vector<hpack::header_t>& headers,
+               std::tuple<std::string, std::string> args)
+    {
+        std::string event;
+        std::string id;
+        std::tie(event, id) = args;
+
         COCAINE_LOG_DEBUG(log, "processing enqueue '{}' event", event);
 
         typedef io::protocol<io::event_traits<io::app::enqueue>::dispatch_type>::scope protocol;
@@ -161,9 +208,9 @@ private:
         try {
             if (auto overseer = this->overseer.lock()) {
                 if (id.empty()) {
-                    return overseer->o->enqueue(upstream, {event, {}}, boost::none);
+                    return overseer->o->enqueue(upstream, {event, hpack::header_storage_t(headers)}, boost::none);
                 } else {
-                    return overseer->o->enqueue(upstream, {event, {}}, service::node::slave::id_t(id));
+                    return overseer->o->enqueue(upstream, {event, hpack::header_storage_t(headers)}, service::node::slave::id_t(id));
                 }
             } else {
                 // We shouldn't close the connection here, because there possibly can be events

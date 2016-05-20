@@ -13,7 +13,6 @@
 #include "cocaine/service/node/profile.hpp"
 #include "cocaine/service/node/slave/id.hpp"
 
-#include "cocaine/detail/service/node/rpc/slot.hpp"
 #include "cocaine/detail/service/node/slave.hpp"
 #include "cocaine/detail/service/node/slave/load.hpp"
 #include "cocaine/detail/service/node/stats.hpp"

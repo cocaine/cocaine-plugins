@@ -53,7 +53,7 @@ public:
 
 private:
     void
-    finalize(const std::error_code& ec = std::error_code());
+    finalize(std::lock_guard<std::mutex>&, const std::error_code& ec = std::error_code());
 };
 
 } // namespace cocaine

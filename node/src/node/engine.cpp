@@ -20,7 +20,6 @@
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 #include "cocaine/detail/service/node/dispatch/handshake.hpp"
 #include "cocaine/detail/service/node/dispatch/worker.hpp"
-#include "cocaine/detail/service/node/rpc/slot.hpp"
 #include "cocaine/detail/service/node/slave/control.hpp"
 #include "cocaine/detail/service/node/slave/stats.hpp"
 #include "cocaine/detail/service/node/util.hpp"
@@ -361,9 +360,9 @@ struct rx_stream_t : public api::stream_t {
     typedef io::event_traits<io::worker::rpc::invoke>::upstream_type tag;
     typedef io::protocol<tag>::scope protocol;
 
-    io::streaming_slot<io::app::enqueue>::upstream_type stream;
+    upstream<io::stream_of<std::string>::tag> stream;
 
-    rx_stream_t(io::streaming_slot<io::app::enqueue>::upstream_type stream) :
+    rx_stream_t(upstream<io::stream_of<std::string>::tag> stream) :
         stream(std::move(stream))
     {}
 
@@ -470,6 +469,18 @@ auto engine_t::spawn(const id_t& id, pool_type& pool) -> void {
 
 auto engine_t::assign(slave_t& slave, load_t& load) -> void {
     trace_t::restore_scope_t scope(load.trace);
+
+    auto& event = load.event;
+
+    if (auto timeout = event.header<std::uint64_t>("request_timeout")) {
+        if (event.birthstamp + std::chrono::milliseconds(*timeout) < std::chrono::high_resolution_clock::now()) {
+            COCAINE_LOG_ERROR(log, "event {} has expired, dropping", event.name);
+            load.downstream->error({}, error::deadline_error, "the event has expired in the queue");
+            return;
+        }
+    }
+
+    // TODO: Drop due to replacement with header.
     if (load.event.deadline && *load.event.deadline < std::chrono::high_resolution_clock::now()) {
         COCAINE_LOG_DEBUG(log, "event has expired, dropping");
 

@@ -206,9 +206,10 @@ struct protocol<node_tag> {
 namespace cocaine { namespace error {
 
 enum node_errors {
-    /// Unable to add an event due to deadline. The event has expired in the queue.
+    /// Event has expired in the queue due to deadline.
     deadline_error = 1,
     resource_error,
+    /// Event has timed out while communicating with worker.
     timeout_error,
     invalid_assignment,
 

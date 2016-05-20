@@ -9,6 +9,7 @@
 #include <cocaine/context.hpp>
 #include <cocaine/rpc/actor.hpp>
 
+#include "cocaine/api/stream.hpp"
 #include "cocaine/api/isolate.hpp"
 
 #include "cocaine/service/node/manifest.hpp"
@@ -166,6 +167,38 @@ auto machine_t::inject(load_t& load, channel_handler handler) -> std::uint64_t {
         channels[id] = channel;
         return channels.size();
     });
+
+    if (auto timeout = load.event.header<std::uint64_t>("request_timeout")) {
+        // May be negative. Probably, it's OK for boost::asio.
+        const auto duration = std::chrono::duration_cast<
+            std::chrono::milliseconds
+        >(load.event.birthstamp + std::chrono::milliseconds(*timeout) - std::chrono::high_resolution_clock::now()).count();
+
+        auto into_worker_dispatch = load.dispatch;
+        auto from_worker_dispatch = dispatch;
+
+        if (duration == 0) {
+            COCAINE_LOG_ERROR(log, "channel {} has timed out immediately, closing", id);
+            into_worker_dispatch->discard(error::timeout_error);
+            from_worker_dispatch->discard(error::timeout_error);
+        } else {
+            auto this_ = shared_from_this();
+
+            auto timer = std::make_shared<asio::deadline_timer>(loop);
+            timer->expires_from_now(boost::posix_time::milliseconds(duration));
+            timer->async_wait([=](const std::error_code& ec) mutable {
+                if (ec == asio::error::operation_aborted) {
+                    return;
+                }
+
+                COCAINE_LOG_ERROR(this_->log, "channel {} has timed out, closing", id);
+                into_worker_dispatch->discard(error::timeout_error);
+                from_worker_dispatch->discard(error::timeout_error);
+
+                timer.reset();
+            });
+        }
+    }
 
     COCAINE_LOG_DEBUG(log, "slave has started processing {} channel", id);
 

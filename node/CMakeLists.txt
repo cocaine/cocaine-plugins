@@ -102,9 +102,9 @@ set_target_properties(${PLUGIN_NAME} PROPERTIES
 )
 
 set_target_properties(isolate_mock PROPERTIES
-        COMPILE_FLAGS "${BUILD_FLAGS}"
-        PREFIX ""
-        SUFFIX "${COCAINE_PLUGIN_SUFFIX}"
+    COMPILE_FLAGS "${BUILD_FLAGS}"
+    PREFIX ""
+    SUFFIX "${COCAINE_PLUGIN_SUFFIX}"
 )
 
 install(TARGETS ${PLUGIN_NAME}
