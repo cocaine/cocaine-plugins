@@ -564,7 +564,9 @@ auto engine_t::on_slave_death(const std::error_code& ec, std::string uuid) -> vo
             } else {
                 timer.reset(new asio::deadline_timer(*loop));
                 if (std::chrono::system_clock::now() - last_failed < std::chrono::seconds(32)) { // TODO: Magic.
-                    last_timeout = std::chrono::seconds(std::min(last_timeout.count() * 2, 32LL)); // TODO: Magic.
+                    last_timeout = std::chrono::seconds(
+                        std::min(static_cast<long long int>(last_timeout.count() * 2), 32LL)
+                    ); // TODO: Magic.
                 } else {
                     last_timeout = std::chrono::seconds(1); // TODO: Magic.
                 }
