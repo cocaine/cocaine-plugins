@@ -39,6 +39,8 @@ public:
 
     context_t& context;
 
+    std::atomic<bool> stopped;
+
     /// Time point, when the overseer was created.
     const std::chrono::system_clock::time_point birthstamp;
 
@@ -52,8 +54,12 @@ public:
     std::shared_ptr<asio::io_service> loop;
 
     /// Slave pool.
+    // TODO: Seems like we need multichannel queue system with size 1 and timeouts.
     synchronized<pool_type> pool;
     std::atomic<int> pool_target;
+    synchronized<std::unique_ptr<asio::deadline_timer>> on_spawn_rate_timer;
+    std::chrono::system_clock::time_point last_failed;
+    std::chrono::seconds last_timeout;
 
     /// Pending queue.
     synchronized<queue_type> queue;
@@ -159,6 +165,8 @@ private:
     auto rebalance_events() -> void;
 
     auto rebalance_slaves() -> void;
+
+    auto on_spawn_rate_timeout(const std::error_code& ec) -> void;
 };
 
 }  // namespace node

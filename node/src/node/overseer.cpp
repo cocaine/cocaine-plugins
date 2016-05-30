@@ -21,8 +21,10 @@ overseer_t::overseer_t(context_t& context, manifest_t manifest, profile_t profil
 overseer_t::~overseer_t() {
     COCAINE_LOG_DEBUG(engine->log, "overseer is processing terminate request");
 
+    engine->stopped = true;
     engine->failover(0);
     engine->pool->clear();
+    engine->on_spawn_rate_timer->reset();
 }
 
 auto overseer_t::manifest() const -> manifest_t {

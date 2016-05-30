@@ -56,11 +56,13 @@ engine_t::engine_t(context_t& context,
                        std::shared_ptr<asio::io_service> loop):
     log(context.log(format("{}/overseer", manifest.name))),
     context(context),
+    stopped(false),
     birthstamp(std::chrono::system_clock::now()),
     manifest_(std::move(manifest)),
     profile_(profile),
     loop(loop),
     pool_target{},
+    last_timeout(std::chrono::seconds(1)),
     stats{}
 {
     COCAINE_LOG_DEBUG(log, "overseer has been initialized");
@@ -555,6 +557,27 @@ auto engine_t::on_handshake(const std::string& id, std::shared_ptr<session_t> se
 
 auto engine_t::on_slave_death(const std::error_code& ec, std::string uuid) -> void {
     if (ec) {
+        on_spawn_rate_timer.apply([&](std::unique_ptr<asio::deadline_timer>& timer) {
+            if (timer) {
+                // We already have fallback timer in progress.
+                // TODO: Increment stats.slaves.timeouted.
+            } else {
+                timer.reset(new asio::deadline_timer(*loop));
+                if (std::chrono::system_clock::now() - last_failed < std::chrono::seconds(32)) { // TODO: Magic.
+                    last_timeout = std::chrono::seconds(std::min(last_timeout.count() * 2, 32LL)); // TODO: Magic.
+                } else {
+                    last_timeout = std::chrono::seconds(1); // TODO: Magic.
+                }
+
+                timer->expires_from_now(boost::posix_time::seconds(last_timeout.count()));
+                timer->async_wait(std::bind(&engine_t::on_spawn_rate_timeout, shared_from_this(), ph::_1));
+
+                COCAINE_LOG_INFO(log, "next rebalance occurs in {} s", last_timeout.count());
+            }
+
+            last_failed = std::chrono::system_clock::now();
+        });
+
         COCAINE_LOG_DEBUG(log, "slave has removed itself from the pool: {}", ec.message());
         ++stats.slaves.crashed;
     } else {
@@ -571,6 +594,15 @@ auto engine_t::on_slave_death(const std::error_code& ec, std::string uuid) -> vo
 
     // TODO: Notify watcher about slave death.
     loop->post(std::bind(&engine_t::rebalance_slaves, shared_from_this()));
+}
+
+auto engine_t::on_spawn_rate_timeout(const std::error_code&) -> void {
+    on_spawn_rate_timer.apply([&](std::unique_ptr<asio::deadline_timer>& timer) {
+        timer.reset();
+    });
+
+    COCAINE_LOG_INFO(log, "rebalancing slaves after exponential backoff timeout");
+    rebalance_slaves();
 }
 
 auto engine_t::rebalance_events() -> void {
@@ -647,6 +679,10 @@ auto engine_t::rebalance_events() -> void {
 }
 
 auto engine_t::rebalance_slaves() -> void {
+    if (stopped) {
+        return;
+    }
+
     using boost::adaptors::filtered;
 
     const auto load = queue->size();
@@ -660,6 +696,10 @@ auto engine_t::rebalance_slaves() -> void {
         pool_target ? pool_target : load / profile.grow_threshold,
         profile.pool_limit
     );
+
+    if (*on_spawn_rate_timer.synchronize()) {
+        return;
+    }
 
     pool.apply([&](pool_type& pool) {
         if (pool_target) {
