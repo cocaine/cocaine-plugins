@@ -171,6 +171,12 @@ struct external_t::inner_t :
     bool prepared;
     bool connecting;
 
+    std::chrono::time_point<std::chrono::system_clock> last_failed_connect_time;
+    std::chrono::milliseconds seal_time;
+    static constexpr std::chrono::milliseconds min_seal_time {1000ul};
+    static constexpr std::chrono::milliseconds max_seal_time {1000000ul};
+
+
 
     std::vector<std::shared_ptr<spool_load_t>> spool_queue;
     std::vector<std::shared_ptr<spawn_load_t>> spawn_queue;
@@ -185,7 +191,9 @@ struct external_t::inner_t :
         log(context.log("universal_isolate/"+_name)),
         signal_dispatch(std::make_shared<dispatch<io::context_tag>>("universal_isolate_signal")),
         prepared(false),
-        connecting(false)
+        connecting(false),
+        last_failed_connect_time(),
+        seal_time(min_seal_time)
     {
         signal_dispatch->on<io::context::prepared>([&](){
             prepared = true;
@@ -198,8 +206,20 @@ struct external_t::inner_t :
     }
 
     void connect() {
-        socket.reset(new asio::ip::tcp::socket(io_context));
+        if(connecting) {
+            COCAINE_LOG_INFO(log, "connection to isolate daemon is already in progress");
+            return;
+        }
+        if(std::chrono::system_clock::now() < (last_failed_connect_time + seal_time)) {
+            COCAINE_LOG_WARNING(log, "connection to isolate daemon is sealed");
+            return;
+        }
         connecting = true;
+        socket.reset(new asio::ip::tcp::socket(io_context));
+        if(session) {
+            session->detach(std::error_code());
+            session = nullptr;
+        }
         auto ep = args.as_object().at("external_isolation_endpoint", dynamic_t::empty_object).as_object();
         tcp::endpoint endpoint(
             asio::ip::address::from_string(ep.at("host", "127.0.0.1").as_string()),
@@ -232,30 +252,9 @@ struct external_t::inner_t :
         });
     }
 
-    void reconnect(const std::error_code& e) {
-        if(!connecting) {
-            connecting = true;
-            if(session) {
-                session->detach(e);
-                session.reset();
-            }
-
-            auto reconnect_timeout_ms = args.as_object().at("reconnect_timeout_ms", 3000u).as_uint();
-            COCAINE_LOG_INFO(log, "queueing reconnect to external isolation daemon after {} ms", reconnect_timeout_ms);
-
-            connect_timer.expires_from_now(boost::posix_time::milliseconds(reconnect_timeout_ms));
-            std::weak_ptr<inner_t> weak_self(shared_from_this());
-            connect_timer.async_wait([=](const std::error_code&) {
-                // We don't perform error code check as nobody should cancel this timer
-                auto self = weak_self.lock();
-                if (self) {
-                    self->connect();
-                } // else application was already stopped and isolation was destroyed
-            });
-        }
-    }
-
     void on_fail(const std::error_code& ec) {
+        last_failed_connect_time = std::chrono::system_clock::now();
+        seal_time = std::min(seal_time * 2, max_seal_time);
         for (auto& load: spool_queue) {
             load->handle->on_abort(ec, "could not connect to external dispatch");
         }
@@ -268,6 +267,7 @@ struct external_t::inner_t :
     }
 
     void on_ready() {
+        seal_time = min_seal_time;
         if(!prepared) {
             COCAINE_LOG_DEBUG(log, "external isolation daemon connection is ready, but context is still not prepared");
             return;
@@ -291,6 +291,9 @@ struct external_t::inner_t :
 
 };
 
+constexpr std::chrono::milliseconds external_t::inner_t::min_seal_time;
+constexpr std::chrono::milliseconds external_t::inner_t::max_seal_time;
+
 void spool_load_t::apply() {
     auto _inner = inner.lock();
     if (!_inner) {
@@ -305,7 +308,8 @@ void spool_load_t::apply() {
                 COCAINE_LOG_ERROR(_inner->log, "failed to process spool request - {}",
                                   error::to_string(e));
                 handle->on_abort(e.code(), error::to_string(e));
-                _inner->reconnect(e.code());
+                _inner->session->detach(e.code());
+                _inner->connect();
             }
         } else {
             COCAINE_LOG_WARNING(_inner->log, "can not process spool request - cancelled");
@@ -348,7 +352,8 @@ spawn_load_t::apply() {
             } catch(const std::system_error& e) {
                 COCAINE_LOG_WARNING(_inner->log, "could not process spawn request: {}", error::to_string(e));
                 handle->on_terminate(e.code(), e.what());
-                _inner->reconnect(e.code());
+                _inner->session->detach(e.code());
+                _inner->connect();
             }
         } else {
             COCAINE_LOG_WARNING(_inner->log, "can not process spawn request - cancelled");
@@ -397,8 +402,8 @@ external_t::spool(std::shared_ptr<api::spool_handle_base_t> handler) {
         } else {
             COCAINE_LOG_DEBUG(inner->log, "queuing spool request");
             _inner->spool_queue.push_back(load);
-            if(!inner->connecting && _inner->prepared) {
-                inner->reconnect(std::error_code());
+            if(_inner->prepared) {
+                _inner->connect();
             }
         }
     });
@@ -421,8 +426,8 @@ external_t::spawn(const std::string& path,
         } else {
             COCAINE_LOG_DEBUG(_inner->log, "queuing spawn request");
             _inner->spawn_queue.push_back(load);
-            if(!inner->connecting && _inner->prepared) {
-                inner->reconnect(std::error_code());
+            if(_inner->prepared) {
+                _inner->connect();
             }
         }
     });
