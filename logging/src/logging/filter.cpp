@@ -32,48 +32,48 @@ namespace logging {
 
 namespace {
 
-auto operator<(const blackhole::cpp17::string_view& lhs, const std::string& rhs) -> bool
+auto operator<(const blackhole::stdext::string_view& lhs, const std::string& rhs) -> bool
 {
     return std::lexicographical_compare(lhs.data(), lhs.data() + lhs.size(),
                                         rhs.data(), rhs.data() + rhs.size());
 }
 
-auto operator<(const std::string& lhs, const blackhole::cpp17::string_view& rhs) -> bool
+auto operator<(const std::string& lhs, const blackhole::stdext::string_view& rhs) -> bool
 {
     return std::lexicographical_compare(lhs.data(), lhs.data() + lhs.size(),
                                         rhs.data(), rhs.data() + rhs.size());
 }
 
-auto operator>(const blackhole::cpp17::string_view& lhs, const std::string& rhs) -> bool
+auto operator>(const blackhole::stdext::string_view& lhs, const std::string& rhs) -> bool
 {
     std::greater<char> comp;
     return std::lexicographical_compare(lhs.data(), lhs.data() + lhs.size(),
                                         rhs.data(), rhs.data() + rhs.size(), comp);
 }
 
-auto operator>(const std::string& lhs, const blackhole::cpp17::string_view& rhs) -> bool
+auto operator>(const std::string& lhs, const blackhole::stdext::string_view& rhs) -> bool
 {
     std::greater<char> comp;
     return std::lexicographical_compare(lhs.data(), lhs.data() + lhs.size(),
                                         rhs.data(), rhs.data() + rhs.size(), comp);
 }
 
-auto operator<=(const blackhole::cpp17::string_view& lhs, const std::string& rhs) -> bool
+auto operator<=(const blackhole::stdext::string_view& lhs, const std::string& rhs) -> bool
 {
     return !(lhs > rhs);
 }
 
-auto operator<=(const std::string& lhs, const blackhole::cpp17::string_view& rhs) -> bool
+auto operator<=(const std::string& lhs, const blackhole::stdext::string_view& rhs) -> bool
 {
     return !(lhs > rhs);
 }
 
-auto operator>=(const blackhole::cpp17::string_view& lhs, const std::string& rhs) -> bool
+auto operator>=(const blackhole::stdext::string_view& lhs, const std::string& rhs) -> bool
 {
     return !(lhs < rhs);
 }
 
-auto operator>=(const std::string& lhs, const blackhole::cpp17::string_view& rhs) -> bool
+auto operator>=(const std::string& lhs, const blackhole::stdext::string_view& rhs) -> bool
 {
     return !(lhs < rhs);
 }
@@ -86,7 +86,7 @@ struct view_of {
 
 template <>
 struct view_of<std::string> {
-    typedef blackhole::cpp17::string_view type;
+    typedef blackhole::stdext::string_view type;
 };
 
 
@@ -136,10 +136,10 @@ struct to<int64_t> : public blackhole::attribute::view_t::visitor_t {
 };
 
 template<>
-struct to<blackhole::cpp17::string_view> : public blackhole::attribute::view_t::visitor_t {
+struct to<blackhole::stdext::string_view> : public blackhole::attribute::view_t::visitor_t {
     typedef blackhole::attribute::view_t value_t;
 
-    blackhole::cpp17::string_view result;
+    blackhole::stdext::string_view result;
     bool failed;
 
     to() : result(), failed() {}
@@ -235,8 +235,8 @@ convert(const blackhole::attribute::view_t& value, T& target) {
 
 template<class T>
 bool
-convert(const blackhole::attribute::view_t& value, blackhole::cpp17::string_view& target) {
-    to<blackhole::cpp17::string_view> visitor;
+convert(const blackhole::attribute::view_t& value, blackhole::stdext::string_view& target) {
+    to<blackhole::stdext::string_view> visitor;
     value.apply(visitor);
     if(!visitor.failed) {
         target = visitor.result;

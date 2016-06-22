@@ -46,7 +46,6 @@ INCLUDE_DIRECTORIES(BEFORE
     SYSTEM
     ${PROJECT_SOURCE_DIR}/foreign/asio/asio/include
     ${PROJECT_SOURCE_DIR}/foreign/blackhole/src
-    ${PROJECT_SOURCE_DIR}/foreign/metrics/include
     ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include)
 
 LINK_DIRECTORIES(
@@ -75,10 +74,6 @@ ELSE()
 ENDIF()
 
 SET(PLUGINS_VERSION 3)
-
-SET(METRICS_BUILD_STATIC ON CACHE BOOL "Build the Metrics library as static")
-
-ADD_SUBDIRECTORY(foreign/metrics)
 
 FOREACH(PLUGIN ${PLUGINS})
     STRING(TOUPPER ${PLUGIN} OPTION_NAME)

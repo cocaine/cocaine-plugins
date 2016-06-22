@@ -33,12 +33,6 @@ public:
 
     virtual
     boost::optional<std::shared_ptr<const dispatch_type>>
-    operator()(tuple_type&& args, upstream_type&& upstream) {
-        return operator()({}, std::move(args), std::move(upstream));
-    }
-
-    virtual
-    boost::optional<std::shared_ptr<const dispatch_type>>
     operator()(const meta_type& headers, tuple_type&& args, upstream_type&& upstream) {
         return f(std::move(upstream), headers, std::move(args));
     }

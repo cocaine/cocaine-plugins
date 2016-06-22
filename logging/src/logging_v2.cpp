@@ -29,10 +29,8 @@
 
 #include <blackhole/config/json.hpp>
 #include <blackhole/formatter/json.hpp>
-#include <blackhole/formatter/string.hpp>
 #include <blackhole/registry.hpp>
 #include <blackhole/root.hpp>
-#include <blackhole/sink/console.hpp>
 #include <blackhole/sink/console.hpp>
 #include <blackhole/sink/file.hpp>
 #include <blackhole/sink/socket/tcp.hpp>
@@ -64,17 +62,13 @@ typedef api::unicorn_t::response response;
 
 //TODO: move out to logging
 bh::root_logger_t get_root_logger(context_t& context, const dynamic_t& service_args) {
-    auto registry = blackhole::registry_t::configured();
-    registry.add<blackhole::formatter::json_t>();
-    registry.add<blackhole::sink::console_t>();
-    registry.add<blackhole::sink::file_t>();
-    registry.add<blackhole::sink::socket::tcp_t>();
-    registry.add<blackhole::sink::socket::udp_t>();
+    auto registry = blackhole::registry::configured();
+    registry->add<blackhole::formatter::json_t>();
 
     std::stringstream stream;
     stream << boost::lexical_cast<std::string>(context.config().logging().loggers());
 
-    return registry.builder<blackhole::config::json_t>(stream).build(
+    return registry->builder<blackhole::config::json_t>(stream).build(
     service_args.as_object().at("backend", "core").as_string());
 }
 
@@ -394,7 +388,8 @@ public:
 
     logging_slot_t(logging_v2_t& _parent) : parent(_parent) {}
 
-    virtual boost::optional<std::shared_ptr<const dispatch_type>> operator()(tuple_type&& args,
+    virtual boost::optional<std::shared_ptr<const dispatch_type>> operator()(const std::vector<hpack::header_t>&,
+                                                                             tuple_type&& args,
                                                                              upstream_type&&) {
         return tuple::invoke(std::forward<tuple_type>(args), [&](std::string name) {
             auto metafilter = parent.impl->get_metafilter(name);
@@ -424,7 +419,8 @@ public:
 
     emit_slot_t(named_logging_t& _parent, bool _need_ack) : parent(_parent), need_ack(_need_ack) {}
 
-    virtual boost::optional<std::shared_ptr<const dispatch_type>> operator()(tuple_type&& args,
+    virtual boost::optional<std::shared_ptr<const dispatch_type>> operator()(const std::vector<hpack::header_t>&,
+                                                                             tuple_type&& args,
                                                                              upstream_type&& upstream) {
         bool result = emit_ack(parent.filter,
                                parent.log,

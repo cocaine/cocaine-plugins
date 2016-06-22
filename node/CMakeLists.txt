@@ -76,7 +76,7 @@ target_link_libraries(${PLUGIN_NAME}
     ${LibCGroup_LIBRARY}
     msgpack
     blackhole
-    metric
+    metrics
     cocaine-core
     cocaine-io-util)
 

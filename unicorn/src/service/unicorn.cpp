@@ -59,7 +59,7 @@ public:
 
     virtual
     boost::optional<std::shared_ptr<const dispatch_type>>
-    operator()(tuple_type&& args, upstream_type&& upstream)
+    operator()(const std::vector<hpack::header_t>&, tuple_type&& args, upstream_type&& upstream)
     {
         typedef boost::optional<std::shared_ptr<const dispatch_type>> opt_dispatch_t;
         Response result;
