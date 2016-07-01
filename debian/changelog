@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.9.0-alpha3) unstable; urgency=low
+
+  * Fixed accidental environment overriding in Node service.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 01 Jul 2016 17:49:08 +0300
+
 cocaine-plugins (0.12.9.0-alpha2) unstable; urgency=low
 
   * Restore legacy isolate for node service.
