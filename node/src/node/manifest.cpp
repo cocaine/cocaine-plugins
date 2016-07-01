@@ -35,7 +35,6 @@ manifest_t::manifest_t(context_t& context, const std::string& name_):
 {
     endpoint = cocaine::format("{}/{}.{}", context.config().path().runtime(), name, ::getpid());
 
-    std::map<std::string, std::string> environment;
     try {
         environment = as_object().at("environment", dynamic_t::empty_object)
             .to<std::map<std::string, std::string>>();
