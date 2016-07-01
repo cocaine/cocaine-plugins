@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.9.0-alpha2) unstable; urgency=low
+
+  * Restore legacy isolate for node service.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 01 Jul 2016 14:35:32 +0300
+
 cocaine-plugins (0.12.9.0-alpha1) unstable; urgency=low
 
   * App service now can extract request timeouts from meta informations and use
