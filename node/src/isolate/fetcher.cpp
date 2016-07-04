@@ -1,4 +1,5 @@
 #include <blackhole/logger.hpp>
+#include <blackhole/logger.hpp>
 
 #include <cocaine/logging.hpp>
 

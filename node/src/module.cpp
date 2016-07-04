@@ -28,6 +28,10 @@ void initialize(api::repository_t& repository) {
     repository.insert<isolate::external_t>("porto");
 
     error::registrar::add(error::node_category(), error::node_category_id);
+
+    error::registrar::add(error::slave_category(), error::node_category_id);
+
+
     error::registrar::add(error::slave_category(), error::slave_category_id);
     error::registrar::add(error::overseer_category(), error::overseer_category_id);
 

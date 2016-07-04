@@ -45,7 +45,6 @@ INCLUDE_DIRECTORIES(
 INCLUDE_DIRECTORIES(BEFORE
     SYSTEM
     ${PROJECT_SOURCE_DIR}/foreign/asio/asio/include
-    ${PROJECT_SOURCE_DIR}/foreign/blackhole/src
     ${PROJECT_SOURCE_DIR}/foreign/rapidjson/include)
 
 LINK_DIRECTORIES(
