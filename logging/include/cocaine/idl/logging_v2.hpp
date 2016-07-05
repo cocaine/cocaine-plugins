@@ -244,7 +244,7 @@ struct protocol<base_log_tag> {
 
 template <>
 struct protocol<named_log_tag> {
-    typedef boost::mpl::int_<1>::type version;
+    typedef boost::mpl::int_<2>::type version;
 
     typedef boost::mpl::list<named_log::emit, named_log::emit_ack>::type messages;
 
