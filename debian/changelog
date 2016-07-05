@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.9.0-alpha4) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Logging: use the same protocol version as in previous version of service.
+
+ -- Anton Matveenko <antmat@me.com>  Tue, 05 Jul 2016 18:24:08 +0300
+
 cocaine-plugins (0.12.9.0-alpha3) unstable; urgency=low
 
   * Fixed accidental environment overriding in Node service.
