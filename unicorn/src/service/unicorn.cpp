@@ -20,6 +20,7 @@
 #include <blackhole/logger.hpp>
 
 #include <cocaine/context.hpp>
+#include <cocaine/logging.hpp>
 
 using namespace cocaine::unicorn;
 
@@ -67,7 +68,11 @@ public:
             try {
                 result.write(future.get());
             } catch (const std::system_error& e) {
-                result.abort(e.code(), error::to_string(e));
+                try {
+                    result.abort(e.code(), error::to_string(e));
+                } catch(const std::system_error& e2) {
+                    COCAINE_LOG_WARNING(service->log, "could not abort deferred - {}", error::to_string(e2));
+                }
             }
         };
         auto api_args = std::tuple_cat(std::make_tuple(unicorn.get(), callback), std::move(args));
@@ -143,9 +148,6 @@ unicorn_service_t::unicorn_service_t(context_t& context, asio::io_service& _asio
     dispatch<io::unicorn_tag>(_name),
     name(_name),
     unicorn(api::unicorn(context, args.as_object().at("backend", "core").as_string())),
-
-
-
     log(context.log("unicorn"))
 {
     on<scope::subscribe>         (std::make_shared<subscribe_slot_t>         (this, unicorn, &api::unicorn_t::subscribe));

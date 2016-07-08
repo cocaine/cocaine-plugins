@@ -35,6 +35,10 @@ public:
     unicorn_service_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
     friend class unicorn_dispatch_t;
     friend class distributed_lock_t;
+
+    template<class Event, class Method, class Response>
+    friend class unicorn_slot_t;
+
     const std::string& get_name() const { return name; }
 private:
     std::string name;
