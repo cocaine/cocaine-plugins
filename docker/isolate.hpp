@@ -50,12 +50,16 @@ public:
     spawn(const std::string& path, const api::string_map_t& args, const api::string_map_t& environment);
 
 private:
+    std::string
+    get_registry_auth(const std::string& registry, const std::string& user, const std::string& pass);
+
     std::shared_ptr<cocaine::logging::log_t> m_log;
 
     std::string m_runtime_path;
     std::string m_image;
     std::string m_tag;
     bool m_do_pool;
+    std::string m_registry_auth;
 
     docker::client_t m_docker_client;
     rapidjson::Value m_run_config;

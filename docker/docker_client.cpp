@@ -760,7 +760,8 @@ client_t::inspect_image(rapidjson::Document& result,
 
 void
 client_t::pull_image(const std::string& image,
-                     const std::string& tag)
+                     const std::string& tag,
+                     const std::string& registry_auth)
 {
     std::string request = "/images/create?";
 
@@ -782,7 +783,11 @@ client_t::pull_image(const std::string& image,
     }
 
     http_response_t resp;
-    m_client->post(resp, make_post(api_version + request));
+    http_request_t http_request = make_post(api_version + request);
+    if (!registry_auth.empty()) {
+        http_request.headers().reset_header("X-Registry-Auth", registry_auth);
+    }
+    m_client->post(resp, http_request);
 
     if(resp.code() >= 200 && resp.code() < 300) {
         rapidjson::GenericStringStream<rapidjson::UTF8<>> stream(resp.body().data());
