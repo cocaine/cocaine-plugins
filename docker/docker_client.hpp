@@ -209,7 +209,8 @@ public:
 
     void
     pull_image(const std::string& image,
-               const std::string& tag);
+               const std::string& tag,
+               const std::string& registry_auth);
 
     container_t
     create_container(const rapidjson::Value& args);

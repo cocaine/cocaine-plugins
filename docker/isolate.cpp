@@ -30,9 +30,15 @@
 #include <cstring>
 #include <system_error>
 
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+#include <boost/algorithm/string.hpp>
+
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/lexical_cast.hpp>
+
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -42,6 +48,15 @@ using namespace cocaine;
 using namespace cocaine::isolate;
 
 namespace fs = boost::filesystem;
+
+namespace {
+    inline std::string base64_decode(const std::string& in) {
+        namespace bai = boost::archive::iterators;
+        typedef bai::base64_from_binary<bai::transform_width<std::string::const_iterator, 6, 8>> Base64It;
+        auto tmp = std::string(Base64It(std::begin(in)), Base64It(std::end(in)));
+        return tmp.append((3 - in.size() % 3) % 3, '=');
+    }
+} //namespace
 
 namespace {
 
@@ -123,7 +138,12 @@ docker_t::docker_t(context_t& context, const std::string& name, const Json::Valu
             // I think that if there is no registry in the config then the plugin must not pull images from foreign registry by default.
             if(args["registry"].asString() != "<default>") {
                 m_image += args["registry"].asString() + "/";
+                if (args.isMember("docker_user") && args.isMember("docker_pass")) {
+                    m_registry_auth = get_registry_auth(args["registry"].asString(), args["docker_user"].asString(), args["docker_pass"].asString());
+                }
             }
+
+
         } else {
             COCAINE_LOG_WARNING(m_log, "Docker registry is not specified. Only local images will be used.");
         }
@@ -186,7 +206,7 @@ void
 docker_t::spool() {
     try {
         if(m_do_pool) {
-            m_docker_client.pull_image(m_image, m_tag);
+            m_docker_client.pull_image(m_image, m_tag, m_registry_auth);
         }
     } catch(const std::exception& e) {
         throw cocaine::error_t("%s", e.what());
@@ -259,4 +279,23 @@ docker_t::spawn(const std::string& path, const api::string_map_t& args, const ap
     } catch(const std::exception& e) {
         throw cocaine::error_t("%s", e.what());
     }
+}
+
+std::string
+docker_t::get_registry_auth(const std::string& registry, const std::string& user, const std::string& pass) {
+    rapidjson::Document docker_auth;
+    docker_auth.SetObject();
+
+    rapidjson::Value registry_user(user.c_str(), user.length(), m_json_allocator);
+
+    rapidjson::Value registry_pass(pass.c_str(), pass.length(), m_json_allocator);
+
+    docker_auth.AddMember("username", registry_user, m_json_allocator);
+    docker_auth.AddMember("password", registry_pass, m_json_allocator);
+
+
+    rapidjson::GenericStringBuffer<rapidjson::UTF8<>> out_buf;
+    rapidjson::Writer<rapidjson::GenericStringBuffer<rapidjson::UTF8<>>> writer(out_buf);
+    docker_auth.Accept(writer);
+    return base64_decode(std::string(out_buf.GetString(), out_buf.Size()));
 }
