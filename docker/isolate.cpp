@@ -140,7 +140,6 @@ docker_t::docker_t(context_t& context, const std::string& name, const Json::Valu
                 m_image += args["registry"].asString() + "/";
                 if (args.isMember("docker_user") && args.isMember("docker_pass")) {
                     m_registry_auth = get_registry_auth(args["registry"].asString(), args["docker_user"].asString(), args["docker_pass"].asString());
-                    COCAINE_LOG_DEBUG(m_log, "Docker auth: %s", m_registry_auth);
                 }
             }
 
