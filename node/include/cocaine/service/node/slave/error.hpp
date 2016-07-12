@@ -62,7 +62,7 @@ enum slave_errors {
     /// The slave has no active channels for a timeout.idle ms.
     slave_idle,
 
-    /// The slave has exhaused its channels and ready to die.
+    /// The slave has exhaused its channels and is ready to die.
     slave_is_sealing
 };
 
