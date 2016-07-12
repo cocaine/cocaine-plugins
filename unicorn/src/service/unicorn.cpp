@@ -68,6 +68,7 @@ public:
             try {
                 result.write(future.get());
             } catch (const std::system_error& e) {
+                COCAINE_LOG_WARNING(service->log, "exception during writing unicorn value - {}", error::to_string(e));
                 try {
                     result.abort(e.code(), error::to_string(e));
                 } catch(const std::system_error& e2) {
