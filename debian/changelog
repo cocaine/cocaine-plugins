@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.9.0-alpha7) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Logging: compatibility with old protocol
+
+ -- Anton Matveenko <antmat@me.com>  Fri, 15 Jul 2016 16:18:08 +0300
+
 cocaine-plugins (0.12.9.0-alpha6) unstable; urgency=low
 
   * Non-maintainer upload.
