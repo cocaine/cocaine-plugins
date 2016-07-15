@@ -505,6 +505,7 @@ logging_v2_t::logging_v2_t(context_t& context,
         return emit_ack(impl->get_non_empty_metafilter(backend), impl->logger, severity, message, attributes);
     });
     on<io::base_log::verbosity>([](){ return 0; });
+    on<io::base_log::set_verbosity>([](unsigned int){});
     on<io::base_log::get>(std::make_shared<logging_slot_t>(*this));
     on<io::base_log::list_loggers>(std::bind(&impl_t::list_loggers, impl.get()));
     on<io::base_log::set_filter>(std::bind(&impl_t::set_filter,

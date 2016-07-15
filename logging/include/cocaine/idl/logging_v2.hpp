@@ -92,6 +92,23 @@ struct base_log {
         >::tag upstream_type;
     };
 
+    /**
+     * This method is a stub for new protocol to be compatible with old one.
+     * It will always do nothing
+     */
+    struct set_verbosity {
+        typedef base_log_tag tag;
+
+        static const char* alias() {
+            return "set_verbosity";
+        }
+
+        typedef boost::mpl::list<
+            /* Proposed verbosity level. */
+            unsigned int
+        >::type argument_type;
+    };
+
     struct get {
         typedef base_log_tag tag;
 
@@ -227,11 +244,13 @@ struct named_log {
 
 template <>
 struct protocol<base_log_tag> {
-    typedef boost::mpl::int_<1>::type version;
+    typedef boost::mpl::int_<2>::type version;
 
     typedef boost::mpl::list<base_log::emit,
-                             base_log::emit_ack,
                              base_log::verbosity,
+                             // this one is just unbound stab for legacy compatibility
+                             base_log::set_verbosity,
+                             base_log::emit_ack,
                              base_log::get,
                              base_log::list_loggers,
                              base_log::set_filter,
@@ -244,7 +263,7 @@ struct protocol<base_log_tag> {
 
 template <>
 struct protocol<named_log_tag> {
-    typedef boost::mpl::int_<2>::type version;
+    typedef boost::mpl::int_<1>::type version;
 
     typedef boost::mpl::list<named_log::emit, named_log::emit_ack>::type messages;
 
