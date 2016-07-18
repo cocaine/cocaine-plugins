@@ -664,7 +664,9 @@ auto engine_t::rebalance_slaves() -> void {
     pool.apply([&](pool_type& pool) {
         if (pool_target) {
             COCAINE_LOG_DEBUG(log, "attempting to rebalance slaves using direct policy", {
-                {"load", load}, {"slaves", pool.size()}, {"target", target}
+                {"load", load},
+                {"slaves", pool.size()},
+                {"target", target}
             });
 
             if (target <= pool.size()) {
