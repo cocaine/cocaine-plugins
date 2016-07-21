@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.9.0-beta2) unstable; urgency=low
+
+  * More logs added to be able to debug events rebalancing.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 21 Jul 2016 16:49:30 +0300
+
 cocaine-plugins (0.12.9.0-beta1) unstable; urgency=low
 
   * Forwardport of exponential timeouts for Node service.
