@@ -627,6 +627,8 @@ auto engine_t::rebalance_events() -> void {
             while (!queue.empty()) {
                 auto& load = queue.front();
 
+                COCAINE_LOG_DEBUG(log, "rebalancing event");
+
                 // If we are dealing with tagged events we need to find an active slave with the
                 // specified id.
                 if (load.id && pool.count(load.id->id()) != 0) {
@@ -662,6 +664,7 @@ auto engine_t::rebalance_events() -> void {
 
                     // No free slaves found.
                     if (slave == boost::end(range)) {
+                        COCAINE_LOG_DEBUG(log, "no free slaves found, rebalancing is over");
                         return;
                     }
 
