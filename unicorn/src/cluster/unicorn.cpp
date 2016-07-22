@@ -150,15 +150,21 @@ unicorn_cluster_t::announce() {
         endpoints.swap(cur_endpoints);
 
         auto scope_data = scope();
-        scope_data.second = unicorn->create(
-            std::bind(&unicorn_cluster_t::on_announce_set, this, scope_data.first, ph::_1),
-            config.path + '/' + locator.uuid(),
-            endpoints,
-            true,
-            false
-        );
-        announce_timer.expires_from_now(boost::posix_time::seconds(config.check_interval));
-        announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
+        try {
+            scope_data.second = unicorn->create(
+                std::bind(&unicorn_cluster_t::on_announce_set, this, scope_data.first, ph::_1),
+                config.path + '/' + locator.uuid(),
+                endpoints,
+                true,
+                false
+            );
+            announce_timer.expires_from_now(boost::posix_time::seconds(config.check_interval));
+            announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
+        } catch (const std::system_error& e) {
+            COCAINE_LOG_WARNING(log, "could not announce self in unicorn - {}", error::to_string(e));
+            announce_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
+            announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
+        }
     }
 }
 
