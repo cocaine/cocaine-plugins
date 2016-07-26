@@ -34,7 +34,7 @@ RUN cd /build/cocaine-core && \
 # Build and install cocaine-plugins.
 COPY . /build/cocaine-plugins
 RUN cd /build/cocaine-plugins && \
-    cmake -DELASTICSEARCH=OFF -DMONGO=OFF -DURLFETCH=OFF -DDOCKER=OFF . && \
+    cmake -DELASTICSEARCH=OFF -DMONGO=OFF -DURLFETCH=OFF -DDOCKER=OFF -DELLIPTICS=OFF . && \
     make
 
 # Cleanup.
