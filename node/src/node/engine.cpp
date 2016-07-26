@@ -474,12 +474,15 @@ auto engine_t::assign(slave_t& slave, load_t& load) -> void {
 
     auto& event = load.event;
 
-    if (auto timeout = event.header<std::uint64_t>("request_timeout")) {
-        if (event.birthstamp + std::chrono::milliseconds(*timeout) < std::chrono::high_resolution_clock::now()) {
-            COCAINE_LOG_ERROR(log, "event {} has expired, dropping", event.name);
-            load.downstream->error({}, error::deadline_error, "the event has expired in the queue");
-            return;
-        }
+    std::chrono::milliseconds request_timeout(profile().timeout.request);
+    if (auto timeout_from_header = event.header<std::uint64_t>("request_timeout")) {
+        request_timeout = std::chrono::milliseconds(*timeout_from_header);
+    }
+
+    if (event.birthstamp + request_timeout < std::chrono::high_resolution_clock::now()) {
+        COCAINE_LOG_ERROR(log, "event {} has expired, dropping", event.name);
+        load.downstream->error({}, error::deadline_error, "the event has expired in the queue");
+        return;
     }
 
     // TODO: Drop due to replacement with header.

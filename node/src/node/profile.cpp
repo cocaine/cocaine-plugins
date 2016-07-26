@@ -41,6 +41,7 @@ profile_t::profile_t(context_t& context, const std::string& name_):
     timeout.seal      = static_cast<uint64_t>(1000 * config.at("seal-timeout", 60.0).to<double>());
     timeout.terminate = static_cast<uint64_t>(1000 * config.at("terminate-timeout", 10.0).to<double>());
     timeout.idle      = static_cast<uint64_t>(1000 * config.at("idle-timeout", 600.0f).to<double>());
+    timeout.request   = static_cast<uint64_t>(1000 * config.at("request-timeout", 86400.0f).to<double>());
 
     concurrency         = as_object().at("concurrency", 10L).to<uint64_t>();
     crashlog_limit      = as_object().at("crashlog-limit", 50L).to<uint64_t>();

@@ -47,6 +47,7 @@ struct profile_t : cached<dynamic_t> {
         unsigned long seal;
         unsigned long terminate;
         unsigned long idle;
+        unsigned long request;
     } timeout;
 
     // Limits.
