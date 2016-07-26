@@ -26,14 +26,14 @@
 namespace cocaine { namespace unicorn {
 
 lock_action_t::lock_action_t(const zookeeper::handler_tag& tag,
-                             const zookeeper_t::context_t& _ctx,
+                             zookeeper_t::context_t _ctx,
                              std::shared_ptr<lock_state_t> _state,
                              path_t _path,
                              path_t _folder,
                              value_t _value,
                              api::unicorn_t::callback::lock _callback
 ) : zookeeper::managed_handler_base_t(tag),
-    create_action_base_t(tag, _ctx, std::move(_path), std::move(_value), true, true),
+    create_action_base_t(tag, std::move(_ctx), std::move(_path), std::move(_value), true, true),
     zookeeper::managed_strings_stat_handler_base_t(tag),
     zookeeper::managed_stat_handler_base_t(tag),
     zookeeper::managed_watch_handler_base_t(tag),
@@ -45,6 +45,7 @@ lock_action_t::lock_action_t(const zookeeper::handler_tag& tag,
 }
 
 lock_action_t::~lock_action_t() {
+    COCAINE_LOG_DEBUG(ctx.log, "lock handler dtor", {{"full_node_name", created_node_name}});
 }
 
 void
@@ -59,7 +60,11 @@ lock_action_t::children_event(int rc, std::vector<std::string> children, zookeep
     */
     if(rc) {
         auto ec = cocaine::error::make_error_code(cocaine::error::zookeeper_errors(rc));
-        COCAINE_LOG_ERROR(ctx.log, "Could not subscribe for lock({}): {}", ec.value(), ec.message());
+        COCAINE_LOG_ERROR(ctx.log,
+                          "could not subscribe for lock({}): {}",
+                          ec.value(),
+                          ec.message(),
+                          blackhole::attribute_list{{"full_node_name", created_node_name}});
         return callback(make_exceptional_future<bool>(std::move(ec)));
     }
     path_t next_min_node = created_node_name;
@@ -81,17 +86,30 @@ lock_action_t::children_event(int rc, std::vector<std::string> children, zookeep
         }
     }
     if(next_min_node == created_node_name) {
+        COCAINE_LOG_DEBUG(ctx.log, "lock aquired", {{"full_node_name", created_node_name}});
         if(auto s = state.lock()) {
             // TODO: Do we really need this check?
             if (!s->release_if_discarded()) {
                 callback(make_ready_future(true));
+            } else {
+                COCAINE_LOG_DEBUG(ctx.log,
+                                  "lock watch event (lock was already released)",
+                                  blackhole::attribute_list{{"full_node_name", created_node_name}});
             }
+        } else {
+            COCAINE_LOG_ERROR(ctx.log,
+                              "lock aquired, but state is missing",
+                              blackhole::attribute_list{{"full_node_name", created_node_name}});
         }
         return;
     } else {
         try {
             ctx.zk.exists(folder + "/" + next_min_node, *this, *this);
         } catch(const std::system_error& e) {
+            COCAINE_LOG_WARNING(ctx.log,
+                                "exception during exists command - {}",
+                                error::to_string(e),
+                                blackhole::attribute_list{{"full_node_name", created_node_name}});
             callback(make_exceptional_future<bool>(e));
             if(auto s = state.lock()) {
                 s->release();
@@ -107,6 +125,10 @@ lock_action_t::stat_event(int rc, zookeeper::node_stat const& /*stat*/) {
         try {
             ctx.zk.childs(folder, *this);
         } catch(const std::system_error& e) {
+            COCAINE_LOG_WARNING(ctx.log,
+                                "exception during childs command - {}",
+                                error::to_string(e),
+                                blackhole::attribute_list{{"full_node_name", created_node_name}});
             callback(make_exceptional_future<bool>(e));
             if(auto s = state.lock()) {
                 s->release();
@@ -120,6 +142,10 @@ lock_action_t::watch_event(int /*type*/, int /*zk_state*/, path_t /*path*/) {
     try {
         ctx.zk.childs(folder, *this);
     } catch(const std::system_error& e) {
+        COCAINE_LOG_WARNING(ctx.log,
+                            "watch event, exception during childs command - {}",
+                            error::to_string(e),
+                            blackhole::attribute_list{{"full_node_name", created_node_name}});
         callback(make_exceptional_future<bool>(e));
         if(auto s = state.lock()) {
             s->release();
@@ -132,9 +158,14 @@ lock_action_t::finalize(zookeeper::path_t created_path) {
     created_node_name = zookeeper::get_node_name(created_path);
 
     if(state_lock->set_lock_created(std::move(created_path))) {
+        COCAINE_LOG_DEBUG(ctx.log, "lock aquired", blackhole::attribute_list{{"full_node_name", created_node_name}});
         try {
             ctx.zk.childs(folder, *this);
         } catch(const std::system_error& e) {
+            COCAINE_LOG_WARNING(ctx.log,
+                                "error in childs request after lock aquisition - {}",
+                                error::to_string(e),
+                                blackhole::attribute_list{{"full_node_name", created_node_name}});
             callback(make_exceptional_future<bool>(e));
             state_lock->release();
         }
@@ -145,15 +176,22 @@ lock_action_t::finalize(zookeeper::path_t created_path) {
 void
 lock_action_t::abort(int rc) {
     auto ec = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
+    COCAINE_LOG_WARNING(ctx.log,
+                        "lock creation aborted - {}",
+                        ec.message(),
+                        blackhole::attribute_list{{"full_node_name", created_node_name}});
     callback(make_exceptional_future<bool>(std::move(ec)));
 }
 
-release_lock_action_t::release_lock_action_t(const zookeeper_t::context_t& _ctx) :
-ctx(_ctx)
-{}
+release_lock_action_t::release_lock_action_t(zookeeper_t::context_t _ctx) :
+    ctx(_ctx)
+{
+    COCAINE_LOG_DEBUG(ctx.log, "release lock action created");
+}
 
 void
 release_lock_action_t::void_event(int rc) {
+    COCAINE_LOG_DEBUG(ctx.log, "release lock action done - {}", rc);
     if(rc && rc != ZCLOSING) {
         auto code = cocaine::error::make_error_code(static_cast<cocaine::error::zookeeper_errors>(rc));
         COCAINE_LOG_WARNING(ctx.log, "ZK error during lock delete: {}. Reconnecting to discard lock for sure", code.message().c_str());

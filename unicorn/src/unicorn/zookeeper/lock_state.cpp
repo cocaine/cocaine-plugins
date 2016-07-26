@@ -24,7 +24,7 @@
 
 namespace cocaine { namespace unicorn {
 
-lock_state_t::lock_state_t(const zookeeper_t::context_t& _ctx) : ctx(_ctx),
+lock_state_t::lock_state_t(zookeeper_t::context_t _ctx) :       ctx(std::move(_ctx)),
                                                                  lock_created(false),
                                                                  lock_released(false),
                                                                  discarded(false),
@@ -68,7 +68,7 @@ lock_state_t::release_if_discarded() {
 
 void
 lock_state_t::discard() {
-    COCAINE_LOG_ERROR(ctx.log, "lock_action_t::discard");
+    COCAINE_LOG_DEBUG(ctx.log, "discarding lock");
     bool should_release = false;
     {
         std::lock_guard<std::mutex> guard(access_mutex);

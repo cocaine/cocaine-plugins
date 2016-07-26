@@ -26,15 +26,14 @@
 namespace cocaine { namespace unicorn {
 
 increment_action_t::increment_action_t(const zookeeper::handler_tag& tag,
-                                       const zookeeper_t::context_t& _ctx,
+                                       zookeeper_t::context_t _ctx,
                                        api::unicorn_t::callback::increment _callback,
                                        path_t _path,
                                        value_t _increment
 ) : managed_handler_base_t(tag),
-    create_action_base_t(tag, _ctx, std::move(_path), std::move(_increment), false, false),
+    create_action_base_t(tag, std::move(_ctx), std::move(_path), std::move(_increment), false, false),
     managed_stat_handler_base_t(tag),
     managed_data_handler_base_t(tag),
-    ctx(_ctx),
     callback(std::move(_callback)),
     total()
 {}

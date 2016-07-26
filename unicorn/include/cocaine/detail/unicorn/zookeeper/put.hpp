@@ -29,7 +29,7 @@ struct put_action_t :
 {
 
     put_action_t(const zookeeper::handler_tag& tag,
-                 const zookeeper_t::context_t& ctx,
+                 zookeeper_t::context_t ctx,
                  api::unicorn_t::callback::put _callback,
                  unicorn::path_t _path,
                  unicorn::value_t _value,

@@ -26,7 +26,7 @@
 namespace cocaine { namespace unicorn {
 
 create_action_base_t::create_action_base_t(const zookeeper::handler_tag& tag,
-                                           const zookeeper_t::context_t& _ctx,
+                                           zookeeper_t::context_t _ctx,
                                            path_t _path,
                                            value_t _value,
                                            bool _ephemeral,
@@ -34,7 +34,7 @@ create_action_base_t::create_action_base_t(const zookeeper::handler_tag& tag,
 ) : zookeeper::managed_handler_base_t(tag),
     zookeeper::managed_string_handler_base_t(tag),
     depth(0),
-    ctx(_ctx),
+    ctx(std::move(_ctx)),
     path(std::move(_path)),
     initial_value(std::move(_value)),
     encoded_value(serialize(initial_value)),
@@ -72,14 +72,14 @@ create_action_base_t::string_event(int rc, zookeeper::path_t value) {
 
 
 create_action_t::create_action_t(const zookeeper::handler_tag& tag,
-                                 const zookeeper_t::context_t& _ctx,
+                                 zookeeper_t::context_t _ctx,
                                  api::unicorn_t::callback::create _callback,
                                  path_t _path,
                                  value_t _value,
                                  bool _ephemeral,
                                  bool _sequence
 ) : zookeeper::managed_handler_base_t(tag),
-    create_action_base_t(tag, _ctx, std::move(_path), std::move(_value), _ephemeral, _sequence),
+    create_action_base_t(tag, std::move(_ctx), std::move(_path), std::move(_value), _ephemeral, _sequence),
     callback(std::move(_callback))
 {}
 

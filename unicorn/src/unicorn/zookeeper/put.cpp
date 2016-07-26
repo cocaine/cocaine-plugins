@@ -28,7 +28,7 @@
 namespace cocaine { namespace unicorn {
 
 put_action_t::put_action_t( const zookeeper::handler_tag& tag,
-                            const zookeeper_t::context_t& _ctx,
+                            zookeeper_t::context_t _ctx,
                             api::unicorn_t::callback::put _callback,
                             path_t _path,
                             value_t _value,
@@ -36,7 +36,7 @@ put_action_t::put_action_t( const zookeeper::handler_tag& tag,
 ) : managed_handler_base_t(tag),
     managed_stat_handler_base_t(tag),
     managed_data_handler_base_t(tag),
-    ctx(_ctx),
+    ctx(std::move(_ctx)),
     callback(std::move(_callback)),
     path(std::move(_path)),
     initial_value(std::move(_value)),

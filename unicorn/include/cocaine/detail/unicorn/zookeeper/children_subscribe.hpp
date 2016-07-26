@@ -35,7 +35,7 @@ struct children_subscribe_action_t :
 {
     children_subscribe_action_t(const zookeeper::handler_tag& tag,
                                 api::unicorn_t::callback::children_subscribe callback,
-                                const zookeeper_t::context_t& ctx,
+                                zookeeper_t::context_t ctx,
                                 path_t path);
 
     /**

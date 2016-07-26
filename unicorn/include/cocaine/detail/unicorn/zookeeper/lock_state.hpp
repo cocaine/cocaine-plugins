@@ -26,7 +26,7 @@ class lock_state_t :
     public std::enable_shared_from_this<lock_state_t>
 {
 public:
-    lock_state_t(const zookeeper_t::context_t& _ctx);
+    lock_state_t(zookeeper_t::context_t _ctx);
 
     ~lock_state_t();
 

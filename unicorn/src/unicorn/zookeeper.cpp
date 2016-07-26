@@ -31,6 +31,7 @@
 #include "cocaine/service/unicorn.hpp"
 
 #include <cocaine/context.hpp>
+#include <cocaine/logging.hpp>
 
 #include <cocaine/unicorn/value.hpp>
 
@@ -39,6 +40,7 @@
 #include <blackhole/logger.hpp>
 
 #include <memory>
+#include <blackhole/wrapper.hpp>
 
 namespace cocaine {
 namespace unicorn {
@@ -75,9 +77,11 @@ public api::unicorn_scope_t
 
 }
 typedef api::unicorn_scope_ptr scope_ptr;
-zookeeper_t::zookeeper_t(cocaine::context_t& context, const std::string& name, const dynamic_t& args) :
-    api::unicorn_t(context, name, args),
-    log(context.log(name)),
+zookeeper_t::zookeeper_t(cocaine::context_t& _context, const std::string& _name, const dynamic_t& args) :
+    api::unicorn_t(_context, name, args),
+    context(_context),
+    name(_name),
+    log(context.log(cocaine::format("unicorn/{}", name))),
     zk_session(),
     zk(make_zk_config(args), zk_session)
 {
@@ -99,42 +103,63 @@ zookeeper_t::put(
         return nullptr;
     }
     auto scope = std::make_shared<zk_scope_t>();
+    std::shared_ptr<logging::logger_t> logger = context.log(cocaine::format("unicorn/{}", name), {
+        {"method", "put"},
+        {"path", path},
+        {"version", version},
+        {"command_id", rand()}});
     auto& handler = scope->handler_scope.get_handler<put_action_t>(
-        context_t({*log, zk}),
+        context_t({logger, zk}),
         std::move(callback),
         path,
         value,
         std::move(version)
     );
+    COCAINE_LOG_DEBUG(logger, "start processing");
     zk.put(handler.path, handler.encoded_value, handler.version, handler);
+    COCAINE_LOG_DEBUG(logger, "enqueued");
     return scope;
 }
 
 scope_ptr
 zookeeper_t::get(callback::get callback, const path_t& path) {
     auto scope = std::make_shared<zk_scope_t>();
+    std::shared_ptr<logging::logger_t> logger = context.log(cocaine::format("unicorn/{}", name), {
+        {"method", {"get"}},
+        {"path", {path}},
+        {"command_id", {rand()}}});
     auto& handler = scope->handler_scope.get_handler<subscribe_action_t>(
         std::move(callback),
-        context_t({*log, zk}),
+        context_t({logger, zk}),
         path
     );
+    COCAINE_LOG_DEBUG(logger, "start processing");
     zk.get(handler.path, handler);
+    COCAINE_LOG_DEBUG(logger, "enqueued");
     return scope;
 }
 
 scope_ptr
 zookeeper_t::create(callback::create callback, const path_t& path, const value_t& value, bool ephemeral, bool sequence ) {
     auto scope = std::make_shared<zk_scope_t>();
+    std::shared_ptr<logging::logger_t> logger = context.log(cocaine::format("unicorn/{}", name), {
+        {"method", "create"},
+        {"path", path},
+        {"ephemeral", ephemeral},
+        {"sequence", sequence},
+        {"command_id", rand()}});
     //Note: There is a possibility to use unmanaged handler.
     auto& handler = scope->handler_scope.get_handler<create_action_t>(
-        context_t({*log, zk}),
+        context_t({logger, zk}),
         std::move(callback),
         path,
         value,
         ephemeral,
         sequence
     );
+    COCAINE_LOG_DEBUG(logger, "start processing");
     zk.create(handler.path, handler.encoded_value, handler.ephemeral, handler.sequence, handler);
+    COCAINE_LOG_DEBUG(logger, "enqueued");
     return scope;
 }
 
@@ -147,25 +172,37 @@ zookeeper_t::del(callback::del callback, const path_t& path, version_t version) 
 
 scope_ptr
 zookeeper_t::subscribe(callback::subscribe callback, const path_t& path) {
+    std::shared_ptr<logging::logger_t> logger = context.log(cocaine::format("unicorn/{}", name), {
+        {"method", "subscribe"},
+        {"path", path},
+        {"command_id", rand()}});
     auto scope = std::make_shared<zk_scope_t>();
     auto& handler = scope->handler_scope.get_handler<subscribe_action_t>(
         std::move(callback),
-        context_t({*log,zk}),
+        context_t({logger, zk}),
         path
     );
+    COCAINE_LOG_DEBUG(logger, "start processing");
     zk.get(handler.path, handler, handler);
+    COCAINE_LOG_DEBUG(logger, "enqueued");
     return scope;
 }
 
 scope_ptr
 zookeeper_t::children_subscribe(callback::children_subscribe callback, const path_t& path) {
+    std::shared_ptr<logging::logger_t> logger = context.log(cocaine::format("unicorn/{}", name), {
+        {"method", "children_subscribe"},
+        {"path", path},
+        {"command_id", rand()}});
     auto scope = std::make_shared<zk_scope_t>();
     auto& handler = scope->handler_scope.get_handler<children_subscribe_action_t>(
         std::move(callback),
-        context_t({*log, zk}),
+        context_t({logger, zk}),
         path
     );
+    COCAINE_LOG_DEBUG(logger, "start processing");
     zk.childs(handler.path, handler, handler);
+    COCAINE_LOG_DEBUG(logger, "enqueued");
     return scope;
 }
 
@@ -177,30 +214,43 @@ zookeeper_t::increment(callback::increment callback, const path_t& path, const v
         callback(std::move(future));
         return nullptr;
     }
+    std::shared_ptr<logging::logger_t> logger = context.log(cocaine::format("unicorn/{}", name), {
+        {"method", "increment"},
+        {"path", path},
+        {"command_id", rand()}});
     auto scope = std::make_shared<zk_scope_t>();
     auto& handler = scope->handler_scope.get_handler<increment_action_t>(
-        context_t({*log, zk}),
+        context_t({logger, zk}),
         std::move(callback),
         path,
         value
     );
+    COCAINE_LOG_DEBUG(logger, "start processing");
     zk.get(handler.path, handler);
+    COCAINE_LOG_DEBUG(logger, "enqueued");
     return scope;
 }
 
 scope_ptr
 zookeeper_t::lock(callback::lock callback, const path_t& folder) {
     path_t path = folder + "/lock";
-    auto lock_state = std::make_shared<lock_state_t>(context_t({*log, zk}));
+    std::shared_ptr<logging::logger_t> logger = context.log(cocaine::format("unicorn/{}", name), {
+        {"method", "lock"},
+        {"folder", folder},
+        {"command_id", rand()}});
+    auto lock_state = std::make_shared<lock_state_t>(context_t({logger, zk}));
+
     auto& handler = lock_state->handler_scope.get_handler<lock_action_t>(
-        context_t({*log, zk}),
+        context_t({logger, zk}),
         lock_state,
         path,
         std::move(folder),
         value_t(time(nullptr)),
         callback
     );
+    COCAINE_LOG_DEBUG(logger, "start processing");
     zk.create(path, handler.encoded_value, handler.ephemeral, handler.sequence, handler);
+    COCAINE_LOG_DEBUG(logger, "enqueued");
     return lock_state;
 }
 

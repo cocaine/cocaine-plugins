@@ -30,7 +30,7 @@ struct create_action_base_t :
     public zookeeper::managed_string_handler_base_t
 {
     create_action_base_t(const zookeeper::handler_tag& tag,
-                         const zookeeper_t::context_t& ctx,
+                         zookeeper_t::context_t ctx,
                          path_t _path,
                          value_t _value,
                          bool _ephemeral,
@@ -71,7 +71,7 @@ struct create_action_t:
     public create_action_base_t
 {
     create_action_t(const zookeeper::handler_tag& tag,
-                    const zookeeper_t::context_t& ctx,
+                    zookeeper_t::context_t ctx,
                     api::unicorn_t::callback::create callback,
                     path_t _path,
                     value_t _value,

@@ -36,7 +36,7 @@ struct subscribe_action_t :
 {
     subscribe_action_t(const zookeeper::handler_tag& tag,
                        api::unicorn_t::callback::subscribe callback,
-                       const unicorn::zookeeper_t::context_t& ctx,
+                       unicorn::zookeeper_t::context_t ctx,
                        unicorn::path_t path);
 
     /**

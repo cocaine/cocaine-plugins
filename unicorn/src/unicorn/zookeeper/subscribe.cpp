@@ -28,14 +28,14 @@ namespace cocaine { namespace unicorn {
 
 subscribe_action_t::subscribe_action_t(const zookeeper::handler_tag& tag,
                                        api::unicorn_t::callback::subscribe _callback,
-                                       const zookeeper_t::context_t& _ctx,
+                                       zookeeper_t::context_t _ctx,
                                        path_t _path
 ) : managed_handler_base_t(tag),
     managed_data_handler_base_t(tag),
     managed_watch_handler_base_t(tag),
     managed_stat_handler_base_t(tag),
     callback(std::move(_callback)),
-    ctx(_ctx),
+    ctx(std::move(_ctx)),
     write_lock(),
     last_version(unicorn::min_version),
     path(std::move(_path))

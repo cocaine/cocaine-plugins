@@ -37,7 +37,7 @@ struct lock_action_t :
     public zookeeper::managed_watch_handler_base_t
 {
     lock_action_t(const zookeeper::handler_tag& tag,
-                  const unicorn::zookeeper_t::context_t& ctx,
+                  unicorn::zookeeper_t::context_t ctx,
                   std::shared_ptr<lock_state_t> state,
                   path_t _path,
                   path_t folder,
@@ -97,7 +97,7 @@ struct lock_action_t :
 struct release_lock_action_t :
 public zookeeper::void_handler_base_t
 {
-    release_lock_action_t(const zookeeper_t::context_t& ctx);
+    release_lock_action_t(zookeeper_t::context_t ctx);
 
     virtual void
     void_event(int rc);
