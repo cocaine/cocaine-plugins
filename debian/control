@@ -223,3 +223,16 @@ Section: debug
 Depends: ${misc:Depends}, libcocaine-plugin-unicorn3 (= ${binary:Version})
 Description: Cocaine - Unicorn Service (debug symbols)
  Unified configuration service for cocaine. Debug symbols.
+
+Package: libcocaine-plugin-elliptics
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, elliptics-client (>= 2.26.11.0)
+Description: Distributed hash table storage (cocaine plugin)
+ Elliptics network is a fault tolerant distributed hash table object storage.
+
+Package: libcocaine-plugin-elliptics-dev
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+         libcocaine-framework-native-dev (>= 0.12.9), libcocaine-framework-native-dev (<< 0.12.10),
+Description: Distributed hash table storage (cocaine plugin includes)
+ Elliptics network is a fault tolerant distributed hash table object storage.

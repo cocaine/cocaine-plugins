@@ -21,6 +21,7 @@ OPTION(MONGO "Build MongoDB Storage plugin" ON)
 OPTION(NODE "Build Node service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(UNICORN "Build Unified configuration service plugin" ON)
+OPTION(ELLIPTICS "Build Elliptics Storage and Service plugin" ON)
 
 # Include our CMake libraries.
 INCLUDE(cmake/locate_library.cmake)
@@ -64,6 +65,7 @@ SET(PLUGINS
     node
     unicorn
     urlfetch
+    elliptics
 )
 
 IF("${CMAKE_SHARED_LIBRARY_SUFFIX}" STREQUAL "")
