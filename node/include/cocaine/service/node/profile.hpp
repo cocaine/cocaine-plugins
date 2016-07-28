@@ -47,7 +47,6 @@ struct profile_t : cached<dynamic_t> {
         unsigned long seal;
         unsigned long terminate;
         unsigned long idle;
-        unsigned long request;
     } timeout;
 
     // Limits.
@@ -63,6 +62,13 @@ struct profile_t : cached<dynamic_t> {
         std::string type;
         dynamic_t args;
     } isolate;
+
+
+    // This is a temporal hack not to break ABI
+    // Should be located in timeout section
+    // TODO: fully rework to interface
+    unsigned long
+    request_timeout() const;
 };
 
 }  // namespace cocaine

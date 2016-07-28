@@ -169,7 +169,7 @@ auto machine_t::inject(load_t& load, channel_handler handler) -> std::uint64_t {
         return channels.size();
     });
 
-    std::chrono::milliseconds request_timeout(profile.timeout.request);
+    std::chrono::milliseconds request_timeout(profile.request_timeout());
     if (auto timeout_from_header = load.event.header<std::uint64_t>("request_timeout")) {
         request_timeout = std::chrono::milliseconds(*timeout_from_header);
     }
