@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.9.4) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Fix broken ABI
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 28 Jul 2016 13:18:30 +0300
+
 cocaine-plugins (0.12.9.3) unstable; urgency=low
 
   * Introduce Elliptics plugin.
