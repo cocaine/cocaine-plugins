@@ -189,6 +189,9 @@ auto machine_t::inject(load_t& load, channel_handler handler) -> std::uint64_t {
         auto this_ = shared_from_this();
 
         auto timer = std::make_shared<asio::deadline_timer>(loop);
+        data.timers.apply([&](timers_map_t& timers) {
+            timers[id] = timer;
+        });
         timer->expires_from_now(boost::posix_time::milliseconds(duration));
         timer->async_wait([=](const std::error_code& ec) mutable {
             if (ec == asio::error::operation_aborted) {
@@ -198,8 +201,6 @@ auto machine_t::inject(load_t& load, channel_handler handler) -> std::uint64_t {
             COCAINE_LOG_ERROR(this_->log, "channel {} has timed out, closing", id);
             into_worker_dispatch->discard(error::timeout_error);
             from_worker_dispatch->discard(error::timeout_error);
-
-            timer.reset();
         });
     }
 
@@ -292,6 +293,10 @@ machine_t::shutdown(std::error_code ec) {
         dump();
     }
 
+    data.timers.apply([&](timers_map_t& timers){
+        timers.clear();
+    });
+
     data.channels.apply([&](channels_map_t& channels) {
         const auto size = channels.size();
         if (size > 0) {
@@ -306,6 +311,7 @@ machine_t::shutdown(std::error_code ec) {
 
         channels.clear();
     });
+
 
     // Check if the slave has been terminated externally. If so, do not call the cleanup callback.
     if (closed) {
@@ -330,6 +336,9 @@ machine_t::revoke(std::uint64_t id, channel_handler handler) {
     const auto load = data.channels.apply([&](channels_map_t& channels) -> std::uint64_t {
         channels.erase(id);
         return channels.size();
+    });
+    data.timers.apply([&](timers_map_t& timers) {
+        timers.erase(id);
     });
 
     COCAINE_LOG_DEBUG(log, "slave has decreased its load to {}", load, attribute_list({{"channel", id}}));

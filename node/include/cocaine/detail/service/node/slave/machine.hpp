@@ -84,9 +84,11 @@ private:
     std::atomic<std::uint64_t> counter;
 
     typedef std::unordered_map<std::uint64_t, std::shared_ptr<channel_t>> channels_map_t;
+    typedef std::unordered_map<std::uint64_t, std::shared_ptr<asio::deadline_timer>> timers_map_t;
 
     struct {
         synchronized<channels_map_t> channels;
+        synchronized<timers_map_t> timers;
     } data;
 
 public:
