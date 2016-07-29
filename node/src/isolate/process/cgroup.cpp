@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include <libcgroup.h>
 
 #include <boost/lexical_cast.hpp>
