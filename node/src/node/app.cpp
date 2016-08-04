@@ -446,9 +446,7 @@ private:
 
 } // namespace state
 
-class cocaine::service::node::app_state_t:
-    public std::enable_shared_from_this<app_state_t>
-{
+class cocaine::service::node::app_state_t {
     const std::unique_ptr<logging::logger_t> log;
 
     context_t& context;
@@ -523,7 +521,7 @@ public:
                 manifest(),
                 profile,
                 log.get(),
-                std::make_shared<spool_handle_t>(shared_from_this())
+                std::make_shared<spool_handle_t>(*this)
             ));
         });
     }
@@ -541,14 +539,14 @@ private:
         virtual
         void
         on_abort(const std::error_code& ec, const std::string& msg) {
-            COCAINE_LOG_ERROR(parent->log, "unable to spool app, [{}] {} - {}", ec.value(), ec.message(), msg);
+            COCAINE_LOG_ERROR(parent.log, "unable to spool app, [{}] {} - {}", ec.value(), ec.message(), msg);
             // Dispatch the completion handler to be sure it will be called in a I/O thread to
             // avoid possible deadlocks.
-            parent->loop->dispatch(std::bind(&app_state_t::cancel, parent, ec));
+            parent.loop->dispatch(std::bind(&app_state_t::cancel, &parent, ec));
 
             // Attempt to finish node service's request.
             try {
-                parent->deferred.abort({}, ec, msg);
+                parent.deferred.abort({}, ec, msg);
             } catch (const std::exception&) {
                 // Ignore if the client has been disconnected.
             }
@@ -556,15 +554,15 @@ private:
         virtual
         void
         on_ready() {
-            COCAINE_LOG_DEBUG(parent->log, "application has been spooled");
-            parent->loop->dispatch(std::bind(&app_state_t::publish, parent));
+            COCAINE_LOG_DEBUG(parent.log, "application has been spooled");
+            parent.loop->dispatch(std::bind(&app_state_t::publish, &parent));
         }
 
-        spool_handle_t(std::shared_ptr<app_state_t> _parent) :
+        spool_handle_t(app_state_t& _parent) :
             parent(_parent)
         {}
 
-        std::shared_ptr<app_state_t> parent;
+        app_state_t& parent;
     };
 
     void
