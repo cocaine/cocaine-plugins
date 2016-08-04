@@ -1,3 +1,11 @@
+cocaine-plugins (0.12.9.6) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Node: Prevent isolate and app_state leakage
+  * Logging: restore source attribute
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 04 Aug 2016 15:29:30 +0300
+
 cocaine-plugins (0.12.9.5) unstable; urgency=low
 
   * Non-maintainer upload.

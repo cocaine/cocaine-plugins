@@ -68,6 +68,7 @@ public:
                     std::shared_ptr<logging::metafilter_t> filter);
 private:
     logging::logger_t& log;
+    std::string backend;
     std::shared_ptr<logging::metafilter_t> filter;
 };
 }

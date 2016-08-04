@@ -73,6 +73,7 @@ bh::root_logger_t get_root_logger(context_t& context, const dynamic_t& service_a
 }
 
 bool emit_ack(std::shared_ptr<logging::metafilter_t> filter,
+              const std::string& backend,
               logging::logger_t& log,
               unsigned int severity,
               const std::string& message,
@@ -81,6 +82,7 @@ bool emit_ack(std::shared_ptr<logging::metafilter_t> filter,
     for (const auto& attribute : attributes) {
         attribute_list.emplace_back(attribute);
     }
+    attribute_list.emplace_back(blackhole::attribute_t{{"source"}, backend});
 
     blackhole::attribute_pack attribute_pack({attribute_list});
     if (filter->apply(severity, attribute_pack) == logging::filter_result_t::reject) {
@@ -91,11 +93,12 @@ bool emit_ack(std::shared_ptr<logging::metafilter_t> filter,
 }
 
 void emit(std::shared_ptr<logging::metafilter_t> filter,
+          const std::string& backend,
           logging::logger_t& log,
           unsigned int severity,
           const std::string& message,
           const logging::attributes_t& attributes) {
-    emit_ack(filter, log, severity, message, attributes);
+    emit_ack(filter, backend, log, severity, message, attributes);
 }
 
 
@@ -423,6 +426,7 @@ public:
                                                                              tuple_type&& args,
                                                                              upstream_type&& upstream) {
         bool result = emit_ack(parent.filter,
+                               parent.backend,
                                parent.log,
                                std::get<0>(args),
                                std::get<1>(args),
@@ -496,13 +500,23 @@ logging_v2_t::logging_v2_t(context_t& context,
                                const std::string& backend,
                                const std::string& message,
                                const logging::attributes_t& attributes){
-        emit(impl->get_non_empty_metafilter(backend), impl->logger, severity, message, attributes);
+        emit(impl->get_non_empty_metafilter(backend),
+             backend,
+             impl->logger,
+             severity,
+             message,
+             attributes);
     });
     on<io::base_log::emit_ack>([&](unsigned int severity,
                                    const std::string& backend,
                                    const std::string& message,
                                    const logging::attributes_t& attributes) {
-        return emit_ack(impl->get_non_empty_metafilter(backend), impl->logger, severity, message, attributes);
+        return emit_ack(impl->get_non_empty_metafilter(backend),
+                        backend,
+                        impl->logger,
+                        severity,
+                        message,
+                        attributes);
     });
     on<io::base_log::verbosity>([](){ return 0; });
     on<io::base_log::set_verbosity>([](unsigned int){});
@@ -526,8 +540,12 @@ logging_v2_t::logging_v2_t(context_t& context,
 
 named_logging_t::named_logging_t(logging::logger_t& _log,
                                  std::string _name,
-                                 std::shared_ptr<logging::metafilter_t> _filter)
-    : dispatch<io::named_log_tag>(std::move(_name)), log(_log), filter(std::move(_filter)) {
+                                 std::shared_ptr<logging::metafilter_t> _filter) :
+        dispatch<io::named_log_tag>(format("named_logging/{}", _name)),
+        log(_log),
+        backend(std::move(_name)),
+        filter(std::move(_filter))
+{
     on<io::named_log::emit>(std::make_shared<emit_slot_t<io::named_log::emit>>(*this, false));
     on<io::named_log::emit_ack>(std::make_shared<emit_slot_t<io::named_log::emit_ack>>(*this, true));
 }
