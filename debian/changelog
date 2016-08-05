@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.9.7) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Logging: fix - extend attribute lifetime.
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 04 Aug 2016 20:31:30 +0300
+
 cocaine-plugins (0.12.9.6) unstable; urgency=low
 
   * Non-maintainer upload.

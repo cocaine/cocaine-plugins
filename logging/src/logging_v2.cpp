@@ -82,7 +82,7 @@ bool emit_ack(std::shared_ptr<logging::metafilter_t> filter,
     for (const auto& attribute : attributes) {
         attribute_list.emplace_back(attribute);
     }
-    attribute_list.emplace_back(blackhole::attribute_t{{"source"}, backend});
+    attribute_list.emplace_back("source", backend);
 
     blackhole::attribute_pack attribute_pack({attribute_list});
     if (filter->apply(severity, attribute_pack) == logging::filter_result_t::reject) {
