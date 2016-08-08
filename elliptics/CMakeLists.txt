@@ -9,9 +9,11 @@ ADD_LIBRARY(elliptics-extensions MODULE
     src/module)
 
 TARGET_LINK_LIBRARIES(elliptics-extensions
+    blackhole
     cocaine-core
     cocaine-io-util
-    blackhole
+    elliptics_client
+    elliptics_cpp
     ${Boost_LIBRARIES})
 
 SET_TARGET_PROPERTIES(elliptics-extensions PROPERTIES
