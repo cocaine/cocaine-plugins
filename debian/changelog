@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.9.9) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Elliptics: rename package for consistency.
+
+ -- Anton Matveenko <antmat@me.com>  Mon, 08 Aug 2016 18:32:30 +0300
+
 cocaine-plugins (0.12.9.8) unstable; urgency=low
 
   * Non-maintainer upload.
