@@ -46,7 +46,7 @@ private:
     struct on_list_update;
 
     std::pair<size_t, api::unicorn_scope_ptr&>
-    scope();
+    scope(std::map<size_t, api::unicorn_scope_ptr>& _scopes);
 
     void
     drop_scope(size_t);

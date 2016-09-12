@@ -111,12 +111,9 @@ unicorn_cluster_t::unicorn_cluster_t(
 }
 
 std::pair<size_t, api::unicorn_scope_ptr&>
-unicorn_cluster_t::scope() {
-    typedef std::pair<size_t, api::unicorn_scope_ptr&> result_t;
-    return scopes.apply([&](std::map<size_t, api::unicorn_scope_ptr>& _scopes) -> result_t {
-        auto id = scope_counter++;
-        return {id, _scopes[id]};
-    });
+unicorn_cluster_t::scope(std::map<size_t, api::unicorn_scope_ptr>& _scopes) {
+    auto id = scope_counter++;
+    return {id, _scopes[id]};
 }
 
 void
@@ -149,15 +146,18 @@ unicorn_cluster_t::announce() {
     } else {
         endpoints.swap(cur_endpoints);
 
-        auto scope_data = scope();
+
         try {
-            scope_data.second = unicorn->create(
-                std::bind(&unicorn_cluster_t::on_announce_set, this, scope_data.first, ph::_1),
-                config.path + '/' + locator.uuid(),
-                endpoints,
-                true,
-                false
-            );
+            scopes.apply([&](std::map<size_t, api::unicorn_scope_ptr>& _scopes) {
+                auto scope_data = scope(_scopes);
+                scope_data.second = unicorn->create(
+                    std::bind(&unicorn_cluster_t::on_announce_set, this, scope_data.first, ph::_1),
+                    config.path + '/' + locator.uuid(),
+                    endpoints,
+                    true,
+                    false
+                );
+            });
             announce_timer.expires_from_now(boost::posix_time::seconds(config.check_interval));
             announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
         } catch (const std::system_error& e) {
@@ -188,10 +188,12 @@ void unicorn_cluster_t::on_announce_set(size_t scope_id, std::future<response::c
         drop_scope(scope_id);
         future.get();
         COCAINE_LOG_INFO(log, "announced self in unicorn");
-        auto scope_data = scope();
-        auto cb = std::bind(&unicorn_cluster_t::on_announce_checked, this, scope_data.first, ph::_1);
-        auto path = config.path + '/' + locator.uuid();
-        scope_data.second = unicorn->subscribe(std::move(cb), path);
+        scopes.apply([&](std::map<size_t, api::unicorn_scope_ptr>& _scopes) {
+            auto scope_data = scope(_scopes);
+            auto cb = std::bind(&unicorn_cluster_t::on_announce_checked, this, scope_data.first, ph::_1);
+            auto path = config.path + '/' + locator.uuid();
+            scope_data.second = unicorn->subscribe(std::move(cb), path);
+        });
     } catch (const std::system_error& e) {
         if(e.code().value() == ZNODEEXISTS) {
             COCAINE_LOG_INFO(log, "announce checked");
@@ -242,14 +244,16 @@ void unicorn_cluster_t::on_node_list_change(size_t scope_id, std::future<respons
             for (auto& uuid: nodes) {
                 auto it = endpoint_map.find(uuid);
                 if(it == endpoint_map.end() || it->second.empty()) {
-                    auto scope_data = scope();
-                    auto callback = std::bind(&unicorn_cluster_t::on_node_fetch,
-                                              this,
-                                              scope_data.first,
-                                              uuid,
-                                              std::placeholders::_1);
-                    scope_data.second = unicorn->get(std::move(callback),
-                                                     config.path + '/' + uuid);
+                    scopes.apply([&](std::map<size_t, api::unicorn_scope_ptr>& _scopes) {
+                        auto scope_data = scope(_scopes);
+                        auto callback = std::bind(&unicorn_cluster_t::on_node_fetch,
+                                                  this,
+                                                  scope_data.first,
+                                                  uuid,
+                                                  std::placeholders::_1);
+                        scope_data.second = unicorn->get(std::move(callback),
+                                                         config.path + '/' + uuid);
+                    });
                 } else {
                     locator.link_node(uuid, it->second);
                 }
@@ -311,11 +315,13 @@ void unicorn_cluster_t::on_node_fetch(size_t scope_id,
 
 void
 unicorn_cluster_t::subscribe() {
-    auto scope_data = scope();
-    scope_data.second = unicorn->children_subscribe(
-        std::bind(&unicorn_cluster_t::on_node_list_change, this, scope_data.first, std::placeholders::_1),
-        config.path
-    );
+    scopes.apply([&](std::map<size_t, api::unicorn_scope_ptr>& _scopes) {
+        auto scope_data = scope(_scopes);
+        scope_data.second = unicorn->children_subscribe(
+            std::bind(&unicorn_cluster_t::on_node_list_change, this, scope_data.first, std::placeholders::_1),
+            config.path
+        );
+    });
     subscribe_timer.expires_from_now(boost::posix_time::seconds(config.check_interval));
     subscribe_timer.async_wait(std::bind(&unicorn_cluster_t::on_subscribe_timer, this, std::placeholders::_1));
     COCAINE_LOG_INFO(log, "subscribed for updates on path {} (may be prefixed)", config.path);
