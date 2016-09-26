@@ -170,7 +170,7 @@ auto machine_t::inject(load_t& load, channel_handler handler) -> std::uint64_t {
     });
 
     std::chrono::milliseconds request_timeout(profile.request_timeout());
-    if (auto timeout_from_header = load.event.header<std::uint64_t>("request_timeout")) {
+    if (auto timeout_from_header = hpack::header::convert_first<std::uint64_t>(load.event.headers, "request_timeout")) {
         request_timeout = std::chrono::milliseconds(*timeout_from_header);
     }
     // May be negative. Probably, it's OK for boost::asio.

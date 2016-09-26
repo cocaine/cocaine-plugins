@@ -35,25 +35,6 @@ public:
         : name(std::move(name)),
           birthstamp(clock_type::now()),
           headers(std::move(headers)) {}
-
-    template<typename T, std::size_t N>
-    auto header(char const (&name)[N]) const -> boost::optional<T> {
-        const auto hname = hpack::header::create_data(name);
-
-        auto it = boost::find_if(headers.get_headers(), [&](const hpack::header_t& item) -> bool {
-            return item.get_name() == hname;
-        });
-
-        if (it == std::end(headers.get_headers())) {
-            return boost::none;
-        } else {
-            try {
-                return it->get_value().template convert<T>();
-            } catch (const std::system_error& err) {
-                return boost::none;
-            }
-        }
-    }
 };
 
 }  // namespace app

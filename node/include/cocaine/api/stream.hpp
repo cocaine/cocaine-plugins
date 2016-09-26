@@ -1,15 +1,9 @@
 #pragma once
 
+#include <cocaine/forwards.hpp>
+
 #include <string>
 #include <system_error>
-
-namespace cocaine {
-namespace hpack {
-
-class header_storage_t;
-
-}  // namespace hpack
-}  // namespace cocaine
 
 namespace cocaine {
 namespace api {

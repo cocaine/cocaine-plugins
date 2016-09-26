@@ -475,7 +475,7 @@ auto engine_t::assign(slave_t& slave, load_t& load) -> void {
     auto& event = load.event;
 
     std::chrono::milliseconds request_timeout(profile().request_timeout());
-    if (auto timeout_from_header = event.header<std::uint64_t>("request_timeout")) {
+    if (auto timeout_from_header = hpack::header::convert_first<std::uint64_t>(event.headers, "request_timeout")) {
         request_timeout = std::chrono::milliseconds(*timeout_from_header);
     }
 
