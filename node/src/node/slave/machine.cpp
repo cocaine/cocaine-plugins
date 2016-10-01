@@ -390,11 +390,15 @@ machine_t::dump() {
     COCAINE_LOG_INFO(log, "slave is dumping output to 'crashlogs/{}' using [{}] indexes",
                      key, boost::join(indexes, ", "));
 
-    try {
-        api::storage(context, "core")->put("crashlogs", key, dump, indexes);
-    } catch (const std::system_error& err) {
-        COCAINE_LOG_WARNING(log, "slave is unable to save the crashlog: {}", err.what());
-    }
+    // TODO: this one is really only used to log any error during crashlog write. Maybe we can do it in a better way
+    auto self = shared_from_this();
+    api::storage(context, "core")->put("crashlogs", key, dump, indexes, [=](std::future<void> f){
+        try {
+            f.get();
+        } catch (const std::exception& e) {
+            COCAINE_LOG_WARNING(self->log, "slave is unable to save the crashlog: {}", e.what());
+        }
+    });
 }
 
 }  // namespace slave

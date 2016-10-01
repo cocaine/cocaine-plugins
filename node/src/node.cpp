@@ -80,7 +80,7 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
 
     try {
         // TODO: Perform request to a special service, like "storage->runlist(runname)".
-        runlist = storage->get<runlist_t>("runlists", runname);
+        runlist = storage->get<runlist_t>("runlists", runname).get();
     } catch(const std::system_error& err) {
         COCAINE_LOG_WARNING(log, "unable to read '{}' runlist: {}", runname, err.what());
     }

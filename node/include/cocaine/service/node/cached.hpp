@@ -70,15 +70,12 @@ cached<T>::cached(context_t& context, const std::string& collection, const std::
     }
 
     try {
-        object() = cache->get<T>(collection, name);
+        object() = cache->get<T>(collection, name).get();
     } catch(const std::system_error& e) {
         download(context, collection, name);
 
-        try {
-            cache->put(collection, name, object(), std::vector<std::string>());
-        } catch(const std::system_error& e) {
-            // Ignore.
-        }
+        //Run in background
+        cache->put(collection, name, object(), std::vector<std::string>());
 
         return;
     }
@@ -90,7 +87,7 @@ template<class T>
 void
 cached<T>::download(context_t& context, const std::string& collection, const std::string& name) {
     // Intentionally propagate storage exceptions from this call.
-    object() = api::storage(context, "core")->get<T>(collection, name);
+    object() = api::storage(context, "core")->get<T>(collection, name).get();
     m_source = sources::storage;
 }
 

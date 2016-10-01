@@ -309,7 +309,9 @@ process_t::spool(std::shared_ptr<api::spool_handle_base_t> handler) {
     COCAINE_LOG_INFO(m_log, "deploying app to {}", m_working_directory);
 
     const auto storage = api::storage(m_context, "core");
-    const auto archive = storage->get<std::string>("apps", m_name);
+
+    //TODO: maybe we can change to async, but as far as this isolation is a legacy one there is no need right now
+    const auto archive = storage->get<std::string>("apps", m_name).get();
 
     archive_t(m_context, archive).deploy(m_working_directory.native());
     io_context.post([=](){
