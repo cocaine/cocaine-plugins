@@ -88,11 +88,10 @@ deferred<void> elliptics_service_t::write(const std::string &collection, const s
 
 deferred<std::vector<std::string>> elliptics_service_t::find(const std::string &collection,
                                                              const std::vector<std::string> &tags) {
-	debug() << "lits, collection: " << collection << std::endl;
 	deferred<std::vector<std::string> > promise;
-
-	m_elliptics->async_find(collection, tags).connect(std::bind(&on_find_completed,
-		promise, ph::_1, ph::_2));
+	auto ec = std::make_error_code(std::errc::not_supported);
+	auto msg = "elliptics indexes support has been dropped out - use pg wrapper instead";
+	promise.abort(ec, msg);
 
 	return promise;
 }

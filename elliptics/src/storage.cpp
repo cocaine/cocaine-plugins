@@ -171,52 +171,64 @@ elliptics_storage_t::elliptics_storage_t(context_t &context, const std::string &
 	m_session.set_exceptions_policy(ell::session::no_exceptions);
 }
 
-std::string elliptics_storage_t::read(const std::string &collection, const std::string &key) {
+void elliptics_storage_t::read(const std::string &collection, const std::string &key, callback<std::string> cb) {
 	auto result = m_read_latest ? async_read_latest(collection, key) : async_read(collection, key);
-	result.wait();
-
-	if (result.error()) {
-		throw std::system_error(-result.error().code(), std::generic_category(), result.error().message());
-	}
-
-	return result.get_one().file().to_string();
+	result.connect([=](const ell::sync_read_result& results, const ell::error_info& error){
+		if (error) {
+			auto e = std::system_error(-error.code(), std::generic_category(), error.message());
+			cb(make_exceptional_future<std::string>(e));
+		} else {
+			// this code mimics get_one sync call behaviour
+			for(const auto& r : results) {
+				if (r.status() == 0 && !r.data().empty()) {
+					cb(make_ready_future(r.file().to_string()));
+					return;
+				}
+			}
+			auto e = std::system_error(std::make_error_code(std::errc::invalid_argument), "no valid results found");
+			cb(make_exceptional_future<std::string>(e));
+		}
+	});
 }
 
 void elliptics_storage_t::write(const std::string &collection,
 	const std::string &key,
 	const std::string &blob,
-	const std::vector<std::string> &tags)
+	const std::vector<std::string> &tags,
+	callback<void> cb
+)
 {
 	auto result = async_write(collection, key, blob, tags);
-	result.wait();
-
-	COCAINE_LOG_DEBUG(m_log, "write finished");
-
-	if (result.error()) {
-		throw std::system_error(-result.error().code(), std::generic_category(), result.error().message());
-	}
+	result.connect([=](const ell::sync_write_result& results, const ell::error_info &error){
+		if (error) {
+			auto e = std::system_error(-error.code(), std::generic_category(), error.message());
+			cb(make_exceptional_future<void>(e));
+		} else {
+			cb(make_ready_future());
+		}
+	});
 }
 
-std::vector<std::string> elliptics_storage_t::find(const std::string &collection, const std::vector<std::string> &tags)
+void elliptics_storage_t::find(const std::string &collection,
+	const std::vector<std::string> &tags,
+	callback<std::vector<std::string>> cb)
 {
-	auto result = async_find(collection, tags);
-	result.wait();
-
-	if (result.error()) {
-		throw std::system_error(-result.error().code(), std::generic_category(), result.error().message());
-	}
-
-	return convert_list_result(result.get());
+	auto ec = std::make_error_code(std::errc::not_supported);
+	auto msg = "elliptics indexes support has been dropped out - use pg wrapper instead";
+	cb(make_exceptional_future<std::vector<std::string>>(ec, msg));
 }
 
-void elliptics_storage_t::remove(const std::string &collection, const std::string &key)
+void elliptics_storage_t::remove(const std::string &collection, const std::string &key, callback<void> cb)
 {
 	auto result = async_remove(collection, key);
-	result.wait();
-
-	if (result.error()) {
-		throw std::system_error(-result.error().code(), std::generic_category(), result.error().message());
-	}
+	result.connect([=](const ell::sync_remove_result& results, const ell::error_info &error){
+		if (error) {
+			auto e = std::system_error(-error.code(), std::generic_category(), error.message());
+			cb(make_exceptional_future<void>(e));
+		} else {
+			cb(make_ready_future());
+		}
+	});
 }
 
 ell::async_read_result elliptics_storage_t::async_read(const std::string &collection, const std::string &key)
@@ -245,49 +257,11 @@ ell::async_read_result elliptics_storage_t::async_read_latest(const std::string 
 	return session.read_latest(key, 0, 0);
 }
 
-static void on_adding_index_finished(const elliptics_storage_t::log_ptr &log,
-	ell::async_result_handler<ell::write_result_entry> handler,
-	const ell::error_info &err)
-{
-	if (err) {
-		COCAINE_LOG_DEBUG(log, "index adding failed: {}", err.message());
-	} else {
-		COCAINE_LOG_DEBUG(log, "index adding completed");
-	}
-	handler.complete(err);
-}
-
-static void on_write_finished(const elliptics_storage_t::log_ptr &log,
-	ell::async_result_handler<ell::write_result_entry> handler,
-	ell::session session,
-	const std::string &key,
-	const std::vector<std::string> &index_names,
-	const ell::sync_write_result &result,
-	const ell::error_info &err)
-{
-	using namespace std::placeholders;
-
-	if (err) {
-		COCAINE_LOG_DEBUG(log, "write failed: {}", err.message());
-		handler.complete(err);
-		return;
-	}
-	COCAINE_LOG_DEBUG(log, "write partially completed");
-
-	for (auto it = result.begin(); it != result.end(); ++it) {
-		handler.process(*it);
-	}
-
-	std::vector<ell::data_pointer> index_data(index_names.size(),
-		ell::data_pointer::copy(key.c_str(), key.size()));
-
-	session.set_indexes(key, index_names, index_data)
-		.connect(std::bind(on_adding_index_finished, log, handler, ph::_2));
-}
-
 ell::async_write_result elliptics_storage_t::async_write(const std::string &collection, const std::string &key, const std::string &blob, const std::vector<std::string> &tags)
 {
-	using namespace std::placeholders;
+	if (!tags.empty()) {
+		COCAINE_LOG_ERROR(m_log, "elliptics indexes are not supported, discarding tags");
+	}
 
 	COCAINE_LOG_DEBUG(m_log, "writing the '{}' object, collection: '{}'", key, collection);
 
@@ -297,46 +271,7 @@ ell::async_write_result elliptics_storage_t::async_write(const std::string &coll
 	session.set_timeout(m_timeouts.write);
 	session.set_checker(m_success_copies_num);
 
-	auto write_result = session.write_data(key, blob, 0);
-
-	if (tags.empty()) {
-		return write_result;
-	}
-
-	ell::async_write_result result(session);
-	ell::async_result_handler<ell::write_result_entry> handler(result);
-
-	write_result.connect(std::bind(on_write_finished, m_log, handler, session, key, tags, ph::_1, ph::_2));
-
-	return result;
-}
-
-ell::async_find_indexes_result elliptics_storage_t::async_find(const std::string &collection, const std::vector<std::string> &tags)
-{
-	COCAINE_LOG_DEBUG(m_log, "listing collection: '{}'", collection);
-	using namespace std::placeholders;
-
-	ell::session session = m_session.clone();
-	session.set_namespace(collection.data(), collection.size());
-	session.set_timeout(m_timeouts.find);
-
-	return session.find_all_indexes(tags);
-}
-
-static void on_removing_index_finished(ell::async_result_handler<ell::callback_result_entry> handler,
-	ell::session session,
-	const std::string &key,
-	const ell::sync_update_indexes_result &,
-	const ell::error_info &err)
-{
-	using namespace std::placeholders;
-
-	if (err) {
-		handler.complete(err);
-		return;
-	}
-
-	session.remove(key).connect(handler);
+	return session.write_data(key, blob, 0);
 }
 
 ell::async_remove_result elliptics_storage_t::async_remove(const std::string &collection, const std::string &key)
@@ -350,16 +285,7 @@ ell::async_remove_result elliptics_storage_t::async_remove(const std::string &co
 	session.set_timeout(m_timeouts.remove);
 	session.set_checker(m_success_copies_num);
 
-	ell::async_remove_result result(session);
-	ell::async_result_handler<ell::callback_result_entry> handler(result);
-
-	session.set_checker(ell::checkers::no_check);
-	session.set_filter(ell::filters::all_with_ack);
-
-	session.set_indexes(key, std::vector<std::string>(), std::vector<ell::data_pointer>())
-		.connect(std::bind(on_removing_index_finished, handler, session, key, ph::_1, ph::_2));
-
-	return result;
+	return session.remove(key);
 }
 
 ioremap::elliptics::async_read_result elliptics_storage_t::async_cache_read(const std::string &collection, const std::string &key)
@@ -440,17 +366,5 @@ ioremap::elliptics::async_write_result elliptics_storage_t::async_bulk_write(con
 	return session.bulk_write(ios, blobs);
 }
 
-std::vector<std::string> elliptics_storage_t::convert_list_result(const ioremap::elliptics::sync_find_indexes_result &result)
-{
-	std::vector<std::string> promise_result;
-
-	for (auto it = result.begin(); it != result.end(); ++it) {
-		if (!it->indexes.empty()) {
-			promise_result.push_back(it->indexes.front().data.to_string());
-		}
-	}
-
-	return promise_result;
-}
 
 }} /* namespace cocaine::storage */

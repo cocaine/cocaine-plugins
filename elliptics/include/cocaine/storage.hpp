@@ -52,16 +52,16 @@ public:
 
 	elliptics_storage_t(context_t &context, const std::string &name, const dynamic_t &args);
 
-	std::string read(const std::string &collection, const std::string &key);
-	void write(const std::string &collection, const std::string &key, const std::string &blob, const std::vector<std::string> &tags);
-	std::vector<std::string> find(const std::string &collection, const std::vector<std::string> &tags);
-	void remove(const std::string &collection, const std::string &key);
+	void read(const std::string &collection, const std::string &key, callback<std::string> cb);
+	void write(const std::string &collection, const std::string &key, const std::string &blob,
+		const std::vector<std::string> &tags, callback<void> cb);
+	void find(const std::string &collection, const std::vector<std::string> &tags, callback<std::vector<std::string>> cb);
+	void remove(const std::string &collection, const std::string &key, callback<void> cb);
 
 protected:
 	ioremap::elliptics::async_read_result async_read(const std::string &collection, const std::string &key);
 	ioremap::elliptics::async_write_result async_write(const std::string &collection, const std::string &key,
 		const std::string &blob, const std::vector<std::string> &tags);
-	ioremap::elliptics::async_find_indexes_result async_find(const std::string &collection, const std::vector<std::string> &tags);
 	ioremap::elliptics::async_remove_result async_remove(const std::string &collection, const std::string &key);
 	ioremap::elliptics::async_read_result async_cache_read(const std::string &collection, const std::string &key);
 	ioremap::elliptics::async_write_result async_cache_write(const std::string &collection, const std::string &key,
