@@ -11,6 +11,7 @@ ENDIF()
 include_directories(
     ${PROJECT_SOURCE_DIR}/foreign/asio/asio/include
     ${PROJECT_SOURCE_DIR}/foreign/blackhole/src
+    ${PROJECT_SOURCE_DIR}/include
 )
 
 ADD_LIBRARY(elliptics-extensions MODULE
