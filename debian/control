@@ -1,0 +1,33 @@
+Source: cocaine-plugin-elliptics
+Section: utils
+Priority: extra
+Maintainer: Anton Matveenko <antmat@yandex-team.ru>
+Build-Depends: cmake, debhelper (>= 7.0.13), libcocaine-dev (>= 0.12.10.0),
+ libboost-filesystem-dev, libboost-thread-dev,
+ elliptics-dev (>= 2.26.11.0),
+ blackhole-migration-dev (>= 1.0.0-1)
+Standards-Version: 3.9.3
+Vcs-Git: git://github.com/interiorem/cocaine-plugin-elliptics.git
+Vcs-Browser: https://github.com/interiorem/cocaine-plugin-elliptics
+
+Package: libcocaine-plugin-elliptics3
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, elliptics-client (>= 2.26.11.0)
+Conflicts: libcocaine-plugin-elliptics
+Replaces: libcocaine-plugin-elliptics
+Description: Distributed hash table storage (cocaine plugin)
+ Elliptics network is a fault tolerant distributed hash table object storage.
+
+Package: libcocaine-plugin-elliptics-dbg
+Architecture: any
+Depends: ${misc:Depends}, libcocaine-plugin-elliptics3 (= ${binary:Version})
+Description: Distributed hash table storage (cocaine plugin debug files)
+ Elliptics network is a fault tolerant distributed hash table object storage.
+
+Package: libcocaine-plugin-elliptics-dev
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+         libcocaine-framework-native-dev (>= 0.12.10), libcocaine-framework-native-dev (<< 0.12.11),
+Description: Distributed hash table storage (cocaine plugin includes)
+ Elliptics network is a fault tolerant distributed hash table object storage.
+
