@@ -14,7 +14,6 @@ OPTION(CACHE "Build LRU Cache plugin" ON)
 OPTION(CHRONO "Build Chrono Service plugin" ON)
 OPTION(DOCKER "Build Docker Isolation plugin" ON)
 OPTION(ELASTICSEARCH "Build ElasticSearch Service plugin" ON)
-OPTION(ELLIPTICS "Build Elliptics Storage and Service plugin" ON)
 OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
 OPTION(LOGGING "Build logging v2 service plugin" ON)
@@ -59,7 +58,6 @@ SET(PLUGINS
     chrono
     docker
     elasticsearch
-    elliptics
     graphite
     ipvs
     logging

@@ -7,7 +7,7 @@ Build-Depends: cmake, debhelper (>= 7.0.13), libcocaine-dev (>= 0.12.9.0),
  libboost-filesystem-dev, libboost-thread-dev,
  libswarm-dev (>= 0.6.1.0), libswarm-dev (<< 0.7),
  libnl-3-dev, libnl-genl-3-dev, libcurl4-openssl-dev (>= 7.22.0),
- libzookeeper-mt-dev, elliptics-dev (>= 2.26.11.0),
+ libzookeeper-mt-dev,
  blackhole-migration-dev (>= 1.0.0-1), libpqxx-dev
 # mongodb-dev (<< 1:2.5.0), mongodb-dev (>= 1:2.4.9), libboost-dev
 Standards-Version: 3.9.3
@@ -225,27 +225,6 @@ Depends: ${misc:Depends}, libcocaine-plugin-unicorn3 (= ${binary:Version})
 Description: Cocaine - Unicorn Service (debug symbols)
  Unified configuration service for cocaine. Debug symbols.
 
-Package: libcocaine-plugin-elliptics3
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, elliptics-client (>= 2.26.11.0)
-Conflicts: libcocaine-plugin-elliptics
-Replaces: libcocaine-plugin-elliptics
-Description: Distributed hash table storage (cocaine plugin)
- Elliptics network is a fault tolerant distributed hash table object storage.
-
-Package: libcocaine-plugin-elliptics-dbg
-Architecture: any
-Depends: ${misc:Depends}, libcocaine-plugin-elliptics3 (= ${binary:Version})
-Description: Distributed hash table storage (cocaine plugin debug files)
- Elliptics network is a fault tolerant distributed hash table object storage.
-
-Package: libcocaine-plugin-elliptics-dev
-Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends},
-         libcocaine-framework-native-dev (>= 0.12.9), libcocaine-framework-native-dev (<< 0.12.10),
-Description: Distributed hash table storage (cocaine plugin includes)
- Elliptics network is a fault tolerant distributed hash table object storage.
-
 Package: libcocaine-plugin-postgres3
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libpqxx-4.0
@@ -254,13 +233,12 @@ Description: Storage and index support based on postgress (cocaine plugin)
 
 Package: libcocaine-plugin-postgres-dbg
 Architecture: any
-Depends: ${misc:Depends}, libcocaine-plugin-elliptics3 (= ${binary:Version})
+Depends: ${misc:Depends}
 Description: Storage and index support based on postgress (cocaine plugin debug files)
  Storage and index support based on postgress.
 
 Package: libcocaine-plugin-postgres-dev
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends},
-         libcocaine-framework-native-dev (>= 0.12.9), libcocaine-framework-native-dev (<< 0.12.10), libpqxx-dev
+Depends: ${shlibs:Depends}, ${misc:Depends}, libpqxx-dev
 Description: Storage and index support based on postgress (cocaine plugin includes)
  Storage and index support based on postgress.
