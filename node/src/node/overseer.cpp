@@ -10,21 +10,30 @@
 #include "cocaine/detail/service/node/engine.hpp"
 #include "cocaine/detail/service/node/slave.hpp"
 
+#include "pool_observer.hpp"
+
 namespace cocaine {
 namespace service {
 namespace node {
 
-overseer_t::overseer_t(context_t& context, manifest_t manifest, profile_t profile,
+overseer_t::overseer_t(context_t& context,
+                       manifest_t manifest,
+                       profile_t profile,
+                       pool_observer& observer,
                        std::shared_ptr<asio::io_service> loop)
-    : engine(std::make_shared<engine_t>(context, manifest, profile, loop)) {}
+    : engine(std::make_shared<engine_t>(context, manifest, profile, observer, loop)) {}
 
 overseer_t::~overseer_t() {
     COCAINE_LOG_DEBUG(engine->log, "overseer is processing terminate request");
 
     engine->stopped = true;
-    engine->failover(0);
+    engine->control_population(0);
     engine->pool->clear();
     engine->on_spawn_rate_timer->reset();
+}
+
+auto overseer_t::active_workers() const -> std::uint32_t {
+    return engine->active_workers();
 }
 
 auto overseer_t::manifest() const -> manifest_t {
@@ -43,8 +52,8 @@ auto overseer_t::uptime() const -> std::chrono::seconds {
     return engine->uptime();
 }
 
-auto overseer_t::failover(int count) -> void {
-    return engine->failover(count);
+auto overseer_t::control_population(int count) -> void {
+    return engine->control_population(count);
 }
 
 auto overseer_t::enqueue(upstream<io::stream_of<std::string>::tag> downstream, app::event_t event,

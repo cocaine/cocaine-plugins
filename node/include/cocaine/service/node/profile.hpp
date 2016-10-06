@@ -56,13 +56,16 @@ struct profile_t : cached<dynamic_t> {
     unsigned long pool_limit;
     unsigned long queue_limit;
 
+    // Publishing thresholds.
+    auto publish_on() const -> std::uint32_t;
+    auto unpublish_under() const -> std::uint32_t;
+
     // The slave processes are launched in sandboxed environments, called isolates. This one
     // describes the isolate type and arguments.
     struct {
         std::string type;
         dynamic_t args;
     } isolate;
-
 
     // This is a temporal hack not to break ABI
     // Should be located in timeout section

@@ -25,6 +25,7 @@ endif()
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/node/include
+    ${PROJECT_SOURCE_DIR}/node/src
 )
 
 add_library(${PLUGIN_NAME} SHARED

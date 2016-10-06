@@ -27,6 +27,8 @@
 #include "cocaine/detail/service/node/slave/load.hpp"
 #include "cocaine/service/node/slave/id.hpp"
 
+#include "pool_observer.hpp"
+
 namespace ph = std::placeholders;
 
 using namespace cocaine;
@@ -43,6 +45,7 @@ struct overseer_proxy_t {
 };
 
 // While the client is connected it's okay, balance on numbers depending on received.
+// TODO: Drop when all scripts will be rewritten.
 class control_slot_t:
     public io::basic_slot<io::app::control>
 {
@@ -62,15 +65,9 @@ class control_slot_t:
         {
             on<protocol::chunk>([&](int size) {
                 if (auto overseer = p->overseer.lock()) {
-                    overseer->o->failover(size);
+                    overseer->o->control_population(size);
                 }
             });
-
-            p->locked.store(true);
-        }
-
-        ~controlling_slot_t() {
-            p->locked.store(false);
         }
 
         virtual
@@ -78,7 +75,7 @@ class control_slot_t:
         discard(const std::error_code&) const {
             COCAINE_LOG_DEBUG(p->log, "client has been disappeared, assuming direct control");
             if (auto overseer = p->overseer.lock()) {
-                overseer->o->failover(0);
+                overseer->o->control_population(0);
             }
         }
     };
@@ -87,13 +84,11 @@ class control_slot_t:
     typedef std::shared_ptr<const io::basic_slot<io::app::control>::dispatch_type> result_type;
 
     const std::unique_ptr<logging::logger_t> log;
-    std::atomic<bool> locked;
     std::weak_ptr<overseer_proxy_t> overseer;
 
 public:
     control_slot_t(std::shared_ptr<overseer_proxy_t> overseer_, std::unique_ptr<logging::logger_t> log_):
         log(std::move(log_)),
-        locked(false),
         overseer(overseer_)
     {
         COCAINE_LOG_DEBUG(log, "control slot has been created");
@@ -109,14 +104,8 @@ public:
     }
 
     boost::optional<result_type>
-    operator()(const meta_type&, tuple_type&& args, upstream_type&& upstream) {
-        typedef io::protocol<io::event_traits<io::app::control>::upstream_type>::scope protocol;
-
+    operator()(const meta_type&, tuple_type&& args, upstream_type&&) {
         const auto dispatch = tuple::invoke(std::move(args), [&]() -> result_type {
-            if (locked) {
-                upstream.send<protocol::error>(std::make_error_code(std::errc::resource_unavailable_try_again));
-                return nullptr;
-            }
             return std::make_shared<controlling_slot_t>(this);
         });
 
@@ -347,7 +336,8 @@ public:
 
 /// The application has been published and currently running.
 class running_t:
-    public base_t
+    public base_t,
+    public pool_observer
 {
     logging::logger_t* const log;
 
@@ -370,22 +360,13 @@ public:
     {
         // Create the Overseer - slave spawner/despawner plus the event queue dispatcher.
         overseer_ = std::make_shared<overseer_proxy_t>(
-            std::make_shared<overseer_t>(context, manifest, profile, loop)
+            std::make_shared<overseer_t>(context, manifest, profile, *this, loop)
         );
-
-        // Create a TCP server and publish it.
-        COCAINE_LOG_DEBUG(log, "publishing application service with the context");
-        context.insert(manifest.name, std::make_unique<actor_t>(
-            context,
-            std::make_shared<asio::io_service>(),
-            std::make_unique<app_dispatch_t>(context, manifest.name, overseer_)
-        ));
 
         // Create an unix actor and bind to {manifest->name}.{pid} unix-socket.
         using namespace detail::service::node;
 
         COCAINE_LOG_DEBUG(log, "publishing worker service with the context");
-        // TODO: We can fail here. Hense noone is going to remove TCP server from the context.
         engine.reset(new unix_actor_t(
             context,
             manifest.endpoint,
@@ -397,23 +378,31 @@ public:
             std::make_unique<init_dispatch_t>(manifest.name)
         ));
         engine->run();
+
+        try {
+            maybe_publish();
+        } catch (const std::exception&) {
+            unpublish();
+            throw std::current_exception();
+        }
     }
 
     ~running_t() {
-        COCAINE_LOG_DEBUG(log, "removing application service from the context");
-
-        try {
-            // NOTE: It can throw if someone has removed the service from the context, it's valid.
-            //
-            // Moreover if the context was unable to bootstrap itself it removes all services from
-            // the service list (including child services). It can be that this app has been removed
-            // earlier during bootstrap failure.
-            context.remove(name);
-        } catch (const std::exception& err) {
-            COCAINE_LOG_WARNING(log, "unable to remove application service from the context: {}", err.what());
-        }
-
+        unpublish();
         engine->terminate();
+    }
+
+    virtual auto spawned() -> void {
+        try {
+            maybe_publish();
+        } catch (const std::exception&) {
+            // Probably if we are here than an application is already published earlier. There is
+            // no need to notify anyone about it over and over again.
+        }
+    }
+
+    virtual auto despawned() -> void {
+        maybe_unpublish();
     }
 
     virtual
@@ -428,6 +417,7 @@ public:
         }
 
         info["state"] = "running";
+        info["publushed"] = static_cast<bool>(context.locate(name));
         return info;
     }
 
@@ -441,6 +431,40 @@ private:
     bool
     is_overseer_report_required(io::node::info::flags_t flags) {
         return flags & io::node::info::overseer_report;
+    }
+
+    auto maybe_publish() -> void {
+        if (overseer()->active_workers() >= overseer()->profile().publish_on()) {
+            publish();
+        }
+    }
+
+    auto publish() -> void {
+        // Create a TCP server and publish it.
+        COCAINE_LOG_DEBUG(log, "publishing application service with the context");
+        context.insert(name, std::make_unique<actor_t>(
+            context,
+            std::make_shared<asio::io_service>(),
+            std::make_unique<app_dispatch_t>(context, name, overseer_)
+        ));
+    }
+
+    auto maybe_unpublish() -> void {
+        if (overseer()->active_workers() < overseer()->profile().unpublish_under()) {
+            unpublish();
+        }
+    }
+
+    auto unpublish() noexcept -> void {
+        try {
+            // It can throw if someone has removed the service from the context, it's valid.
+            // Moreover if the context was unable to bootstrap itself it removes all services from
+            // the service list (including child services). It can be that this app has been
+            // removed earlier during bootstrap failure.
+            context.remove(name);
+        } catch (const std::exception& err) {
+            COCAINE_LOG_WARNING(log, "failed to remove application service from the context: {}", err.what());
+        }
     }
 };
 

@@ -24,6 +24,8 @@
 #include "cocaine/detail/service/node/slave/stats.hpp"
 #include "cocaine/detail/service/node/util.hpp"
 
+#include "pool_observer.hpp"
+
 namespace cocaine {
 namespace detail {
 namespace service {
@@ -53,6 +55,7 @@ struct collector_t {
 engine_t::engine_t(context_t& context,
                        manifest_t manifest,
                        profile_t profile,
+                       pool_observer& observer,
                        std::shared_ptr<asio::io_service> loop):
     log(context.log(format("{}/overseer", manifest.name))),
     context(context),
@@ -63,6 +66,7 @@ engine_t::engine_t(context_t& context,
     loop(loop),
     pool_target{},
     last_timeout(std::chrono::seconds(1)),
+    observer(observer),
     stats{}
 {
     COCAINE_LOG_DEBUG(log, "overseer has been initialized");
@@ -70,6 +74,18 @@ engine_t::engine_t(context_t& context,
 
 engine_t::~engine_t() {
     COCAINE_LOG_DEBUG(log, "overseer has been destroyed");
+}
+
+auto engine_t::active_workers() const -> std::uint32_t {
+    return pool.apply([&](const pool_type& pool) -> std::uint32_t {
+        std::uint32_t active = 0;
+        for (const auto& kv : pool) {
+            if (kv.second.active()) {
+                ++active;
+            }
+        }
+        return active;
+    });
 }
 
 manifest_t
@@ -331,7 +347,7 @@ auto engine_t::uptime() const -> std::chrono::seconds {
     return std::chrono::duration_cast<std::chrono::seconds>(now - birthstamp);
 }
 
-auto engine_t::failover(int count) -> void {
+auto engine_t::control_population(int count) -> void {
     count = std::max(0, count);
     COCAINE_LOG_DEBUG(log, "changed keep-alive slave count to {}", count);
 
@@ -511,7 +527,7 @@ auto engine_t::despawn(const std::string& id, despawn_policy_t policy) -> void {
                 break;
             case despawn_policy_t::force:
                 pool.erase(it);
-                // TODO: Notify watcher about slave death.
+                observer.despawned();
                 loop->post(std::bind(&engine_t::rebalance_slaves, shared_from_this()));
                 break;
             default:
@@ -551,7 +567,7 @@ auto engine_t::on_handshake(const std::string& id, std::shared_ptr<session_t> se
     });
 
     if (control) {
-        // TODO: Notify watcher about slave spawn.
+        observer.spawned();
         loop->post(std::bind(&engine_t::rebalance_events, shared_from_this()));
     }
 
@@ -597,7 +613,7 @@ auto engine_t::on_slave_death(const std::error_code& ec, std::string uuid) -> vo
         }
     });
 
-    // TODO: Notify watcher about slave death.
+    observer.despawned();
     loop->post(std::bind(&engine_t::rebalance_slaves, shared_from_this()));
 }
 

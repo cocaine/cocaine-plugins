@@ -72,6 +72,22 @@ profile_t::profile_t(context_t& context, const std::string& name_):
     if(concurrency == 0) {
         throw cocaine::error_t("engine concurrency must be positive");
     }
+
+    if (publish_on() > pool_limit) {
+        throw cocaine::error_t("publish threshold must not be greater than pool limit");
+    }
+
+    if (publish_on() < unpublish_under()) {
+        throw cocaine::error_t("publish threshold must not be less than unpublish one");
+    }
+}
+
+auto profile_t::publish_on() const -> std::uint32_t {
+    return this->as_object().at("publish-on", 0u).as_uint();
+}
+
+auto profile_t::unpublish_under() const -> std::uint32_t {
+    return this->as_object().at("unpublish-under", 0u).as_uint();
 }
 
 unsigned long

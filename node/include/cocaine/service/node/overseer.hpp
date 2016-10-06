@@ -18,11 +18,16 @@ namespace cocaine {
 namespace service {
 namespace node {
 
+class pool_observer;
+
 class overseer_t {
     std::shared_ptr<engine_t> engine;
 
 public:
-    overseer_t(context_t& context, manifest_t manifest, profile_t profile,
+    overseer_t(context_t& context,
+               manifest_t manifest,
+               profile_t profile,
+               pool_observer& observer,
                std::shared_ptr<asio::io_service> loop);
 
     /// TODO: Docs.
@@ -30,6 +35,9 @@ public:
 
     /// Returns application total uptime in seconds.
     auto uptime() const -> std::chrono::seconds;
+
+    /// Returns number of currently active workers.
+    auto active_workers() const -> std::uint32_t;
 
     /// Returns the copy of current profile, which is used to spawn new slaves.
     ///
@@ -61,7 +69,8 @@ public:
     ///
     /// \return the dispatch object, which is ready for processing the appropriate protocol
     ///     messages.
-    auto enqueue(upstream<io::stream_of<std::string>::tag> downstream, app::event_t event,
+    auto enqueue(upstream<io::stream_of<std::string>::tag> downstream,
+                 app::event_t event,
                  boost::optional<slave::id_t> id) -> std::shared_ptr<client_rpc_dispatch_t>;
 
     /// Enqueues the new event into the most appropriate slave.
@@ -75,13 +84,14 @@ public:
     /// \param id represents slave id to be enqueued (may be none, which means any slave).
     ///
     /// \return a tx stream.
-    auto enqueue(std::shared_ptr<api::stream_t> rx, app::event_t event,
+    auto enqueue(std::shared_ptr<api::stream_t> rx,
+                 app::event_t event,
                  boost::optional<slave::id_t> id) -> std::shared_ptr<api::stream_t>;
 
     /// Tries to keep alive at least `count` workers no matter what.
     ///
     /// Zero value is allowed and means not to spawn workers at all.
-    auto failover(int count) -> void;
+    auto control_population(int count) -> void;
 
     /// Creates a new handshake dispatch, which will be consumed after a new incoming connection
     /// attached.

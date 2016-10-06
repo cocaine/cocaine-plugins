@@ -114,7 +114,7 @@ struct node {
 struct start_app {
     typedef node_tag tag;
 
-    static const char* alias() {
+    static const char* alias() noexcept {
         return "start_app";
     }
 
@@ -135,6 +135,25 @@ struct pause_app {
      /* Name of the app to susped. */
         std::string
     >::type argument_type;
+};
+
+struct control_app {
+    typedef node_tag tag;
+
+    static const char* alias() noexcept {
+        return "control";
+    }
+
+    typedef boost::mpl::list<
+     /* Name of the application to be controlled. */
+        std::string
+    > argument_type;
+
+    typedef stream_of<
+     /* Number of workers we want the Node Service for App to be kept alive. Non-positive values
+        means rolling back to the default logic. */
+        int
+    >::tag dispatch_type;
 };
 
 struct info {
@@ -194,6 +213,7 @@ struct protocol<node_tag> {
     typedef boost::mpl::list<
         node::start_app,
         node::pause_app,
+        node::control_app,
         node::list,
         node::info
     >::type messages;
