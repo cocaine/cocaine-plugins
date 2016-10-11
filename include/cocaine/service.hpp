@@ -129,10 +129,6 @@ private:
 		const ioremap::elliptics::sync_write_result &result,
 		const ioremap::elliptics::error_info &error);
 
-	static void on_find_completed(nice_deferred<std::vector<std::string> > promise,
-		const ioremap::elliptics::sync_find_indexes_result &result,
-		const ioremap::elliptics::error_info &error);
-
 	static void on_remove_completed(nice_deferred<void> promise,
 		const ioremap::elliptics::sync_remove_result &result,
 		const ioremap::elliptics::error_info &error);

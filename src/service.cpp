@@ -170,16 +170,6 @@ void elliptics_service_t::on_write_completed(nice_deferred<void> promise,
 	}
 }
 
-void elliptics_service_t::on_find_completed(nice_deferred<std::vector<std::string>> promise,
-                                            const elliptics::sync_find_indexes_result &result,
-                                            const elliptics::error_info &error) {
-	if (error) {
-		promise.abort(std::error_code(-error.code(), std::generic_category()), error.message());
-	} else {
-		promise.write(storage::elliptics_storage_t::convert_list_result(result));
-	}
-}
-
 void elliptics_service_t::on_remove_completed(nice_deferred<void> promise,
                                               const elliptics::sync_remove_result & /*result*/,
                                               const elliptics::error_info &error) {

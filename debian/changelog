@@ -1,3 +1,9 @@
+cocaine-plugin-elliptics (0.12.10-1) unstable; urgency=low
+
+  * Elliptics: Drop dead code
+
+ -- Anton Matveenko <antmat@me.com>  Mon, 10 Oct 2016 12:08:30 +0300
+
 cocaine-plugin-elliptics (0.12.10) unstable; urgency=low
 
   * Elliptics: move out plugin to separate repo
