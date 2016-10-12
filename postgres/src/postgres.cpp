@@ -85,7 +85,7 @@ postgres_t::remove(const std::string& collection, const std::string& key, callba
             pg_pool.execute([=](pqxx::connection_base& connection){
                 try {
                     pqxx::work transaction(connection);
-                    std::string query("DELETE FROM " + transaction.esc(table_name) + "WHERE " +
+                    std::string query("DELETE FROM " + transaction.esc(table_name) + " WHERE " +
                                       transaction.esc(collection_column_name) + " = " + transaction.quote(collection) +
                                       " AND " + transaction.esc(key_column_name) + " = " + transaction.quote(key) + ";");
                     COCAINE_LOG_DEBUG(log, "executing {}", query);
