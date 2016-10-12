@@ -8,6 +8,7 @@
 #include <blackhole/logger.hpp>
 
 #include <pqxx/except.hxx>
+#include <cocaine/format.hpp>
 
 namespace cocaine {
 namespace storage {
@@ -50,17 +51,18 @@ postgres_t::write(const std::string& collection,
                     dynamic_t tags_obj(tags);
                     auto tag_string = boost::lexical_cast<std::string>(tags_obj);
                     pqxx::work transaction(connection);
-                    std::string query("INSERT INTO " + transaction.esc(table_name) + "(" +
-                                          transaction.esc(collection_column_name) + ", " +
-                                          transaction.esc(key_column_name) + ", " +
-                                          transaction.esc(tags_column_name) + ") " +
-                                      " VALUES(" +
-                                          transaction.quote(collection) + ", " +
-                                          transaction.quote(key) + ", " +
-                                          transaction.quote(tag_string) +
-                                      ") ON CONFLICT (key, collection) DO UPDATE SET " +
-                                          transaction.esc(tags_column_name) + " = " + transaction.quote(tag_string) +
-                                      ";");
+                    auto query = cocaine::format("INSERT INTO {} ({}, {}, {}) VALUES ({}, {}, {}) "
+                                                 "ON CONFLICT (key, collection) DO UPDATE SET {} = {};",
+                                                 transaction.esc(table_name),
+                                                 transaction.esc(collection_column_name),
+                                                 transaction.esc(key_column_name),
+                                                 transaction.esc(tags_column_name),
+                                                 transaction.quote(collection),
+                                                 transaction.quote(key),
+                                                 transaction.quote(tag_string),
+                                                 transaction.esc(tags_column_name),
+                                                 transaction.quote(tag_string));
+
                     COCAINE_LOG_DEBUG(log, "executing {}", query);
                     transaction.exec(query);
                     transaction.commit();
@@ -85,9 +87,13 @@ postgres_t::remove(const std::string& collection, const std::string& key, callba
             pg_pool.execute([=](pqxx::connection_base& connection){
                 try {
                     pqxx::work transaction(connection);
-                    std::string query("DELETE FROM " + transaction.esc(table_name) + " WHERE " +
-                                      transaction.esc(collection_column_name) + " = " + transaction.quote(collection) +
-                                      " AND " + transaction.esc(key_column_name) + " = " + transaction.quote(key) + ";");
+                    auto query = cocaine::format("DELETE FROM {} WHERE {} = {} AND {} = {};",
+                                                 transaction.esc(table_name),
+                                                 transaction.esc(collection_column_name),
+                                                 transaction.quote(collection),
+                                                 transaction.esc(key_column_name),
+                                                 transaction.quote(key));
+
                     COCAINE_LOG_DEBUG(log, "executing {}", query);
                     transaction.exec(query);
                     transaction.commit();
@@ -113,12 +119,14 @@ postgres_t::find(const std::string& collection, const std::vector<std::string>& 
             auto tag_string = boost::lexical_cast<std::string>(tags_obj);
 
             pqxx::work transaction(connection);
-            std::string query("SELECT " + transaction.esc(key_column_name) + " FROM " + transaction.esc(table_name) +
-                              " WHERE " +
-                                  transaction.esc(collection_column_name) + " = " + transaction.quote(collection) +
-                                  " AND " +
-                                  transaction.esc(tags_column_name) + " @> " + transaction.quote(tag_string) +
-                              ";");
+            auto query = cocaine::format("SELECT {} FROM {} WHERE {} = {} AND {} @> {};",
+                                         transaction.esc(key_column_name),
+                                         transaction.esc(table_name),
+                                         transaction.esc(collection_column_name),
+                                         transaction.quote(collection),
+                                         transaction.esc(tags_column_name),
+                                         transaction.quote(tag_string));
+
             COCAINE_LOG_DEBUG(log, "executing {}", query);
             auto sql_result = transaction.exec(query);
 
