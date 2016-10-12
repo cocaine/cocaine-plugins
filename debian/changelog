@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.10.2) unstable; urgency=low
+
+  * Bug fix: SQL misprint fix (#67).
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 12 Oct 2016 13:35:39 +0300
+
 cocaine-plugins (0.12.10.1) unstable; urgency=low
 
   * No more Elliptics.
