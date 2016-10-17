@@ -213,9 +213,9 @@ struct protocol<node_tag> {
     typedef boost::mpl::list<
         node::start_app,
         node::pause_app,
-        node::control_app,
         node::list,
-        node::info
+        node::info,
+        node::control_app
     >::type messages;
 
     typedef node scope;

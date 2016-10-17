@@ -64,12 +64,10 @@ class control_slot_t:
         typedef io::event_traits<io::node::control_app>::dispatch_type dispatch_type;
         typedef io::protocol<dispatch_type>::scope protocol;
 
-        control_slot_t* p;
         std::shared_ptr<overseer_t> overseer;
 
-        controlling_slot_t(const std::string& name, control_slot_t* p_):
-            super(format("controlling/{}", name)),
-            p(p_)
+        controlling_slot_t(const std::string& name, control_slot_t* p):
+            super(format("controlling/{}", name))
         {
             overseer = p->parent.overseer(name);
             if (overseer == nullptr) {
