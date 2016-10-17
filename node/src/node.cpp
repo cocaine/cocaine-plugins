@@ -53,6 +53,8 @@ using cocaine::service::node::overseer_t;
 
 namespace ph = std::placeholders;
 
+namespace {
+
 class control_slot_t:
     public io::basic_slot<io::node::control_app>
 {
@@ -110,6 +112,8 @@ public:
         return boost::make_optional(dispatch);
     }
 };
+
+}  // namespace
 
 node_t::node_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args):
     category_type(context, asio, name, args),

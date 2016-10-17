@@ -46,6 +46,9 @@ struct overseer_proxy_t {
 
 // While the client is connected it's okay, balance on numbers depending on received.
 // TODO: Drop when all scripts will be rewritten.
+
+namespace {
+
 class control_slot_t:
     public io::basic_slot<io::app::control>
 {
@@ -112,6 +115,8 @@ public:
         return boost::make_optional(dispatch);
     }
 };
+
+}  // namespace
 
 template<class F>
 class enqueue_slot : public io::basic_slot<io::app::enqueue> {
