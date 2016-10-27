@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.10.5) unstable; urgency=low
+
+  * Feature: new plugin extension - metrics sender (#69).
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 27 Oct 2016 16:52:10 +0300
+
 cocaine-plugins (0.12.10.4) unstable; urgency=low
 
   * Bug fix: no longer violate ODR in Node Service.
