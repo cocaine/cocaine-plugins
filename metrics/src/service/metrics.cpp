@@ -13,7 +13,6 @@
 #include <metrics/accumulator/snapshot/uniform.hpp>
 #include <metrics/meter.hpp>
 #include <metrics/timer.hpp>
-#include <pqxx/pqxx>
 
 
 namespace cocaine {
