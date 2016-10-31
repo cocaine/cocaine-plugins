@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.10.6) unstable; urgency=low
+
+  * Changed: move Postgres pool to separate component (#70).
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 31 Oct 2016 12:43:08 +0300
+
 cocaine-plugins (0.12.10.5) unstable; urgency=low
 
   * Feature: new plugin extension - metrics sender (#69).
