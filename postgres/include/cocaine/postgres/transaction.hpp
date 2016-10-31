@@ -15,8 +15,7 @@ inline std::unique_ptr<pqxx::work> start_transaction(pqxx::connection_base& c, s
             }
         }
     }
-    //Unreachable, but compiler still complain without assert
-    assert(false);
+    __builtin_unreachable();
 }
 
 }
