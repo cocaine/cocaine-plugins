@@ -49,7 +49,7 @@ private:
 
     policy_t policy;
     data_provider_ptr data_provider;
-    std::unique_ptr<postgres::pool_t> pool;
+    std::shared_ptr<api::postgres::pool_t> pool;
     std::string hostname;
     std::string table_name;
     std::unique_ptr<blackhole::logger_t> logger;

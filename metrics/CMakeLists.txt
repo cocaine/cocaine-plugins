@@ -10,7 +10,7 @@ ADD_LIBRARY(metrics-plugin MODULE
         src/sender/postgres.cpp
         src/service/metrics.cpp
         src/module.cpp
-        ../postgres/src/pool.cpp
+        ../postgres/src/api/postgres/pool.cpp
         )
 
 TARGET_LINK_LIBRARIES(metrics-plugin

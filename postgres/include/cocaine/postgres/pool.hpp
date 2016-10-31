@@ -1,5 +1,7 @@
 #pragma once
 
+#include "cocaine/api/postgres/pool.hpp"
+
 #include <cocaine/forwards.hpp>
 #include <cocaine/locked_ptr.hpp>
 
@@ -14,9 +16,9 @@
 namespace cocaine {
 namespace postgres {
 
-class pool_t {
+class pool_t : public api::postgres::pool_t{
 public:
-    pool_t(size_t pool_size, const std::string& connection_string);
+    pool_t(context_t& context, const std::string& name, const dynamic_t& args);
 
     ~pool_t();
 

@@ -13,8 +13,10 @@
 * GNU General Public License for more details.
 */
 
+#include <cocaine/api/postgres/pool.hpp>
 #include <cocaine/api/storage.hpp>
 #include <cocaine/repository.hpp>
+#include <cocaine/repository/postgres/pool.hpp>
 #include <cocaine/repository/storage.hpp>
 
 #include "cocaine/storage/postgres.hpp"
@@ -30,6 +32,7 @@ validation() {
 void
 initialize(api::repository_t& repository) {
     repository.insert<storage::postgres_t>("postgres");
+    repository.insert<postgres::pool_t>("postgres");
 }
 
 }

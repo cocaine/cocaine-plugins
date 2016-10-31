@@ -80,7 +80,7 @@ private:
 
     std::string table_name;
     api::storage_ptr wrapped;
-    postgres::pool_t pg_pool;
+    api::postgres::pool_ptr pg_pool;
 };
 } // namespace storage
 } // namespace cocaine

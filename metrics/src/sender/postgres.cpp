@@ -1,5 +1,8 @@
 #include "cocaine/sender/postgres.hpp"
 
+#include "cocaine/api/postgres/pool.hpp"
+#include "cocaine/postgres/transaction.hpp"
+
 #include <cocaine/context.hpp>
 #include <cocaine/context/config.hpp>
 #include <cocaine/errors.hpp>
@@ -22,8 +25,7 @@ pg_sender_t::pg_sender_t(context_t& context,
     sender_t(context, io_loop, name, nullptr, args),
     policy(policy_t::continous),
     data_provider(std::move(_data_provier)),
-    pool(new postgres::pool_t(args.as_object().at("pg_pool_size", 1u).as_uint(),
-                              args.as_object().at("pg_conn_string", "").as_string())),
+    pool(api::postgres::pool(context, args.as_object().at("pg_backend", "core").as_string())),
     hostname(context.config().network().hostname()),
     table_name(args.as_object().at("pg_table_name", "cocaine_metrics").as_string()),
     logger(context.log(format("pg_sender/{}", name))),
@@ -93,42 +95,41 @@ auto pg_sender_t::send(dynamic_t data) -> void {
     pool->execute([=](pqxx::connection_base& connection){
         try {
             auto data_string = boost::lexical_cast<std::string>(data);
+            auto transaction = postgres::start_transaction(connection);
             switch (policy) {
                 case policy_t::gc:
                 case policy_t::continous: {
-                    pqxx::work transaction(connection);
                     auto query = cocaine::format("INSERT INTO {} (ts, host, data) VALUES(now(), {}, {});",
-                                                 transaction.esc(table_name),
-                                                 transaction.quote(hostname),
-                                                 transaction.quote(data_string));
+                                                 transaction->esc(table_name),
+                                                 transaction->quote(hostname),
+                                                 transaction->quote(data_string));
                     COCAINE_LOG_DEBUG(logger, "executing {}", query);
-                    auto sql_result = transaction.exec(query);
-                    transaction.commit();
+                    auto sql_result = transaction->exec(query);
+                    transaction->commit();
                     break;
                 }
                 case policy_t::update: {
-                    pqxx::work transaction(connection);
                     auto query = cocaine::format("SELECT count(*) FROM {} WHERE host = {};",
-                                                 transaction.esc(table_name),
-                                                 transaction.quote(hostname));
+                                                 transaction->esc(table_name),
+                                                 transaction->quote(hostname));
                     COCAINE_LOG_DEBUG(logger, "executing {}", query);
-                    auto sql_result = transaction.exec(query);
+                    auto sql_result = transaction->exec(query);
                     if (sql_result[0][0].as<size_t>() == 0) {
                         query = cocaine::format("INSERT INTO {} (ts, host, data) VALUES(now(), {}, {});",
-                                                transaction.esc(table_name),
-                                                transaction.quote(hostname),
-                                                transaction.quote(data_string));
+                                                transaction->esc(table_name),
+                                                transaction->quote(hostname),
+                                                transaction->quote(data_string));
                         COCAINE_LOG_DEBUG(logger, "executing {}", query);
-                        transaction.exec(query);
+                        transaction->exec(query);
                     } else {
                         query = cocaine::format("UPDATE {}  set ts = now(), data = {} WHERE host = {};",
-                                                transaction.esc(table_name),
-                                                transaction.quote(data_string),
-                                                transaction.quote(hostname));
+                                                transaction->esc(table_name),
+                                                transaction->quote(data_string),
+                                                transaction->quote(hostname));
                         COCAINE_LOG_DEBUG(logger, "executing {}", query);
-                        transaction.exec(query);
+                        transaction->exec(query);
                     }
-                    transaction.commit();
+                    transaction->commit();
                     break;
                 }
                 default:

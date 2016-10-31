@@ -1,5 +1,8 @@
 #include "cocaine/storage/postgres.hpp"
+
+#include "cocaine/api/postgres/pool.hpp"
 #include "cocaine/error/postgres.hpp"
+#include "cocaine/postgres/transaction.hpp"
 
 #include <cocaine/context.hpp>
 #include <cocaine/dynamic.hpp>
@@ -9,6 +12,7 @@
 
 #include <pqxx/except.hxx>
 #include <cocaine/format.hpp>
+
 
 namespace cocaine {
 namespace storage {
@@ -21,8 +25,7 @@ postgres_t::postgres_t(context_t& context, const std::string& name, const dynami
     tags_column_name(args.as_object().at("pg_tags_column", "tags").as_string()),
     table_name(args.as_object().at("pg_table_name", "cocaine_index").as_string()),
     wrapped(api::storage(context, args.as_object().at("pg_underlying_storage", "core").as_string())),
-    pg_pool(args.as_object().at("pg_pool_size", 1ul).as_uint(),
-            args.as_object().at("pg_connection_string", "").as_string())
+    pg_pool(api::postgres::pool(context, args.as_object().at("pg_backend", "core").as_string()))
 {}
 
 void
@@ -44,28 +47,28 @@ postgres_t::write(const std::string& collection,
             COCAINE_LOG_DEBUG(log, "enqueuing index setup for {}/{}", collection, key);
             // First we check if underlying write succeed
             fut.get();
-            pg_pool.execute([=](pqxx::connection_base& connection){
+            pg_pool->execute([=](pqxx::connection_base& connection){
                 try {
                     // TODO: possible overhead with dynamic can be removed via usage
                     // of RapidJson or even manual formatting
                     dynamic_t tags_obj(tags);
                     auto tag_string = boost::lexical_cast<std::string>(tags_obj);
-                    pqxx::work transaction(connection);
+                    auto transaction = postgres::start_transaction(connection);
                     auto query = cocaine::format("INSERT INTO {} ({}, {}, {}) VALUES ({}, {}, {}) "
                                                  "ON CONFLICT (key, collection) DO UPDATE SET {} = {};",
-                                                 transaction.esc(table_name),
-                                                 transaction.esc(collection_column_name),
-                                                 transaction.esc(key_column_name),
-                                                 transaction.esc(tags_column_name),
-                                                 transaction.quote(collection),
-                                                 transaction.quote(key),
-                                                 transaction.quote(tag_string),
-                                                 transaction.esc(tags_column_name),
-                                                 transaction.quote(tag_string));
+                                                 transaction->esc(table_name),
+                                                 transaction->esc(collection_column_name),
+                                                 transaction->esc(key_column_name),
+                                                 transaction->esc(tags_column_name),
+                                                 transaction->quote(collection),
+                                                 transaction->quote(key),
+                                                 transaction->quote(tag_string),
+                                                 transaction->esc(tags_column_name),
+                                                 transaction->quote(tag_string));
 
                     COCAINE_LOG_DEBUG(log, "executing {}", query);
-                    transaction.exec(query);
-                    transaction.commit();
+                    transaction->exec(query);
+                    transaction->commit();
                     cb(make_ready_future());
                 } catch (const std::exception& e) {
                     COCAINE_LOG_ERROR(log, "error during index update - {}", e.what());
@@ -84,19 +87,19 @@ postgres_t::remove(const std::string& collection, const std::string& key, callba
         try {
             // First we check if underlying remove succeed
             fut.get();
-            pg_pool.execute([=](pqxx::connection_base& connection){
+            pg_pool->execute([=](pqxx::connection_base& connection){
                 try {
-                    pqxx::work transaction(connection);
+                    auto transaction = postgres::start_transaction(connection);
                     auto query = cocaine::format("DELETE FROM {} WHERE {} = {} AND {} = {};",
-                                                 transaction.esc(table_name),
-                                                 transaction.esc(collection_column_name),
-                                                 transaction.quote(collection),
-                                                 transaction.esc(key_column_name),
-                                                 transaction.quote(key));
+                                                 transaction->esc(table_name),
+                                                 transaction->esc(collection_column_name),
+                                                 transaction->quote(collection),
+                                                 transaction->esc(key_column_name),
+                                                 transaction->quote(key));
 
                     COCAINE_LOG_DEBUG(log, "executing {}", query);
-                    transaction.exec(query);
-                    transaction.commit();
+                    transaction->exec(query);
+                    transaction->commit();
                     cb(make_ready_future());
                 } catch (const std::exception& e) {
                     COCAINE_LOG_ERROR(log, "error during index delete - {}", e.what());
@@ -111,24 +114,24 @@ postgres_t::remove(const std::string& collection, const std::string& key, callba
 
 void
 postgres_t::find(const std::string& collection, const std::vector<std::string>& tags, callback<std::vector<std::string>> cb) {
-    pg_pool.execute([=](pqxx::connection_base& connection){
+    pg_pool->execute([=](pqxx::connection_base& connection){
         try {
             // TODO: possible overhead with dynamic can be removed via usage
             // of RapidJson or even manual formatting
             dynamic_t tags_obj(tags);
             auto tag_string = boost::lexical_cast<std::string>(tags_obj);
 
-            pqxx::work transaction(connection);
+            auto transaction = postgres::start_transaction(connection);
             auto query = cocaine::format("SELECT {} FROM {} WHERE {} = {} AND {} @> {};",
-                                         transaction.esc(key_column_name),
-                                         transaction.esc(table_name),
-                                         transaction.esc(collection_column_name),
-                                         transaction.quote(collection),
-                                         transaction.esc(tags_column_name),
-                                         transaction.quote(tag_string));
+                                         transaction->esc(key_column_name),
+                                         transaction->esc(table_name),
+                                         transaction->esc(collection_column_name),
+                                         transaction->quote(collection),
+                                         transaction->esc(tags_column_name),
+                                         transaction->quote(tag_string));
 
             COCAINE_LOG_DEBUG(log, "executing {}", query);
-            auto sql_result = transaction.exec(query);
+            auto sql_result = transaction->exec(query);
 
             std::vector<std::string> result;
             for(const auto& row : sql_result) {
