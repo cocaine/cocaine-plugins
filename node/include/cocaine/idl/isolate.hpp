@@ -90,7 +90,6 @@ struct isolate_spawned {
         static const char* alias() {
             return "kill";
         }
-
     };
 };
 
@@ -102,7 +101,6 @@ struct isolate_spooled {
         static const char* alias() {
             return "cancel";
         }
-
     };
 };
 

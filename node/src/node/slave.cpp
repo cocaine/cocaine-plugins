@@ -47,7 +47,7 @@ slave_t::slave_t(context_t& context, id_t id, manifest_t manifest, profile_t pro
 }
 
 slave_t::~slave_t() {
-    // This condition is required, because the class itself is movable.
+    // This condition is required, because the class can be moved away.
     if (machine) {
         machine->terminate(std::move(ec));
     }

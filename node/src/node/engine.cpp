@@ -539,7 +539,8 @@ auto engine_t::despawn(const std::string& id, despawn_policy_t policy) -> void {
 
 auto engine_t::on_handshake(const std::string& id, std::shared_ptr<session_t> session,
                             upstream<io::worker::control_tag>&& stream)
-    -> std::shared_ptr<control_t> {
+    -> std::shared_ptr<control_t>
+{
     const blackhole::scope::holder_t scoped(*log, {{ "uuid", id }});
 
     COCAINE_LOG_DEBUG(log, "processing handshake message");
