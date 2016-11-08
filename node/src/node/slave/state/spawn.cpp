@@ -119,10 +119,13 @@ auto spawn_t::spawn(unsigned long timeout) -> void {
             shared_from_this()
         );
 
+        auto env = slave->manifest.environment;
+        // TODO: env["SECRET"] = token; // Consider the corresponding naming from macaroons.
+
         handle = isolate->spawn(
             slave->manifest.executable,
             args,
-            slave->manifest.environment,
+            std::move(env),
             std::move(spawn_handle)
         );
     } catch (const std::system_error& err) {
@@ -157,7 +160,7 @@ spawn_t::on_spawn(std::chrono::high_resolution_clock::time_point start) {
     const auto elapsed = std::chrono::duration<float, std::chrono::milliseconds::period>(now - start).count();
 
     std::error_code ec;
-    const size_t cancelled = timer.cancel(ec);
+    const auto cancelled = timer.cancel(ec);
     if (ec || cancelled == 0) {
         // If we are here, then the spawn timer has been triggered and the slave has been
         // shutdowned with a spawn timeout error.

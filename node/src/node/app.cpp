@@ -632,6 +632,7 @@ app_t::app_t(context_t& context,
     work(std::make_unique<asio::io_service::work>(*loop)),
     thread([&] { loop->run(); })
 {
+    // TODO: Fetch auth token from the secret storage.
     state = std::make_shared<app_state_t>(
         context,
         manifest_t(context, manifest),

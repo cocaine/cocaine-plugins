@@ -473,6 +473,8 @@ auto engine_t::spawn(const id_t& id, pool_type& pool) -> void {
         throw std::system_error(error::pool_is_full, "the pool is full");
     }
 
+    // TODO: auto token = auth->token();
+
     COCAINE_LOG_INFO(log, "enlarging the slaves pool to {}", pool.size() + 1);
 
     // It is guaranteed that the cleanup handler will not be invoked from within the slave's
