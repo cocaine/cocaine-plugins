@@ -117,6 +117,7 @@ install(
     DIRECTORY
         include/cocaine/api
         include/cocaine/idl
+        include/cocaine/repository
         include/cocaine/service
     DESTINATION include/cocaine
     COMPONENT development)
