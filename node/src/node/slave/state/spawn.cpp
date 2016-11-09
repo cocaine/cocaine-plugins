@@ -32,8 +32,10 @@ namespace ph = std::placeholders;
 
 using asio::ip::tcp;
 
-spawn_t::spawn_t(std::shared_ptr<machine_t> slave_)
-    : slave(std::move(slave_)), timer(slave->loop) {}
+spawn_t::spawn_t(std::shared_ptr<machine_t> slave_) :
+    slave(std::move(slave_)),
+    timer(slave->loop)
+{}
 
 spawn_t::~spawn_t() {
     data.apply([&](data_t& data) {
@@ -69,7 +71,7 @@ auto spawn_t::terminate(const std::error_code& ec) -> void {
     slave->shutdown(ec);
 }
 
-auto spawn_t::spawn(unsigned long timeout) -> void {
+auto spawn_t::spawn(api::auth_t::token_t token, unsigned long timeout) -> void {
     COCAINE_LOG_DEBUG(slave->log, "slave is spawning using '{}', timeout: {} ms",
                       slave->manifest.executable, timeout);
 
@@ -125,7 +127,10 @@ auto spawn_t::spawn(unsigned long timeout) -> void {
         );
 
         auto env = slave->manifest.environment;
-        // TODO: env["SECRET"] = token; // Consider the corresponding naming from macaroons.
+        if (token.is_valid()) {
+            env["COCAINE_APP_TOKEN_TYPE"] = token.type;
+            env["COCAINE_APP_TOKEN_BODY"] = token.body;
+        }
 
         handle = isolate->spawn(
             slave->manifest.executable,

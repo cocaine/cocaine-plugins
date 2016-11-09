@@ -10,6 +10,8 @@
 
 #include "state.hpp"
 
+#include "cocaine/api/auth.hpp"
+
 #include "cocaine/detail/service/node/forwards.hpp"
 
 namespace cocaine {
@@ -19,7 +21,10 @@ namespace node {
 namespace slave {
 namespace state {
 
-class spawn_t : public state_t, public std::enable_shared_from_this<spawn_t> {
+class spawn_t :
+    public state_t,
+    public std::enable_shared_from_this<spawn_t>
+{
     std::shared_ptr<machine_t> slave;
 
     asio::deadline_timer timer;
@@ -41,7 +46,7 @@ public:
     auto cancel() -> void;
     auto terminate(const std::error_code& ec) -> void;
 
-    auto spawn(unsigned long timeout) -> void;
+    auto spawn(api::auth_t::token_t token, unsigned long timeout) -> void;
 
     auto activate(std::shared_ptr<session_t> session, upstream<io::worker::control_tag> stream) ->
         std::shared_ptr<control_t>;

@@ -36,6 +36,7 @@ struct stats_t;
 namespace state {
 
 class active_t;
+class preparation_t;
 class handshaking_t;
 class inactive_t;
 class seal_t;

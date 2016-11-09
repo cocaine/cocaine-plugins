@@ -25,6 +25,18 @@ public:
         /// slow network of whatever else the token may become expired in unexpected way. Use this
         /// information as a cache hint.
         std::chrono::system_clock::time_point expires_in;
+
+        auto is_valid() const -> bool {
+            return !is_invalid();
+        }
+
+        auto is_invalid() const -> bool {
+            return type.empty() || body.empty();
+        }
+
+        auto is_expired() const -> bool {
+            return std::chrono::system_clock::now() >= expires_in;
+        }
     };
 
     typedef std::function<void(token_t token, const std::error_code& ec)> callback_type;

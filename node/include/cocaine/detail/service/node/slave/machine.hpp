@@ -37,6 +37,7 @@ using state::state_t;
 /// Actual slave implementation.
 class machine_t : public std::enable_shared_from_this<machine_t> {
     friend class state::active_t;
+    friend class state::preparation_t;
     friend class state::handshaking_t;
     friend class state::seal_t;
     friend class state::spawn_t;

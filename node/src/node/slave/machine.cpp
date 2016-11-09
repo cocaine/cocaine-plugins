@@ -10,8 +10,9 @@
 #include <cocaine/rpc/actor.hpp>
 #include <cocaine/service/node/profile.hpp>
 
-#include "cocaine/api/stream.hpp"
+#include "cocaine/api/auth.hpp"
 #include "cocaine/api/isolate.hpp"
+#include "cocaine/api/stream.hpp"
 
 #include "cocaine/service/node/manifest.hpp"
 #include "cocaine/service/node/profile.hpp"
@@ -25,6 +26,7 @@
 #include "cocaine/detail/service/node/slave/load.hpp"
 #include "cocaine/detail/service/node/slave/machine.hpp"
 #include "cocaine/detail/service/node/slave/state/inactive.hpp"
+#include "cocaine/detail/service/node/slave/state/preparation.hpp"
 #include "cocaine/detail/service/node/slave/state/spawn.hpp"
 #include "cocaine/detail/service/node/slave/stats.hpp"
 
@@ -39,18 +41,25 @@ namespace ph = std::placeholders;
 using blackhole::attribute_list;
 
 using detail::service::node::slave::state::spawn_t;
+using detail::service::node::slave::state::preparation_t;
 using detail::service::node::slave::state::inactive_t;
 
 using cocaine::detail::service::node::slave::stats_t;
 using cocaine::service::node::slave::id_t;
 
-machine_t::machine_t(context_t& context, id_t id, manifest_t manifest, profile_t profile,
-                asio::io_service& loop, cleanup_handler cleanup):
+machine_t::machine_t(context_t& context,
+                     id_t id,
+                     manifest_t manifest,
+                     profile_t profile,
+                     std::shared_ptr<api::auth_t> auth,
+                     asio::io_service& loop,
+                     cleanup_handler cleanup):
     log(context.log(format("{}/slave", manifest.name), {{ "uuid", id.id() }})),
     context(context),
     id(id),
     profile(profile),
     manifest(manifest),
+    auth(std::move(auth)),
     loop(loop),
     closed(false),
     cleanup(std::move(cleanup)),
@@ -71,14 +80,14 @@ machine_t::start() {
 
     COCAINE_LOG_DEBUG(log, "slave state machine is starting");
 
-    auto spawning = std::make_shared<spawn_t>(shared_from_this());
-    migrate(spawning);
+    auto preparation = std::make_shared<preparation_t>(shared_from_this());
+    migrate(preparation);
 
     // NOTE: Slave spawning involves starting timers and posting completion handlers callbacks with
     // the event loop.
     loop.post(trace_t::bind([=]() {
         // This call can perform state machine shutdowning on any error occurred.
-        spawning->spawn(profile.timeout.spawn);
+        preparation->start(std::chrono::milliseconds(profile.timeout.spawn));
     }));
 }
 

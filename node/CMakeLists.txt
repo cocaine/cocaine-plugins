@@ -54,6 +54,7 @@ add_library(${PLUGIN_NAME} SHARED
     src/node/slave/state/active.cpp
     src/node/slave/state/handshaking.cpp
     src/node/slave/state/inactive.cpp
+    src/node/slave/state/preparation.cpp
     src/node/slave/state/seal.cpp
     src/node/slave/state/spawn.cpp
     src/node/slave/state/state.cpp
