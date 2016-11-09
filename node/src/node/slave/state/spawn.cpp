@@ -105,8 +105,13 @@ auto spawn_t::spawn(unsigned long timeout) -> void {
     // Spawn a worker instance and start reading standard outputs of it.
     try {
         auto isolate = slave->context.repository().get<api::isolate_t>(
-            slave->profile.isolate.type, slave->context, slave->loop, slave->manifest.name,
-            slave->profile.isolate.type, slave->profile.isolate.args);
+            slave->profile.isolate.type,
+            slave->context,
+            slave->loop,
+            slave->manifest.name,
+            slave->profile.isolate.type,
+            slave->profile.isolate.args
+        );
 
         COCAINE_LOG_DEBUG(slave->log, "spawning");
 

@@ -161,14 +161,17 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
 
     std::vector<std::string> errored;
 
-    for(auto it = runlist.begin(); it != runlist.end(); ++it) {
-        const blackhole::scope::holder_t scoped(*log, {{ "app", it->first }});
+    std::string app;
+    std::string profile;
+    for (const auto& run : runlist) {
+        std::tie(app, profile) = run;
+        const blackhole::scope::holder_t scoped(*log, {{ "app", app }});
 
         try {
-            start_app(it->first, it->second);
-        } catch(const std::exception& e) {
-            COCAINE_LOG_WARNING(log, "unable to initialize app: {}", e.what());
-            errored.push_back(it->first);
+            start_app(app, profile);
+        } catch(const std::exception& err) {
+            COCAINE_LOG_WARNING(log, "unable to initialize app: {}", err.what());
+            errored.push_back(app);
         }
     }
 
