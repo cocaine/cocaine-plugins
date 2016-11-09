@@ -504,7 +504,7 @@ auto engine_t::spawn(const id_t& id, pool_type& pool) -> void {
             id,
             manifest(),
             profile,
-            // auth, // new state: auth(?) with profile.timeouts.auth
+            auth,
             *loop,
             std::bind(&engine_t::on_slave_death, shared_from_this(), ph::_1, id.id())
         )

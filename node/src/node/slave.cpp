@@ -12,6 +12,7 @@
 #include <cocaine/rpc/actor.hpp>
 #include <cocaine/rpc/upstream.hpp>
 
+#include "cocaine/api/auth.hpp"
 #include "cocaine/api/isolate.hpp"
 
 #include "cocaine/service/node/manifest.hpp"
@@ -35,10 +36,15 @@ using detail::service::node::slave::state::inactive_t;
 using cocaine::detail::service::node::slave::stats_t;
 using cocaine::service::node::slave::id_t;
 
-slave_t::slave_t(context_t& context, id_t id, manifest_t manifest, profile_t profile,
-                 asio::io_service& loop, cleanup_handler fn)
+slave_t::slave_t(context_t& context,
+                 id_t id,
+                 manifest_t manifest,
+                 profile_t profile,
+                 std::shared_ptr<api::auth_t> auth,
+                 asio::io_service& loop,
+                 cleanup_handler fn)
     : ec(error::overseer_shutdowning),
-      machine(std::make_shared<machine_t>(context, id, manifest, profile, loop, fn))
+      machine(std::make_shared<machine_t>(context, id, manifest, profile, std::move(auth), loop, fn))
 {
     machine->start();
 
