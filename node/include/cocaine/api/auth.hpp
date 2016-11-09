@@ -41,7 +41,8 @@ public:
     virtual auto token(callback_type callback) -> void = 0;
 };
 
-auto auth(context_t& context, const std::string& name) -> std::shared_ptr<auth_t>;
+auto auth(context_t& context, const std::string& name, const std::string& service) ->
+    std::shared_ptr<auth_t>;
 
 }  // namespace api
 }  // namespace cocaine

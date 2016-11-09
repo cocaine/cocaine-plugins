@@ -16,20 +16,20 @@ struct category_traits<auth_t> {
     struct factory_type : public basic_factory<auth_t> {
         virtual
         ptr_type
-        get(context_t& context, const std::string& name, const dynamic_t& args) = 0;
+        get(context_t& context, const std::string& name, const std::string& service, const dynamic_t& args) = 0;
     };
 
     template<class T>
     struct default_factory : public factory_type {
         ptr_type
-        get(context_t& context, const std::string& name, const dynamic_t& args) override {
+        get(context_t& context, const std::string& name, const std::string& service, const dynamic_t& args) override {
             ptr_type instance;
 
             instances.apply([&](std::map<std::string, std::weak_ptr<auth_t>>& instances) {
                 auto weak_ptr = instances[name];
 
                 if ((instance = weak_ptr.lock()) == nullptr) {
-                    instance = std::make_shared<T>(context, name, args);
+                    instance = std::make_shared<T>(context, name, service, args);
                     instances[name] = instance;
                 }
             });
