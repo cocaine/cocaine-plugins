@@ -12,6 +12,7 @@
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
+#include "cocaine/api/auth.hpp"
 #include "cocaine/api/stream.hpp"
 
 #include "cocaine/service/node/manifest.hpp"
@@ -55,16 +56,17 @@ struct collector_t {
 };
 
 engine_t::engine_t(context_t& context,
-                       manifest_t manifest,
-                       profile_t profile,
-                       pool_observer& observer,
-                       std::shared_ptr<asio::io_service> loop):
+                   manifest_t manifest,
+                   profile_t profile,
+                   pool_observer& observer,
+                   std::shared_ptr<asio::io_service> loop):
     log(context.log(format("{}/overseer", manifest.name))),
     context(context),
     stopped(false),
     birthstamp(std::chrono::system_clock::now()),
     manifest_(std::move(manifest)),
     profile_(profile),
+    auth(api::auth(context, "core", manifest_.name)),
     loop(loop),
     pool_target{},
     last_timeout(std::chrono::seconds(1)),
@@ -486,12 +488,10 @@ auto engine_t::spawn(pool_type& pool) -> void {
 }
 
 auto engine_t::spawn(const id_t& id, pool_type& pool) -> void {
-    auto _profile = profile();
-    if (pool.size() >= _profile.pool_limit) {
+    const auto profile = this->profile();
+    if (pool.size() >= profile.pool_limit) {
         throw std::system_error(error::pool_is_full, "the pool is full");
     }
-
-    // TODO: auto token = auth->token();
 
     COCAINE_LOG_INFO(log, "enlarging the slaves pool to {}", pool.size() + 1);
 
@@ -499,7 +499,15 @@ auto engine_t::spawn(const id_t& id, pool_type& pool) -> void {
     // constructor.
     pool.insert(std::make_pair(
         id.id(),
-        slave_t(context, id, manifest(), _profile, *loop, std::bind(&engine_t::on_slave_death, shared_from_this(), ph::_1, id.id()))
+        slave_t(
+            context,
+            id,
+            manifest(),
+            profile,
+            // auth, // new state: auth(?) with profile.timeouts.auth
+            *loop,
+            std::bind(&engine_t::on_slave_death, shared_from_this(), ph::_1, id.id())
+        )
     ));
 
     ++stats.slaves.spawned;

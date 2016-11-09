@@ -363,7 +363,7 @@ public:
         context(context_),
         name(manifest.name)
     {
-        // Create the Overseer - slave spawner/despawner plus the event queue dispatcher.
+        // Create an Overseer - slave spawner/despawner plus the event queue dispatcher.
         overseer_ = std::make_shared<overseer_proxy_t>(
             std::make_shared<overseer_t>(context, manifest, profile, *this, loop)
         );
@@ -510,13 +510,17 @@ public:
         manifest_(std::move(manifest_)),
         profile(std::move(profile_)),
         loop(std::move(loop_)),
-        isolate(context.repository().get<api::isolate_t>(profile.isolate.type,
-                                            context,
-                                            *loop,
-                                            this->manifest_.name,
-                                            profile.isolate.type,
-                                            profile.isolate.args))
-    {}
+        isolate()
+    {
+        isolate = context.repository().get<api::isolate_t>(
+            profile.isolate.type,
+            context,
+            *loop,
+            manifest().name,
+            profile.isolate.type,
+            profile.isolate.args
+        );
+    }
 
     auto logger() noexcept -> logging::logger_t& {
         return *log;
@@ -625,17 +629,16 @@ private:
 };
 
 app_t::app_t(context_t& context,
-             const std::string& manifest,
+             const std::string& name,
              const std::string& profile,
              cocaine::deferred<void> deferred):
     loop(std::make_shared<asio::io_service>()),
     work(std::make_unique<asio::io_service::work>(*loop)),
     thread([&] { loop->run(); })
 {
-    // TODO: Fetch auth token from the secret storage.
     state = std::make_shared<app_state_t>(
         context,
-        manifest_t(context, manifest),
+        manifest_t(context, name),
         profile_t(context, profile),
         deferred,
         loop
