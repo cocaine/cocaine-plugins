@@ -35,6 +35,7 @@ add_library(${PLUGIN_NAME} SHARED
     src/isolate/external.cpp
     src/isolate/fetcher.cpp
     src/module.cpp
+    src/api/auth.cpp
     src/node.cpp
     src/node/app.cpp
     src/node/dispatch/client.cpp
