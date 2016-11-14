@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.10.7) unstable; urgency=low
+
+  * Added: read-only PG pool, GC and queue limits (#72).
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 14 Nov 2016 17:28:08 +0300
+
 cocaine-plugins (0.12.10.6) unstable; urgency=low
 
   * Changed: move Postgres pool to separate component (#70).
