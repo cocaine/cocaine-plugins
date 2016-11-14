@@ -25,7 +25,8 @@ postgres_t::postgres_t(context_t& context, const std::string& name, const dynami
     tags_column_name(args.as_object().at("pg_tags_column", "tags").as_string()),
     table_name(args.as_object().at("pg_table_name", "cocaine_index").as_string()),
     wrapped(api::storage(context, args.as_object().at("pg_underlying_storage", "core").as_string())),
-    pg_pool(api::postgres::pool(context, args.as_object().at("pg_backend", "core").as_string()))
+    pg_pool(api::postgres::pool(context, args.as_object().at("pg_backend", "core").as_string())),
+    pg_ro_pool(api::postgres::pool(context, args.as_object().at("pg_backend_ro", "core").as_string()))
 {}
 
 void
@@ -114,7 +115,7 @@ postgres_t::remove(const std::string& collection, const std::string& key, callba
 
 void
 postgres_t::find(const std::string& collection, const std::vector<std::string>& tags, callback<std::vector<std::string>> cb) {
-    pg_pool->execute([=](pqxx::connection_base& connection){
+    pg_ro_pool->execute([=](pqxx::connection_base& connection){
         try {
             // TODO: possible overhead with dynamic can be removed via usage
             // of RapidJson or even manual formatting

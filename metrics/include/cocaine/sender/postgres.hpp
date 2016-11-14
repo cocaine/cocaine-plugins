@@ -40,8 +40,7 @@ public:
 private:
     enum class policy_t {
         continous,
-        update,
-        gc
+        update
     };
     auto on_send_timer(const std::error_code& ec) -> void;
     auto on_gc_timer(const std::error_code& ec) -> void;

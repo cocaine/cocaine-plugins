@@ -5,6 +5,7 @@
 
 #include <cocaine/context.hpp>
 #include <cocaine/context/config.hpp>
+#include <cocaine/dynamic.hpp>
 #include <cocaine/errors.hpp>
 #include <cocaine/format.hpp>
 #include <cocaine/logging.hpp>
@@ -12,6 +13,8 @@
 #include <blackhole/logger.hpp>
 
 #include <pqxx/transaction>
+
+#include <sys/time.h>
 
 namespace cocaine {
 namespace sender {
@@ -39,8 +42,6 @@ pg_sender_t::pg_sender_t(context_t& context,
     if(!_policy.empty()) {
         if(_policy == "continous") {
             policy = policy_t::continous;
-        } else if(_policy == "gc") {
-            policy = policy_t::gc;
         } else if(_policy == "update") {
             policy = policy_t::update;
         } else {
@@ -53,9 +54,10 @@ pg_sender_t::pg_sender_t(context_t& context,
     send_timer.expires_from_now(send_period);
     send_timer.async_wait(std::bind(&pg_sender_t::on_send_timer, this, std::placeholders::_1));
 
-    if(policy == policy_t::gc) {
+    if(args.as_object().at("pg_use_gc", true).as_bool()) {
+        COCAINE_LOG_DEBUG(logger, "setting GC timer to {}", gc_period.total_seconds());
         gc_timer.expires_from_now(gc_period);
-        send_timer.async_wait(std::bind(&pg_sender_t::on_gc_timer, this, std::placeholders::_1));
+        gc_timer.async_wait(std::bind(&pg_sender_t::on_gc_timer, this, std::placeholders::_1));
     }
 }
 
@@ -71,6 +73,7 @@ auto pg_sender_t::on_send_timer(const std::error_code& ec) -> void {
 
 auto pg_sender_t::on_gc_timer(const std::error_code& ec) -> void {
     if(!ec) {
+        COCAINE_LOG_DEBUG(logger, "running gc for metrics");
         pool->execute([=](pqxx::connection_base& connection) {
             try {
                 pqxx::work transaction(connection);
@@ -86,7 +89,7 @@ auto pg_sender_t::on_gc_timer(const std::error_code& ec) -> void {
             gc_timer.async_wait(std::bind(&pg_sender_t::on_gc_timer, this, std::placeholders::_1));
         });
     } else {
-        COCAINE_LOG_WARNING(logger, "sender timer was cancelled");
+        COCAINE_LOG_WARNING(logger, "GC timer was cancelled");
     }
 }
 
@@ -94,13 +97,17 @@ auto pg_sender_t::on_gc_timer(const std::error_code& ec) -> void {
 auto pg_sender_t::send(dynamic_t data) -> void {
     pool->execute([=](pqxx::connection_base& connection){
         try {
+            struct timeval time_point;
+            gettimeofday(&time_point, nullptr);
+            const auto now = std::to_string((time_point.tv_sec * 1000.0 + time_point.tv_usec / 1000.0) / 1000.0);
+
             auto data_string = boost::lexical_cast<std::string>(data);
             auto transaction = postgres::start_transaction(connection);
             switch (policy) {
-                case policy_t::gc:
                 case policy_t::continous: {
-                    auto query = cocaine::format("INSERT INTO {} (ts, host, data) VALUES(now(), {}, {});",
+                    auto query = cocaine::format("INSERT INTO {} (ts, host, data) VALUES(to_timestamp({}), {}, {});",
                                                  transaction->esc(table_name),
+                                                 now,
                                                  transaction->quote(hostname),
                                                  transaction->quote(data_string));
                     COCAINE_LOG_DEBUG(logger, "executing {}", query);
@@ -115,15 +122,17 @@ auto pg_sender_t::send(dynamic_t data) -> void {
                     COCAINE_LOG_DEBUG(logger, "executing {}", query);
                     auto sql_result = transaction->exec(query);
                     if (sql_result[0][0].as<size_t>() == 0) {
-                        query = cocaine::format("INSERT INTO {} (ts, host, data) VALUES(now(), {}, {});",
+                        query = cocaine::format("INSERT INTO {} (ts, host, data) VALUES(to_timestamp({}), {}, {});",
                                                 transaction->esc(table_name),
+                                                now,
                                                 transaction->quote(hostname),
                                                 transaction->quote(data_string));
                         COCAINE_LOG_DEBUG(logger, "executing {}", query);
                         transaction->exec(query);
                     } else {
-                        query = cocaine::format("UPDATE {}  set ts = now(), data = {} WHERE host = {};",
+                        query = cocaine::format("UPDATE {}  set ts = to_timestamp({}), data = {} WHERE host = {};",
                                                 transaction->esc(table_name),
+                                                now,
                                                 transaction->quote(data_string),
                                                 transaction->quote(hostname));
                         COCAINE_LOG_DEBUG(logger, "executing {}", query);

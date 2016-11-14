@@ -54,6 +54,8 @@ private:
     asio::io_service io_loop;
     boost::optional<asio::io_service::work> io_work;
     synchronized<slots_t> slots;
+    std::atomic_ullong load;
+    size_t max_load;
 };
 
 } // namespace postgres
