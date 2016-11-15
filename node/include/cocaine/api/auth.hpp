@@ -13,6 +13,7 @@ namespace api {
 class auth_t {
 public:
     typedef auth_t category_type;
+    typedef std::chrono::system_clock clock_type;
 
     struct token_t {
         /// Token type. Think of the first part of the Authorization HTTP header.
@@ -24,18 +25,11 @@ public:
         /// Time point when the token becomes expired. Note that due to NTP misconfiguration,
         /// slow network of whatever else the token may become expired in unexpected way. Use this
         /// information as a cache hint.
-        std::chrono::system_clock::time_point expires_in;
+        clock_type::time_point expires_in;
 
-        auto is_valid() const -> bool {
-            return !is_invalid();
-        }
-
-        auto is_invalid() const -> bool {
-            return type.empty() || body.empty();
-        }
-
-        auto is_expired() const -> bool {
-            return std::chrono::system_clock::now() >= expires_in;
+        /// Returns true if the token is expired.
+        auto expired() const -> bool {
+            return clock_type::now() >= expires_in;
         }
     };
 
