@@ -16,6 +16,7 @@
 #include "cocaine/cluster/unicorn.hpp"
 
 #include <cocaine/context.hpp>
+#include <cocaine/context/quote.hpp>
 #include <cocaine/errors.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/rpc/actor.hpp>
@@ -125,28 +126,26 @@ unicorn_cluster_t::drop_scope(size_t id) {
 
 void
 unicorn_cluster_t::announce() {
-    const auto& actor = context.locate("locator");
+    auto quote = context.locate("locator");
 
-    if(!actor) {
+    if(!quote) {
         COCAINE_LOG_ERROR(log, "unable to announce local endpoints: locator is not available");
         announce_timer.expires_from_now(boost::posix_time::seconds(config.retry_interval));
         announce_timer.async_wait(std::bind(&unicorn_cluster_t::on_announce_timer, this, std::placeholders::_1));
         return;
     }
 
-    auto cur_endpoints = actor->endpoints();
-
     COCAINE_LOG_INFO(log, "going to announce self");
-    if(!endpoints.empty() && cur_endpoints != endpoints) {
+    if(!endpoints.empty() && quote->endpoints != endpoints) {
         // TODO: fix this case, if ever we would need it
         // This can happen only if actor endpoints have changed
         // which is not likely.
-        BOOST_ASSERT_MSG(false, "endpoints changed for locator sercice, can not comtimue, terminating" );
+        BOOST_ASSERT_MSG(false, "endpoints changed for locator service, can not continue, terminating" );
         std::terminate();
     } else {
-        endpoints.swap(cur_endpoints);
-
-
+        if(endpoints.empty()) {
+            endpoints.swap(quote->endpoints);
+        }
         try {
             scopes.apply([&](std::map<size_t, api::unicorn_scope_ptr>& _scopes) {
                 auto scope_data = scope(_scopes);

@@ -6,6 +6,8 @@
 
 #include <blackhole/logger.hpp>
 
+#include <cocaine/context.hpp>
+#include <cocaine/context/quote.hpp>
 #include <cocaine/repository.hpp>
 #include <cocaine/repository/isolate.hpp>
 #include <cocaine/rpc/actor.hpp>
@@ -76,17 +78,15 @@ auto spawn_t::spawn(api::auth_t::token_t token, unsigned long timeout) -> void {
                       slave->manifest.executable, timeout);
 
     COCAINE_LOG_DEBUG(slave->log, "locating the Locator endpoint list");
-    const auto locator = slave->context.locate("locator");
+    const auto locator_quote = slave->context.locate("locator");
 
-    if (!locator) {
+    if (!locator_quote) {
         COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: failed to locate the Locator");
         slave->shutdown(error::locator_not_found);
         return;
     }
 
-    const auto endpoints = locator->endpoints();
-
-    if (endpoints.empty()) {
+    if (locator_quote->endpoints.empty()) {
         COCAINE_LOG_ERROR(slave->log,
                           "unable to spawn slave: failed to determine the Locator endpoints");
         slave->shutdown(error::empty_locator_endpoints);
@@ -100,7 +100,7 @@ auto spawn_t::spawn(api::auth_t::token_t token, unsigned long timeout) -> void {
     args["--app"] = slave->manifest.name;
     args["--endpoint"] = slave->manifest.endpoint;
     args["--locator"] = boost::join(
-        endpoints | boost::adaptors::transformed(boost::lexical_cast<std::string, tcp::endpoint>),
+        locator_quote->endpoints | boost::adaptors::transformed(boost::lexical_cast<std::string, tcp::endpoint>),
         ",");
     args["--protocol"] = std::to_string(io::protocol<io::worker_tag>::version::value);
 

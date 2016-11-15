@@ -4,6 +4,7 @@
 
 #include <cocaine/logging.hpp>
 #include <cocaine/context.hpp>
+#include <cocaine/context/quote.hpp>
 #include <cocaine/errors.hpp>
 
 #include <cocaine/locked_ptr.hpp>
