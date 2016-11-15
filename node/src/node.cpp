@@ -37,12 +37,9 @@
 #include <blackhole/logger.hpp>
 #include <blackhole/scope/holder.hpp>
 
+#include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptor/map.hpp>
 #include <boost/range/algorithm/copy.hpp>
-#include <boost/spirit/include/karma_char.hpp>
-#include <boost/spirit/include/karma_generate.hpp>
-#include <boost/spirit/include/karma_list.hpp>
-#include <boost/spirit/include/karma_string.hpp>
 
 #include "cocaine/service/node/overseer.hpp"
 
@@ -176,12 +173,7 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
     }
 
     if(!errored.empty()) {
-        std::ostringstream stream;
-        std::ostream_iterator<char> builder(stream);
-
-        boost::spirit::karma::generate(builder, boost::spirit::karma::string % ", ", errored);
-
-        COCAINE_LOG_WARNING(log, "couldn't start {} app(s): {}", errored.size(), stream.str());
+        COCAINE_LOG_WARNING(log, "couldn't start {} app(s): {}", errored.size(), boost::join(errored, ", "));
     }
 
     context.signal_hub().listen(signal, asio);
