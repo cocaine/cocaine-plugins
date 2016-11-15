@@ -127,7 +127,7 @@ auto spawn_t::spawn(api::auth_t::token_t token, unsigned long timeout) -> void {
         );
 
         auto env = slave->manifest.environment;
-        if (token.is_valid()) {
+        if (!token.type.empty()) {
             env["COCAINE_APP_TOKEN_TYPE"] = token.type;
             env["COCAINE_APP_TOKEN_BODY"] = token.body;
         }
