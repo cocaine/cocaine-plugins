@@ -15,15 +15,15 @@ struct category_traits<auth_t> {
 
     struct factory_type : public basic_factory<auth_t> {
         virtual
-        ptr_type
-        get(context_t& context, const std::string& name, const std::string& service, const dynamic_t& args) = 0;
+        auto
+        get(context_t& context, const std::string& name, const dynamic_t& args) -> ptr_type = 0;
     };
 
     template<class T>
     struct default_factory : public factory_type {
-        ptr_type
-        get(context_t& context, const std::string& name, const std::string& service, const dynamic_t& args) override {
-            return std::make_shared<T>(context, name, service, args);
+        auto
+        get(context_t& context, const std::string& name, const dynamic_t& args) -> ptr_type override {
+            return std::make_shared<T>(context, name, args);
         }
     };
 };

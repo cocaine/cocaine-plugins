@@ -41,6 +41,7 @@
 #include <boost/range/adaptor/map.hpp>
 #include <boost/range/algorithm/copy.hpp>
 
+#include "cocaine/middleware/auth.hpp"
 #include "cocaine/service/node/overseer.hpp"
 
 using namespace cocaine;
@@ -55,7 +56,7 @@ namespace {
 class control_slot_t:
     public io::basic_slot<io::node::control_app>
 {
-    struct controlling_slot_t:
+    struct dispatch_t:
         public io::basic_slot<io::node::control_app>::dispatch_type
     {
         typedef io::basic_slot<io::node::control_app>::dispatch_type super;
@@ -65,12 +66,12 @@ class control_slot_t:
 
         std::shared_ptr<overseer_t> overseer;
 
-        controlling_slot_t(const std::string& name, control_slot_t* p):
+        dispatch_t(const std::string& name, control_slot_t* p):
             super(format("controlling/{}", name))
         {
             overseer = p->parent.overseer(name);
             if (overseer == nullptr) {
-                throw cocaine::error_t("app '{}' is not available", name);
+                throw cocaine::error_t("app is not available");
             }
 
             on<protocol::chunk>([&](int size) {
@@ -78,9 +79,8 @@ class control_slot_t:
             });
         }
 
-        virtual
         void
-        discard(const std::error_code&) const {
+        discard(const std::error_code&) const override {
             overseer->control_population(0);
         }
     };
@@ -102,8 +102,9 @@ public:
 
     boost::optional<result_type>
     operator()(const meta_type&, tuple_type&& args, upstream_type&&) {
+        // TODO: Call middlewares manually. Catch exceptions, send error manually, everything manually.
         const auto dispatch = tuple::invoke(std::move(args), [&](const std::string& name) -> result_type {
-            return std::make_shared<controlling_slot_t>(name, this);
+            return std::make_shared<dispatch_t>(name, this);
         });
 
         return boost::make_optional(dispatch);
@@ -118,7 +119,9 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
     log(context.log(name)),
     context(context)
 {
-    on<io::node::start_app>(std::bind(&node_t::start_app, this, ph::_1, ph::_2));
+    on<io::node::start_app>()
+        .execute(std::bind(&node_t::start_app, this, ph::_1, ph::_2))
+        .add_middleware(middleware::auth_t(context, name));
     on<io::node::pause_app>(std::bind(&node_t::pause_app, this, ph::_1));
     on<io::node::list>     (std::bind(&node_t::list, this));
     on<io::node::info>     (std::bind(&node_t::info, this, ph::_1, ph::_2));
@@ -237,7 +240,6 @@ node_t::pause_app(const std::string& name) {
 auto
 node_t::list() const -> dynamic_t {
     dynamic_t::array_t result;
-
     apps.apply([&](const std::map<std::string, std::shared_ptr<node::app_t>>& apps) {
         boost::copy(apps | boost::adaptors::map_keys, std::back_inserter(result));
     });

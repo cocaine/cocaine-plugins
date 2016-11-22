@@ -48,14 +48,14 @@ class node_t :
     std::shared_ptr<dispatch<io::context_tag>> signal;
 
 public:
-    node_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
+    node_t(context_t& context, asio::io_service& loop, const std::string& name, const dynamic_t& args);
     ~node_t();
 
-    auto prototype() const -> const io::basic_dispatch_t&;
+    auto prototype() const -> const io::basic_dispatch_t& override;
 
+    auto list() const -> dynamic_t;
     auto start_app(const std::string& name, const std::string& profile) -> deferred<void>;
     auto pause_app(const std::string& name) -> void;
-    auto list() const -> dynamic_t;
 
     // TODO: Flags are bad!
     auto info(const std::string& name, io::node::info::flags_t flags) const -> dynamic_t;
