@@ -8,15 +8,15 @@ public:
     typedef api::auth_t::callback_type callback_type;
 
 public:
-    promiscuous_t(context_t&, const std::string&, const dynamic_t&) {}
+    promiscuous_t(context_t&, const std::string&, const std::string&, const dynamic_t&) {}
 
     auto
-    token(const std::string&, callback_type callback) -> void override {
+    token(callback_type callback) -> void override {
         callback({}, {});
     }
 
     auto
-    check_permissions(const std::string&, const std::string&, const std::string&) const ->
+    check_permissions(const std::string&, const std::string&) const ->
         permission_t override
     {
         return allow_t();

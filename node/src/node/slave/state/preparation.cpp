@@ -48,7 +48,7 @@ auto preparation_t::terminate(const std::error_code& ec) -> void {
 
 auto preparation_t::start(std::chrono::milliseconds timeout) -> void {
     COCAINE_LOG_DEBUG(slave->log, "preparation start");
-    slave->auth->token(slave->manifest.name, [=](auth_t::token_t token, const std::error_code& ec) {
+    slave->auth->token([=](auth_t::token_t token, const std::error_code& ec) {
         COCAINE_LOG_DEBUG(slave->log, "preparation got token: {}", ec);
         slave->loop.post([=] {
             COCAINE_LOG_DEBUG(slave->log, "preparation loop");

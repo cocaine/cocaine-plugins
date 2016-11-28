@@ -64,34 +64,33 @@ public:
     ///     inner threads context switching.
     virtual
     auto
-    token(const std::string& service, callback_type callback) -> void = 0;
+    token(callback_type callback) -> void = 0;
 
     /// Checks access rights for a given authorization entity represented with a token, i.e can it
     /// use the requested event of a given service.
     ///
-    /// \param service Service name to ask permissions of.
     /// \param token Authorization token.
     /// \tparam Event Requested event.
     template<typename Event>
     auto
-    check_permissions(const std::string& service, const std::string& credentials) -> permission_t {
-        return check_permissions(service, Event::alias(), credentials);
+    check_permissions(const std::string& credentials) -> permission_t {
+        return check_permissions(Event::alias(), credentials);
     }
 
     /// Checks access rights for a given authorization entity represented with a token, i.e can it
     /// use the requested event of a given service.
     ///
-    /// \param service Service name to ask permissions of.
     /// \param event Requested event.
     /// \param token Authorization token.
     virtual
     auto
-    check_permissions(const std::string& service, const std::string& event, const std::string& credentials) const ->
+    check_permissions(const std::string& event, const std::string& credentials) const ->
         permission_t = 0;
 };
 
 auto
-auth(context_t& context, const std::string& name) -> std::shared_ptr<auth_t>;
+auth(context_t& context, const std::string& name, const std::string& service) ->
+    std::shared_ptr<auth_t>;
 
 }  // namespace api
 }  // namespace cocaine

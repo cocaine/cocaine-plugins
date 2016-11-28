@@ -11,13 +11,11 @@ namespace middleware {
 
 class auth_t {
     std::shared_ptr<api::auth_t> auth;
-    std::string service;
 
 public:
     explicit
-    auth_t(context_t& context, std::string service) :
-        auth(api::auth(context, "core")),
-        service(std::move(service))
+    auth_t(context_t& context, const std::string& service) :
+        auth(api::auth(context, "core", service))
     {}
 
     template<typename Event, typename F, typename... Args>
@@ -31,7 +29,7 @@ public:
             credentials = header->value();
         }
 
-        const auto perm = auth->check_permissions<Event>(service, credentials);
+        const auto perm = auth->check_permissions<Event>(credentials);
 
         if (auto ec = boost::get<std::error_code>(&perm)) {
             throw std::system_error(*ec, "permission denied");
