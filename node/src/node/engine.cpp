@@ -75,9 +75,9 @@ engine_t::engine_t(context_t& context,
 
     std::weak_ptr<metrics::usts::ewma_t> queue_depth(stats.queue_depth);
     context.metrics_hub()
-        .register_gauge<std::uint64_t>(format("app.{}.queue.depth_average", manifest_.name), {}, [queue_depth]() -> std::uint64_t {
+        .register_gauge<double>(format("app.{}.queue.depth_average", manifest_.name), {}, [queue_depth]() -> double {
             if (auto depth = queue_depth.lock()) {
-                return static_cast<std::size_t>(depth->get());
+                return depth->get();
             } else {
                 return 0;
             }
@@ -187,7 +187,7 @@ public:
 
             // Wake up aggregator.
             value.queue_depth.add(queue.size());
-            info["depth_average"] = static_cast<std::size_t>(value.queue_depth.get());
+            info["depth_average"] = trunc(value.queue_depth.get(), 3);
 
             typedef engine_t::queue_type::value_type value_type;
 
