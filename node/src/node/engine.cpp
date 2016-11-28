@@ -7,6 +7,8 @@
 #include <blackhole/logger.hpp>
 #include <blackhole/scope/holder.hpp>
 
+#include <metrics/registry.hpp>
+
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
@@ -70,6 +72,16 @@ engine_t::engine_t(context_t& context,
     stats(std::chrono::seconds(2))
 {
     COCAINE_LOG_DEBUG(log, "overseer has been initialized");
+
+    std::weak_ptr<metrics::usts::ewma_t> queue_depth(stats.queue_depth);
+    context.metrics_hub()
+        .register_gauge<std::uint64_t>(format("app.{}.queue.depth_average", manifest_.name), {}, [queue_depth]() -> std::uint64_t {
+            if (auto depth = queue_depth.lock()) {
+                return static_cast<std::size_t>(depth->get());
+            } else {
+                return 0;
+            }
+        });
 }
 
 engine_t::~engine_t() {

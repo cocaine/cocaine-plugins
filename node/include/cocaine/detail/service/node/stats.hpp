@@ -31,7 +31,7 @@ struct stats_t {
 
     /// EWMA rates.
     std::unique_ptr<metrics::meter_t> meter;
-    std::unique_ptr<metrics::usts::ewma_t> queue_depth;
+    std::shared_ptr<metrics::usts::ewma_t> queue_depth;
 
     /// Channel processing time quantiles (summary).
     std::unique_ptr<metrics::timer<metrics::accumulator::sliding::window_t>> timer;
