@@ -1,4 +1,4 @@
-cocaine-plugins (0.12.10.8) UNRELEASED; urgency=low
+cocaine-plugins (0.12.10.8) unstable; urgency=low
 
   * Added: new app metric - average queue depth.
 
