@@ -67,7 +67,7 @@ engine_t::engine_t(context_t& context,
     pool_target{},
     last_timeout(std::chrono::seconds(1)),
     observer(observer),
-    stats{}
+    stats(std::chrono::seconds(2))
 {
     COCAINE_LOG_DEBUG(log, "overseer has been initialized");
 }
@@ -105,6 +105,7 @@ struct queue_t {
     unsigned long capacity;
 
     const synchronized<engine_t::queue_type>* queue;
+    metrics::usts::ewma_t& queue_depth;
 };
 
 // Helper tagged struct.
@@ -171,6 +172,10 @@ public:
 
         value.queue->apply([&](const engine_t::queue_type& queue) {
             info["depth"] = queue.size();
+
+            // Wake up aggregator.
+            value.queue_depth.add(queue.size());
+            info["depth_average"] = static_cast<std::size_t>(value.queue_depth.get());
 
             typedef engine_t::queue_type::value_type value_type;
 
@@ -333,7 +338,7 @@ auto engine_t::info(io::node::info::flags_t flags) const -> dynamic_t::object_t 
     visitor.visit(manifest());
     visitor.visit(profile);
     visitor.visit(stats.requests.accepted.load(), stats.requests.rejected.load());
-    visitor.visit({profile.queue_limit, &queue});
+    visitor.visit({profile.queue_limit, &queue, *stats.queue_depth});
     visitor.visit(*stats.meter);
     visitor.visit(*stats.timer);
     visitor.visit({profile.pool_limit, stats.slaves.spawned, stats.slaves.crashed, &pool});
@@ -440,6 +445,7 @@ auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx,
                 tx->dispatch, // Explicitly copy.
                 std::move(rx)
             });
+            stats.queue_depth->add(queue.size());
         });
 
         stats.requests.accepted++;
@@ -674,6 +680,7 @@ auto engine_t::rebalance_events() -> void {
                             }
                         }
                         queue.pop_front();
+                        stats.queue_depth->add(queue.size());
                     }
                 } else {
                     const auto range = pool | boost::adaptors::map_values | filtered(filter);
@@ -696,6 +703,7 @@ auto engine_t::rebalance_events() -> void {
                         // other reasons. We pop the channel only on successful assignment to
                         // achieve strong exception guarantee.
                         queue.pop_front();
+                        stats.queue_depth->add(queue.size());
                     } catch (const std::exception& err) {
                         COCAINE_LOG_WARNING(log, "slave has rejected assignment: {}", err.what());
                     }

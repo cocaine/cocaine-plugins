@@ -6,6 +6,7 @@
 #include <metrics/accumulator/sliding/window.hpp>
 #include <metrics/meter.hpp>
 #include <metrics/timer.hpp>
+#include <metrics/usts/ewma.hpp>
 
 #include <cocaine/locked_ptr.hpp>
 
@@ -30,11 +31,12 @@ struct stats_t {
 
     /// EWMA rates.
     std::unique_ptr<metrics::meter_t> meter;
+    std::unique_ptr<metrics::usts::ewma_t> queue_depth;
 
     /// Channel processing time quantiles (summary).
     std::unique_ptr<metrics::timer<metrics::accumulator::sliding::window_t>> timer;
 
-    stats_t();
+    stats_t(std::chrono::high_resolution_clock::duration interval);
 };
 
 }  // namespace cocaine
