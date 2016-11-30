@@ -27,6 +27,8 @@
 #include <cocaine/repository/service.hpp>
 #include <cocaine/repository/unicorn.hpp>
 
+#include "repository/zookeeper.hpp"
+
 using namespace cocaine;
 extern "C" {
 auto
@@ -36,9 +38,10 @@ validation() -> api::preconditions_t {
 
 void
 initialize(api::repository_t& repository) {
+    repository.insert<unicorn::zookeeper_t>("zookeeper", std::make_unique<api::zookeeper_factory_t>());
+
     repository.insert<service::unicorn_service_t>("unicorn");
     repository.insert<cluster::unicorn_cluster_t>("unicorn");
-    repository.insert<unicorn::zookeeper_t>("zookeeper");
     error::registrar::add(error::zookeeper_category(), error::zookeeper_category_id);
 }
 
