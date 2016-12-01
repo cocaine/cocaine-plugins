@@ -5,7 +5,7 @@
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
-static int do_log(void* handler, const char* buf, size_t size) {
+static auto do_log(void* handler, const char* buf, size_t size) -> int {
     cocaine::logging::logger_t* log = static_cast<cocaine::logging::logger_t*>(handler);
 
     std::string message(buf, size);
@@ -46,40 +46,40 @@ static int do_log(void* handler, const char* buf, size_t size) {
 
 #ifdef __linux__
 
-static ssize_t memfile_read(void*, char*, size_t) {
+static auto memfile_read(void*, char*, size_t) -> ssize_t {
     std::terminate();
     return 0;
 }
 
-static ssize_t memfile_write(void* handler, const char* buf, size_t size) {
+static auto memfile_write(void* handler, const char* buf, size_t size) -> ssize_t {
     return do_log(handler, buf, static_cast<size_t>(size));
 }
 
-static int memfile_seek(void*, off64_t*, int) {
+static auto memfile_seek(void*, off64_t*, int) -> int {
     std::terminate();
     return 0;
 }
 
 #elif defined(__APPLE__)
 
-static int memfile_read(void*, char*, int) {
+static auto memfile_read(void*, char*, int) -> int {
     std::terminate();
     return 0;
 }
 
-static int memfile_write(void* handler, const char* buf, int size) {
+static auto memfile_write(void* handler, const char* buf, int size) -> int {
     return do_log(handler, buf, static_cast<size_t>(size));
 }
 
-static fpos_t memfile_seek(void*, fpos_t, int) {
+static auto memfile_seek(void*, fpos_t, int) -> fpos_t {
     std::terminate();
     return 0;
 }
 
 #endif
 
-static int memfile_close(void* handler) {
     ::free(handler);
+static auto memfile_close(void* handler) -> int {
     return 0;
 }
 
