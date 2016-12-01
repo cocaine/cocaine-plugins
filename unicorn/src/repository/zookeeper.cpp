@@ -113,8 +113,8 @@ zookeeper_factory_t::zookeeper_factory_t() :
 
 zookeeper_factory_t::~zookeeper_factory_t() {
     if (fh) {
-        ::fclose(fh);
         ::zoo_set_log_stream(nullptr);
+        ::fclose(fh);
     }
 }
 
