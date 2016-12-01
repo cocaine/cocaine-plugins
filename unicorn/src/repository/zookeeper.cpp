@@ -78,8 +78,8 @@ static auto memfile_seek(void*, fpos_t, int) -> fpos_t {
 
 #endif
 
-    ::free(handler);
 static auto memfile_close(void* handler) -> int {
+    delete static_cast<cocaine::logging::logger_t*>(handler);
     return 0;
 }
 
