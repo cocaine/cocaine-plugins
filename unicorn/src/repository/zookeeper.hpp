@@ -16,8 +16,15 @@ struct zookeeper_factory_t :
 {
     typedef unicorn_ptr ptr_type;
 
+    zookeeper_factory_t();
+   ~zookeeper_factory_t();
+
     ptr_type
     get(context_t& context, const std::string& name, const dynamic_t& args) override;
+
+private:
+    FILE* fh;
+    std::once_flag init_flag;
 };
 
 template<>
