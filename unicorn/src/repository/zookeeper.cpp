@@ -47,7 +47,7 @@ static auto do_log(void* handler, const char* buf, size_t size) -> int {
 #ifdef __linux__
 
 static auto memfile_read(void*, char*, size_t) -> ssize_t {
-    std::terminate();
+    __builtin_unreachable();
     return 0;
 }
 
@@ -56,14 +56,14 @@ static auto memfile_write(void* handler, const char* buf, size_t size) -> ssize_
 }
 
 static auto memfile_seek(void*, off64_t*, int) -> int {
-    std::terminate();
+    __builtin_unreachable();
     return 0;
 }
 
 #elif defined(__APPLE__)
 
 static auto memfile_read(void*, char*, int) -> int {
-    std::terminate();
+    __builtin_unreachable();
     return 0;
 }
 
@@ -72,7 +72,7 @@ static auto memfile_write(void* handler, const char* buf, int size) -> int {
 }
 
 static auto memfile_seek(void*, fpos_t, int) -> fpos_t {
-    std::terminate();
+    __builtin_unreachable();
     return 0;
 }
 
