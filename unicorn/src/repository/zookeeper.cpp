@@ -83,40 +83,58 @@ static auto memfile_close(void* handler) -> int {
     return 0;
 }
 
-static FILE* init_logging(cocaine::logging::logger_t* log) {
-    FILE* fh = nullptr;
-
-#if defined(__linux__)
-    cookie_io_functions_t memfile_func;
-    memfile_func.read  = memfile_read;
-    memfile_func.write = memfile_write;
-    memfile_func.seek  = memfile_seek;
-    memfile_func.close = memfile_close;
-    fh = ::fopencookie(log, "a+", memfile_func);
-    ::zoo_set_log_stream(fh);
-#elif defined(__APPLE__)
-    fh = ::funopen(log, memfile_read, memfile_write, memfile_seek, memfile_close);
-    ::zoo_set_log_stream(fh);
-#else
-    // Do nothing on unsupported platforms.
-#endif
-
-    return fh;
-}
-
 namespace cocaine {
 namespace api {
 
-zookeeper_factory_t::zookeeper_factory_t() {}
-zookeeper_factory_t::~zookeeper_factory_t() {
-    ::fclose(fh);
-}
+namespace {
+
+class initializer_t {
+    FILE* fh;
+
+public:
+    initializer_t() :
+        fh(nullptr)
+    {}
+
+    ~initializer_t() {
+       if (fh) {
+           ::fclose(fh);
+           ::zoo_set_log_stream(nullptr);
+       }
+   }
+
+    auto init(logging::logger_t* log) -> void {
+#if defined(__linux__)
+        cookie_io_functions_t memfile_func;
+        memfile_func.read  = memfile_read;
+        memfile_func.write = memfile_write;
+        memfile_func.seek  = memfile_seek;
+        memfile_func.close = memfile_close;
+        fh = ::fopencookie(log, "a+", memfile_func);
+        ::zoo_set_log_stream(fh);
+#elif defined(__APPLE__)
+        fh = ::funopen(log, memfile_read, memfile_write, memfile_seek, memfile_close);
+        ::zoo_set_log_stream(fh);
+#else
+        // Do nothing on unsupported platforms.
+#endif
+    }
+
+    static auto instance() -> initializer_t& {
+        static initializer_t self;
+        return self;
+    }
+};
+
+std::once_flag init_once;
+
+}  // namespace
 
 zookeeper_factory_t::ptr_type
 zookeeper_factory_t::get(context_t& context, const std::string& name, const dynamic_t& args) {
-    if (initialized.test_and_set() == false) {
-        fh = init_logging(context.log(cocaine::format("zookeeper")).release());
-    }
+    std::call_once(init_once, [&] {
+        initializer_t::instance().init(context.log(cocaine::format("zookeeper")).release());
+    });
     return category_traits<unicorn_t>::default_factory<unicorn::zookeeper_t>::get(context, name, args);
 }
 
