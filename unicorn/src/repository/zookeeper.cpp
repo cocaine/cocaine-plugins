@@ -1,5 +1,7 @@
 #include "zookeeper.hpp"
 
+#include <boost/algorithm/string/trim.hpp>
+
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
@@ -7,9 +9,7 @@ static int do_log(void* handler, const char* buf, size_t size) {
     cocaine::logging::logger_t* log = static_cast<cocaine::logging::logger_t*>(handler);
 
     std::string message(buf, size);
-    while (message.size() > 0 && message.back() == '\n') {
-        message.resize(message.size() - 1);
-    }
+    boost::trim(message);
 
     auto pos = message.find("ZOO_");
     if (pos == std::string::npos || pos + 4 >= message.size()) {
