@@ -83,9 +83,6 @@ static auto memfile_close(void* handler) -> int {
     return 0;
 }
 
-namespace cocaine {
-namespace api {
-
 namespace {
 
 class initializer_t {
@@ -103,13 +100,14 @@ public:
        }
    }
 
-    auto init(logging::logger_t* log) -> void {
+    auto init(cocaine::logging::logger_t* log) -> void {
 #if defined(__linux__)
         cookie_io_functions_t memfile_func;
         memfile_func.read  = memfile_read;
         memfile_func.write = memfile_write;
         memfile_func.seek  = memfile_seek;
         memfile_func.close = memfile_close;
+
         fh = ::fopencookie(log, "a+", memfile_func);
         ::zoo_set_log_stream(fh);
 #elif defined(__APPLE__)
@@ -130,9 +128,13 @@ std::once_flag init_once;
 
 }  // namespace
 
+namespace cocaine {
+namespace api {
+
 zookeeper_factory_t::ptr_type
 zookeeper_factory_t::get(context_t& context, const std::string& name, const dynamic_t& args) {
     std::call_once(init_once, [&] {
+        // Wrapper pointer will be released at static destruction time.
         initializer_t::instance().init(context.log(cocaine::format("zookeeper")).release());
     });
     return category_traits<unicorn_t>::default_factory<unicorn::zookeeper_t>::get(context, name, args);
