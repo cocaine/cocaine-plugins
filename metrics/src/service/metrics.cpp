@@ -83,6 +83,12 @@ auto metrics_t::metrics() const -> dynamic_t {
         result[_name + ".p99"] = snapshot.p99() / 1e6;
     }
 
+    for (const auto& item : hub.gauges<double>()) {
+        const auto& name = std::get<0>(item).name();
+        const auto& gauge = std::get<1>(item);
+        result[name] = (*gauge.get())();
+    }
+
     return result;
 }
 
