@@ -63,7 +63,7 @@ struct base_log {
         typedef base_log_tag tag;
 
         static const char* alias() {
-            return "emit";
+            return "emit_ack";
         }
         typedef boost::mpl::list<
         /* Log severity*/

@@ -41,9 +41,12 @@
 #include <cocaine/context.hpp>
 #include <cocaine/context/config.hpp>
 #include <cocaine/context/filter.hpp>
+#include <cocaine/context/signal.hpp>
+#include <cocaine/idl/context.hpp>
 #include <cocaine/idl/streaming.hpp>
 #include <cocaine/rpc/slot.hpp>
 #include <cocaine/repository/unicorn.hpp>
+#include <cocaine/trace/logger.hpp>
 #include <cocaine/traits/vector.hpp>
 #include <cocaine/unicorn/value.hpp>
 
@@ -117,14 +120,27 @@ struct logging_v2_t::impl_t {
     static const std::string default_key;
     static const std::string core_key;
 
-    impl_t(context_t& context, asio::io_service& io_context, bh::root_logger_t _logger, std::string _filter_unicorn_path)
-        : internal_logger(context.log("logging_v2")),
-          logger(std::move(_logger)),
-          generator(std::random_device()()),
-          unicorn(api::unicorn(context, "core")),
-          filter_unicorn_path(std::move(_filter_unicorn_path)),
-          list_scope(),
-          retry_timer(io_context) {
+    impl_t(context_t& context,
+           asio::io_service& io_context,
+           const dynamic_t& config
+    ) :
+        internal_logger(context.log("logging_v2")),
+        root_logger(new bh::root_logger_t(get_root_logger(context, config))),
+        logger(std::unique_ptr<logging::logger_t>(new bh::wrapper_t(*root_logger, {}))),
+        signal_dispatcher(std::make_shared<dispatch<io::context_tag>>("logging_signals")),
+        generator(std::random_device()()),
+        unicorn(api::unicorn(context, "core")),
+        filter_unicorn_path(config.as_object().at("unicorn_path", "/logging_v2/filters").as_string()),
+        list_scope(),
+        retry_timer(io_context)
+    {
+        signal_dispatcher->on<io::context::os_signal>([=, &context](int signum, siginfo_t){
+            if(signum == SIGHUP) {
+                COCAINE_LOG_INFO(internal_logger, "resetting logging v2 root logger");
+                *root_logger = get_root_logger(context, config);
+            }
+        });
+        context.signal_hub().listen(signal_dispatcher, io_context);
         init();
     }
 
@@ -367,7 +383,9 @@ struct logging_v2_t::impl_t {
     }
 
     std::unique_ptr<logging::logger_t> internal_logger;
-    bh::root_logger_t logger;
+    std::unique_ptr<bh::root_logger_t> root_logger;
+    logging::trace_wrapper_t logger;
+    std::shared_ptr<dispatch<io::context_tag>> signal_dispatcher;
     synchronized<std::map<std::string, std::shared_ptr<logging::metafilter_t>>> metafilters;
     synchronized<std::mt19937_64> generator;
     api::unicorn_ptr unicorn;
@@ -459,10 +477,7 @@ logging_v2_t::logging_v2_t(context_t& context,
       dispatch<io::base_log_tag>(service_name)
 {
     typedef logging::filter_t::disposition_t disposition_t;
-    impl.reset(new impl_t(context,
-                    asio,
-                    get_root_logger(context, service_args),
-                    service_args.as_object().at("unicorn_path", "/logging_v2/filters").as_string()));
+    impl.reset(new impl_t(context, asio, service_args));
 
     auto default_mf = impl->get_default_metafilter();
     auto default_metafilter_conf = service_args.as_object().at("default_metafilter").as_array();
