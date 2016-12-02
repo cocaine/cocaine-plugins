@@ -84,9 +84,9 @@ auto metrics_t::metrics() const -> dynamic_t {
     }
 
     for (const auto& item : hub.gauges<double>()) {
-        const auto& name = std::get<0>(item).name();
+        const auto& gauge_name = std::get<0>(item).name();
         const auto& gauge = std::get<1>(item);
-        result[name] = (*gauge.get())();
+        result[gauge_name] = (*gauge.get())();
     }
 
     return result;
