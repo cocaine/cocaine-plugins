@@ -75,7 +75,7 @@ engine_t::engine_t(context_t& context,
 
     std::weak_ptr<metrics::usts::ewma_t> queue_depth(stats.queue_depth);
     context.metrics_hub()
-        .register_gauge<double>(format("app.{}.queue.depth_average", manifest_.name), {}, [queue_depth]() -> double {
+        .register_gauge<double>(format("{}.queue.depth_average", manifest_.name), {}, [queue_depth]() -> double {
             if (auto depth = queue_depth.lock()) {
                 return depth->get();
             } else {
