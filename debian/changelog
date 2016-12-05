@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.10.11) unstable; urgency=low
+
+  * Remove useless prefix in queue depth metric
+
+ -- Anton Matveenko <antmat@me.com>  Fri, 05 Dec 2016 14:11:18 +0300
+
 cocaine-plugins (0.12.10.10) unstable; urgency=low
 
   * Fix: pass gauges to metrics output
