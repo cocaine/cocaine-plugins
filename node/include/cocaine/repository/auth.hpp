@@ -22,8 +22,8 @@ struct category_traits<auth_t> {
     template<class T>
     struct default_factory : public factory_type {
         auto
-        get(context_t& context, const std::string& name, const std::string& service, const dynamic_t& args) -> ptr_type override {
-            return std::make_shared<T>(context, name, service, args);
+        get(context_t& context, const std::string&, const std::string& service, const dynamic_t& args) -> ptr_type override {
+            return std::make_shared<T>(context, service, args);
         }
     };
 };

@@ -119,12 +119,16 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
     log(context.log(name)),
     context(context)
 {
+    auto middleware = middleware::auth_t(context, name);
+
     on<io::node::start_app>()
         .execute(std::bind(&node_t::start_app, this, ph::_1, ph::_2))
-        .add_middleware(middleware::auth_t(context, name));
-    on<io::node::pause_app>(std::bind(&node_t::pause_app, this, ph::_1));
-    on<io::node::list>     (std::bind(&node_t::list, this));
-    on<io::node::info>     (std::bind(&node_t::info, this, ph::_1, ph::_2));
+        .add_middleware(middleware);
+    on<io::node::pause_app>()
+        .execute(std::bind(&node_t::pause_app, this, ph::_1))
+        .add_middleware(middleware);
+    on<io::node::list>(std::bind(&node_t::list, this));
+    on<io::node::info>(std::bind(&node_t::info, this, ph::_1, ph::_2));
     on<io::node::control_app>(std::make_shared<control_slot_t>(*this));
 
     // Context signal/slot.

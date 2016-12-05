@@ -8,7 +8,7 @@ public:
     typedef api::auth_t::callback_type callback_type;
 
 public:
-    promiscuous_t(context_t&, const std::string&, const std::string&, const dynamic_t&) {}
+    promiscuous_t(context_t&, const std::string&, const dynamic_t&) {}
 
     auto
     token(callback_type callback) -> void override {
