@@ -237,7 +237,7 @@ describe :Unicorn do
     expect(result[1][0][1]).to eq -1
     expect{
       rx.recv(fast_timeout)
-    }.to raise_error(Celluloid::TaskTimeout)
+    }.to raise_error(Celluloid::TimeoutError)
     ensure_create(node, node_val)
     result = rx.recv(fast_timeout)
     expect(result[1][0][0]).to eq node_val
@@ -245,7 +245,7 @@ describe :Unicorn do
 
     expect{
       rx.recv(fast_timeout)
-    }.to raise_error(Celluloid::TaskTimeout)
+    }.to raise_error(Celluloid::TimeoutError)
     ensure_del(node)
     result = rx.recv(fast_timeout)
     expect(result[1][0][0]).to eq ZK_ERROR_CATEGORY
@@ -255,7 +255,7 @@ describe :Unicorn do
     ensure_create(node, node_val)
     expect{
       rx.recv(fast_timeout)
-    }.to raise_error(Celluloid::TaskTimeout)
+    }.to raise_error(Celluloid::TimeoutError)
 
     ensure_del(node)
     tx.close
@@ -420,7 +420,7 @@ describe :Unicorn do
       expect(Set.new(result[1][1])).to eq subnodes
       expect{
         rx.recv(fast_timeout)
-      }.to raise_error(Celluloid::TaskTimeout)
+      }.to raise_error(Celluloid::TimeoutError)
     end
     for subnode in subnodes.to_a do
       ensure_del(node + '/' + subnode)
@@ -431,7 +431,7 @@ describe :Unicorn do
       expect(Set.new(result[1][1])).to eq subnodes
       expect{
         rx.recv(fast_timeout)
-      }.to raise_error(Celluloid::TaskTimeout)
+      }.to raise_error(Celluloid::TimeoutError)
     end
     ensure_del(node)
     result = rx.recv
@@ -451,7 +451,7 @@ describe :Unicorn do
     tx2, rx2 = unicorn2.lock(node)
     expect{
       rx2.recv(fast_timeout)
-    }.to raise_error(Celluloid::TaskTimeout)
+    }.to raise_error(Celluloid::TimeoutError)
 
     tx.close
     result = rx2.recv

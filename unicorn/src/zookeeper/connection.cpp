@@ -19,6 +19,8 @@
 
 #include "cocaine/detail/zookeeper/errors.hpp"
 
+#include <boost/optional/optional.hpp>
+
 #include <zookeeper/zookeeper.h>
 
 #include <algorithm>
@@ -77,9 +79,12 @@ cfg_t::connection_string() const {
 zookeeper::connection_t::connection_t(const cfg_t& _cfg, const session_t& _session) :
     cfg(_cfg),
     session(_session),
-    zhandle(),
+    _zhandle(),
     w_scope(),
-    watcher(w_scope.get_handler<reconnect_action_t>(*this))
+    watcher(w_scope.get_handler<reconnect_action_t>(*this)),
+    io_loop(),
+    work(asio::io_service::work(io_loop)),
+    close_thread([&](){io_loop.run();})
 {
     if(!cfg.prefix.empty() && cfg.prefix[0] != '/') {
         throw std::system_error(std::make_error_code(std::errc::invalid_argument), "invalid prefix");
@@ -87,13 +92,15 @@ zookeeper::connection_t::connection_t(const cfg_t& _cfg, const session_t& _sessi
     while(!cfg.prefix.empty() && cfg.prefix.back() == '/') {
         cfg.prefix.resize(cfg.prefix.size() - 1);
     }
-    reconnect();
+    _zhandle.apply([&](handle_ptr& h) {
+        reconnect(h);
+    });
 }
 
 zookeeper::connection_t::~connection_t() {
-    if(zhandle) {
-        zookeeper_close(zhandle);
-    }
+    _zhandle->reset();
+    work = boost::none;
+    close_thread.join();
 }
 
 path_t zookeeper::connection_t::format_path(const path_t path) {
@@ -103,12 +110,18 @@ path_t zookeeper::connection_t::format_path(const path_t path) {
     return cfg.prefix + path;
 }
 
+connection_t::handle_ptr connection_t::zhandle(){
+    return _zhandle.apply([&](handle_ptr& handle){
+        return handle;
+    });
+}
+
 void
 connection_t::put(const path_t& path, const value_t& value, version_t version, managed_stat_handler_base_t& handler) {
     check_connectivity();
     auto prefixed_path = format_path(path);
     check_rc(
-        zoo_aset(zhandle, prefixed_path.c_str(), value.c_str(), value.size(), version, &handler_dispatcher_t::stat_cb, mc_ptr(&handler))
+        zoo_aset(zhandle().get(), prefixed_path.c_str(), value.c_str(), value.size(), version, &handler_dispatcher_t::stat_cb, mc_ptr(&handler))
     );
 }
 
@@ -117,7 +130,7 @@ connection_t::get(const path_t& path, managed_data_handler_base_t& handler, mana
     check_connectivity();
     auto prefixed_path = format_path(path);
     check_rc(
-        zoo_awget(zhandle, prefixed_path.c_str(), &handler_dispatcher_t::watcher_cb, mc_ptr(&watch), &handler_dispatcher_t::data_cb, mc_ptr(&handler))
+        zoo_awget(zhandle().get(), prefixed_path.c_str(), &handler_dispatcher_t::watcher_cb, mc_ptr(&watch), &handler_dispatcher_t::data_cb, mc_ptr(&handler))
     );
 }
 
@@ -126,7 +139,7 @@ connection_t::get(const path_t& path, managed_data_handler_base_t& handler) {
     check_connectivity();
     auto prefixed_path = format_path(path);
     check_rc(
-        zoo_awget(zhandle, prefixed_path.c_str(), &handler_dispatcher_t::watcher_cb, nullptr, &handler_dispatcher_t::data_cb, mc_ptr(&handler))
+        zoo_awget(zhandle().get(), prefixed_path.c_str(), &handler_dispatcher_t::watcher_cb, nullptr, &handler_dispatcher_t::data_cb, mc_ptr(&handler))
     );
 }
 
@@ -139,7 +152,7 @@ connection_t::create(const path_t& path, const value_t& value, bool ephemeral, b
     flag = flag | (sequence ? ZOO_SEQUENCE : 0);
     handler.set_prefix(cfg.prefix);
     check_rc(
-        zoo_acreate(zhandle, prefixed_path.c_str(), value.c_str(), value.size(), &acl, flag, &handler_dispatcher_t::string_cb, mc_ptr(&handler))
+        zoo_acreate(zhandle().get(), prefixed_path.c_str(), value.c_str(), value.size(), &acl, flag, &handler_dispatcher_t::string_cb, mc_ptr(&handler))
     );
 }
 
@@ -148,7 +161,7 @@ connection_t::del(const path_t& path, version_t version, std::unique_ptr<void_ha
     check_connectivity();
     auto prefixed_path = format_path(path);
     check_rc(
-        zoo_adelete(zhandle, prefixed_path.c_str(), version, &handler_dispatcher_t::void_cb, c_ptr(handler.get()))
+        zoo_adelete(zhandle().get(), prefixed_path.c_str(), version, &handler_dispatcher_t::void_cb, c_ptr(handler.get()))
     );
     handler.release();
 }
@@ -158,7 +171,7 @@ connection_t::exists(const path_t& path, managed_stat_handler_base_t& handler, m
     check_connectivity();
     auto prefixed_path = format_path(path);
     check_rc(
-        zoo_awexists(zhandle, prefixed_path.c_str(), &handler_dispatcher_t::watcher_cb, mc_ptr(&watch), &handler_dispatcher_t::stat_cb, mc_ptr(&handler))
+        zoo_awexists(zhandle().get(), prefixed_path.c_str(), &handler_dispatcher_t::watcher_cb, mc_ptr(&watch), &handler_dispatcher_t::stat_cb, mc_ptr(&handler))
     );
 }
 
@@ -167,7 +180,7 @@ connection_t::childs(const path_t& path, managed_strings_stat_handler_base_t& ha
     check_connectivity();
     auto prefixed_path = format_path(path);
     check_rc(
-        zoo_awget_children2(zhandle, prefixed_path.c_str(), &handler_dispatcher_t::watcher_cb, mc_ptr(&watch), &handler_dispatcher_t::strings_stat_cb, mc_ptr(&handler))
+        zoo_awget_children2(zhandle().get(), prefixed_path.c_str(), &handler_dispatcher_t::watcher_cb, mc_ptr(&watch), &handler_dispatcher_t::strings_stat_cb, mc_ptr(&handler))
     );
 }
 
@@ -176,14 +189,16 @@ connection_t::childs(const path_t& path, managed_strings_stat_handler_base_t& ha
     check_connectivity();
     auto prefixed_path = format_path(path);
     check_rc(
-        zoo_awget_children2(zhandle, prefixed_path.c_str(), nullptr, nullptr, &handler_dispatcher_t::strings_stat_cb, mc_ptr(&handler))
+        zoo_awget_children2(zhandle().get(), prefixed_path.c_str(), nullptr, nullptr, &handler_dispatcher_t::strings_stat_cb, mc_ptr(&handler))
     );
 }
 
 void connection_t::check_connectivity() {
-    if(!zhandle || is_unrecoverable(zhandle)) {
-        reconnect();
-    }
+    _zhandle.apply([&](handle_ptr& handle) {
+        if(!handle.get() || is_unrecoverable(handle.get())) {
+            reconnect(handle);
+        }
+    });
 }
 
 void connection_t::check_rc(int rc) const {
@@ -194,37 +209,48 @@ void connection_t::check_rc(int rc) const {
 }
 
 void connection_t::reconnect() {
+    _zhandle.apply([&](handle_ptr& h) {
+        reconnect(h);
+    });
+}
 
-    zhandle_t* new_zhandle = init();
-    if(!new_zhandle || is_unrecoverable(new_zhandle)) {
+void connection_t::reconnect(handle_ptr& old_zhandle) {
+
+    handle_ptr new_zhandle = init();
+    if(!new_zhandle.get() || is_unrecoverable(new_zhandle.get())) {
         if(session.valid()) {
             //Try to reset session before second attempt
             session.reset();
             new_zhandle = init();
         }
-        if(!new_zhandle || is_unrecoverable(new_zhandle)) {
+        if(!new_zhandle.get() || is_unrecoverable(new_zhandle.get())) {
             // Swap in any case.
             // Sometimes we really want to force reconnect even when zk is unavailable at all. For example on lock release.
-            std::swap(new_zhandle, zhandle);
+            old_zhandle.swap(new_zhandle);
             throw std::system_error(cocaine::error::could_not_connect);
         }
     } else {
         if(!session.valid()) {
-            session.assign(*zoo_client_id(new_zhandle));
+            session.assign(*zoo_client_id(new_zhandle.get()));
         }
     }
-    std::swap(new_zhandle, zhandle);
-    zookeeper_close(new_zhandle);
+    old_zhandle.swap(new_zhandle);
 }
 
-zhandle_t* connection_t::init() {
+connection_t::handle_ptr connection_t::init() {
     zhandle_t* new_zhandle = zookeeper_init(cfg.connection_string().c_str(),
                                             &handler_dispatcher_t::watcher_cb,
                                             cfg.recv_timeout_ms,
                                             session.native(),
                                             mc_ptr(&watcher),
                                             0);
-    return new_zhandle;
+    return handle_ptr(new_zhandle, std::bind(&connection_t::close, this, std::placeholders::_1));
+}
+
+void connection_t::close(zhandle_t* handle) {
+    io_loop.post([=]{
+        zookeeper_close(handle);
+    });
 }
 
 void connection_t::create_prefix() {
@@ -234,9 +260,11 @@ void connection_t::create_prefix() {
         int flag = 0;
         for (size_t i = count; i > 0; i--) {
             auto path = path_parent(cfg.prefix, i - 1);
-            int rc = zoo_create(zhandle, path.c_str(), "", 0, &acl, flag, NULL, 0);
+            int rc = zoo_create(zhandle().get(), path.c_str(), "", 0, &acl, flag, NULL, 0);
             if (rc && rc != ZNODEEXISTS) {
-                reconnect();
+                _zhandle.apply([&](handle_ptr& h){
+                    reconnect(h);
+                });
             }
         }
     }
@@ -249,7 +277,9 @@ void connection_t::reconnect_action_t::watch_event(int type, int state, path_t /
         if(state == ZOO_EXPIRED_SESSION_STATE) {
             try {
                 parent.session.reset();
-                parent.reconnect();
+                parent._zhandle.apply([&](handle_ptr& h){
+                    parent.reconnect(h);
+                });
             } catch (const std::system_error& e) {
                 // Swallow it and leave connection in disconnected state.
                 // That's all we can do if ZK is unavailable.
