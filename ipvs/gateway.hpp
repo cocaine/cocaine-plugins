@@ -43,7 +43,7 @@ class ipvs_t:
 {
     class remote_t;
 
-    typedef std::map<partition_t, std::unique_ptr<remote_t>> remote_map_t;
+    typedef std::map<std::string, std::unique_ptr<remote_t>> remote_map_t;
 
     context_t& m_context;
 
@@ -56,24 +56,36 @@ class ipvs_t:
     // Keeps track of IPVS configuration.
     synchronized<remote_map_t> m_remotes;
 
+    std::string local_uuid;
 public:
-    ipvs_t(context_t& context, const std::string& name, const dynamic_t& args);
+    ipvs_t(context_t& context, const std::string& local_uuid, const std::string& name, const dynamic_t& args);
 
     virtual
    ~ipvs_t();
 
-    virtual
     auto
-    resolve(const partition_t& name) const -> std::vector<asio::ip::tcp::endpoint>;
+    resolve_policy() const -> resolve_policy_t {
+        return resolve_policy_t::remote_only;
+    }
 
-    virtual
-    size_t
+    auto
+    resolve(const std::string& name) const -> service_description_t;
+
+    auto
     consume(const std::string& uuid,
-            const partition_t& name, const std::vector<asio::ip::tcp::endpoint>& endpoints);
+            const std::string& name,
+            unsigned int version,
+            const std::vector<asio::ip::tcp::endpoint>& endpoints,
+            const io::graph_root_t& protocol) -> void override;
 
-    virtual
-    size_t
-    cleanup(const std::string& uuid, const partition_t& name);
+    auto
+    cleanup(const std::string& uuid, const std::string& name) -> void override;
+
+    auto
+    cleanup(const std::string& uuid) -> void override;
+
+    auto
+    total_count(const std::string& name) const -> size_t override;
 };
 
 }} // namespace cocaine::gateway

@@ -37,7 +37,7 @@ public:
         size_t check_interval;
     };
 
-    unicorn_cluster_t(context_t& context, interface& locator, const std::string& name, const dynamic_t& args);
+    unicorn_cluster_t(context_t& context, interface& locator, mode_t mode, const std::string& name, const dynamic_t& args);
 
 private:
     struct on_announce;

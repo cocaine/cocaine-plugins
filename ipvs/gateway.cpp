@@ -96,8 +96,9 @@ class ipvs_t::remote_t {
 
     struct info_t {
         std::string service;
-        std::size_t version;
+        unsigned int version;
         std::vector<tcp::endpoint> endpoints;
+        io::graph_root_t protocol;
     };
 
     ipvs_t *const parent;
@@ -110,13 +111,13 @@ class ipvs_t::remote_t {
     std::multimap<std::string, ipvs_dest_t> backends;
 
 public:
-    remote_t(ipvs_t* parent, const partition_t& name);
+    remote_t(ipvs_t *const parent_, const std::string& name_, unsigned int version, const io::graph_root_t& protocol);
    ~remote_t();
 
     // Observers
 
     auto
-    reduce() const -> std::vector<tcp::endpoint>;
+    reduce() const -> gateway_t::service_description_t;
 
     // Modifiers
 
@@ -126,14 +127,20 @@ public:
     size_t
     remove(const std::string& uuid);
 
+    size_t
+    backends_size() const;
+
 private:
     void
     format_address(union nf_inet_addr& target, const tcp::endpoint& endpoint);
 };
 
-ipvs_t::remote_t::remote_t(ipvs_t *const parent_, const partition_t& name_):
+ipvs_t::remote_t::remote_t(ipvs_t *const parent_,
+                           const std::string& name_,
+                           unsigned int version,
+                           const io::graph_root_t& protocol):
     parent(parent_),
-    info({std::get<0>(name_), std::get<1>(name_), {}})
+    info({name_, version, {}, protocol})
 {
     ipvs_service_t handle;
 
@@ -238,7 +245,7 @@ struct is_serving {
 } // namespace
 
 auto
-ipvs_t::remote_t::reduce() const -> std::vector<tcp::endpoint> {
+ipvs_t::remote_t::reduce() const -> gateway_t::service_description_t {
     if(backends.empty()) {
         throw std::system_error(error::service_not_available);
     }
@@ -249,7 +256,7 @@ ipvs_t::remote_t::reduce() const -> std::vector<tcp::endpoint> {
         is_serving{backends}
     );
 
-    return endpoints;
+    return {std::move(endpoints), info.protocol, info.version};
 }
 
 size_t
@@ -345,6 +352,11 @@ ipvs_t::remote_t::format_address(union nf_inet_addr& target, const tcp::endpoint
     }
 }
 
+size_t
+ipvs_t::remote_t::backends_size() const {
+    return backends.size();
+}
+
 // IPVS gateway
 
 namespace cocaine {
@@ -367,11 +379,12 @@ struct dynamic_converter<ipvs_config_t> {
 
 } // namespace cocaine
 
-ipvs_t::ipvs_t(context_t& context, const std::string& name, const dynamic_t& args):
-    category_type(context, name, args),
+ipvs_t::ipvs_t(context_t& context, const std::string& _local_uuid, const std::string& name, const dynamic_t& args):
+    category_type(context, _local_uuid, name, args),
     m_context(context),
     m_log(context.log(name)),
-    m_cfg(args.to<ipvs_config_t>())
+    m_cfg(args.to<ipvs_config_t>()),
+    local_uuid(_local_uuid)
 {
     COCAINE_LOG_INFO(m_log, "initializing IPVS");
 
@@ -432,7 +445,7 @@ ipvs_t::~ipvs_t() {
 }
 
 auto
-ipvs_t::resolve(const partition_t& name) const -> std::vector<tcp::endpoint> {
+ipvs_t::resolve(const std::string& name) const -> service_description_t {
     auto ptr = m_remotes.synchronize();
 
     if(!ptr->count(name)) {
@@ -444,26 +457,48 @@ ipvs_t::resolve(const partition_t& name) const -> std::vector<tcp::endpoint> {
     return ptr->at(name)->reduce();
 }
 
-size_t
+auto
 ipvs_t::consume(const std::string& uuid,
-                const partition_t& name, const std::vector<tcp::endpoint>& endpoints)
+                const std::string& name,
+                unsigned int version,
+                const std::vector<asio::ip::tcp::endpoint>& endpoints,
+                const io::graph_root_t& protocol) -> void
 {
     auto ptr = m_remotes.synchronize();
 
     if(!ptr->count(name)) {
-        (*ptr)[name] = std::make_unique<remote_t>(this, name);
+        (*ptr)[name] = std::make_unique<remote_t>(this, name, version, protocol);
     }
 
-    return ptr->at(name)->insert(uuid, endpoints);
+    ptr->at(name)->insert(uuid, endpoints);
 }
 
-size_t
-ipvs_t::cleanup(const std::string& uuid, const partition_t& name) {
+auto
+ipvs_t::cleanup(const std::string& uuid, const std::string& name) -> void {
     auto ptr = m_remotes.synchronize();
 
     if(!ptr->count(name)) {
-        return 0;
+        return;
     }
 
-    return ptr->at(name)->remove(uuid);
+    ptr->at(name)->remove(uuid);
+}
+
+auto
+ipvs_t::cleanup(const std::string& uuid) -> void {
+    m_remotes.apply([&](remote_map_t& remote_map){
+        for(auto& remote_pair: remote_map) {
+            remote_pair.second->remove(uuid);
+        }
+    });
+}
+
+auto
+ipvs_t::total_count(const std::string& name) const -> size_t {
+    return m_remotes.apply([&](const remote_map_t& remote_map){
+        auto it = remote_map.find(name);
+        if(it != remote_map.end()) {
+            return it->second->backends_size();
+        }
+    });
 }

@@ -95,10 +95,11 @@ unicorn_cluster_t::cfg_t::cfg_t(const dynamic_t& args) :
 unicorn_cluster_t::unicorn_cluster_t(
     cocaine::context_t & _context,
     cocaine::api::cluster_t::interface & _locator,
+    mode_t mode,
     const std::string& name,
     const cocaine::dynamic_t& args
 ):
-    cluster_t(_context, _locator, name, args),
+    cluster_t(_context, _locator, mode, name, args),
     log(_context.log("unicorn")),
     config(args),
     context(_context),
@@ -107,7 +108,9 @@ unicorn_cluster_t::unicorn_cluster_t(
     subscribe_timer(_locator.asio()),
     unicorn(api::unicorn(_context, args.as_object().at("backend").as_string()))
 {
-    subscribe();
+    if(mode == mode_t::full) {
+        subscribe();
+    }
     announce();
 }
 
