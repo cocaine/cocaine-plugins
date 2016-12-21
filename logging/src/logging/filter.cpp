@@ -38,20 +38,7 @@ auto operator<(const blackhole::stdext::string_view& lhs, const std::string& rhs
                                         rhs.data(), rhs.data() + rhs.size());
 }
 
-auto operator<(const std::string& lhs, const blackhole::stdext::string_view& rhs) -> bool
-{
-    return std::lexicographical_compare(lhs.data(), lhs.data() + lhs.size(),
-                                        rhs.data(), rhs.data() + rhs.size());
-}
-
 auto operator>(const blackhole::stdext::string_view& lhs, const std::string& rhs) -> bool
-{
-    std::greater<char> comp;
-    return std::lexicographical_compare(lhs.data(), lhs.data() + lhs.size(),
-                                        rhs.data(), rhs.data() + rhs.size(), comp);
-}
-
-auto operator>(const std::string& lhs, const blackhole::stdext::string_view& rhs) -> bool
 {
     std::greater<char> comp;
     return std::lexicographical_compare(lhs.data(), lhs.data() + lhs.size(),
@@ -63,21 +50,10 @@ auto operator<=(const blackhole::stdext::string_view& lhs, const std::string& rh
     return !(lhs > rhs);
 }
 
-auto operator<=(const std::string& lhs, const blackhole::stdext::string_view& rhs) -> bool
-{
-    return !(lhs > rhs);
-}
-
 auto operator>=(const blackhole::stdext::string_view& lhs, const std::string& rhs) -> bool
 {
     return !(lhs < rhs);
 }
-
-auto operator>=(const std::string& lhs, const blackhole::stdext::string_view& rhs) -> bool
-{
-    return !(lhs < rhs);
-}
-
 
 template <class T>
 struct view_of {
