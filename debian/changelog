@@ -1,3 +1,17 @@
+cocaine-plugins (0.12.11.0-alpha1) unstable; urgency=low
+
+  * Added: Vicodyn - virtual cocaine dynamic proxy.
+  * Added: authorization mechanics - auth middlewares for services.
+  * Added: Node service now checks for auth credentials.
+  * Added: Metrics service can now return tree-like output, as like as
+    performing custom filtering.
+  * Changed: Zookeeper logs are now passed to the Blackhole instead of the
+    Standard Error.
+  * Fixed: Unicorn now has a thread for closing connections to avoid
+    deadlocks (#85).
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 21 Dec 2016 21:03:29 +0300
+
 cocaine-plugins (0.12.10.11) unstable; urgency=low
 
   * Remove useless prefix in queue depth metric
@@ -6,7 +20,7 @@ cocaine-plugins (0.12.10.11) unstable; urgency=low
 
 cocaine-plugins (0.12.10.10) unstable; urgency=low
 
-  * Fix: pass gauges to metrics output
+  * Fixed: pass gauges to metrics output
 
  -- Anton Matveenko <antmat@me.com>  Fri, 02 Dec 2016 17:02:18 +0300
 
