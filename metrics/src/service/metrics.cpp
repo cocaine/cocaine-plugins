@@ -10,9 +10,11 @@
 
 #include <blackhole/logger.hpp>
 
+#include "metrics/extract.hpp"
 #include "metrics/factory.hpp"
 #include "metrics/filter/and.hpp"
 #include "metrics/filter/contains.hpp"
+#include "metrics/filter/ge.hpp"
 #include "metrics/filter/eq.hpp"
 #include "metrics/filter/or.hpp"
 #include "metrics/visitor/dendroid.hpp"
@@ -38,12 +40,18 @@ metrics_t::metrics_t(context_t& context,
     dispatch<io::metrics_tag>(_name),
     hub(context.metrics_hub()),
     senders(),
-    factory(std::make_shared<metrics::factory_t>())
+    registry(std::make_shared<metrics::registry_t>())
 {
-    factory->add(std::make_shared<metrics::filter::eq_t>());
-    factory->add(std::make_shared<metrics::filter::or_t>());
-    factory->add(std::make_shared<metrics::filter::and_t>());
-    factory->add(std::make_shared<metrics::filter::contains_t>());
+    registry->add(std::make_shared<metrics::tag_t>());
+    registry->add(std::make_shared<metrics::name_t>());
+    registry->add(std::make_shared<metrics::type_t>());
+    registry->add(std::make_shared<metrics::const_t>());
+
+    registry->add(std::make_shared<metrics::filter::eq_t>());
+    registry->add(std::make_shared<metrics::filter::ge_t>());
+    registry->add(std::make_shared<metrics::filter::or_t>());
+    registry->add(std::make_shared<metrics::filter::and_t>());
+    registry->add(std::make_shared<metrics::filter::contains_t>());
 
     auto sender_names = args.as_object().at("senders", dynamic_t::empty_array).as_array();
 
@@ -94,11 +102,11 @@ metrics_t::make_type(const std::string& type) const -> type_t {
 auto
 metrics_t::make_filter(const dynamic_t& query) const -> libmetrics::query_t {
     if (query.is_null()) {
-        return [](const libmetrics::tags_t&) -> bool {
+        return [](const libmetrics::tagged_t&) -> bool {
             return true;
         };
     } else {
-        return factory->construct_query(query);
+        return registry->make_filter(query);
     }
 }
 

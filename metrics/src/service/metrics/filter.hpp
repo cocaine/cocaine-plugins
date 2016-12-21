@@ -21,7 +21,7 @@ public:
     arity() const -> boost::optional<std::size_t> = 0;
 
     virtual auto
-    create(const factory_t& factory, const dynamic_t::array_t& args) const -> libmetrics::query_t = 0;
+    create(const registry_t& registry, const dynamic_t::array_t& args) const -> libmetrics::query_t = 0;
 };
 
 }  // namespace metrics

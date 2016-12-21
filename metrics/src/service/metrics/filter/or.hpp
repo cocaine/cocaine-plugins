@@ -18,7 +18,7 @@ public:
     }
 
     auto
-    create(const factory_t& factory, const dynamic_t::array_t& args) const ->
+    create(const registry_t& registry, const dynamic_t::array_t& args) const ->
         libmetrics::query_t override
     {
         std::vector<libmetrics::query_t> functions;
@@ -27,16 +27,16 @@ public:
             std::end(args),
             std::back_inserter(functions),
             [&](const dynamic_t& arg) {
-                return factory.construct_query(arg);
+                return registry.make_filter(arg);
             }
         );
 
-        return [=](const libmetrics::tags_t& tags) -> bool {
+        return [=](const libmetrics::tagged_t& metric) -> bool {
             return std::any_of(
                 std::begin(functions),
                 std::end(functions),
                 [&](const libmetrics::query_t& q) -> bool {
-                    return q(tags);
+                    return q(metric);
                 }
             );
         };

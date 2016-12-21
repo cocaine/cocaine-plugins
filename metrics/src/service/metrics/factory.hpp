@@ -1,59 +1,37 @@
 #pragma once
 
-#include <memory>
-#include <string>
-#include <unordered_map>
-
-#include <metrics/fwd.hpp>
-
-#include "filter.hpp"
+#include "cocaine/service/metrics/fwd.hpp"
 
 namespace cocaine {
 namespace service {
 namespace metrics {
 
-class factory_t {
-    std::unordered_map<std::string, std::shared_ptr<filter_t>> filters;
+/// An interface for AST node factory.
+template<typename R>
+class node_factory {
+public:
+    typedef R result_type;
 
 public:
+    virtual ~node_factory() = default;
+
+    /// Returns AST node name to be constructed.
+    virtual
     auto
-    add(std::shared_ptr<filter_t> filter) -> void {
-        filters[filter->name()] = std::move(filter);
-    }
+    name() const -> const char* = 0;
 
+    /// Returns AST node children count or `boost::none` if there can be undefined number of
+    /// children.
+    ///
+    /// This value is checked before calling construction method.
+    virtual
     auto
-    construct(const std::string& name, const dynamic_t::array_t& args) const -> libmetrics::query_t {
-        if (filters.count(name) == 0) {
-            throw cocaine::error_t("unknown filter function \"{}\"", name);
-        }
+    children() const -> boost::optional<std::size_t> = 0;
 
-        const auto& filter = filters.at(name);
-        if (auto arity = filter->arity()) {
-            if (*arity != args.size()) {
-                throw cocaine::error_t("expected {} arguments for filter \"{}\", found {}",
-                    *arity, name, args.size());
-            }
-        }
-
-        return filter->create(*this, args);
-    }
-
+    /// Constructs new AST node.
+    virtual
     auto
-    construct_query(const dynamic_t& query) const -> libmetrics::query_t {
-        if (!query.is_object()) {
-            throw cocaine::error_t("query object must be an object");
-        }
-
-        auto in = query.as_object();
-        if (in.size() != 1) {
-            throw cocaine::error_t("query function must have exactly one name");
-        }
-
-        const auto& name = std::begin(in)->first;
-        const auto& args = std::begin(in)->second.as_array();
-
-        return construct(name, args);
-    }
+    construct(const registry_t& registry, const dynamic_t::array_t& args) const -> node<R> = 0;
 };
 
 }  // namespace metrics

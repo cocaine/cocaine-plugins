@@ -76,7 +76,7 @@ private:
 private:
     libmetrics::registry_t& hub;
     std::vector<api::sender_ptr> senders;
-    std::shared_ptr<metrics::factory_t> factory;
+    std::shared_ptr<metrics::registry_t> registry;
 };
 
 }  // namespace service

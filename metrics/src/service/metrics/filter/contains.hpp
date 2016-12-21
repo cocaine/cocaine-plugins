@@ -18,14 +18,15 @@ public:
     }
 
     auto
-    create(const factory_t&, const dynamic_t::array_t& args) const ->
+    create(const registry_t& registry, const dynamic_t::array_t& args) const ->
         libmetrics::query_t override
     {
-        auto name = args[0].as_string();
-        auto value = args[1].as_string();
-        return [=](const libmetrics::tags_t& tags) -> bool {
-            const auto tag = tags.tag(name);
-            return tag && tag->find(value) != std::string::npos;
+        auto f1 = registry.make_extractor(args[0]);
+        auto f2 = registry.make_extractor(args[1]);
+        return [=](const libmetrics::tagged_t& metric) -> bool {
+            auto name = f1(metric).as_string();
+            auto substring = f2(metric).as_string();
+            return name.find(substring) != std::string::npos;
         };
     }
 };
