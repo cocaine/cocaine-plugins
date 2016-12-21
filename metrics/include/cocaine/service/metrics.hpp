@@ -30,26 +30,53 @@
 #include <cocaine/idl/metrics.hpp>
 #include <cocaine/rpc/dispatch.hpp>
 
+#include "metrics/fwd.hpp"
+
 namespace cocaine {
 namespace service {
 
-class metrics_t : public api::service_t, public dispatch<io::metrics_tag> {
+class metrics_t :
+    public api::service_t,
+    public dispatch<io::metrics_tag>
+{
+public:
+    enum class type_t {
+        json,
+        plain
+    };
+
 public:
     metrics_t(context_t& context,
               asio::io_service& asio,
               const std::string& name,
               const dynamic_t& args);
 
-    auto prototype() const -> const io::basic_dispatch_t& {
+    auto
+    prototype() const -> const io::basic_dispatch_t& {
         return *this;
     }
 
     /// Returns metrics dump.
-    auto metrics() const -> dynamic_t;
+    auto
+    metrics(const std::string& type, const dynamic_t& query) const -> dynamic_t;
 
 private:
-    metrics::registry_t& hub;
+    auto
+    make_type(const std::string& type) const -> type_t;
+
+    auto
+    make_filter(const dynamic_t& query) const -> libmetrics::query_t;
+
+    auto
+    construct_plain(const libmetrics::query_t& filter) const -> dynamic_t;
+
+    auto
+    construct_dendroid(const libmetrics::query_t& filter) const -> dynamic_t;
+
+private:
+    libmetrics::registry_t& hub;
     std::vector<api::sender_ptr> senders;
+    std::shared_ptr<metrics::factory_t> factory;
 };
 
 }  // namespace service

@@ -9,14 +9,26 @@
 #include <cocaine/postgres/pool.hpp>
 
 #include <blackhole/logger.hpp>
-#include <metrics/accumulator/sliding/window.hpp>
-#include <metrics/accumulator/snapshot/uniform.hpp>
-#include <metrics/meter.hpp>
-#include <metrics/timer.hpp>
 
+#include "metrics/factory.hpp"
+#include "metrics/filter/and.hpp"
+#include "metrics/filter/contains.hpp"
+#include "metrics/filter/eq.hpp"
+#include "metrics/filter/or.hpp"
+#include "metrics/visitor/dendroid.hpp"
+#include "metrics/visitor/plain.hpp"
 
 namespace cocaine {
 namespace service {
+
+namespace {
+
+const std::array<std::tuple<std::string, metrics_t::type_t>, 2> types = {{
+    std::make_tuple("json", metrics_t::type_t::json),
+    std::make_tuple("plain", metrics_t::type_t::plain)
+}};
+
+}  // namespace
 
 metrics_t::metrics_t(context_t& context,
                      asio::io_service& asio,
@@ -25,71 +37,91 @@ metrics_t::metrics_t(context_t& context,
     api::service_t(context, asio, _name, args),
     dispatch<io::metrics_tag>(_name),
     hub(context.metrics_hub()),
-    senders()
+    senders(),
+    factory(std::make_shared<metrics::factory_t>())
 {
+    factory->add(std::make_shared<metrics::filter::eq_t>());
+    factory->add(std::make_shared<metrics::filter::or_t>());
+    factory->add(std::make_shared<metrics::filter::and_t>());
+    factory->add(std::make_shared<metrics::filter::contains_t>());
 
     auto sender_names = args.as_object().at("senders", dynamic_t::empty_array).as_array();
 
     for(auto& sender_name: sender_names) {
         api::sender_t::data_provider_ptr provider(new api::sender_t::function_data_provider_t([=]() {
-            return metrics();
+            return metrics({}, {});
         }));
         senders.push_back(api::sender(context, asio, sender_name.as_string(), std::move(provider)));
     }
 
-    on<io::metrics::fetch>([&]() -> dynamic_t {
-        return metrics();
+    on<io::metrics::fetch>([&](const std::string& type, const dynamic_t& query) -> dynamic_t {
+        return metrics(type, query);
     });
 }
 
-auto metrics_t::metrics() const -> dynamic_t {
-    dynamic_t::object_t result;
+auto metrics_t::metrics(const std::string& type, const dynamic_t& query) const -> dynamic_t {
+    const auto ty = make_type(type);
+    const auto filter = make_filter(query);
 
-    for (const auto& item : hub.counters<std::int64_t>()) {
-        const auto& _name = std::get<0>(item).name();
-        const auto& counter = std::get<1>(item);
+    if (ty == type_t::json) {
+        return construct_dendroid(filter);
+    } else {
+        return construct_plain(filter);
+    }
+}
 
-        result[_name] = counter.get()->load();
+auto
+metrics_t::make_type(const std::string& type) const -> type_t {
+    if (type.empty()) {
+        return type_t::plain;
     }
 
-    for (const auto& item : hub.meters()) {
-        const auto& _name = std::get<0>(item).name();
-        const auto& meter = std::get<1>(item);
+    const auto it = std::find_if(
+        std::begin(types),
+        std::end(types),
+        [&](const std::tuple<std::string, metrics_t::type_t>& ty) -> bool {
+            return std::get<0>(ty) == type;
+        }
+    );
 
-        result[_name + ".count"] = meter.get()->count();
-        result[_name + ".m01rate"] = meter.get()->m01rate();
-        result[_name + ".m05rate"] = meter.get()->m05rate();
-        result[_name + ".m15rate"] = meter.get()->m15rate();
+    if (it == std::end(types)) {
+        throw cocaine::error_t("unknown output type");
     }
 
-    for (const auto& item : hub.timers()) {
-        const auto& _name = std::get<0>(item).name();
-        const auto& timer = std::get<1>(item);
+    return std::get<1>(*it);
+}
 
-        result[_name + ".count"] = timer.get()->count();
-        result[_name + ".m01rate"] = timer.get()->m01rate();
-        result[_name + ".m05rate"] = timer.get()->m05rate();
-        result[_name + ".m15rate"] = timer.get()->m15rate();
+auto
+metrics_t::make_filter(const dynamic_t& query) const -> libmetrics::query_t {
+    if (query.is_null()) {
+        return [](const libmetrics::tags_t&) -> bool {
+            return true;
+        };
+    } else {
+        return factory->construct_query(query);
+    }
+}
 
-        const auto snapshot = timer->snapshot();
-
-        result[_name + ".mean"] = snapshot.mean() / 1e6;
-        result[_name + ".stddev"] = snapshot.stddev() / 1e6;
-        result[_name + ".p50"] = snapshot.median() / 1e6;
-        result[_name + ".p75"] = snapshot.p75() / 1e6;
-        result[_name + ".p90"] = snapshot.p90() / 1e6;
-        result[_name + ".p95"] = snapshot.p95() / 1e6;
-        result[_name + ".p98"] = snapshot.p98() / 1e6;
-        result[_name + ".p99"] = snapshot.p99() / 1e6;
+auto
+metrics_t::construct_plain(const libmetrics::query_t& filter) const -> dynamic_t {
+    dynamic_t::object_t out;
+    for (const auto& metric : hub.select(filter)) {
+        metrics::plain_t visitor(metric->name(), out);
+        metric->apply(visitor);
     }
 
-    for (const auto& item : hub.gauges<double>()) {
-        const auto& gauge_name = std::get<0>(item).name();
-        const auto& gauge = std::get<1>(item);
-        result[gauge_name] = (*gauge.get())();
+    return out;
+}
+
+auto
+metrics_t::construct_dendroid(const libmetrics::query_t& filter) const -> dynamic_t {
+    dynamic_t::object_t out;
+    for (const auto& metric : hub.select(filter)) {
+        metrics::dendroid_t visitor(metric->name(), out);
+        metric->apply(visitor);
     }
 
-    return result;
+    return out;
 }
 
 }  // namespace service
