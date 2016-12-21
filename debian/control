@@ -260,3 +260,22 @@ Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libpqxx-dev
 Description: Metrics proxy and sending service (cocaine plugin includes)
  Service for serving current metrics via cocaine protocol and pushing them outside by timer.
+
+Package: libcocaine-plugin-vicodyn3
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Vicodyn gateway
+ Vicodyn gateway
+
+Package: libcocaine-plugin-vicodyn-dbg
+Architecture: any
+Depends: ${misc:Depends}
+Description: Vicodyn gateway (debug files)
+ Vicodyn gateway (debug files)
+
+Package: libcocaine-plugin-vicodyn-dev
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Vicodyn gateway (dev files)
+ Vicodyn gateway (dev files)
+

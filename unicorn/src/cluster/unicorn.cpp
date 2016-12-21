@@ -244,6 +244,10 @@ void unicorn_cluster_t::on_node_list_change(size_t scope_id, std::future<respons
                 endpoint_map.erase(to_delete[i]);
             }
             for (auto& uuid: nodes) {
+                if(uuid == locator.uuid()) {
+                    COCAINE_LOG_DEBUG(log, "skipping local uuid");
+                    continue;
+                }
                 auto it = endpoint_map.find(uuid);
                 if(it == endpoint_map.end() || it->second.empty()) {
                     scopes.apply([&](std::map<size_t, api::unicorn_scope_ptr>& _scopes) {
