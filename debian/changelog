@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.11.0-alpha2) unstable; urgency=low
+
+  * Fixed: build on GCC.
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 22 Dec 2016 14:45:29 +0300
+
 cocaine-plugins (0.12.11.0-alpha1) unstable; urgency=low
 
   * Added: Vicodyn - virtual cocaine dynamic proxy.
