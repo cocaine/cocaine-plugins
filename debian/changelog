@@ -1,3 +1,9 @@
+cocaine-plugin-elliptics (0.12.11) unstable; urgency=low
+
+  * Rebuild with new cocaine release
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 22 Dec 2016 16:18:30 +0300
+
 cocaine-plugin-elliptics (0.12.10-1) unstable; urgency=low
 
   * Elliptics: Drop dead code

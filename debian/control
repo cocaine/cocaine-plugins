@@ -2,7 +2,7 @@ Source: cocaine-plugin-elliptics
 Section: utils
 Priority: extra
 Maintainer: Anton Matveenko <antmat@yandex-team.ru>
-Build-Depends: cmake, debhelper (>= 7.0.13), libcocaine-dev (>= 0.12.10.0),
+Build-Depends: cmake, debhelper (>= 7.0.13), libcocaine-dev (>= 0.12.11.0),
  libboost-filesystem-dev, libboost-thread-dev,
  elliptics-dev (>= 2.26.11.0), elliptics-dev (<< 2.27),
  blackhole-migration-dev (>= 1.0.0-1)
@@ -27,7 +27,7 @@ Description: Distributed hash table storage (cocaine plugin debug files)
 Package: libcocaine-plugin-elliptics-dev
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
-         libcocaine-framework-native-dev (>= 0.12.10), libcocaine-framework-native-dev (<< 0.12.11),
+         libcocaine-framework-native-dev (>= 0.12.11), libcocaine-framework-native-dev (<< 0.12.12),
 Description: Distributed hash table storage (cocaine plugin includes)
  Elliptics network is a fault tolerant distributed hash table object storage.
 
