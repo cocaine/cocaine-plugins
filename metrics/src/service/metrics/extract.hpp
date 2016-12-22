@@ -22,7 +22,7 @@ class const_t : public node_factory<dynamic_t> {
 
     auto
     children() const -> boost::optional<std::size_t> override {
-        return 1;
+        return 1ul;
     }
 
     auto
@@ -43,7 +43,7 @@ class name_t : public node_factory<dynamic_t> {
 
     auto
     children() const -> boost::optional<std::size_t> override {
-        return 0;
+        return 0ul;
     }
 
     auto
@@ -63,7 +63,7 @@ class type_t : public node_factory<dynamic_t> {
 
     auto
     children() const -> boost::optional<std::size_t> override {
-        return 0;
+        return 0ul;
     }
 
     auto
@@ -84,7 +84,7 @@ public:
 
     auto
     children() const -> boost::optional<std::size_t> override {
-        return 1;
+        return 1ul;
     }
 
     auto
