@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.11.0-alpha3) unstable; urgency=low
+
+  * Fixed: ABI restored in core. Adopt this changes.
+
+ -- Anton Matveenko <antmat@me.com>  Sat, 24 Dec 2016 17:23:29 +0300
+
 cocaine-plugins (0.12.11.0-alpha2) unstable; urgency=low
 
   * Fixed: build on GCC.
