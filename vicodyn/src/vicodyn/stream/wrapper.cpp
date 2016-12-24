@@ -16,7 +16,7 @@ struct partially_encoded_t {
                         hpack::header_storage_t _headers,
                         uint64_t channel_id) :
         encoded_message(new io::aux::encoded_message_t()),
-        packer(*encoded_message),
+        packer(encoded_message->buffer),
         //TODO: If the performance is really critical we can try to move headers here, not copy
         headers(std::move(_headers))
     {
@@ -36,7 +36,7 @@ struct partially_encoded_t {
 
     //TODO: FUCK! It's copied by std::function!
     std::shared_ptr<io::aux::encoded_message_t> encoded_message;
-    msgpack::packer<io::aux::encoded_message_t> packer;
+    msgpack::packer<io::aux::encoded_buffers_t> packer;
     hpack::header_storage_t headers;
 };
 
