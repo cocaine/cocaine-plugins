@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.11.0-alpha6) unstable; urgency=low
+
+  * Fixed: vicodyn invalid dispatch name
+
+ -- Anton Matveenko <antmat@me.com>  Mon, 26 Dec 2016 20:59:29 +0300
+
 cocaine-plugins (0.12.11.0-alpha5) unstable; urgency=low
 
   * Fixed: vicodyn invocation queue thread safety
