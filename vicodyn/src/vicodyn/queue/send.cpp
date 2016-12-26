@@ -15,6 +15,7 @@ auto send_t::append(const msgpack::object& message, uint64_t event_id, hpack::he
         auto& operation = operations.back();
         operation.event_id = event_id;
         operation.headers = std::move(headers);
+        operation.zone.reset(new msgpack::zone);
 
         msgpack::packer<io::aux::encoded_message_t> packer(operation.encoded_message);
         packer << message;
