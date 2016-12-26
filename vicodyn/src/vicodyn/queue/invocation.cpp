@@ -18,54 +18,50 @@ auto invocation_t::append(const msgpack::object& message,
                           const io::graph_node_t& incoming_protocol,
                           io::upstream_ptr_t upstream) -> std::shared_ptr<queue::send_t>
 {
-    auto send_queue = m_session.apply([&](std::shared_ptr<session_t>& session) -> std::shared_ptr<queue::send_t> {
+    return m_session.apply([&](std::shared_ptr<session_t>& session) -> std::shared_ptr<queue::send_t> {
+        std::shared_ptr<queue::send_t> send_queue;
         if(!session) {
-            return nullptr;
-        }
-        try {
-            const auto& name = std::get<0>(incoming_protocol.at(event_id));
+            m_operations.resize(m_operations.size()+1);
+            auto& operation = m_operations.back();
+            operation.event_id = event_id;
+            operation.headers = std::move(headers);
+            operation.send_queue = std::make_shared<queue::send_t>();
+            operation.upstream = std::move(upstream);
+            operation.zone = std::make_unique<msgpack::zone>();
+            //TODO: WTF? I'm too tired to read what compiler says to me
+            //operation.incoming_protocol = const_cast<io::graph_node_t*>(&incoming_protocol);
+            operation.incoming_protocol = &incoming_protocol;
+            msgpack::packer<io::aux::encoded_message_t> packer(operation.encoded_message);
+            packer << message;
+            size_t offset;
+            msgpack::unpack(operation.encoded_message.data(),
+                            operation.encoded_message.size(),
+                            &offset,
+                            operation.zone.get(),
+                            &operation.data);
+            return operation.send_queue;
+        } else {
+            try {
+                const auto& name = std::get<0>(incoming_protocol.at(event_id));
 
-            auto upstream_wrapper = std::make_shared<stream::wrapper_t>(upstream);
-            auto dispatch = std::make_shared<proxy::dispatch_t>(name, upstream_wrapper, incoming_protocol);
+                auto upstream_wrapper = std::make_shared<stream::wrapper_t>(upstream);
+                auto dispatch = std::make_shared<proxy::dispatch_t>(name, upstream_wrapper, incoming_protocol);
 
-            auto downstream = session->fork(dispatch);
-            stream::wrapper_t downstream_wrapper(downstream);
-            downstream_wrapper.append(message, event_id, std::move(headers));
+                auto downstream = session->fork(dispatch);
+                stream::wrapper_t downstream_wrapper(downstream);
+                downstream_wrapper.append(message, event_id, std::move(headers));
 
-            auto s_queue = std::make_shared<queue::send_t>();
-            s_queue->attach(std::move(downstream));
+                auto s_queue = std::make_shared<queue::send_t>();
+                s_queue->attach(std::move(downstream));
 
-            return s_queue;
-        } catch (const std::exception& e) {
-            VICODYN_DEBUG("append to invocation queue failed: {}", e.what());
-            session = nullptr;
-            throw;
+                return s_queue;
+            } catch (const std::exception& e) {
+                VICODYN_DEBUG("append to invocation queue failed: {}", e.what());
+                session = nullptr;
+                throw;
+            }
         }
     });
-
-    if(!send_queue) {
-        m_operations.resize(m_operations.size()+1);
-        auto& operation = m_operations.back();
-        operation.event_id = event_id;
-        operation.headers = std::move(headers);
-        operation.send_queue = std::make_shared<queue::send_t>();
-        operation.upstream = std::move(upstream);
-        operation.zone = std::make_unique<msgpack::zone>();
-        //TODO: WTF? I'm too tired to read what compiler says to me
-        //operation.incoming_protocol = const_cast<io::graph_node_t*>(&incoming_protocol);
-        operation.incoming_protocol = &incoming_protocol;
-        msgpack::packer<io::aux::encoded_message_t> packer(operation.encoded_message);
-        packer << message;
-        size_t offset;
-        msgpack::unpack(operation.encoded_message.data(),
-                        operation.encoded_message.size(),
-                        &offset,
-                        operation.zone.get(),
-                        &operation.data);
-        send_queue = operation.send_queue;
-    }
-    return send_queue;
-
 }
 
 auto invocation_t::attach(std::shared_ptr<session_t> _session) -> void {
