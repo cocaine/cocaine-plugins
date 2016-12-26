@@ -42,10 +42,9 @@ auto invocation_t::append(const msgpack::object& message,
             return operation.send_queue;
         } else {
             try {
-                const auto& name = std::get<0>(incoming_protocol.at(event_id));
-
                 auto upstream_wrapper = std::make_shared<stream::wrapper_t>(upstream);
-                auto dispatch = std::make_shared<proxy::dispatch_t>(name, upstream_wrapper, incoming_protocol);
+                //TODO: we need to get proper name  for dispatch somehow.
+                auto dispatch = std::make_shared<proxy::dispatch_t>("<-", upstream_wrapper, incoming_protocol);
 
                 auto downstream = session->fork(dispatch);
                 stream::wrapper_t downstream_wrapper(downstream);

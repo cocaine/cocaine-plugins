@@ -61,7 +61,7 @@ proxy_t::process(const io::decoder_t::message_type& incoming_message, const io::
     if(forward_protocol->empty()) {
         return boost::optional<io::dispatch_ptr_t>(nullptr);
     }
-    auto dispatch_name = cocaine::format("{}/{}", name(), std::get<0>(protocol_tuple));
+    auto dispatch_name = cocaine::format("->/{}/{}", name(), std::get<0>(protocol_tuple));
     auto dispatch = std::make_shared<proxy::dispatch_t>(std::move(dispatch_name), queue, *forward_protocol);
     return boost::optional<io::dispatch_ptr_t>(std::move(dispatch));
 }
