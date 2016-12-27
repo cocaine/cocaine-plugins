@@ -129,6 +129,8 @@ auto basic_t::on_peer_error(const std::string& uuid, std::future<void> future) -
         future.get();
     } catch (const std::system_error& e) {
         COCAINE_LOG_WARNING(logger, "peer {} errored: {}", uuid, error::to_string(e));
+    } catch (const std::exception& e) {
+        COCAINE_LOG_WARNING(logger, "peer {} errored: {}", uuid, e.what());
     }
 
     remotes.apply([&](remote_map_t& remote_map){
