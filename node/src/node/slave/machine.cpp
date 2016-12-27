@@ -6,6 +6,9 @@
 
 #include <blackhole/logger.hpp>
 
+#include <metrics/gauge.hpp>
+#include <metrics/registry.hpp>
+
 #include <cocaine/context.hpp>
 #include <cocaine/rpc/actor.hpp>
 #include <cocaine/service/node/profile.hpp>
@@ -47,6 +50,16 @@ using detail::service::node::slave::state::inactive_t;
 using cocaine::detail::service::node::slave::stats_t;
 using cocaine::service::node::slave::id_t;
 
+machine_t::metrics_t::metrics_t(context_t& context, machine_t& parent) :
+    prefix(cocaine::format("{}.pool.slaves.{}", parent.manifest.name, parent.id.id())),
+    state(context.metrics_hub().register_gauge<std::string>(format("{}.state", prefix), {}, [&] {
+        return parent.state->get()->name();
+    })),
+    uptime(context.metrics_hub().register_gauge<std::uint64_t>(format("{}.uptime", prefix), {}, [&] {
+        return parent.uptime().count();
+    }))
+{}
+
 machine_t::machine_t(context_t& context,
                      id_t id,
                      manifest_t manifest,
@@ -65,7 +78,9 @@ machine_t::machine_t(context_t& context,
     cleanup(std::move(cleanup)),
     lines(profile.crashlog_limit),
     shutdowned(false),
-    counter(1)
+    counter(1),
+    birthstamp(clock_type::now()),
+    metrics(context, *this)
 {
     COCAINE_LOG_DEBUG(log, "slave state machine has been initialized");
 }
@@ -89,6 +104,13 @@ machine_t::start() {
         // This call can perform state machine shutdowning on any error occurred.
         preparation->start(std::chrono::milliseconds(profile.timeout.spawn));
     }));
+}
+
+auto
+machine_t::uptime() const -> std::chrono::seconds {
+    return std::chrono::duration_cast<
+        std::chrono::seconds
+    >(clock_type::now() - birthstamp);
 }
 
 bool
@@ -270,15 +292,13 @@ machine_t::output(const std::string& data) {
 }
 
 void
-machine_t::migrate(std::shared_ptr<state_t> desired) {
-    BOOST_ASSERT(desired);
+machine_t::migrate(std::shared_ptr<state_t> target) {
+    BOOST_ASSERT(target);
 
     state.apply([&](std::shared_ptr<state_t>& state) {
         COCAINE_LOG_DEBUG(log, "slave has changed its state from '{}' to '{}'",
-            state ? state->name() : "null", desired->name()
-        );
-
-        state.swap(desired);
+            state ? state->name() : "null", target->name());
+        state.swap(target);
     });
 }
 

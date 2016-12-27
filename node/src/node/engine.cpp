@@ -71,19 +71,9 @@ engine_t::engine_t(context_t& context,
     pool_target{},
     last_timeout(std::chrono::seconds(1)),
     observer(observer),
-    stats(std::chrono::seconds(2))
+    stats(context, manifest_.name, std::chrono::seconds(2))
 {
     COCAINE_LOG_DEBUG(log, "overseer has been initialized");
-
-    std::weak_ptr<metrics::usts::ewma_t> queue_depth(stats.queue_depth);
-    context.metrics_hub()
-        .register_gauge<double>(format("{}.queue.depth_average", manifest_.name), {}, [queue_depth]() -> double {
-            if (auto depth = queue_depth.lock()) {
-                return depth->get();
-            } else {
-                return 0;
-            }
-        });
 }
 
 engine_t::~engine_t() {
@@ -353,8 +343,8 @@ auto engine_t::info(io::node::info::flags_t flags) const -> dynamic_t::object_t 
     visitor.visit(profile);
     visitor.visit(stats.requests.accepted.load(), stats.requests.rejected.load());
     visitor.visit({profile.queue_limit, &queue, *stats.queue_depth});
-    visitor.visit(*stats.meter);
-    visitor.visit(*stats.timer);
+    visitor.visit(*stats.meter.get());
+    visitor.visit(*stats.timer.get());
     visitor.visit({profile.pool_limit, stats.slaves.spawned, stats.slaves.crashed, &pool});
 
     return result;
@@ -746,8 +736,8 @@ auto engine_t::rebalance_slaves() -> void {
     const auto pool_target = static_cast<std::size_t>(this->pool_target.load());
 
     // Bound current pool target between [1; limit].
-    const auto target = detail::bound(
-        1UL,
+    const auto target = util::bound(
+        1ul,
         pool_target ? pool_target : load / profile.grow_threshold,
         profile.pool_limit
     );

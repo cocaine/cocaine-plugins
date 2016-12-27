@@ -10,6 +10,8 @@
 #include <asio/io_service.hpp>
 #include <asio/posix/stream_descriptor.hpp>
 
+#include <metrics/metric.hpp>
+
 #include <cocaine/logging.hpp>
 
 #include "cocaine/api/auth.hpp"
@@ -94,6 +96,20 @@ private:
         synchronized<timers_map_t> timers;
     } data;
 
+    typedef std::chrono::high_resolution_clock clock_type;
+
+    clock_type::time_point birthstamp;
+
+    /// Metric watchers.
+    struct metrics_t {
+        const std::string prefix;
+
+        metrics::shared_metric<metrics::gauge<std::string>> state;
+        metrics::shared_metric<metrics::gauge<std::uint64_t>> uptime;
+
+        metrics_t(context_t& context, machine_t& parent);
+    } metrics;
+
 public:
     machine_t(context_t& context,
               id_t id,
@@ -104,6 +120,13 @@ public:
               cleanup_handler cleanup);
 
     ~machine_t();
+
+    /// Spawns a slave.
+    ///
+    /// \pre state == nullptr.
+    /// \post state != nullptr.
+    void
+    start();
 
     // Observers.
 
@@ -135,12 +158,8 @@ public:
     void
     terminate(std::error_code ec);
 
-    /// Spawns a slave.
-    ///
-    /// \pre state == nullptr.
-    /// \post state != nullptr.
-    void
-    start();
+    auto
+    uptime() const -> std::chrono::seconds;
 
 private:
     void
