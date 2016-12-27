@@ -19,7 +19,6 @@
 #include "cocaine/detail/service/node/slave/control.hpp"
 #include "cocaine/detail/service/node/slave/spawn_handle.hpp"
 #include "cocaine/detail/service/node/slave/state/spawn.hpp"
-#include "cocaine/detail/service/node/util.hpp"
 
 namespace cocaine {
 namespace detail {

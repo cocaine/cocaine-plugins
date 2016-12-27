@@ -25,9 +25,9 @@
 #include "cocaine/detail/service/node/dispatch/worker.hpp"
 #include "cocaine/detail/service/node/slave/control.hpp"
 #include "cocaine/detail/service/node/slave/stats.hpp"
-#include "cocaine/detail/service/node/util.hpp"
 
 #include "pool_observer.hpp"
+#include "util/bound.hpp"
 
 namespace cocaine {
 namespace detail {
