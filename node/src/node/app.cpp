@@ -389,7 +389,7 @@ public:
             maybe_publish();
         } catch (const std::exception&) {
             unpublish();
-            throw std::current_exception();
+            throw;
         }
     }
 
