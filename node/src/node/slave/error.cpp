@@ -59,7 +59,7 @@ public:
         case error::conrol_ipc_error:
             return "unexpected control IPC error";
         case error::overseer_shutdowning:
-            return "overseer is shutdowning";
+            return "overseer is shutting down";
         case error::committed_suicide:
             return "slave has committed suicide";
         case error::slave_idle:
