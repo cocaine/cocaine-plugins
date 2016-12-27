@@ -41,6 +41,10 @@ public:
         do_visit(metric);
     }
 
+    auto visit(const libmetrics::gauge<std::string>& metric) -> void override {
+        do_visit(metric);
+    }
+
     auto visit(const std::atomic<std::int64_t>& metric) -> void override {
         do_visit(metric);
     }
