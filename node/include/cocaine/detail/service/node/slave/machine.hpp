@@ -24,13 +24,15 @@
 #include "cocaine/service/node/slave/id.hpp"
 
 #include "cocaine/detail/service/node/forwards.hpp"
-#include "cocaine/detail/service/node/splitter.hpp"
+#include "util/splitter.hpp"
 
 namespace cocaine {
 namespace detail {
 namespace service {
 namespace node {
 namespace slave {
+
+using util::splitter_t;
 
 using cocaine::service::node::slave::id_t;
 

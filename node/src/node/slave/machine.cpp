@@ -388,7 +388,7 @@ machine_t::revoke(std::uint64_t id, channel_handler handler) {
 
 void
 machine_t::dump() {
-    if (lines.empty() && splitter.unparsed.empty()) {
+    if (lines.empty() && splitter.empty()) {
         COCAINE_LOG_WARNING(log, "рабъ умеръ въ тишинѣ");
         return;
     }
@@ -396,8 +396,8 @@ machine_t::dump() {
     std::vector<std::string> dump;
     std::copy(lines.begin(), lines.end(), std::back_inserter(dump));
 
-    if (!splitter.unparsed.empty()) {
-        dump.emplace_back(splitter.unparsed);
+    if (!splitter.empty()) {
+        dump.emplace_back(splitter.data());
     }
 
     const auto now = std::chrono::system_clock::now().time_since_epoch();
