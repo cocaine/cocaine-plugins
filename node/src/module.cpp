@@ -1,7 +1,6 @@
 #include <cocaine/repository.hpp>
 #include <cocaine/repository/service.hpp>
 
-#include "cocaine/repository/auth.hpp"
 #include "cocaine/repository/isolate.hpp"
 #include "cocaine/service/node.hpp"
 #include "cocaine/service/node/error.hpp"
@@ -9,8 +8,6 @@
 
 #include "cocaine/detail/isolate/external.hpp"
 #include "cocaine/detail/isolate/process.hpp"
-
-#include "auth/promiscuous.hpp"
 
 using namespace cocaine;
 using namespace cocaine::service;
@@ -29,8 +26,6 @@ void initialize(cocaine::api::repository_t& repository) {
     repository.insert<isolate::external_t>("process");
     repository.insert<isolate::external_t>("docker");
     repository.insert<isolate::external_t>("porto");
-
-    repository.insert<auth::promiscuous_t>("promiscuous");
 
     error::registrar::add(error::node_category(), error::node_category_id);
     error::registrar::add(error::slave_category(), error::slave_category_id);
