@@ -14,6 +14,7 @@
 
 #include "cocaine/api/isolate.hpp"
 #include "cocaine/service/node/slave/id.hpp"
+#include "cocaine/service/node/slave/error.hpp"
 
 #include "cocaine/detail/service/node/slave/machine.hpp"
 #include "cocaine/detail/service/node/slave/control.hpp"
@@ -46,14 +47,20 @@ auto preparation_t::terminate(const std::error_code& ec) -> void {
 }
 
 auto preparation_t::start(std::chrono::milliseconds timeout) -> void {
-    COCAINE_LOG_DEBUG(slave->log, "preparation start");
-    slave->auth->token([=](auth_t::token_t token, const std::error_code& ec) {
-        COCAINE_LOG_DEBUG(slave->log, "preparation got token: {}", ec);
-        slave->loop.post([=] {
-            COCAINE_LOG_DEBUG(slave->log, "preparation loop");
-            on_refresh(token, ec);
+    try {
+        COCAINE_LOG_DEBUG(slave->log, "preparation start");
+        slave->auth->token([=](auth_t::token_t token, const std::error_code& ec) {
+            COCAINE_LOG_DEBUG(slave->log, "preparation got token: {}", ec);
+            slave->loop.post([=] {
+                on_refresh(token, ec);
+            });
         });
-    });
+    } catch (const std::exception& err) {
+        COCAINE_LOG_ERROR(slave->log, "failed to start preparation state: {}", err.what());
+        slave->loop.post([=] {
+            terminate(make_error_code(error::unknown_activate_error));
+        });
+    }
 }
 
 auto preparation_t::on_refresh(auth_t::token_t token, const std::error_code& ec) -> void {
