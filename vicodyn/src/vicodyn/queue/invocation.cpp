@@ -22,6 +22,7 @@ auto invocation_t::absorb(invocation_t&& other) -> void {
             for (auto it = other.m_operations.begin(); it != other.m_operations.end();) {
                 try {
                     execute(session, *it);
+                    it = other.m_operations.erase(it);
                 } catch (...) {
                     it = other.m_operations.erase(it);
                     session = nullptr;
