@@ -15,19 +15,19 @@ namespace cocaine {
 
 struct stats_t {
     struct {
-        /// The number of requests, that are pushed into the queue.
-        std::atomic<std::uint64_t> accepted;
+        /// Number of requests, that are pushed into the queue.
+        metrics::shared_metric<std::atomic<std::int64_t>> accepted;
 
-        /// The number of requests, that were rejected due to queue overflow or other circumstances.
-        std::atomic<std::uint64_t> rejected;
+        /// Number of requests, that were rejected due to queue overflow or other circumstances.
+        metrics::shared_metric<std::atomic<std::int64_t>> rejected;
     } requests;
 
     struct {
-        /// The number of successfully spawned slaves.
-        std::atomic<std::uint64_t> spawned;
+        /// Number of successfully spawned slaves.
+        metrics::shared_metric<std::atomic<std::int64_t>> spawned;
 
-        /// The number of crashed slaves.
-        std::atomic<std::uint64_t> crashed;
+        /// Number of crashed slaves.
+        metrics::shared_metric<std::atomic<std::int64_t>> crashed;
     } slaves;
 
     /// EWMA rates.

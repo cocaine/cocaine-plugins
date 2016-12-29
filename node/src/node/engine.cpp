@@ -116,8 +116,8 @@ struct queue_t {
 struct pool_t {
     unsigned long capacity;
 
-    std::uint64_t spawned;
-    std::uint64_t crashed;
+    std::int64_t spawned;
+    std::int64_t crashed;
 
     const synchronized<engine_t::pool_type>* pool;
 };
@@ -156,7 +156,7 @@ public:
 
     // Incoming requests.
     void
-    visit(std::uint64_t accepted, std::uint64_t rejected) {
+    visit(std::int64_t accepted, std::int64_t rejected) {
         dynamic_t::object_t info;
 
         info["accepted"] = accepted;
@@ -341,11 +341,11 @@ auto engine_t::info(io::node::info::flags_t flags) const -> dynamic_t::object_t 
     auto profile = this->profile();
     visitor.visit(manifest());
     visitor.visit(profile);
-    visitor.visit(stats.requests.accepted.load(), stats.requests.rejected.load());
+    visitor.visit(stats.requests.accepted->load(), stats.requests.rejected->load());
     visitor.visit({profile.queue_limit, &queue, *stats.queue_depth});
     visitor.visit(*stats.meter.get());
     visitor.visit(*stats.timer.get());
-    visitor.visit({profile.pool_limit, stats.slaves.spawned, stats.slaves.crashed, &pool});
+    visitor.visit({profile.pool_limit, stats.slaves.spawned->load(), stats.slaves.crashed->load(), &pool});
 
     return result;
 }
@@ -452,12 +452,12 @@ auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx,
             stats.queue_depth->add(queue.size());
         });
 
-        stats.requests.accepted++;
+        stats.requests.accepted->fetch_add(1);
         stats.meter->mark();
         rebalance_events();
         rebalance_slaves();
     } catch (...) {
-        stats.requests.rejected++;
+        stats.requests.rejected->fetch_add(1);
         rebalance_events();
         rebalance_slaves();
         throw;
@@ -500,7 +500,7 @@ auto engine_t::spawn(const id_t& id, pool_type& pool) -> void {
         )
     ));
 
-    ++stats.slaves.spawned;
+    stats.slaves.spawned->fetch_add(1);;
 }
 
 auto engine_t::assign(slave_t& slave, load_t& load) -> void {
@@ -619,7 +619,7 @@ auto engine_t::on_slave_death(const std::error_code& ec, std::string uuid) -> vo
         });
 
         COCAINE_LOG_DEBUG(log, "slave has removed itself from the pool: {}", ec.message());
-        ++stats.slaves.crashed;
+        stats.slaves.crashed->fetch_add(1);
     } else {
         COCAINE_LOG_DEBUG(log, "slave has removed itself from the pool");
     }
