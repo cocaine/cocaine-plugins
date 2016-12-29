@@ -26,6 +26,10 @@ peer_t::peer_t(context_t& _context, asio::io_service& _loop) :
     queue(new queue::invocation_t)
 {}
 
+auto peer_t::absorb(peer_t&& peer) -> void {
+    queue->absorb(std::move(*peer.queue));
+}
+
 auto peer_t::invoke(const io::decoder_t::message_type& incoming_message,
                     const io::graph_node_t& protocol,
                     io::upstream_ptr_t downstream) -> std::shared_ptr<queue::send_t>
@@ -38,6 +42,7 @@ auto peer_t::invoke(const io::decoder_t::message_type& incoming_message,
 auto peer_t::connected() -> bool {
     return queue->connected();
 }
+
 auto peer_t::connect(std::vector<asio::ip::tcp::endpoint> _endpoints) -> void {
     assert(error_cb);
     endpoints = std::move(_endpoints);

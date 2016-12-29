@@ -2,7 +2,7 @@ Source: cocaine-plugins
 Section: utils
 Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
-Build-Depends: cmake, debhelper (>= 7.0.13), libcocaine-dev (>= 0.12.10.5),
+Build-Depends: cmake, debhelper (>= 7.0.13), libcocaine-dev (>= 0.12.11),
  libarchive-dev, uuid-dev, libcgroup-dev,
  libboost-filesystem-dev, libboost-thread-dev,
  libswarm-dev (>= 0.6.1.0), libswarm-dev (<< 0.7),

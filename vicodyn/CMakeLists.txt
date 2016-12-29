@@ -1,7 +1,7 @@
 INCLUDE_DIRECTORIES(
         ${PROJECT_SOURCE_DIR}/vicodyn/include)
 
-ADD_LIBRARY(vicodyn MODULE
+ADD_LIBRARY(vicodyn SHARED
         src/api/peer/pool.cpp
         src/gateway/vicodyn.cpp
         src/module.cpp
@@ -31,3 +31,8 @@ SET_TARGET_PROPERTIES(vicodyn PROPERTIES
 INSTALL(TARGETS vicodyn
         LIBRARY DESTINATION lib/cocaine
         COMPONENT runtime)
+
+INSTALL(DIRECTORY
+        include/cocaine
+        DESTINATION include
+        COMPONENT development)

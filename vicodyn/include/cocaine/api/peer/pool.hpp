@@ -20,7 +20,7 @@ public:
     virtual
     auto invoke(const io::aux::decoded_message_t& incoming_message,
                 const io::graph_node_t& protocol,
-                io::upstream_ptr_t downstream) -> std::shared_ptr<vicodyn::queue::send_t> = 0;
+                io::upstream_ptr_t downstream) -> std::shared_ptr<cocaine::vicodyn::queue::send_t> = 0;
 
     virtual
     auto register_real(std::string uuid, std::vector<asio::ip::tcp::endpoint> endpoints, bool local) -> void = 0;

@@ -23,6 +23,8 @@ public:
            const io::graph_node_t& protocol,
            io::upstream_ptr_t downstream);
 
+    auto absorb(invocation_t&& queue) -> void;
+
     auto attach(std::shared_ptr<session_t> session) -> void;
 
     auto connected() -> bool;
@@ -53,6 +55,8 @@ private:
         // send queue to queue all further send invocations
         std::shared_ptr<queue::send_t> send_queue;
     };
+
+    auto execute(std::shared_ptr<session_t> session, const operation_t& op) -> void;
 
     std::deque<operation_t> m_operations;
     synchronized<std::shared_ptr<session_t>> m_session;

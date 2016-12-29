@@ -19,6 +19,8 @@ public:
 
     peer_t(context_t& context, asio::io_service& loop);
 
+    auto absorb(peer_t&& peer) -> void;
+
     auto invoke(const io::aux::decoded_message_t& incoming_message,
                 const io::graph_node_t& protocol,
                 io::upstream_ptr_t downstream) -> std::shared_ptr<queue::send_t>;

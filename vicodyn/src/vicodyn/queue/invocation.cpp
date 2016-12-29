@@ -12,6 +12,28 @@ namespace cocaine {
 namespace vicodyn {
 namespace queue {
 
+auto invocation_t::absorb(invocation_t&& other) -> void {
+    m_session.apply([&](std::shared_ptr<session_t>& session) {
+        if(!session) {
+            for(auto& op: other.m_operations) {
+                m_operations.push_back(std::move(op));
+            }
+        } else {
+            for (auto it = other.m_operations.begin(); it != other.m_operations.end();) {
+                try {
+                    execute(session, *it);
+                } catch (...) {
+                    it = other.m_operations.erase(it);
+                    session = nullptr;
+                    for(auto& op: other.m_operations) {
+                        m_operations.push_back(std::move(op));
+                    }
+                }
+            }
+        }
+    });
+}
+
 auto invocation_t::append(const msgpack::object& message,
                           uint64_t event_id,
                           hpack::header_storage_t headers,
@@ -42,6 +64,7 @@ auto invocation_t::append(const msgpack::object& message,
             return operation.send_queue;
         } else {
             try {
+                //TODO: use execute method here
                 auto upstream_wrapper = std::make_shared<stream::wrapper_t>(upstream);
                 //TODO: we need to get proper name  for dispatch somehow.
                 auto dispatch = std::make_shared<proxy::dispatch_t>("<-", upstream_wrapper, incoming_protocol);
@@ -69,18 +92,7 @@ auto invocation_t::attach(std::shared_ptr<session_t> _session) -> void {
         session = _session;
         for (auto it = m_operations.begin(); it != m_operations.end();) {
             try {
-                const auto& operation = *it;
-                const auto& name = std::get<0>(operation.incoming_protocol->at(operation.event_id));
-
-                auto upstream_wrapper = std::make_shared<stream::wrapper_t>(operation.upstream);
-                auto dispatch = std::make_shared<proxy::dispatch_t>(name, upstream_wrapper,
-                                                                    *operation.incoming_protocol);
-
-                auto downstream = session->fork(dispatch);
-                stream::wrapper_t downstream_wrapper(downstream);
-                downstream_wrapper.append(operation.data, operation.event_id, std::move(operation.headers));
-
-                operation.send_queue->attach(std::move(downstream));
+                execute(session, *it);
                 it = m_operations.erase(it);
             } catch (...) {
                 it = m_operations.erase(it);
@@ -92,6 +104,20 @@ auto invocation_t::attach(std::shared_ptr<session_t> _session) -> void {
 
     // safe to clean outside lock as it is not used anymore after session is set
     m_operations.clear();
+}
+
+auto invocation_t::execute(std::shared_ptr<session_t> session, const operation_t& operation) -> void{
+    const auto& name = std::get<0>(operation.incoming_protocol->at(operation.event_id));
+
+    auto upstream_wrapper = std::make_shared<stream::wrapper_t>(operation.upstream);
+    auto dispatch = std::make_shared<proxy::dispatch_t>(name, upstream_wrapper,
+                                                        *operation.incoming_protocol);
+
+    auto downstream = session->fork(dispatch);
+    stream::wrapper_t downstream_wrapper(downstream);
+    downstream_wrapper.append(operation.data, operation.event_id, std::move(operation.headers));
+
+    operation.send_queue->attach(std::move(downstream));
 }
 
 auto invocation_t::connected() -> bool {
