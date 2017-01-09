@@ -1,3 +1,14 @@
+cocaine-plugins (0.12.11.0-alpha9) unstable; urgency=low
+
+  * Feature: expose some metrics from slaves.
+  * Changed: adapt to libmetrics2 API.
+  * Fixed: throw proper exception on failed publish.
+  * Fixed: cocaine should no longer abort on failed authorization
+    preparation for slaves.
+  * Note: version -alpha8 is skipped intentionally.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 09 Jan 2017 16:21:43 +0300
+
 cocaine-plugins (0.12.11.0-alpha7) unstable; urgency=low
 
   * Fixed: vicodyn - catch all exceptions on peer error.
