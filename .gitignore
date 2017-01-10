@@ -4,5 +4,5 @@ build/*
 # Compiled files
 *.cocaine-plugin
 
-# IDEs
-
+docs/build/html/*
+!docs/build/html/doxy-boot.js
