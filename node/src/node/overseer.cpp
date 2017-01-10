@@ -403,8 +403,32 @@ void
 overseer_t::cancel() {
     COCAINE_LOG_DEBUG(log, "overseer is processing terminate request");
 
-    keep_alive(0);
+    queue.apply([&](queue_type& queue) {
+        typedef io::protocol<io::event_traits<io::app::enqueue>::dispatch_type>::scope protocol;
+
+        COCAINE_LOG_DEBUG(log, "dropping %llu incomplete %s due to the overseer termination",
+            queue.size(),
+            queue.size() == 1 ? "channel" : "channels"
+        );
+
+        // Abort all the outstanding channels.
+        for (auto& payload : queue) {
+            trace_t::restore_scope_t scope(payload.trace);
+
+            try {
+                payload->downstream.send<protocol::error>(error::resource_error,
+                    "overseer is shutting down");
+            } catch (...) {
+                // No need to notify if an owner isn't already waiting for.
+            }
+        }
+
+        queue.clear();
+    });
+
     pool->clear();
+
+    keep_alive(0);
 }
 
 std::shared_ptr<control_t>
