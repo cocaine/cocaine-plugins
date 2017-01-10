@@ -63,6 +63,13 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Cocaine - Docker Isolation
  Support of Docker for Cocaine.
 
+Package: libcocaine-plugin-porto3
+Architecture: any
+Section: libs
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Cocaine - Porto Isolation
+ Support of Porto for Cocaine.
+
 Package: libcocaine-plugin-docker-dbg
 Architecture: any
 Section: debug

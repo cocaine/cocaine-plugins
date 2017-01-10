@@ -1,8 +1,12 @@
-cocaine-plugins (0.12.4.1) UNRELEASED; urgency=low
+cocaine-plugins (0.12.4.1) unstable; urgency=low
 
+  [ Evgeny Safronov ]
   * misc(node): code simplification
 
- -- Evgeny Safronov <division494@gmail.com>  Fri, 09 Oct 2015 14:16:00 +0300
+  [ Boris Litvinenko <borislitv@yandex-team.ru> ]
+  * add porto plugin(as fork docker plugin without depends)
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 01 Dec 2015 13:04:15 +0300
 
 cocaine-plugins (0.12.4.0) unstable; urgency=low
 
