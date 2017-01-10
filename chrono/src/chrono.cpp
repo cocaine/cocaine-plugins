@@ -114,7 +114,7 @@ chrono_t::on_timer(const std::error_code& ec, io::timer_id_t timer_id) {
     auto ptr = timers_.synchronize();
 
     try {
-        timer_desc_t& timer_desc = ptr->at(timer_id);
+        timer_desc_t timer_desc = ptr->at(timer_id);
 
         try {
             timer_desc.promise_.write(timer_id);
@@ -124,7 +124,7 @@ chrono_t::on_timer(const std::error_code& ec, io::timer_id_t timer_id) {
 
         if (!timer_desc.interval_ && ptr->find(timer_id) != ptr->end()) {
             remove_timer(timer_id);
-        } else if (timer_desc.interval_) {
+        } else if (timer_desc.interval_ && ptr->find(timer_id) != ptr->end()) {
             restart(timer_id);
         }
     } catch (std::exception& ex) {
@@ -137,8 +137,8 @@ chrono_t::remove_timer(io::timer_id_t timer_id) {
     try {
         // Already locked.
         timers_.unsafe().at(timer_id).promise_.close();
-        timers_.unsafe().erase(timer_id);
     } catch (const std::exception& ex) {
         COCAINE_LOG_ERROR(log_, "error occured while removing timer %s", ex.what());
     }
+    timers_.unsafe().erase(timer_id);
 }
