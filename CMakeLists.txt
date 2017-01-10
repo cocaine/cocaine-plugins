@@ -14,6 +14,7 @@ OPTION(NODE "Build Node service plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(UNICORN "Build Unified configuration service plugin" ON)
+OPTION(CONDUCTOR "Build Conductor isolation plugin and service" ON)
 
 # Include our CMake libraries.
 INCLUDE(cmake/locate_library.cmake)
@@ -49,6 +50,7 @@ LINK_DIRECTORIES(
 SET(PLUGINS
     cache
     chrono
+    conductor
     docker
     elasticsearch
     graphite

@@ -20,6 +20,12 @@ spawning_t::spawning_t(std::shared_ptr<state_machine_t> slave_) :
     timer(slave->loop)
 {}
 
+spawning_t::~spawning_t() {
+    if(spawner){
+        spawner->cancel();
+    }
+}
+
 const char*
 spawning_t::name() const noexcept {
     return "spawning";
@@ -93,19 +99,21 @@ spawning_t::spawn(unsigned long timeout) {
         timer.expires_from_now(boost::posix_time::milliseconds(timeout));
         timer.async_wait(trace_t::bind(&spawning_t::on_timeout, shared_from_this(), ph::_1));
 
-        handle = isolate->spawn(
+        auto self = shared_from_this();
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        spawner = isolate->async_spawn(
             slave->context.manifest.executable,
             args,
-            slave->context.manifest.environment
+            slave->context.manifest.environment,
+            [self, isolate, start, this] (const std::error_code& ec, std::unique_ptr<api::handle_t>& handle_){
+                handle = std::move(handle_);
+                slave->loop.post(trace_t::bind(&spawning_t::on_spawn, self, ec, start));
+            }
+
         );
 
-        // Currently we spawn all slaves synchronously, but here is the right place to provide
-        // a callback function to the Isolate.
-        // NOTE: The callback must be called from the event loop thread, otherwise the behavior
-        // is undefined.
-        slave->loop.post(trace_t::bind(
-            &spawning_t::on_spawn, shared_from_this(), std::chrono::high_resolution_clock::now()
-        ));
     } catch(const std::system_error& err) {
         COCAINE_LOG_ERROR(slave->log, "unable to spawn slave: %s", err.code().message());
 
@@ -116,7 +124,11 @@ spawning_t::spawn(unsigned long timeout) {
 }
 
 void
-spawning_t::on_spawn(std::chrono::high_resolution_clock::time_point start) {
+spawning_t::on_spawn(const std::error_code& spawn_ec, std::chrono::high_resolution_clock::time_point start) {
+    if (spawn_ec) {
+        COCAINE_LOG_ERROR(slave->log, "error spawning slave: %d %s", spawn_ec.value(), spawn_ec.message());
+        return;
+    }
     std::error_code ec;
     const size_t cancelled = timer.cancel(ec);
     if (ec || cancelled == 0) {
@@ -132,10 +144,19 @@ spawning_t::on_spawn(std::chrono::high_resolution_clock::time_point start) {
 
     try {
         // May throw system error when failed to assign native descriptor to the fetcher.
+
+        COCAINE_LOG_DEBUG(slave->log, "slave stdout fd is %d", handle->stdout());
+
+        COCAINE_LOG_DEBUG(slave->log, "make handshaking state...");
+        
         auto handshaking = std::make_shared<handshaking_t>(slave, std::move(handle));
         slave->migrate(handshaking);
 
+        COCAINE_LOG_DEBUG(slave->log, "migrated to handshaking state...");
+
         handshaking->start(slave->context.profile.timeout.handshake);
+
+        COCAINE_LOG_DEBUG(slave->log, "started to handshaking state...");
     } catch (const std::exception& err) {
         COCAINE_LOG_ERROR(slave->log, "unable to activate slave: %s", err.what());
 

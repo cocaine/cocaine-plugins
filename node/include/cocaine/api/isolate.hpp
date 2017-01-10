@@ -30,6 +30,8 @@
 
 #include <asio/io_service.hpp>
 
+#include <cocaine/detail/service/node/util.hpp>
+
 namespace cocaine { namespace api {
 
 struct handle_t {
@@ -48,6 +50,7 @@ struct handle_t {
 };
 
 typedef std::map<std::string, std::string> string_map_t;
+typedef std::function<void(const std::error_code&, std::unique_ptr<handle_t>&)> spawn_handler_t;
 
 // Cancellation token.
 struct cancellation_t {
@@ -86,14 +89,29 @@ struct isolate_t {
     std::unique_ptr<handle_t>
     spawn(const std::string& path, const string_map_t& args, const string_map_t& environment) = 0;
 
+
+    virtual
+    std::unique_ptr<cancellation_t>
+    async_spawn(const std::string& path, const string_map_t& args, const string_map_t& environment, spawn_handler_t handler) {
+
+        auto handle_ = spawn(path, args, environment);
+
+        auto handler_ = cocaine::detail::move_handler(
+            std::bind(handler, std::error_code(), std::move(handle_)));
+
+        get_io_service().post(handler_);
+
+        return std::make_unique<cancellation_t>();
+    }
+
     asio::io_service&
     get_io_service() {
         return io_service;
     }
 
 protected:
-    isolate_t(context_t&, asio::io_service& io_service, const std::string&, const dynamic_t& /* args */):
-        io_service(io_service)
+    isolate_t(context_t&, asio::io_service& asio_, const std::string&, const dynamic_t& /* args */):
+        io_service(asio_)
     {}
 
 private:

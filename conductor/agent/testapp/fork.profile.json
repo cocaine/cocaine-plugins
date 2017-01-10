@@ -1,0 +1,15 @@
+{
+  "log-output": true,
+  "isolate": {
+    "type": "conductor",
+    "args": {
+       "test": "bla"
+    }
+  },
+  "handshake-timeout": 600,
+  "heartbeat-timeout": 600,
+  "spawn-timeout": 600,
+  "seal-timeout": 600,
+  "terminate-timeout": 600,
+  "idle-timeout": 600000000
+}

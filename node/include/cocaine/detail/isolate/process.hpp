@@ -34,7 +34,8 @@ struct cgroup;
 namespace cocaine { namespace isolate {
 
 class process_t:
-    public api::isolate_t
+    public api::isolate_t,
+    public std::enable_shared_from_this<process_t>
 {
     context_t& m_context;
     asio::io_service& io_context;

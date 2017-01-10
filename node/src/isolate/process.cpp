@@ -338,6 +338,8 @@ process_t::process_t(context_t& context, asio::io_service& io_context, const std
     m_working_directory(fs::path(args.as_object().at("spool", "/var/spool/cocaine").as_string()) / name),
     m_kill_timeout(args.as_object().at("kill_timeout", 5ULL).as_uint())
 {
+    COCAINE_LOG_ERROR(m_log, "process isolate is being created");
+
 #ifdef COCAINE_ALLOW_CGROUPS
     int rv = 0;
 
@@ -381,6 +383,8 @@ process_t::process_t(context_t& context, asio::io_service& io_context, const std
 }
 
 process_t::~process_t() {
+    COCAINE_LOG_DEBUG(m_log, "process isolate is being destroyed");
+
 #ifdef COCAINE_ALLOW_CGROUPS
     int rv = 0;
 

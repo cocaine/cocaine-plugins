@@ -2,6 +2,8 @@
 
 #include <asio/deadline_timer.hpp>
 
+#include "cocaine/api/isolate.hpp"
+
 #include "state.hpp"
 
 namespace cocaine {
@@ -20,10 +22,14 @@ class spawning_t:
 
     asio::deadline_timer timer;
     std::unique_ptr<api::handle_t> handle;
+    std::unique_ptr<api::cancellation_t> spawner;
 
 public:
     explicit
     spawning_t(std::shared_ptr<state_machine_t> slave);
+
+    virtual
+    ~spawning_t();
 
     virtual
     const char*
@@ -42,7 +48,7 @@ public:
 
 private:
     void
-    on_spawn(std::chrono::high_resolution_clock::time_point start);
+    on_spawn(const std::error_code& ec, std::chrono::high_resolution_clock::time_point start);
 
     void
     on_timeout(const std::error_code& ec);
