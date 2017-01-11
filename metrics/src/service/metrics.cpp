@@ -55,9 +55,18 @@ metrics_t::metrics_t(context_t& context,
 
     auto sender_names = args.as_object().at("senders", dynamic_t::empty_array).as_array();
 
+    // TODO: should we provide an opportunity to select output type to the user?
+    // const auto out_type = args.as_object().at("output_type", "json").as_string();
+    //
+    // throw (fail) early in this::ctor on incorrect user provided type
+    // make_type(out_type);
+
+    const auto out_type = std::string("json");
+    const auto filter_ast = args.as_object().at("filter_ast", dynamic_t::null);
+
     for(auto& sender_name: sender_names) {
         api::sender_t::data_provider_ptr provider(new api::sender_t::function_data_provider_t([=]() {
-            return metrics({}, {});
+            return metrics(out_type, filter_ast);
         }));
         senders.push_back(api::sender(context, asio, sender_name.as_string(), std::move(provider)));
     }
