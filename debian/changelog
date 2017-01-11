@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.11.0-alpha11) unstable; urgency=low
+
+  * Bump for the glory of Satan.
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 11 Jan 2017 14:19:41 +0300
+
 cocaine-plugins (0.12.11.0-alpha10) unstable; urgency=low
 
   * Feature: tree like JSON send for metrics, filters in config (#98).
