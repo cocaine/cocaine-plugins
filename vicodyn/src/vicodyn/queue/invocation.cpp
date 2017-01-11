@@ -29,6 +29,7 @@ auto invocation_t::absorb(invocation_t&& other) -> void {
                     for(auto& op: other.m_operations) {
                         m_operations.push_back(std::move(op));
                     }
+                    break;
                 }
             }
         }
