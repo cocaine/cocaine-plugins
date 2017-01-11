@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.11.0-alpha10) unstable; urgency=low
+
+  * Fixed: vicodyn is a shared lib now.
+
+ -- Anton Matveenko <antmat@me.com>  Wed, 11 Jan 2017 12:43:29 +0300
+
 cocaine-plugins (0.12.11.0-alpha9) unstable; urgency=low
 
   * Feature: expose some metrics from slaves.
