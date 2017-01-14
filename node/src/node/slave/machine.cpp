@@ -50,13 +50,13 @@ using detail::service::node::slave::state::inactive_t;
 using cocaine::detail::service::node::slave::stats_t;
 using cocaine::service::node::slave::id_t;
 
-machine_t::metrics_t::metrics_t(context_t& context, machine_t& parent) :
-    prefix(cocaine::format("{}.pool.slaves.{}", parent.manifest.name, parent.id.id())),
-    state(context.metrics_hub().register_gauge<std::string>(format("{}.state", prefix), {}, [&] {
-        return parent.state->get()->name();
+machine_t::metrics_t::metrics_t(context_t& context, std::shared_ptr<machine_t> parent) :
+    prefix(cocaine::format("{}.pool.slaves.{}", parent->manifest.name, parent->id.id())),
+    state(context.metrics_hub().register_gauge<std::string>(format("{}.state", prefix), {}, [=] {
+        return parent->state->get()->name();
     })),
-    uptime(context.metrics_hub().register_gauge<std::uint64_t>(format("{}.uptime", prefix), {}, [&] {
-        return parent.uptime().count();
+    uptime(context.metrics_hub().register_gauge<std::uint64_t>(format("{}.uptime", prefix), {}, [=] {
+        return parent->uptime().count();
     }))
 {}
 
@@ -80,7 +80,7 @@ machine_t::machine_t(context_t& context,
     shutdowned(false),
     counter(1),
     birthstamp(clock_type::now()),
-    metrics(context, *this)
+    metrics(nullptr)
 {
     COCAINE_LOG_DEBUG(log, "slave state machine has been initialized");
 }
@@ -91,6 +91,7 @@ machine_t::~machine_t() {
 
 void
 machine_t::start() {
+    metrics.reset(new metrics_t(context, shared_from_this()));
     BOOST_ASSERT(*state.synchronize() == nullptr);
 
     COCAINE_LOG_DEBUG(log, "slave state machine is starting");
@@ -263,6 +264,7 @@ machine_t::seal() {
 void
 machine_t::terminate(std::error_code ec) {
     BOOST_ASSERT(ec);
+    metrics.reset();
 
     if (closed.exchange(true)) {
         return;

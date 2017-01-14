@@ -109,8 +109,10 @@ private:
         metrics::shared_metric<metrics::gauge<std::string>> state;
         metrics::shared_metric<metrics::gauge<std::uint64_t>> uptime;
 
-        metrics_t(context_t& context, machine_t& parent);
-    } metrics;
+        metrics_t(context_t& context, std::shared_ptr<machine_t> parent);
+    };
+
+    std::unique_ptr<metrics_t> metrics;
 
 public:
     machine_t(context_t& context,
