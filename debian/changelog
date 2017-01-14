@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.11.0-alpha12) unstable; urgency=low
+
+  * Fixed: fixed corrupted memory access, while collecting metrics from no
+    longer available slave.
+
+ -- Evgeny Safronov <division494@gmail.com>  Sat, 14 Jan 2017 11:02:12 +0300
+
 cocaine-plugins (0.12.11.0-alpha11) unstable; urgency=low
 
   * Bump for the glory of Satan.
