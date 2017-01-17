@@ -25,7 +25,7 @@ class app_t {
 private:
     std::shared_ptr<asio::io_service> loop;
     std::unique_ptr<asio::io_service::work> work;
-    boost::thread thread;
+    std::unique_ptr<boost::thread> thread;
     std::shared_ptr<app_state_t> state;
 
 public:

@@ -635,7 +635,7 @@ app_t::app_t(context_t& context,
              cocaine::deferred<void> deferred):
     loop(std::make_shared<asio::io_service>()),
     work(std::make_unique<asio::io_service::work>(*loop)),
-    thread([&] { loop->run(); })
+    thread(nullptr)
 {
     state = std::make_shared<app_state_t>(
         context,
@@ -647,6 +647,10 @@ app_t::app_t(context_t& context,
     COCAINE_LOG_DEBUG(state->logger(), "application has initialized its internal state");
 
     state->spool();
+
+    thread = std::make_unique<boost::thread>([&] {
+        loop->run();
+    });
 }
 
 app_t::~app_t() {
@@ -655,7 +659,7 @@ app_t::~app_t() {
     state->cancel(std::error_code());
 
     work.reset();
-    thread.join();
+    thread->join();
 
     COCAINE_LOG_DEBUG(state->logger(), "application has destroyed its internal state");
 }
