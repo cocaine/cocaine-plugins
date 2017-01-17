@@ -1,3 +1,13 @@
+cocaine-plugins (0.12.11.0-alpha14) unstable; urgency=low
+
+  * Fixed: prevent crash on start apps.
+    This commit fixes a bug where Node service trying to start an
+    application with non-existent manifest/profile, which led to exception
+    raising. If the machine isn’t fast enough to spawn a thread it results
+    in segmentation fault or other random memory corruption bugs.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 17 Jan 2017 12:25:10 +0300
+
 cocaine-plugins (0.12.11.0-alpha13) unstable; urgency=low
 
   * Fixed: memory corruption while collecting queue depth EWMA.
