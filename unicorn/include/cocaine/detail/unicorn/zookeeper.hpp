@@ -111,6 +111,8 @@ public:
 
 private:
     cocaine::context_t& context;
+    // Executor for callback invocation
+    std::unique_ptr<api::executor_t> executor;
     const std::string name;
     const std::unique_ptr<logging::logger_t> log;
     zookeeper::session_t zk_session;

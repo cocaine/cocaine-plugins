@@ -13,7 +13,6 @@
 * GNU General Public License for more details.
 */
 
-#include "cocaine/detail/future.hpp"
 #include "cocaine/detail/unicorn/zookeeper.hpp"
 #include "cocaine/detail/unicorn/zookeeper/children_subscribe.hpp"
 #include "cocaine/detail/unicorn/zookeeper/create.hpp"
@@ -23,17 +22,17 @@
 #include "cocaine/detail/unicorn/zookeeper/put.hpp"
 #include "cocaine/detail/unicorn/zookeeper/subscribe.hpp"
 #include "cocaine/detail/unicorn/zookeeper/lock_state.hpp"
-
 #include "cocaine/detail/zookeeper/handler.hpp"
-
 #include "cocaine/detail/zookeeper/errors.hpp"
-
+#include "cocaine/unicorn/value.hpp"
 #include "cocaine/service/unicorn.hpp"
 
 #include <cocaine/context.hpp>
+#include <cocaine/executor/asio.hpp>
+#include <cocaine/errors.hpp>
+#include <cocaine/format.hpp>
 #include <cocaine/logging.hpp>
-
-#include <cocaine/unicorn/value.hpp>
+#include <cocaine/utility/future.hpp>
 
 #include <asio/io_service.hpp>
 
@@ -75,11 +74,25 @@ public api::unicorn_scope_t
     close(){}
 };
 
+template<class F, class Result>
+auto try_run(F runnable, std::function<void(std::future<Result>)>& callback, api::executor_t& executor) -> void {
+    typedef std::function<void(std::future<Result>)> callback_t;
+    try {
+        runnable();
+    } catch (...) {
+        auto future = make_exceptional_future<Result>();
+        executor.spawn(std::bind([](callback_t& cb, std::future<Result>& f) {
+            cb(std::move(f));
+        }, std::move(callback), std::move(future)));
+    }
 }
+}
+
 typedef api::unicorn_scope_ptr scope_ptr;
 zookeeper_t::zookeeper_t(cocaine::context_t& _context, const std::string& _name, const dynamic_t& args) :
     api::unicorn_t(_context, name, args),
     context(_context),
+    executor(new cocaine::executor::owning_asio_t()),
     name(_name),
     log(context.log(cocaine::format("unicorn/{}", name))),
     zk_session(),
@@ -96,18 +109,24 @@ zookeeper_t::put(
     const value_t& value,
     version_t version
 ) {
-    if (version < 0) {
-        auto ec = make_error_code(cocaine::error::version_not_allowed);
-        auto future = make_exceptional_future<response::put>(std::move(ec));
-        callback(std::move(future));
-        return nullptr;
-    }
     auto scope = std::make_shared<zk_scope_t>();
+    if (version < 0) {
+        //TODO: use move capture when it is available
+        executor->spawn(std::bind([](callback::put& cb){
+            auto ec = make_error_code(cocaine::error::version_not_allowed);
+            auto future = make_exceptional_future<response::put>(std::move(ec));
+            cb(std::move(future));
+        }, std::move(callback)));
+
+        return scope;
+    }
+
     std::shared_ptr<logging::logger_t> logger = context.log(cocaine::format("unicorn/{}", name), {
         {"method", "put"},
         {"path", path},
         {"version", version},
         {"command_id", rand()}});
+
     auto& handler = scope->handler_scope.get_handler<put_action_t>(
         context_t({logger, zk}),
         std::move(callback),
@@ -115,8 +134,12 @@ zookeeper_t::put(
         value,
         std::move(version)
     );
+
     COCAINE_LOG_DEBUG(logger, "start processing");
-    zk.put(handler.path, handler.encoded_value, handler.version, handler);
+    try_run([&]{
+        zk.put(handler.path, handler.encoded_value, handler.version, handler);
+    }, handler.callback, *executor);
+
     COCAINE_LOG_DEBUG(logger, "enqueued");
     return scope;
 }
@@ -134,7 +157,10 @@ zookeeper_t::get(callback::get callback, const path_t& path) {
         path
     );
     COCAINE_LOG_DEBUG(logger, "start processing");
-    zk.get(handler.path, handler);
+    try_run([&]{
+        zk.get(handler.path, handler);
+    }, handler.callback, *executor);
+
     COCAINE_LOG_DEBUG(logger, "enqueued");
     return scope;
 }
@@ -158,7 +184,10 @@ zookeeper_t::create(callback::create callback, const path_t& path, const value_t
         sequence
     );
     COCAINE_LOG_DEBUG(logger, "start processing");
-    zk.create(handler.path, handler.encoded_value, handler.ephemeral, handler.sequence, handler);
+    try_run([&]{
+        zk.create(handler.path, handler.encoded_value, handler.ephemeral, handler.sequence, handler);
+    }, handler.callback, *executor);
+
     COCAINE_LOG_DEBUG(logger, "enqueued");
     return scope;
 }
@@ -166,8 +195,11 @@ zookeeper_t::create(callback::create callback, const path_t& path, const value_t
 scope_ptr
 zookeeper_t::del(callback::del callback, const path_t& path, version_t version) {
     auto handler = std::make_unique<del_action_t>(callback);
-    zk.del(path, version, std::move(handler));
-    return nullptr;
+    try_run([&]{
+        zk.del(path, version, std::move(handler));
+    }, callback, *executor);
+
+    return std::make_shared<zk_scope_t>();
 }
 
 scope_ptr
@@ -183,7 +215,9 @@ zookeeper_t::subscribe(callback::subscribe callback, const path_t& path) {
         path
     );
     COCAINE_LOG_DEBUG(logger, "start processing");
-    zk.get(handler.path, handler, handler);
+    try_run([&]{
+        zk.get(handler.path, handler, handler);
+    }, handler.callback, *executor);
     COCAINE_LOG_DEBUG(logger, "enqueued");
     return scope;
 }
@@ -201,24 +235,28 @@ zookeeper_t::children_subscribe(callback::children_subscribe callback, const pat
         path
     );
     COCAINE_LOG_DEBUG(logger, "start processing");
-    zk.childs(handler.path, handler, handler);
+    try_run([&]{
+        zk.childs(handler.path, handler, handler);
+    }, handler.callback, *executor);
     COCAINE_LOG_DEBUG(logger, "enqueued");
     return scope;
 }
 
 scope_ptr
 zookeeper_t::increment(callback::increment callback, const path_t& path, const value_t& value) {
+    auto scope = std::make_shared<zk_scope_t>();
     if (!value.is_double() && !value.is_int() && !value.is_uint()) {
-        auto ec = make_error_code(cocaine::error::unicorn_errors::invalid_type);
-        auto future = make_exceptional_future<response::increment>(ec);
-        callback(std::move(future));
-        return nullptr;
+        executor->spawn(std::bind([](callback::increment& cb){
+            auto ec = make_error_code(cocaine::error::unicorn_errors::invalid_type);
+            auto future = make_exceptional_future<response::increment>(ec);
+            cb(std::move(future));
+        }, std::move(callback)));
+        return scope;
     }
     std::shared_ptr<logging::logger_t> logger = context.log(cocaine::format("unicorn/{}", name), {
         {"method", "increment"},
         {"path", path},
         {"command_id", rand()}});
-    auto scope = std::make_shared<zk_scope_t>();
     auto& handler = scope->handler_scope.get_handler<increment_action_t>(
         context_t({logger, zk}),
         std::move(callback),
@@ -226,7 +264,9 @@ zookeeper_t::increment(callback::increment callback, const path_t& path, const v
         value
     );
     COCAINE_LOG_DEBUG(logger, "start processing");
-    zk.get(handler.path, handler);
+    try_run([&]{
+        zk.get(handler.path, handler);
+    }, handler.callback, *executor);
     COCAINE_LOG_DEBUG(logger, "enqueued");
     return scope;
 }
@@ -246,10 +286,12 @@ zookeeper_t::lock(callback::lock callback, const path_t& folder) {
         path,
         std::move(folder),
         value_t(time(nullptr)),
-        callback
+        std::move(callback)
     );
     COCAINE_LOG_DEBUG(logger, "start processing");
-    zk.create(path, handler.encoded_value, handler.ephemeral, handler.sequence, handler);
+    try_run([&]{
+        zk.create(path, handler.encoded_value, handler.ephemeral, handler.sequence, handler);
+    }, handler.callback, *executor);
     COCAINE_LOG_DEBUG(logger, "enqueued");
     return lock_state;
 }

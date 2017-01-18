@@ -15,10 +15,10 @@
 
 #include "cocaine/detail/unicorn/zookeeper/create.hpp"
 
-#include "cocaine/detail/future.hpp"
 #include "cocaine/detail/zookeeper/errors.hpp"
 
 #include <cocaine/logging.hpp>
+#include <cocaine/utility/future.hpp>
 
 #include <blackhole/logger.hpp>
 

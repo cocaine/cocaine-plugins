@@ -16,14 +16,13 @@
 
 #include "cocaine/detail/unicorn/zookeeper/put.hpp"
 
-#include "cocaine/detail/future.hpp"
 #include "cocaine/detail/zookeeper/errors.hpp"
 
 #include <blackhole/logger.hpp>
 
-#include <cocaine/logging.hpp>
-
 #include <cocaine/errors.hpp>
+#include <cocaine/logging.hpp>
+#include <cocaine/utility/future.hpp>
 
 namespace cocaine { namespace unicorn {
 
@@ -69,7 +68,7 @@ put_action_t::data_event(int rc, zookeeper::value_t value, zookeeper::node_stat 
         callback(make_exceptional_future<api::unicorn_t::response::put>(ec));
     } else {
         try {
-            auto result = std::make_tuple(false,versioned_value_t(unserialize(value), stat.version));
+            auto result = std::make_tuple(false, versioned_value_t(unserialize(value), stat.version));
             callback(make_ready_future(std::move(result)));
         } catch (const std::system_error& e) {
             callback(make_exceptional_future<api::unicorn_t::response::put>(e));

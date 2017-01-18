@@ -15,11 +15,11 @@
 
 #include "cocaine/detail/unicorn/zookeeper/children_subscribe.hpp"
 
-#include "cocaine/detail/future.hpp"
 #include "cocaine/detail/zookeeper/errors.hpp"
 
 #include <cocaine/errors.hpp>
 #include <cocaine/logging.hpp>
+#include <cocaine/utility/future.hpp>
 
 #include <blackhole/logger.hpp>
 
@@ -62,7 +62,7 @@ children_subscribe_action_t::watch_event(int /*type*/, int /*state*/, zookeeper:
         ctx.zk.childs(path, *this, *this);
     } catch (const std::system_error& e) {
         COCAINE_LOG_WARNING(ctx.log, "failure during subscription for childs: {}", error::to_string(e));
-        callback(make_exceptional_future<result_t, std::system_error>(e));
+        callback(make_exceptional_future<result_t>());
     }
 }
 }} // namespace cocaine::unicorn

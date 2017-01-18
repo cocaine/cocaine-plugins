@@ -19,6 +19,8 @@
 
 #include "cocaine/detail/zookeeper/errors.hpp"
 
+#include <cocaine/executor/asio.hpp>
+
 #include <boost/optional/optional.hpp>
 
 #include <zookeeper/zookeeper.h>
@@ -79,12 +81,10 @@ cfg_t::connection_string() const {
 zookeeper::connection_t::connection_t(const cfg_t& _cfg, const session_t& _session) :
     cfg(_cfg),
     session(_session),
+    executor(new cocaine::executor::owning_asio_t()),
     _zhandle(),
     w_scope(),
-    watcher(w_scope.get_handler<reconnect_action_t>(*this)),
-    io_loop(),
-    work(asio::io_service::work(io_loop)),
-    close_thread([&](){io_loop.run();})
+    watcher(w_scope.get_handler<reconnect_action_t>(*this))
 {
     if(!cfg.prefix.empty() && cfg.prefix[0] != '/') {
         throw std::system_error(std::make_error_code(std::errc::invalid_argument), "invalid prefix");
@@ -95,12 +95,6 @@ zookeeper::connection_t::connection_t(const cfg_t& _cfg, const session_t& _sessi
     _zhandle.apply([&](handle_ptr& h) {
         reconnect(h);
     });
-}
-
-zookeeper::connection_t::~connection_t() {
-    _zhandle->reset();
-    work = boost::none;
-    close_thread.join();
 }
 
 path_t zookeeper::connection_t::format_path(const path_t path) {
@@ -248,7 +242,7 @@ connection_t::handle_ptr connection_t::init() {
 }
 
 void connection_t::close(zhandle_t* handle) {
-    io_loop.post([=]{
+    executor->spawn([=]{
         zookeeper_close(handle);
     });
 }

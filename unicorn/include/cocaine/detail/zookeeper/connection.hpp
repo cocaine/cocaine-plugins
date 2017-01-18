@@ -19,8 +19,7 @@
 #include "cocaine/detail/zookeeper/session.hpp"
 
 #include <cocaine/locked_ptr.hpp>
-
-#include <asio/io_service.hpp>
+#include <cocaine/api/executor.hpp>
 
 #include <boost/optional/optional.hpp>
 
@@ -72,7 +71,6 @@ public:
     connection_t(const cfg_t& cfg, const session_t& session);
     connection_t(const connection_t&) = delete;
     connection_t& operator=(const connection_t&) = delete;
-    ~connection_t();
 
     /**
     * put value to path. If version in ZK is different returns an error.
@@ -144,6 +142,10 @@ private:
 
     cfg_t cfg;
     session_t session;
+
+    // executor for closing connections to avoid deadlocks
+    std::unique_ptr<cocaine::api::executor_t> executor;
+
     cocaine::synchronized<handle_ptr> _zhandle;
     void check_rc(int rc) const;
     void check_connectivity();
@@ -152,11 +154,6 @@ private:
     void create_prefix();
     handler_scope_t w_scope;
     managed_watch_handler_base_t& watcher;
-
-    // special loop for closing connections to avoid deadlocks
-    asio::io_service io_loop;
-    boost::optional<asio::io_service::work> work;
-    std::thread close_thread;
 };
 }
 
