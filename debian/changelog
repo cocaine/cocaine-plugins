@@ -1,7 +1,14 @@
+cocaine-plugins (0.12.11.0-beta1) unstable; urgency=low
+
+  * Fixed: eliminated race condition by registering metrics after
+    state is defined (#103).
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 02 Feb 2017 14:30:00 +0300
+
 cocaine-plugins (0.12.11.0-alpha15) unstable; urgency=low
 
   * Fixed: catch errors in unicorn.
-    Catch exceptions in unicorn calls and process calbacks in executor
+    Catch exceptions in unicorn calls and process callbacks in executor
     to prevent deadlocks.
 
  -- Anton Matveenko <antmat@me.com>  Wed, 18 Jan 2017 17:14:10 +0300
