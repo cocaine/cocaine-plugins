@@ -91,13 +91,14 @@ machine_t::~machine_t() {
 
 void
 machine_t::start() {
-    metrics.reset(new metrics_t(context, shared_from_this()));
     BOOST_ASSERT(*state.synchronize() == nullptr);
 
     COCAINE_LOG_DEBUG(log, "slave state machine is starting");
 
     auto preparation = std::make_shared<preparation_t>(shared_from_this());
     migrate(preparation);
+
+    metrics.reset(new metrics_t(context, shared_from_this()));
 
     // NOTE: Slave spawning involves starting timers and posting completion handlers callbacks with
     // the event loop.
