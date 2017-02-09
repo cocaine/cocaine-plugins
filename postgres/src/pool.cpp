@@ -17,9 +17,15 @@ pool_t::pool_t(context_t& context, const std::string& name, const dynamic_t& arg
     std::string connection_string = args.as_object().at("connection_string", "").as_string();
     slots.apply([&](slots_t& _slots){
         for(size_t i = 0; i < pool_size; i++) {
-            auto slot = std::make_shared<slot_t>(io_loop, connection_string);
-            auto id = slot->id();
-            _slots.emplace(id, std::move(slot));
+            std::shared_ptr<slot_t> slot;
+            try {
+                slot = std::make_shared<slot_t>(io_loop, connection_string);
+                auto id = slot->id();
+                _slots.emplace(id, std::move(slot));
+            } catch(...) {
+                io_work.reset();
+                throw;
+            }
         }
     });
 }
