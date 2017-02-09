@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.11.0-beta2) unstable; urgency=low
+
+  * Fixed: Prevent dead lock on PG pool on exception and thread join.
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 09 Feb 2017 12:39:00 +0300
+
 cocaine-plugins (0.12.11.0-beta1) unstable; urgency=low
 
   * Fixed: eliminated race condition by registering metrics after
