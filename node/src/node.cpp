@@ -25,6 +25,8 @@
 #include <cocaine/context.hpp>
 #include <cocaine/context/signal.hpp>
 #include <cocaine/logging.hpp>
+#include <cocaine/middleware/auth.hpp>
+#include <cocaine/middleware/headers.hpp>
 
 #include <cocaine/traits/dynamic.hpp>
 #include <cocaine/traits/endpoint.hpp>
@@ -41,7 +43,6 @@
 #include <boost/range/adaptor/map.hpp>
 #include <boost/range/algorithm/copy.hpp>
 
-#include "cocaine/middleware/auth.hpp"
 #include "cocaine/service/node/overseer.hpp"
 
 using namespace cocaine;
@@ -122,11 +123,13 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
     auto middleware = middleware::auth_t(context, name);
 
     on<io::node::start_app>()
-        .execute(std::bind(&node_t::start_app, this, ph::_1, ph::_2))
-        .add_middleware(middleware);
+        .with_middleware(middleware)
+        .with_middleware(middleware::drop_headers_t())
+        .execute(std::bind(&node_t::start_app, this, ph::_1, ph::_2));
     on<io::node::pause_app>()
-        .execute(std::bind(&node_t::pause_app, this, ph::_1))
-        .add_middleware(middleware);
+        .with_middleware(middleware)
+        .with_middleware(middleware::drop_headers_t())
+        .execute(std::bind(&node_t::pause_app, this, ph::_1));
     on<io::node::list>(std::bind(&node_t::list, this));
     on<io::node::info>(std::bind(&node_t::info, this, ph::_1, ph::_2));
     on<io::node::control_app>(std::make_shared<control_slot_t>(*this));
