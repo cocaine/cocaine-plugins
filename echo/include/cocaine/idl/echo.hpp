@@ -16,6 +16,7 @@ struct echo {
         }
 
         typedef boost::mpl::list<std::string>::type argument_type;
+        typedef option_of<std::string>::tag upstream_type;
     };
 };
 

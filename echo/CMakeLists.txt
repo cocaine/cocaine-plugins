@@ -6,6 +6,7 @@ ADD_LIBRARY(echo MODULE
     src/module)
 
 TARGET_LINK_LIBRARIES(echo
+    blackhole
     cocaine-core
     cocaine-io-util
     ${Boost_LIBRARIES})
