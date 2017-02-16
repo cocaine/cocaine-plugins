@@ -57,6 +57,12 @@ machine_t::metrics_t::metrics_t(context_t& context, std::shared_ptr<machine_t> p
     })),
     uptime(context.metrics_hub().register_gauge<std::uint64_t>(format("{}.uptime", prefix), {}, [=] {
         return parent->uptime().count();
+    })),
+    load(context.metrics_hub().register_gauge<double>(format("{}.load", prefix), {}, [=] {
+        return parent->data.channels.apply( [&](channels_map_t& channels) {
+            parent->metrics_data.load->add(channels.size());
+            return parent->metrics_data.load->get();
+        });
     }))
 {}
 
@@ -82,6 +88,9 @@ machine_t::machine_t(context_t& context,
     birthstamp(clock_type::now()),
     metrics(nullptr)
 {
+    metrics_data.load.reset(new machine_t::ewma_type(std::chrono::seconds(10)));
+    metrics_data.load->add(0.0);
+
     COCAINE_LOG_DEBUG(log, "slave state machine has been initialized");
 }
 
@@ -199,8 +208,13 @@ auto machine_t::inject(load_t& load, channel_handler handler) -> std::uint64_t {
 
     const auto current = data.channels.apply([&](channels_map_t& channels) -> std::uint64_t {
         channels[id] = channel;
-        return channels.size();
+
+        const auto load = channels.size();
+        metrics_data.load->add(load);
+
+        return load;
     });
+
 
     std::chrono::milliseconds request_timeout(profile.request_timeout());
     if (auto timeout_from_header = hpack::header::convert_first<std::uint64_t>(load.event.headers, "request_timeout")) {
@@ -342,8 +356,8 @@ machine_t::shutdown(std::error_code ec) {
         }
 
         channels.clear();
+        metrics_data.load->add(channels.size());
     });
-
 
     // Check if the slave has been terminated externally. If so, do not call the cleanup callback.
     if (closed) {
@@ -367,8 +381,13 @@ void
 machine_t::revoke(std::uint64_t id, channel_handler handler) {
     const auto load = data.channels.apply([&](channels_map_t& channels) -> std::uint64_t {
         channels.erase(id);
-        return channels.size();
+
+        const auto load = channels.size();
+        metrics_data.load->add(load);
+
+        return load;
     });
+
     data.timers.apply([&](timers_map_t& timers) {
         timers.erase(id);
     });

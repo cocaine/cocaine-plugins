@@ -11,6 +11,7 @@
 #include <asio/posix/stream_descriptor.hpp>
 
 #include <metrics/metric.hpp>
+#include <metrics/usts/ewma.hpp>
 
 #include <cocaine/logging.hpp>
 
@@ -108,11 +109,18 @@ private:
 
         metrics::shared_metric<metrics::gauge<std::string>> state;
         metrics::shared_metric<metrics::gauge<std::uint64_t>> uptime;
+        metrics::shared_metric<metrics::gauge<double>> load;
 
         metrics_t(context_t& context, std::shared_ptr<machine_t> parent);
     };
 
     std::unique_ptr<metrics_t> metrics;
+
+    typedef metrics::usts::ewma_t ewma_type;
+
+    struct {
+        std::unique_ptr<ewma_type> load;
+    } metrics_data;
 
 public:
     machine_t(context_t& context,
