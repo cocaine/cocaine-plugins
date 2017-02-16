@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.11.2) unstable; urgency=low
+
+  * Feat: load metric for slave (#105).
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 16 Feb 2017 15:53:50 +0300
+
 cocaine-plugins (0.12.11.1) unstable; urgency=low
 
   * Fixed: build with latest cocaine-core.
