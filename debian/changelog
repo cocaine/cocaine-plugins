@@ -1,3 +1,9 @@
+cocaine-plugin-elliptics (0.12.11-1) unstable; urgency=low
+
+  * Rebuild with release version of cocaine 0.12.11
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 16 Feb 2016 13:09:30 +0300
+
 cocaine-plugin-elliptics (0.12.11) unstable; urgency=low
 
   * Rebuild with new cocaine release
