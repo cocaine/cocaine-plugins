@@ -15,6 +15,7 @@
 
 #pragma once
 
+#include "cocaine/traits/dynamic.hpp"
 #include "cocaine/unicorn/value.hpp"
 
 #include <cocaine/traits.hpp>
@@ -28,8 +29,8 @@ static inline
 void
 pack(msgpack::packer<Stream>& packer, const cocaine::unicorn::versioned_value_t& source) {
     packer.pack_array(2);
-    cocaine::io::type_traits<cocaine::unicorn::value_t>::pack(packer, source.get_value());
-    cocaine::io::type_traits<cocaine::unicorn::version_t>::pack(packer, source.get_version());
+    cocaine::io::type_traits<cocaine::unicorn::value_t>::pack(packer, source.value());
+    cocaine::io::type_traits<cocaine::unicorn::version_t>::pack(packer, source.version());
 }
 
 static inline

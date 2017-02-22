@@ -15,29 +15,26 @@
 
 #include "cocaine/service/unicorn.hpp"
 
-#include "cocaine/traits/unicorn.hpp"
+#include <boost/algorithm/string/join.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/mpl/at.hpp>
+#include <boost/mpl/for_each.hpp>
+#include <boost/mpl/map.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 
 #include <blackhole/logger.hpp>
+#include <blackhole/wrapper.hpp>
 
+#include <cocaine/api/authentication.hpp>
+#include <cocaine/api/authorization/unicorn.hpp>
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
+
+#include "cocaine/traits/unicorn.hpp"
 
 using namespace cocaine::unicorn;
 
 namespace cocaine { namespace service {
-
-namespace {
-class null_scope_t:
-    public api::unicorn_scope_t
-{
-public:
-    virtual void
-    close() {}
-
-    virtual
-    ~null_scope_t(){}
-};
-}
 
 template<class Event, class Method, class Response>
 class unicorn_slot_t :
@@ -52,128 +49,248 @@ public:
     // And here we use only upstream tag.
     typedef typename io::aux::protocol_impl<typename io::event_traits<Event>::upstream_type>::type protocol;
 
-    unicorn_slot_t(unicorn_service_t* _service, std::shared_ptr<api::unicorn_t> _unicorn, Method _method) :
-        service(_service),
-        unicorn(_unicorn),
-        method(_method)
+    unicorn_slot_t(const unicorn_service_t& service_,
+                   std::shared_ptr<api::unicorn_t> unicorn_,
+                   Method method_,
+                   std::shared_ptr<api::authentication_t> auth_,
+                   std::shared_ptr<api::authorization::unicorn_t> authorization_) :
+        service(service_),
+        unicorn(unicorn_),
+        method(method_),
+        auth(std::move(auth_)),
+        authorization(std::move(authorization_))
     {}
 
     virtual
     boost::optional<std::shared_ptr<const dispatch_type>>
-    operator()(const std::vector<hpack::header_t>&, tuple_type&& args, upstream_type&& upstream)
-    {
-        typedef boost::optional<std::shared_ptr<const dispatch_type>> opt_dispatch_t;
-        Response result;
-        auto callback = [=](std::future<result_type> future) mutable {
+    operator()(const std::vector<hpack::header_t>& headers, tuple_type&& args, upstream_type&& upstream) {
+        typedef boost::optional<std::shared_ptr<const dispatch_type>> result_dispatch_type;
+
+        const auto& path = extract_path(args);
+        if (!is_allowed(path)) {
+            upstream.template send<typename protocol::error>(error::invalid_path, "root path is not allowed");
+            return result_dispatch_type(std::make_shared<unicorn_dispatch_t>(service.name()));
+        }
+
+        const auto identity = auth->identify(headers);
+
+        if (auto ec = boost::get<std::error_code>(&identity)) {
+            COCAINE_LOG_ERROR(service.log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
+                {"code", ec->value()},
+                {"error", ec->message()},
+            });
+
+            upstream.template send<typename protocol::error>(*ec, "permission denied");
+            return result_dispatch_type(std::make_shared<unicorn_dispatch_t>(service.name()));
+        }
+
+        const auto& ident = boost::get<auth::identity_t>(identity);
+        auto dispatch = std::make_shared<unicorn_dispatch_t>(service.name());
+
+        auto log = std::make_shared<blackhole::wrapper_t>(*service.log, blackhole::attributes_t{
+            {"event", std::string(Event::alias())},
+            {"path", path},
+            {"uids", cocaine::format("[{}]", boost::join(ident.uids() | boost::adaptors::transformed(static_cast<std::string(*)(auth::uid_t)>(std::to_string)), ";"))},
+        });
+
+        Response response;
+
+        auto on_response = [=](std::future<result_type> future) mutable {
             try {
-                result.write(future.get());
-            } catch (const std::system_error& e) {
-                COCAINE_LOG_DEBUG(service->log, "exception during unicorn '{}' event - {}", Event::alias(), error::to_string(e));
+                auto result = future.get();
+                COCAINE_LOG_INFO(log, "completed '{}' operation", Event::alias());
+
+                response.write(std::move(result));
+            } catch (const std::system_error& err) {
+                COCAINE_LOG_ERROR(log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
+                    {"code", err.code().value()},
+                    {"error", error::to_string(err)}
+                });
+
                 try {
-                    result.abort(e.code(), error::to_string(e));
-                } catch(const std::system_error& e2) {
-                    COCAINE_LOG_WARNING(service->log, "could not abort deferred - {}", error::to_string(e2));
+                    response.abort(err.code(), error::to_string(err));
+                } catch(const std::system_error&) {
+                    // Eat.
                 }
             }
         };
-        auto api_args = std::tuple_cat(std::make_tuple(unicorn.get(), callback), std::move(args));
-        api::unicorn_scope_ptr request_scope;
-        try {
-            request_scope = tuple::invoke(std::move(api_args), std::mem_fn(method));
-            result.attach(std::move(upstream));
-        } catch(const std::system_error& e) {
-            upstream.template send<typename protocol::error>(e.code(), error::to_string(e));
-        } catch(const std::exception& e) {
-            upstream.template send<typename protocol::error>(error::uncaught_error, std::string(e.what()));
-        }
-        // Always create a dispatch for close.
-        // In case of exception we use null scope as request was not completed.
-        if(!request_scope) {
-            request_scope = std::make_shared<null_scope_t>();
-        }
-        auto dispatch = std::make_shared<unicorn_dispatch_t>(service->get_name(), service, request_scope);
-        return opt_dispatch_t(dispatch);
+
+        auto on_validated = [=](std::error_code ec) mutable {
+            if (ec) {
+                COCAINE_LOG_ERROR(log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
+                    {"code", ec.value()},
+                    {"error", ec.message()},
+                });
+                upstream.template send<typename protocol::error>(ec);
+                return;
+            }
+
+            auto tuple = std::tuple_cat(std::make_tuple(unicorn.get(), on_response), std::move(args));
+
+            try {
+                dispatch->attach(tuple::invoke(std::move(tuple), std::mem_fn(method)));
+            } catch(const std::system_error& err) {
+                COCAINE_LOG_ERROR(log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
+                    {"code", err.code().value()},
+                    {"error", error::to_string(err)},
+                });
+
+                upstream.template send<typename protocol::error>(err.code(), error::to_string(err));
+            } catch(const std::exception& err) {
+                COCAINE_LOG_ERROR(log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
+                    {"error", err.what()},
+                });
+                upstream.template send<typename protocol::error>(error::uncaught_error, err.what());
+            }
+
+            response.attach(std::move(upstream));
+        };
+
+        authorization->verify<Event>(path, ident, [=](std::error_code code) mutable {
+            on_validated(code);
+        });
+
+        return result_dispatch_type(dispatch);
     }
 
 private:
-    unicorn_service_t* service;
+    static
+    auto
+    is_allowed(const path_t& path) -> bool {
+        return path != "/";
+    }
+
+    static
+    auto
+    extract_path(const tuple_type& args) -> const std::string& {
+        return std::get<0>(args);
+    }
+
+private:
+    const unicorn_service_t& service;
     std::shared_ptr<api::unicorn_t> unicorn;
     Method method;
+
+    std::shared_ptr<api::authentication_t> auth;
+    std::shared_ptr<api::authorization::unicorn_t> authorization;
 };
 
-/**
-* Typedefs for result type. Actual result types are in include/cocaine/idl/unicorn.hpp
-*/
-struct resp {
-    typedef deferred<result_of<io::unicorn::put>::type> put;
-    typedef deferred<result_of<io::unicorn::get>::type> get;
-    typedef deferred<result_of<io::unicorn::create>::type> create;
-    typedef deferred<result_of<io::unicorn::del>::type> del;
-    typedef deferred<result_of<io::unicorn::increment>::type> increment;
-    typedef streamed<result_of<io::unicorn::subscribe>::type> subscribe;
-    typedef streamed<result_of<io::unicorn::children_subscribe>::type> children_subscribe;
-    typedef deferred<result_of<io::unicorn::lock>::type> lock;
+namespace {
+
+template<typename Event>
+struct response_of {
+    typedef deferred<typename result_of<Event>::type> type;
 };
 
-struct method {
-    typedef decltype(&api::unicorn_t::children_subscribe) children_subscribe;
-    typedef decltype(&api::unicorn_t::subscribe)          subscribe;
-    typedef decltype(&api::unicorn_t::put)                put;
-    typedef decltype(&api::unicorn_t::get)                get;
-    typedef decltype(&api::unicorn_t::create_default)     create_default;
-    typedef decltype(&api::unicorn_t::del)                del;
-    typedef decltype(&api::unicorn_t::increment)          increment;
-    typedef decltype(&api::unicorn_t::lock)               lock;
+template<>
+struct response_of<io::unicorn::subscribe> {
+    typedef streamed<typename result_of<io::unicorn::subscribe>::type> type;
 };
 
-typedef io::unicorn scope;
+template<>
+struct response_of<io::unicorn::children_subscribe> {
+    typedef streamed<typename result_of<io::unicorn::children_subscribe>::type> type;
+};
 
-typedef unicorn_slot_t<scope::children_subscribe, method::children_subscribe, resp::children_subscribe> children_subscribe_slot_t;
-typedef unicorn_slot_t<scope::subscribe, method::subscribe,      resp::subscribe> subscribe_slot_t;
-typedef unicorn_slot_t<scope::put,       method::put,            resp::put      > put_slot_t;
-typedef unicorn_slot_t<scope::get,       method::get,            resp::get      > get_slot_t;
-typedef unicorn_slot_t<scope::create,    method::create_default, resp::create   > create_slot_t;
-typedef unicorn_slot_t<scope::del,       method::del,            resp::del      > del_slot_t;
-typedef unicorn_slot_t<scope::remove,    method::del,            resp::del      > remove_slot_t;
-typedef unicorn_slot_t<scope::increment, method::increment,      resp::increment> increment_slot_t;
-typedef unicorn_slot_t<scope::lock,      method::lock,           resp::lock     > lock_slot_t;
+template<typename Event>
+struct method_of {
+    typedef boost::mpl::map<
+        boost::mpl::pair<io::unicorn::subscribe, decltype(&api::unicorn_t::subscribe)>,
+        boost::mpl::pair<io::unicorn::children_subscribe, decltype(&api::unicorn_t::children_subscribe)>,
+        boost::mpl::pair<io::unicorn::put, decltype(&api::unicorn_t::put)>,
+        boost::mpl::pair<io::unicorn::get, decltype(&api::unicorn_t::get)>,
+        boost::mpl::pair<io::unicorn::create, decltype(&api::unicorn_t::create_default)>,
+        boost::mpl::pair<io::unicorn::del, decltype(&api::unicorn_t::del)>,
+        boost::mpl::pair<io::unicorn::remove, decltype(&api::unicorn_t::del)>,
+        boost::mpl::pair<io::unicorn::increment, decltype(&api::unicorn_t::increment)>,
+        boost::mpl::pair<io::unicorn::lock, decltype(&api::unicorn_t::lock)>
+    >::type mapping;
 
+    typedef typename boost::mpl::at<mapping, Event>::type type;
+};
 
-const io::basic_dispatch_t&
-unicorn_service_t::prototype() const {
-    return *this;
+template<typename Event>
+using slot_of = unicorn_slot_t<
+    Event,
+    typename method_of<Event>::type,
+    typename response_of<Event>::type
+>;
+
+struct register_slot_t {
+    unicorn_service_t& dispatch;
+    std::shared_ptr<api::unicorn_t> unicorn;
+    std::shared_ptr<api::authentication_t> auth;
+    std::shared_ptr<api::authorization::unicorn_t> authorization;
+
+    template<typename T, typename Event>
+    auto
+    on(Event event) -> void {
+        dispatch.on<T>(
+            std::make_shared<slot_of<T>>(
+                dispatch,
+                unicorn,
+                std::forward<Event>(event),
+                auth,
+                authorization
+            )
+        );
+    }
+};
+
+} // namespace
+
+unicorn_service_t::unicorn_service_t(context_t& context, asio::io_service& asio_, const std::string& name_, const dynamic_t& args) :
+    service_t(context, asio_, name_, args),
+    dispatch<io::unicorn_tag>(name_),
+    log(context.log("audit", {{"service", name()}})),
+    unicorn(api::unicorn(context, args.as_object().at("backend", "core").as_string()))
+{
+    typedef io::unicorn scope;
+
+    auto auth = api::authentication(context, "core", name());
+    auto authorization = api::authorization::unicorn(context, name());
+
+    register_slot_t r{*this, unicorn, auth, authorization};
+
+    r.on<scope::subscribe>(&api::unicorn_t::subscribe);
+    r.on<scope::children_subscribe>(&api::unicorn_t::children_subscribe);
+    r.on<scope::put>(&api::unicorn_t::put);
+    r.on<scope::get>(&api::unicorn_t::get);
+    r.on<scope::create>(&api::unicorn_t::create_default);
+    r.on<scope::del>(&api::unicorn_t::del);
+    r.on<scope::remove>(&api::unicorn_t::del);
+    r.on<scope::increment>(&api::unicorn_t::increment);
+    r.on<scope::lock>(&api::unicorn_t::lock);
 }
 
-unicorn_service_t::unicorn_service_t(context_t& context, asio::io_service& _asio, const std::string& _name, const dynamic_t& args) :
-    service_t(context, _asio, _name, args),
-    dispatch<io::unicorn_tag>(_name),
-    name(_name),
-    unicorn(api::unicorn(context, args.as_object().at("backend", "core").as_string())),
-    log(context.log("unicorn"))
+unicorn_dispatch_t::unicorn_dispatch_t(const std::string& name_) :
+    dispatch<io::unicorn_final_tag>(name_),
+    state(state_t::initial)
 {
-    on<scope::subscribe>         (std::make_shared<subscribe_slot_t>         (this, unicorn, &api::unicorn_t::subscribe));
-    on<scope::children_subscribe>(std::make_shared<children_subscribe_slot_t>(this, unicorn, &api::unicorn_t::children_subscribe));
-    on<scope::put>               (std::make_shared<put_slot_t>               (this, unicorn, &api::unicorn_t::put));
-    on<scope::get>               (std::make_shared<get_slot_t>               (this, unicorn, &api::unicorn_t::get));
-    on<scope::create>            (std::make_shared<create_slot_t>            (this, unicorn, &api::unicorn_t::create_default));
-    on<scope::del>               (std::make_shared<del_slot_t>               (this, unicorn, &api::unicorn_t::del));
-
-    // alias for del method
-    on<scope::remove>            (std::make_shared<remove_slot_t>               (this, unicorn, &api::unicorn_t::del));
-    on<scope::increment>         (std::make_shared<increment_slot_t>         (this, unicorn, &api::unicorn_t::increment));
-    on<scope::lock>              (std::make_shared<lock_slot_t>              (this, unicorn, &api::unicorn_t::lock));
+    on<io::unicorn::close>([&] {
+        discard(std::error_code());
+    });
 }
 
-unicorn_dispatch_t::unicorn_dispatch_t(const std::string& _name, unicorn_service_t* /*service*/, api::unicorn_scope_ptr _scope) :
-    dispatch<io::unicorn_final_tag>(_name),
-    scope(std::move(_scope))
-{
-    on<io::unicorn::close>(std::bind(&unicorn_dispatch_t::discard, this, std::error_code()));
+auto
+unicorn_dispatch_t::attach(api::unicorn_scope_ptr nscope) -> void {
+    BOOST_ASSERT(nscope != nullptr);
+    BOOST_ASSERT(this->scope == nullptr);
+
+    std::lock_guard<std::mutex> lock(mutex);
+    this->scope = std::move(nscope);
+    if (state == state_t::discarded) {
+        this->scope->close();
+    }
 }
 
 void
-unicorn_dispatch_t::discard(const std::error_code& /*ec*/) const {
-    scope->close();
+unicorn_dispatch_t::discard(const std::error_code& /* ec */) const {
+    std::lock_guard<std::mutex> lock(mutex);
+    state = state_t::discarded;
+    if (scope) {
+        scope->close();
+    }
 }
 
 }} //namespace cocaine::service

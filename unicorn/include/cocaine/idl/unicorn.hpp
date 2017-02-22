@@ -150,7 +150,7 @@ struct unicorn {
     /**
      * delete node. replaces del method as "del" is a reserved word in Python
      * */
-    struct remove{
+    struct remove {
         typedef unicorn_tag tag;
 
         static const char* alias() {
@@ -297,4 +297,3 @@ struct protocol<unicorn_final_tag> {
 };
 
 }} // namespace cocaine::io
-

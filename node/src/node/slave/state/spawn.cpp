@@ -72,7 +72,7 @@ auto spawn_t::terminate(const std::error_code& ec) -> void {
     slave->shutdown(ec);
 }
 
-auto spawn_t::spawn(api::auth_t::token_t token, unsigned long timeout) -> void {
+auto spawn_t::spawn(api::authentication_t::token_t token, unsigned long timeout) -> void {
     COCAINE_LOG_DEBUG(slave->log, "slave is spawning using '{}', timeout: {} ms",
                       slave->manifest.executable, timeout);
 

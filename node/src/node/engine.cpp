@@ -12,7 +12,7 @@
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
-#include "cocaine/api/auth.hpp"
+#include "cocaine/api/authentication.hpp"
 #include "cocaine/api/stream.hpp"
 
 #include "cocaine/service/node/manifest.hpp"
@@ -66,7 +66,7 @@ engine_t::engine_t(context_t& context,
     birthstamp(std::chrono::system_clock::now()),
     manifest_(std::move(manifest)),
     profile_(profile),
-    auth(api::auth(context, "core", manifest_.name)),
+    auth(api::authentication(context, "core", manifest_.name)),
     loop(loop),
     pool_target{},
     last_timeout(std::chrono::seconds(1)),

@@ -12,7 +12,6 @@
 #include <cocaine/rpc/actor.hpp>
 #include <cocaine/rpc/upstream.hpp>
 
-#include "cocaine/api/auth.hpp"
 #include "cocaine/api/isolate.hpp"
 
 #include "cocaine/service/node/manifest.hpp"
@@ -40,7 +39,7 @@ slave_t::slave_t(context_t& context,
                  id_t id,
                  manifest_t manifest,
                  profile_t profile,
-                 std::shared_ptr<api::auth_t> auth,
+                 std::shared_ptr<api::authentication_t> auth,
                  asio::io_service& loop,
                  cleanup_handler fn)
     : ec(error::overseer_shutdowning),

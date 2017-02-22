@@ -6,13 +6,11 @@
 
 #include <asio/deadline_timer.hpp>
 
+#include <cocaine/api/authentication.hpp>
 #include <cocaine/locked_ptr.hpp>
 
-#include "state.hpp"
-
-#include "cocaine/api/auth.hpp"
-
 #include "cocaine/detail/service/node/forwards.hpp"
+#include "state.hpp"
 
 namespace cocaine {
 namespace detail {
@@ -46,7 +44,7 @@ public:
     auto cancel() -> void;
     auto terminate(const std::error_code& ec) -> void;
 
-    auto spawn(api::auth_t::token_t token, unsigned long timeout) -> void;
+    auto spawn(api::authentication_t::token_t token, unsigned long timeout) -> void;
 
     auto activate(std::shared_ptr<session_t> session, upstream<io::worker::control_tag> stream) ->
         std::shared_ptr<control_t>;

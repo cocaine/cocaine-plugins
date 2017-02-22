@@ -15,7 +15,6 @@
 
 #include <cocaine/logging.hpp>
 
-#include "cocaine/api/auth.hpp"
 #include "cocaine/idl/rpc.hpp"
 
 #include "cocaine/service/node/app/event.hpp"
@@ -72,7 +71,7 @@ public:
     const cocaine::service::node::slave::id_t id;
     const profile_t profile;
     const manifest_t manifest;
-    std::shared_ptr<api::auth_t> auth;
+    std::shared_ptr<api::authentication_t> auth;
 
 private:
     // TODO: In current implementation this can be invalid, when engine is stopped.
@@ -127,7 +126,7 @@ public:
               id_t id,
               manifest_t manifest,
               profile_t profile,
-              std::shared_ptr<api::auth_t> auth,
+              std::shared_ptr<api::authentication_t> auth,
               asio::io_service& loop,
               cleanup_handler cleanup);
 

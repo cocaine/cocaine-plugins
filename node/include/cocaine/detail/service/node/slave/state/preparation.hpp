@@ -4,10 +4,10 @@
 #include <memory>
 #include <system_error>
 
-#include "state.hpp"
+#include <cocaine/api/authentication.hpp>
 
-#include "cocaine/api/auth.hpp"
 #include "cocaine/detail/service/node/forwards.hpp"
+#include "state.hpp"
 
 namespace cocaine {
 namespace detail {
@@ -31,7 +31,7 @@ public:
     auto start(std::chrono::milliseconds timeout) -> void;
 
 private:
-    auto on_refresh(api::auth_t::token_t token, const std::error_code& ec) -> void;
+    auto on_refresh(api::authentication_t::token_t token, const std::error_code& ec) -> void;
 };
 
 }  // namespace state

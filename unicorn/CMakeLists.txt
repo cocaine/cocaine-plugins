@@ -6,6 +6,7 @@ LOCATE_LIBRARY(LIBZOOKEEPER_MT "zookeeper/zookeeper.h" "zookeeper_mt")
 
 ADD_LIBRARY(unicorn MODULE
     src/cluster/unicorn.cpp
+    src/authorization/unicorn.cpp
     src/module.cpp
     src/repository/zookeeper.cpp
     src/service/unicorn.cpp

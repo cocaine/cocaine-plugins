@@ -30,8 +30,6 @@ namespace state {
 
 namespace ph = std::placeholders;
 
-using api::auth_t;
-
 using asio::ip::tcp;
 
 preparation_t::preparation_t(std::shared_ptr<machine_t> slave_) :
@@ -46,10 +44,10 @@ auto preparation_t::terminate(const std::error_code& ec) -> void {
     slave->shutdown(ec);
 }
 
-auto preparation_t::start(std::chrono::milliseconds timeout) -> void {
+auto preparation_t::start(std::chrono::milliseconds) -> void {
     try {
         COCAINE_LOG_DEBUG(slave->log, "preparation start");
-        slave->auth->token([=](auth_t::token_t token, const std::error_code& ec) {
+        slave->auth->token([=](api::authentication_t::token_t token, const std::error_code& ec) {
             COCAINE_LOG_DEBUG(slave->log, "preparation got token: {}", ec);
             slave->loop.post([=] {
                 on_refresh(token, ec);
@@ -63,7 +61,7 @@ auto preparation_t::start(std::chrono::milliseconds timeout) -> void {
     }
 }
 
-auto preparation_t::on_refresh(auth_t::token_t token, const std::error_code& ec) -> void {
+auto preparation_t::on_refresh(api::authentication_t::token_t token, const std::error_code& ec) -> void {
     if (ec) {
         terminate(ec);
         return;

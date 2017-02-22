@@ -23,45 +23,51 @@
 
 namespace cocaine { namespace service {
 
+/// Service for providing access to unified configuration service.
+///
+/// Currently we use Zookeeper as a backend. For protocol methods description see
+/// `include/cocaine/idl/unicorn.hpp`.
 class unicorn_service_t:
     public api::service_t,
     public dispatch<io::unicorn_tag>
 {
-public:
-    virtual
-    const io::basic_dispatch_t&
-    prototype() const;
-
-    unicorn_service_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
-    friend class unicorn_dispatch_t;
-    friend class distributed_lock_t;
-
     template<class Event, class Method, class Response>
     friend class unicorn_slot_t;
 
-    const std::string& get_name() const { return name; }
+public:
+    unicorn_service_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
+
+    auto
+    prototype() const -> const io::basic_dispatch_t& override {
+        return *this;
+    }
+
 private:
-    std::string name;
-    std::shared_ptr<api::unicorn_t> unicorn;
     std::shared_ptr<logging::logger_t> log;
+
+    std::shared_ptr<api::unicorn_t> unicorn;
 };
 
-/**
-* Service for providing access to unified configuration service.
-* Currently we use zookeeper as backend.
-* For protocol methods description see include/cocaine/idl/unicorn.hpp
-*/
 class unicorn_dispatch_t :
     public dispatch<io::unicorn_final_tag>
 {
 public:
-    unicorn_dispatch_t(const std::string& name, unicorn_service_t* service, api::unicorn_scope_ptr scope);
+    unicorn_dispatch_t(const std::string& name);
 
-    virtual
-    void discard(const std::error_code& ec) const;
+    auto
+    attach(api::unicorn_scope_ptr scope) -> void;
+
+    void
+    discard(const std::error_code& ec) const override;
 
 private:
-    // because discard is marked const
+    // Because discard is marked as const.
+    enum state_t {
+        initial,
+        discarded,
+    } mutable state;
+
+    mutable std::mutex mutex;
     mutable api::unicorn_scope_ptr scope;
 };
 

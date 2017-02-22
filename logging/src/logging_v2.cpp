@@ -211,7 +211,7 @@ struct logging_v2_t::impl_t {
         try {
             auto filter_value = filter_future.get();
             COCAINE_LOG_DEBUG(internal_logger, "received filter update for id {} ", filter_id);
-            if (filter_value.get_version() == unicorn::not_existing_version) {
+            if (filter_value.version() == unicorn::not_existing_version) {
                 bool removed = metafilters.apply(
                 [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mf) -> bool {
                     for (auto& mf_pair : mf) {
@@ -225,7 +225,7 @@ struct logging_v2_t::impl_t {
                     COCAINE_LOG_ERROR(internal_logger, "possible bug - removing unregistered filter {}", filter_id);
                 }
             } else {
-                logging::filter_info_t info(filter_value.get_value());
+                logging::filter_info_t info(filter_value.value());
                 auto metafilter = metafilters.apply(
                 [&](std::map<std::string, std::shared_ptr<logging::metafilter_t>>& mf) {
                     auto& ret = mf[info.logger_name];

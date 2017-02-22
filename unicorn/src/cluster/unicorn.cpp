@@ -209,7 +209,7 @@ void unicorn_cluster_t::on_announce_set(size_t scope_id, std::future<response::c
 
 void unicorn_cluster_t::on_announce_checked(size_t scope_id, std::future<response::subscribe> future) {
     try {
-        if (future.get().get_version() < 0) {
+        if (future.get().version() < 0) {
             drop_scope(scope_id);
             COCAINE_LOG_ERROR(log, "announce dissappeared, retrying");
             announce();
@@ -282,12 +282,12 @@ void unicorn_cluster_t::on_node_fetch(size_t scope_id,
         auto result = node_endpoints.get();
         COCAINE_LOG_INFO(log, "fetched {} node's endpoint from zookeeper", uuid);
         std::vector<asio::ip::tcp::endpoint> fetched_endpoints;
-        if (result.get_value().convertible_to<std::vector<asio::ip::tcp::endpoint>>()) {
-            fetched_endpoints = result.get_value().to<std::vector<asio::ip::tcp::endpoint>>();
+        if (result.value().convertible_to<std::vector<asio::ip::tcp::endpoint>>()) {
+            fetched_endpoints = result.value().to<std::vector<asio::ip::tcp::endpoint>>();
         }
         if (fetched_endpoints.empty()) {
             COCAINE_LOG_WARNING(log, "invalid value for announce: {}",
-                                boost::lexical_cast<std::string>(result.get_value()).c_str()
+                                boost::lexical_cast<std::string>(result.value()).c_str()
             );
             registered_locators.apply([&](locator_endpoints_t& endpoint_map) {
                 endpoint_map.erase(uuid);

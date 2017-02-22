@@ -7,7 +7,6 @@
 
 #include <cocaine/forwards.hpp>
 
-#include "cocaine/api/auth.hpp"
 #include "cocaine/idl/rpc.hpp"
 
 #include "cocaine/detail/service/node/forwards.hpp"
@@ -48,7 +47,7 @@ public:
             id_t id,
             manifest_t manifest,
             profile_t profile,
-            std::shared_ptr<api::auth_t> auth,
+            std::shared_ptr<api::authentication_t> auth,
             asio::io_service& loop,
             cleanup_handler fn);
     slave_t(const slave_t& other) = delete;

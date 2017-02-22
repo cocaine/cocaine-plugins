@@ -8,7 +8,6 @@
 #include "cocaine/idl/node.hpp"
 #include "cocaine/idl/rpc.hpp"
 
-#include "cocaine/api/auth.hpp"
 #include "cocaine/service/node/app/event.hpp"
 #include "cocaine/service/node/manifest.hpp"
 #include "cocaine/service/node/profile.hpp"
@@ -54,7 +53,7 @@ public:
     /// The application profile.
     synchronized<profile_t> profile_;
 
-    std::shared_ptr<api::auth_t> auth;
+    std::shared_ptr<api::authentication_t> auth;
 
     /// IO loop for timers and standard output fetchers.
     std::shared_ptr<asio::io_service> loop;

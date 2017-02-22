@@ -13,7 +13,6 @@
 #include <cocaine/rpc/actor.hpp>
 #include <cocaine/service/node/profile.hpp>
 
-#include "cocaine/api/auth.hpp"
 #include "cocaine/api/isolate.hpp"
 #include "cocaine/api/stream.hpp"
 
@@ -70,7 +69,7 @@ machine_t::machine_t(context_t& context,
                      id_t id,
                      manifest_t manifest,
                      profile_t profile,
-                     std::shared_ptr<api::auth_t> auth,
+                     std::shared_ptr<api::authentication_t> auth,
                      asio::io_service& loop,
                      cleanup_handler cleanup):
     log(context.log(format("{}/slave", manifest.name), {{ "uuid", id.id() }})),

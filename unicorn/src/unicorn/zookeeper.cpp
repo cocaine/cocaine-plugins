@@ -19,13 +19,14 @@
 #include "cocaine/detail/unicorn/zookeeper/del.hpp"
 #include "cocaine/detail/unicorn/zookeeper/increment.hpp"
 #include "cocaine/detail/unicorn/zookeeper/lock.hpp"
+#include "cocaine/detail/unicorn/zookeeper/lock_state.hpp"
 #include "cocaine/detail/unicorn/zookeeper/put.hpp"
 #include "cocaine/detail/unicorn/zookeeper/subscribe.hpp"
-#include "cocaine/detail/unicorn/zookeeper/lock_state.hpp"
-#include "cocaine/detail/zookeeper/handler.hpp"
 #include "cocaine/detail/zookeeper/errors.hpp"
-#include "cocaine/unicorn/value.hpp"
+#include "cocaine/detail/zookeeper/handler.hpp"
 #include "cocaine/service/unicorn.hpp"
+#include "cocaine/traits/dynamic.hpp"
+#include "cocaine/unicorn/value.hpp"
 
 #include <cocaine/context.hpp>
 #include <cocaine/executor/asio.hpp>
@@ -62,16 +63,15 @@ zookeeper::cfg_t make_zk_config(const dynamic_t& args) {
     return zookeeper::cfg_t(endpoints, cfg.at("recv_timeout_ms", 1000u).as_uint(), cfg.at("prefix", "").as_string());
 }
 
-struct zk_scope_t:
-public api::unicorn_scope_t
+struct zk_scope_t :
+    public api::unicorn_scope_t
 {
     zookeeper::handler_scope_t handler_scope;
 
-    /**
-     * Does nothing as all work is done in handler_scope dtor.
-     */
-    virtual void
-    close(){}
+    /// Does nothing as all work is done in `handler_scope` destructor.
+    virtual
+    void
+    close() {}
 };
 
 template<class F, class Result>
