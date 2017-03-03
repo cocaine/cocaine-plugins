@@ -75,7 +75,7 @@ public:
         const auto identity = auth->identify(headers);
 
         if (auto ec = boost::get<std::error_code>(&identity)) {
-            COCAINE_LOG_ERROR(service.log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
+            COCAINE_LOG_WARNING(service.log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
                 {"code", ec->value()},
                 {"error", ec->message()},
             });
@@ -102,7 +102,7 @@ public:
 
                 response.write(std::move(result));
             } catch (const std::system_error& err) {
-                COCAINE_LOG_ERROR(log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
+                COCAINE_LOG_WARNING(log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
                     {"code", err.code().value()},
                     {"error", error::to_string(err)}
                 });
@@ -117,7 +117,7 @@ public:
 
         auto on_validated = [=](std::error_code ec) mutable {
             if (ec) {
-                COCAINE_LOG_ERROR(log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
+                COCAINE_LOG_WARNING(log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
                     {"code", ec.value()},
                     {"error", ec.message()},
                 });
@@ -130,14 +130,14 @@ public:
             try {
                 dispatch->attach(tuple::invoke(std::move(tuple), std::mem_fn(method)));
             } catch(const std::system_error& err) {
-                COCAINE_LOG_ERROR(log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
+                COCAINE_LOG_WARNING(log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
                     {"code", err.code().value()},
                     {"error", error::to_string(err)},
                 });
 
                 upstream.template send<typename protocol::error>(err.code(), error::to_string(err));
             } catch(const std::exception& err) {
-                COCAINE_LOG_ERROR(log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
+                COCAINE_LOG_WARNING(log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
                     {"error", err.what()},
                 });
                 upstream.template send<typename protocol::error>(error::uncaught_error, err.what());
