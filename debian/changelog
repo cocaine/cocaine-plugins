@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.12.1) unstable; urgency=low
+
+  * Changed: log audit failures as warnings.
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 03 Mar 2017 14:45:10 +0300
+
 cocaine-plugins (0.12.11.3) unstable; urgency=low
 
   * Added: Unicorn authorization.
