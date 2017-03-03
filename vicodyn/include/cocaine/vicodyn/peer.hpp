@@ -1,7 +1,7 @@
 #pragma once
 
-#include "cocaine/vicodyn/queue/send.hpp"
 #include "cocaine/vicodyn/queue/invocation.hpp"
+#include "cocaine/vicodyn/stream.hpp"
 
 #include <asio/ip/tcp.hpp>
 
@@ -23,7 +23,7 @@ public:
 
     auto invoke(const io::aux::decoded_message_t& incoming_message,
                 const io::graph_node_t& protocol,
-                io::upstream_ptr_t downstream) -> std::shared_ptr<queue::send_t>;
+                stream_ptr_t backward_stream) -> stream_ptr_t;
 
     auto connect(std::vector<asio::ip::tcp::endpoint>) -> void;
 

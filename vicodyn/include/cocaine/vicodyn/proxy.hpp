@@ -26,7 +26,7 @@ public:
         return m_version;
     }
 
-    auto process(const io::decoder_t::message_type& incoming_message, const io::upstream_ptr_t& upstream) const ->
+    auto process(const io::decoder_t::message_type& incoming_message, const io::upstream_ptr_t& backward_stream) const ->
         boost::optional<io::dispatch_ptr_t> override;
 
     auto register_real(std::string uuid, std::vector<asio::ip::tcp::endpoint> endpoints, bool local) -> void {

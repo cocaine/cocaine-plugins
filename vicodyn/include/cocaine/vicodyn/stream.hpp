@@ -1,7 +1,6 @@
 #pragma once
 
 #include "cocaine/vicodyn/forwards.hpp"
-#include "cocaine/vicodyn/proxy/appendable.hpp"
 
 #include <cocaine/forwards.hpp>
 #include <cocaine/hpack/header.hpp>
@@ -12,13 +11,19 @@
 
 namespace cocaine {
 namespace vicodyn {
-namespace queue {
 
-class send_t: public proxy::appendable_t {
+class stream_t {
 public:
-    auto append(const msgpack::object& message, uint64_t event_id, hpack::header_storage_t headers) -> void override;
+    stream_t();
+    stream_t(const stream_t&) = delete;
+    stream_t& operator=(const stream_t&) = delete;
+    stream_t(stream_t&&) = default;
+    stream_t& operator=(stream_t&&) = default;
 
-    auto attach(io::upstream_ptr_t upstream) -> void;
+    auto attach(io::upstream_ptr_t wrapped_stream) -> void;
+    auto attach(std::shared_ptr<session_t> session) -> void;
+
+    auto append(const msgpack::object& message, uint64_t event_id, hpack::header_storage_t headers) -> void;
 
 private:
     struct operation_t {
@@ -40,12 +45,9 @@ private:
 
     // Operation log.
     std::vector<operation_t> operations;
-
-    // The upstream might be attached during message invocation, so it has to be synchronized for
-    // thread safety - the atomicity guarantee of the shared_ptr<T> is not enough.
-    io::upstream_ptr_t upstream;
+    io::upstream_ptr_t wrapped_stream;
+    std::shared_ptr<session_t> session;
 };
 
-} // namespace queue
 } // namespace vicodyn
 } // namespace cocaine

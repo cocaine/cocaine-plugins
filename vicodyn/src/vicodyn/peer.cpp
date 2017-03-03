@@ -1,5 +1,7 @@
 #include "cocaine/vicodyn/peer.hpp"
 
+#include "cocaine/vicodyn/stream.hpp"
+
 #include <cocaine/context.hpp>
 #include <cocaine/engine.hpp>
 #include <cocaine/logging.hpp>
@@ -17,7 +19,9 @@
 namespace cocaine {
 namespace vicodyn {
 
-peer_t::~peer_t() = default;
+peer_t::~peer_t(){
+    VICODYN_DEBUG("peer dtor");
+}
 
 peer_t::peer_t(context_t& _context, asio::io_service& _loop) :
     context(_context),
@@ -32,11 +36,12 @@ auto peer_t::absorb(peer_t&& peer) -> void {
 
 auto peer_t::invoke(const io::decoder_t::message_type& incoming_message,
                     const io::graph_node_t& protocol,
-                    io::upstream_ptr_t downstream) -> std::shared_ptr<queue::send_t>
+                    stream_ptr_t backward_stream) -> std::shared_ptr<stream_t>
 {
     assert(error_cb);
 
-    return queue->append(incoming_message.args(), incoming_message.type(), incoming_message.headers(), protocol, downstream);
+    return queue->append(incoming_message.args(), incoming_message.type(), incoming_message.headers(), protocol,
+                         std::move(backward_stream));
 }
 
 auto peer_t::connected() -> bool {
@@ -58,6 +63,7 @@ auto peer_t::connect(std::vector<asio::ip::tcp::endpoint> _endpoints) -> void {
                 VICODYN_DEBUG("peer disappeared during connection");
                 return;
             }
+            VICODYN_DEBUG("peer connected");
             if(ec) {
                 COCAINE_LOG_ERROR(logger, "could not connect - {}({})", ec.message(), ec.value());
                 error_cb(make_exceptional_future<void>(ec));
@@ -72,7 +78,7 @@ auto peer_t::connect(std::vector<asio::ip::tcp::endpoint> _endpoints) -> void {
                 auto session = context.engine().attach(std::move(ptr), nullptr);
                 // queue will be in consistent state if exception is thrown
                 // it is safe to reconnect peer to different endpoint
-                queue->attach(std::move(session));
+                queue->attach(session_t::shared(std::move(session)));
             } catch(const std::exception& e) {
                 COCAINE_LOG_WARNING(logger, "failed to attach session to queue: {}", e.what());
                 error_cb(make_exceptional_future<void>());

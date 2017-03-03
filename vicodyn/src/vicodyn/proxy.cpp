@@ -2,6 +2,7 @@
 
 #include "cocaine/vicodyn/peer.hpp"
 #include "cocaine/vicodyn/proxy/dispatch.hpp"
+#include "cocaine/vicodyn/stream.hpp"
 
 #include <cocaine/context.hpp>
 #include <cocaine/errors.hpp>
@@ -31,7 +32,7 @@ proxy_t::proxy_t(context_t& context,
 }
 
 boost::optional<io::dispatch_ptr_t>
-proxy_t::process(const io::decoder_t::message_type& incoming_message, const io::upstream_ptr_t& upstream) const {
+proxy_t::process(const io::decoder_t::message_type& incoming_message, const io::upstream_ptr_t& raw_backward_stream) const {
     auto slot_id = incoming_message.type();
     auto protocol_it = m_protocol.find(slot_id);
     COCAINE_LOG_DEBUG(logger, "graph has {} handles", m_protocol.size());
@@ -55,15 +56,18 @@ proxy_t::process(const io::decoder_t::message_type& incoming_message, const io::
         COCAINE_LOG_ERROR(logger, msg);
         throw error_t(error::slot_not_found, msg);
     }
-    auto queue = pool->invoke(incoming_message, *backward_protocol, upstream);
+    stream_ptr_t backward_stream = std::make_shared<stream_t>();
+    backward_stream->attach(std::move(raw_backward_stream));
+    auto forward_stream = pool->invoke(incoming_message, *backward_protocol, std::move(backward_stream));
 
     // terminal transition
     if(forward_protocol->empty()) {
         return boost::optional<io::dispatch_ptr_t>(nullptr);
     }
     auto dispatch_name = cocaine::format("->/{}/{}", name(), std::get<0>(protocol_tuple));
-    auto dispatch = std::make_shared<proxy::dispatch_t>(std::move(dispatch_name), queue, *forward_protocol);
-    return boost::optional<io::dispatch_ptr_t>(std::move(dispatch));
+    auto forward_dispatch = std::make_shared<proxy::dispatch_t>(
+            std::move(dispatch_name), forward_stream, *forward_protocol);
+    return boost::optional<io::dispatch_ptr_t>(std::move(forward_dispatch));
 }
 
 } // namespace vicodyn

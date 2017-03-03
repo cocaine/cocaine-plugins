@@ -11,11 +11,11 @@ ADD_LIBRARY(vicodyn SHARED
         src/vicodyn/peer.cpp
         src/vicodyn/peer/pool/basic.cpp
         src/vicodyn/queue/invocation.cpp
-        src/vicodyn/queue/send.cpp
-        src/vicodyn/stream/wrapper.cpp
+        src/vicodyn/session.cpp
+        src/vicodyn/stream.cpp
         )
 
-#ADD_DEFINITIONS("-DVICODYN_USE_DEBUG")
+ADD_DEFINITIONS("-DVICODYN_USE_DEBUG")
 TARGET_LINK_LIBRARIES(vicodyn
         msgpack
         blackhole

@@ -2,8 +2,10 @@
 
 #include "cocaine/vicodyn/proxy.hpp"
 
+
 #include <cocaine/errors.hpp>
 #include <cocaine/format.hpp>
+
 
 namespace cocaine {
 namespace vicodyn {
@@ -19,10 +21,10 @@ auto make_root(const io::graph_node_t& branch) -> io::graph_root_t {
 }
 
 dispatch_t::dispatch_t(const std::string& name,
-                       appendable_ptr _downstream,
+                       std::shared_ptr<stream_t> _proxy_stream,
                        const io::graph_node_t& _current_state) :
     io::basic_dispatch_t(name),
-    downstream(std::move(_downstream)),
+    proxy_stream(std::move(_proxy_stream)),
     full_name(name),
     current_state(&_current_state),
     current_root(make_root(*current_state))
@@ -44,7 +46,7 @@ auto dispatch_t::process(const io::decoder_t::message_type& incoming_message, co
     -> boost::optional<io::dispatch_ptr_t>
 {
     VICODYN_DEBUG("processing dispatch {}/{}", incoming_message.span(), incoming_message.type());
-    downstream->append(incoming_message.args(), incoming_message.type(), incoming_message.headers());
+    proxy_stream->append(incoming_message.args(), incoming_message.type(), incoming_message.headers());
     auto event_span = incoming_message.type();
     auto protocol_span = current_state->find(event_span);
     if(protocol_span == current_state->end()) {

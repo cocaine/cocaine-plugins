@@ -69,6 +69,9 @@ namespace vicodyn {
 
 class proxy_t;
 class peer_t;
+class stream_t;
+class session_t;
+using stream_ptr_t = std::shared_ptr<stream_t>;
 
 } // namespace vicodyn
 } // namespace cocaine

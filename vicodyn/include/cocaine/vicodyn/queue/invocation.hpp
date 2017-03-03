@@ -1,7 +1,8 @@
 #pragma once
 
 #include "cocaine/vicodyn/forwards.hpp"
-#include "cocaine/vicodyn/queue/send.hpp"
+#include "cocaine/vicodyn/session.hpp"
+#include "cocaine/vicodyn/stream.hpp"
 
 #include <cocaine/forwards.hpp>
 #include <cocaine/hpack/header.hpp>
@@ -16,18 +17,19 @@ namespace queue {
 
 class invocation_t {
 public:
-    std::shared_ptr<queue::send_t>
-    append(const msgpack::object& message,
-           uint64_t event_id,
-           hpack::header_storage_t headers,
-           const io::graph_node_t& protocol,
-           io::upstream_ptr_t downstream);
+
+    auto append(const msgpack::object& message, uint64_t event_id, hpack::header_storage_t headers,
+                const io::graph_node_t& protocol, stream_ptr_t backward_stream) -> stream_ptr_t;
 
     auto absorb(invocation_t&& queue) -> void;
 
     auto attach(std::shared_ptr<session_t> session) -> void;
 
     auto connected() -> bool;
+
+    ~invocation_t() {
+            VICODYN_DEBUG("queue dtor, use count - {}", m_session->use_count());
+    }
 
 private:
     struct operation_t {
@@ -46,14 +48,14 @@ private:
         // message headers
         hpack::header_storage_t headers;
 
-        //invocation upstream to respond to
-        io::upstream_ptr_t upstream;
-
         // incoming protocol to fork session to
         const io::graph_node_t* incoming_protocol;
 
+        //send queue to respond to
+        stream_ptr_t backward_stream;
+
         // send queue to queue all further send invocations
-        std::shared_ptr<queue::send_t> send_queue;
+        stream_ptr_t forward_stream;
     };
 
     auto execute(std::shared_ptr<session_t> session, const operation_t& op) -> void;

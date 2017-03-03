@@ -15,6 +15,7 @@
 #include <functional>
 #include <cocaine/utility/future.hpp>
 #include <cocaine/idl/context.hpp>
+#include <cocaine/vicodyn/stream.hpp>
 
 namespace cocaine {
 namespace vicodyn {
@@ -84,7 +85,7 @@ basic_t::~basic_t() = default;
 
 auto basic_t::invoke(const io::aux::decoded_message_t& incoming_message,
                      const io::graph_node_t& protocol,
-                     io::upstream_ptr_t downstream) -> std::shared_ptr<vicodyn::queue::send_t>
+                     stream_ptr_t backward_stream) -> stream_ptr_t
 {
     std::shared_ptr<peer_t> peer;
     std::string uuid;
@@ -92,7 +93,7 @@ auto basic_t::invoke(const io::aux::decoded_message_t& incoming_message,
         std::tie(uuid, peer) = choose_peer();
         try {
             COCAINE_LOG_DEBUG(logger, "processing invocation via {}", uuid);
-            return peer->invoke(incoming_message, protocol, downstream);
+            return peer->invoke(incoming_message, protocol, std::move(backward_stream));
         } catch(std::system_error& e) {
             on_peer_error(uuid, make_exceptional_future<void>());
         }

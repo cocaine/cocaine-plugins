@@ -1,6 +1,6 @@
 #pragma once
+#include "cocaine/vicodyn/stream.hpp"
 
-#include "cocaine/vicodyn/proxy/appendable.hpp"
 #include <cocaine/rpc/basic_dispatch.hpp>
 
 namespace cocaine {
@@ -16,15 +16,13 @@ public:
 
     auto version() const -> int override;
 
-    dispatch_t(const std::string& name,
-               appendable_ptr _downstream,
-               const io::graph_node_t& _current_state);
+    dispatch_t(const std::string& name, std::shared_ptr<stream_t> proxy_stream, const io::graph_node_t& _current_state);
 
     auto process(const io::decoder_t::message_type& incoming_message, const io::upstream_ptr_t&) const
         -> boost::optional<io::dispatch_ptr_t> override;
 
 private:
-    appendable_ptr downstream;
+    std::shared_ptr<stream_t> proxy_stream;
     mutable std::string full_name;
     mutable const io::graph_node_t* current_state;
     mutable io::graph_root_t current_root;
