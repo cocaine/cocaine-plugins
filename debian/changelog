@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.12.2) unstable; urgency=low
+
+  * Fix: fd leak in vicodyn.
+
+ -- Anton Matveenko <antmat@me.com>  Fri, 03 Mar 2017 20:24:22 +0300
+
 cocaine-plugins (0.12.12.1) unstable; urgency=low
 
   * Changed: log audit failures as warnings.
