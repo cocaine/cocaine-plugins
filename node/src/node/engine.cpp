@@ -716,6 +716,10 @@ auto engine_t::rebalance_events() -> void {
                         stats.queue_depth->add(queue.size());
                     } catch (const std::exception& err) {
                         COCAINE_LOG_WARNING(log, "slave has rejected assignment: {}", err.what());
+                        loop->post([&] {
+                            rebalance_slaves();
+                        });
+                        return;
                     }
                 }
             }
