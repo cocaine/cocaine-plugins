@@ -500,7 +500,7 @@ auto engine_t::spawn(const id_t& id, pool_type& pool) -> void {
         )
     ));
 
-    stats.slaves.spawned->fetch_add(1);;
+    stats.slaves.spawned->fetch_add(1);
 }
 
 auto engine_t::assign(slave_t& slave, load_t& load) -> void {
