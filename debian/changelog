@@ -5,7 +5,7 @@ cocaine-plugins (0.12.12.3) unstable; urgency=low
     is processing in the same thread where rebalancing occurs.
   * Fixed: catch client-is-detached exceptions in Unicorn.
 
--- Evgeny Safronov <division494@gmail.com>  Sun, 05 Mar 2017 19:26:18 +0300
+ -- Evgeny Safronov <division494@gmail.com>  Sun, 05 Mar 2017 19:26:18 +0300
 
 cocaine-plugins (0.12.12.2) unstable; urgency=low
 
