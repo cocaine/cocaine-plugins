@@ -147,7 +147,11 @@ public:
         };
 
         authorization->verify<Event>(path, ident, [=](std::error_code code) mutable {
-            on_validated(code);
+            try {
+                on_validated(code);
+            } catch (const std::system_error& err) {
+                // Only client-is-detached exceptions may be caught here.
+            }
         });
 
         return result_dispatch_type(dispatch);
