@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.12.4) unstable; urgency=low
+
+  * Fixed: specify uid type precisely.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 07 Mar 2017 14:48:57 +0300
+
 cocaine-plugins (0.12.12.3) unstable; urgency=low
 
   * Fixed: rebalance events deferredly.
