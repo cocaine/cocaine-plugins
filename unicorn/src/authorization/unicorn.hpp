@@ -21,7 +21,7 @@ enum flags_t: std::size_t {
 };
 
 class enabled_t : public api::authorization::unicorn_t {
-    using node_t = std::tuple<uid_t, flags_t>;
+    using node_t = std::tuple<auth::uid_t, flags_t>;
     using metainfo_t = std::vector<node_t>;
 
     std::unique_ptr<logging::logger_t> log;

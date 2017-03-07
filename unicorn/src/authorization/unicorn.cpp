@@ -145,7 +145,7 @@ enabled_t::verify(std::size_t event, const std::string& path, const auth::identi
             if (op.is_modify() && uids.size() > 0) {
                 COCAINE_LOG_INFO(log_, "initializing ACL for '{}' prefix for uid(s) [{}]", *prefix,
                     [&](std::ostream& stream) -> std::ostream& {
-                        return stream << boost::join(uids | boost::adaptors::transformed(static_cast<std::string(*)(uid_t)>(std::to_string)), ", ");
+                        return stream << boost::join(uids | boost::adaptors::transformed(static_cast<std::string(*)(auth::uid_t)>(std::to_string)), ", ");
                     }
                 );
 
@@ -179,7 +179,7 @@ enabled_t::verify(std::size_t event, const std::string& path, const auth::identi
 
         BOOST_ASSERT(metainfo.size() > 0);
 
-        const auto allowed = std::all_of(std::begin(uids), std::end(uids), [&](uid_t uid) {
+        const auto allowed = std::all_of(std::begin(uids), std::end(uids), [&](auth::uid_t uid) {
             const auto it = std::find_if(
                 std::begin(metainfo),
                 std::end(metainfo),
