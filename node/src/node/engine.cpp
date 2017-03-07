@@ -245,15 +245,9 @@ public:
         result["timings"] = info;
 
         dynamic_t::object_t reversed;
-        const auto& values = snapshot.values();
 
-        const auto find = [&](double ms) -> double {
-            if (values.empty()) {
-                return 0;
-            }
-
-            const auto it = std::lower_bound(values.begin(), values.end(), ms);
-            return 100.00 * std::distance(values.begin(), it) / values.size();
+        const auto find = [&](const double ms) -> double {
+            return 100.0 * snapshot.phi(ms);
         };
 
         reversed["1ms"]    = trunc(find(1e6), 2);

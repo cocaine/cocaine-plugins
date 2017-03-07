@@ -3,7 +3,7 @@
 #include <atomic>
 #include <cstdint>
 
-#include <metrics/accumulator/sliding/window.hpp>
+#include <metrics/accumulator/decaying/exponentially.hpp>
 #include <metrics/meter.hpp>
 #include <metrics/timer.hpp>
 #include <metrics/usts/ewma.hpp>
@@ -36,7 +36,7 @@ struct stats_t {
     metrics::shared_metric<metrics::gauge<double>> queue_depth_gauge;
 
     /// Channel processing time quantiles (summary).
-    metrics::shared_metric<metrics::timer<metrics::accumulator::sliding::window_t>> timer;
+    metrics::shared_metric<metrics::timer<metrics::accumulator::decaying::exponentially_t>> timer;
 
     stats_t(context_t& context, const std::string& name, std::chrono::high_resolution_clock::duration interval);
 };

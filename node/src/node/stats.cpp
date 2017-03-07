@@ -28,7 +28,7 @@ stats_t::stats_t(context_t& context, const std::string& name, std::chrono::high_
             std::bind(&metrics::usts::ewma_t::get, queue_depth)
         )
     ),
-    timer(context.metrics_hub().timer<metrics::accumulator::sliding::window_t>(cocaine::format("{}.timings", name)))
+    timer(context.metrics_hub().timer<metrics::accumulator::decaying::exponentially_t>(cocaine::format("{}.timings", name)))
 {
     queue_depth->add(0);
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <metrics/accumulator/sliding/window.hpp>
+#include <metrics/accumulator/decaying/exponentially.hpp>
 #include <metrics/accumulator/snapshot/uniform.hpp>
 #include <metrics/meter.hpp>
 #include <metrics/timer.hpp>
@@ -52,6 +53,10 @@ public:
     }
 
     auto visit(const libmetrics::timer<libmetrics::accumulator::sliding::window_t>& metric) -> void override {
+        do_visit(metric);
+    }
+
+    auto visit(const libmetrics::timer<libmetrics::accumulator::decaying::exponentially_t>& metric) -> void override {
         do_visit(metric);
     }
 
