@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.12.5) unstable; urgency=low
+
+  * Fixed: use after move in vicodyn.
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 09 Mar 2017 14:14:57 +0300
+
 cocaine-plugins (0.12.12.4) unstable; urgency=low
 
   * Fixed: specify uid type precisely.
