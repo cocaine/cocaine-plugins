@@ -93,7 +93,7 @@ auto basic_t::invoke(const io::aux::decoded_message_t& incoming_message,
         std::tie(uuid, peer) = choose_peer();
         try {
             COCAINE_LOG_DEBUG(logger, "processing invocation via {}", uuid);
-            return peer->invoke(incoming_message, protocol, std::move(backward_stream));
+            return peer->invoke(incoming_message, protocol, backward_stream);
         } catch(std::system_error& e) {
             on_peer_error(uuid, make_exceptional_future<void>());
         }
