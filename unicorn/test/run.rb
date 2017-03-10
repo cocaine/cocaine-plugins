@@ -1,3 +1,4 @@
+#coding: utf-8
 require 'securerandom'
 require 'cocaine'
 require 'rspec'
@@ -26,6 +27,10 @@ INVALID_NODE_NAME = 5
 INVALID_PATH = 6
 VERSION_NOT_ALLOWED = 7
 
+def new_unicorn
+  Cocaine::Service.new(:unicorn, [[Default::Locator.host, Default::Locator.port]])
+end
+
 def node_gen
   node = '/test/' + SecureRandom.hex
 end
@@ -45,7 +50,7 @@ def node_val_gen
 end
 
 def create(name, val)
-  unicorn = Cocaine::Service.new(:unicorn)
+  unicorn = new_unicorn()
   tx, rx = unicorn.create(name, val)
 	result = rx.recv(timeout)
 	tx.close
@@ -54,7 +59,7 @@ def create(name, val)
 end
 
 def get(name)
-  unicorn = Cocaine::Service.new(:unicorn)
+  unicorn = new_unicorn()
   tx, rx = unicorn.get(name)
 	result = rx.recv(timeout)
 	tx.close
@@ -63,7 +68,7 @@ def get(name)
 end
 
 def del(name, version=0)
-  unicorn = Cocaine::Service.new(:unicorn)
+  unicorn = new_unicorn()
   tx, rx = unicorn.del(name, version)
   result = rx.recv(timeout)
   tx.close
@@ -72,7 +77,7 @@ def del(name, version=0)
 end
 
 def put(name, value='test_value', version=0)
-  unicorn = Cocaine::Service.new(:unicorn)
+  unicorn = new_unicorn()
   tx, rx = unicorn.put(name, value, version)
   result = rx.recv(timeout)
   tx.close
@@ -230,7 +235,7 @@ describe :Unicorn do
   it 'should handle "subscribe" for unexisting value' do
     node = node_gen
     node_val = node_val_gen
-    unicorn = Cocaine::Service.new(:unicorn)
+    unicorn = new_unicorn()
     tx, rx = unicorn.subscribe(node)
     result = rx.recv(fast_timeout)
     expect(result[1][0][0]).to be nil
@@ -264,7 +269,7 @@ describe :Unicorn do
   it 'should handle "subscribe" for existing value' do
     node = node_gen
     node_val = {'key' => 'value'}
-    unicorn = Cocaine::Service.new(:unicorn)
+    unicorn = new_unicorn()
     ensure_create(node, node_val)
     tx, rx = unicorn.subscribe(node)
     result = rx.recv(timeout)
@@ -279,7 +284,7 @@ describe :Unicorn do
 
   it 'should handle "del" error on unexisting path' do
     node = node_gen
-    unicorn = Cocaine::Service.new(:unicorn)
+    unicorn = new_unicorn()
     for i in [-1, 0, 1]
       tx, rx = unicorn.del(node, i)
       result = rx.recv(timeout)
@@ -292,7 +297,7 @@ describe :Unicorn do
     node = node_gen
     node_val = node_val_gen
     ensure_create(node, node_val)
-    unicorn = Cocaine::Service.new(:unicorn)
+    unicorn = new_unicorn()
     tx, rx = unicorn.del(node, 42)
     result = rx.recv(timeout)
     expect(result[1][0][0]).to be ZK_ERROR_CATEGORY
@@ -302,7 +307,7 @@ describe :Unicorn do
   it 'should handle "del" correctly on valid path and version' do
     node = node_gen
     node_val = {'key' => 'value'}
-    unicorn = Cocaine::Service.new(:unicorn)
+    unicorn = new_unicorn()
     ensure_create(node, node_val)
     ensure_del(node)
     ensure_create(node, node_val)
@@ -321,7 +326,7 @@ describe :Unicorn do
 
   it 'should handle "increment" on new node' do
     node = node_gen
-    unicorn = Cocaine::Service.new(:unicorn)
+    unicorn = new_unicorn()
     tx, rx = unicorn.increment(node, 42)
     result = rx.recv(timeout)
     expect(result[1][0][0]).to eq 42
@@ -338,7 +343,7 @@ describe :Unicorn do
 
   it 'should handle "increment" on integer node' do
     node = node_gen
-    unicorn = Cocaine::Service.new(:unicorn)
+    unicorn = new_unicorn()
     ensure_create(node, 42)
     tx, rx = unicorn.increment(node, 10)
     result = rx.recv(timeout)
@@ -354,7 +359,7 @@ describe :Unicorn do
 
   it 'should handle "increment" on float node' do
     node = node_gen
-    unicorn = Cocaine::Service.new(:unicorn)
+    unicorn = new_unicorn()
     ensure_create(node, 42.1)
     tx, rx = unicorn.increment(node, 10)
     result = rx.recv(timeout)
@@ -370,7 +375,7 @@ describe :Unicorn do
 
   it 'should handle "increment" errors' do
     node = node_gen
-    unicorn = Cocaine::Service.new(:unicorn)
+    unicorn = new_unicorn()
     tx, rx = unicorn.increment(node, 'Invalid value')
     result = rx.recv(timeout)
     expect(result[1][0][0]).to be UNICORN_ERROR_CATEGORY
@@ -390,7 +395,7 @@ describe :Unicorn do
 
   it 'should handle "children_subscribe" no node error correctly' do
     node = node_gen
-    unicorn = Cocaine::Service.new(:unicorn)
+    unicorn = new_unicorn()
     tx, rx = unicorn.children_subscribe(node)
     result = rx.recv(timeout)
     expect(result[1][0][0]).to be ZK_ERROR_CATEGORY
@@ -400,7 +405,7 @@ describe :Unicorn do
   it 'should handle "children_subscribe" correctly' do
     node = node_gen
     ensure_create(node, "")
-    unicorn = Cocaine::Service.new(:unicorn)
+    unicorn = new_unicorn()
     tx, rx = unicorn.children_subscribe(node)
     result = rx.recv(timeout)
     version = 0
@@ -441,8 +446,8 @@ describe :Unicorn do
 
   it 'should lock properly and pass lock to other connection on close' do
     node = '/test/test_lock'
-    unicorn = Cocaine::Service.new(:unicorn)
-    unicorn2 = Cocaine::Service.new(:unicorn)
+    unicorn = new_unicorn()
+    unicorn2 = new_unicorn()
 
     tx, rx = unicorn.lock(node)
     result = rx.recv
