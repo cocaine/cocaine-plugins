@@ -257,6 +257,7 @@ struct unicorn {
         static const char* alias() {
             return "close";
         }
+        typedef void upstream_type;
     };
 };
 
