@@ -237,7 +237,7 @@ inline boost::optional<const attribute_view_t&> find_attribute(const blackhole::
 
 filter_info_t::filter_info_t(filter_t _filter,
                              filter_t::deadline_t _deadline,
-                             filter_t::id_type _id,
+                             filter_t::id_t _id,
                              filter_t::disposition_t _disposition,
                              std::string _logger_name)
     : filter(std::move(_filter)),
@@ -247,20 +247,29 @@ filter_info_t::filter_info_t(filter_t _filter,
       logger_name(std::move(_logger_name)) {}
 
 filter_info_t::filter_info_t(const dynamic_t& value) {
+    const auto throw_error = [&] {
+        throw cocaine::error_t("invalid representation for filter info - {}", boost::lexical_cast<std::string>(value));
+    };
     if (!value.is_object()) {
-        throw cocaine::error_t("invalid representation for filter info - {}",
-                               boost::lexical_cast<std::string>(value));
+        throw_error();
     }
     const auto& obj = value.as_object();
-    if (!obj.count("filter") || !obj.count("deadline") || !obj.count("id") ||
-        !obj.count("logger_name")) {
-        throw cocaine::error_t("invalid representation for filter info - {}",
-                               boost::lexical_cast<std::string>(value));
+    static const std::vector<std::string> required_keys {"filter", "deadline", "id", "logger_name", "disposition"};
+    for(const auto& key: required_keys) {
+        if(!obj.count(key)) {
+            throw_error();
+        }
     }
     filter = filter_t(obj.at("filter"));
     typedef filter_t::deadline_t dl_t;
     deadline = dl_t(dl_t::duration(obj.at("deadline").as_uint()));
     id = obj.at("id").as_uint();
+
+    disposition = static_cast<filter_t::disposition_t>(obj.at("disposition").as_uint());
+    if(disposition != filter_t::disposition_t::cluster && disposition != filter_t::disposition_t::local) {
+        throw_error();
+    }
+
     logger_name = obj.at("logger_name").as_string();
 }
 
@@ -270,6 +279,7 @@ dynamic_t filter_info_t::representation() {
     container["deadline"] = deadline.time_since_epoch().count();
     container["id"] = id;
     container["logger_name"] = logger_name;
+    container["disposition"] = static_cast<uint64_t>(disposition);
     return dynamic_t(std::move(container));
 }
 

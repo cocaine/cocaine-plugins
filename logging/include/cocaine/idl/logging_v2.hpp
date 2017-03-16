@@ -149,9 +149,8 @@ struct base_log {
             // TTL of the filter
             logging::filter_t::seconds_t>::type argument_type;
 
-        typedef option_of<
-            // Id of the filter created.
-            logging::filter_t::id_type>::tag upstream_type;
+        // Id of the filter created.
+        typedef option_of<logging::filter_t::id_t>::tag upstream_type;
     };
 
     struct remove_filter {
@@ -161,7 +160,7 @@ struct base_log {
             return "remove_filter";
         }
 
-        typedef boost::mpl::list<logging::filter_t::id_type>::type argument_type;
+        typedef boost::mpl::list<logging::filter_t::id_t>::type argument_type;
 
         // true if filter was deleted,
         // false if it didn't exist,
@@ -178,7 +177,7 @@ struct base_log {
 
         typedef option_of<std::vector<std::tuple<std::string,
                                                  logging::filter_t::representation_t,
-                                                 logging::filter_t::id_type,
+                                                 logging::filter_t::id_t,
                                                  logging::filter_t::disposition_t>>>::tag
             upstream_type;
     };
@@ -200,7 +199,7 @@ struct base_log {
 
         typedef option_of<
             // Id of the filter created.
-            logging::filter_t::id_type>::tag upstream_type;
+            logging::filter_t::id_t>::tag upstream_type;
     };
 };
 

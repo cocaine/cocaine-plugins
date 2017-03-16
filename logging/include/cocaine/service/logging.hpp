@@ -43,29 +43,20 @@ class logging_v2_t : public api::service_t, public dispatch<io::base_log_tag> {
 public:
     virtual const io::basic_dispatch_t& prototype() const;
 
-    logging_v2_t(context_t& context,
-              asio::io_service& asio,
-              const std::string& name,
-              const dynamic_t& args);
+    logging_v2_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
+
     struct impl_t;
 
 private:
     class logging_slot_t;
 
-    struct deleter_t {
-        void operator()(impl_t*);
-    };
-    std::unique_ptr<impl_t, deleter_t> impl;
+    std::shared_ptr<impl_t> d;
 };
 
 class named_logging_t : public dispatch<io::named_log_tag> {
 public:
-    template<class Event>
-    class emit_slot_t;
+    named_logging_t(logging::logger_t& log, std::string name, std::shared_ptr<logging::metafilter_t> filter);
 
-    named_logging_t(logging::logger_t& log,
-                    std::string name,
-                    std::shared_ptr<logging::metafilter_t> filter);
 private:
     logging::logger_t& log;
     std::string backend;

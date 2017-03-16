@@ -44,7 +44,7 @@ void metafilter_t::add_filter(filter_info_t filter) {
     }
 }
 
-bool metafilter_t::remove_filter(filter_t::id_type filter_id) {
+bool metafilter_t::remove_filter(filter_t::id_t filter_id) {
     std::lock_guard<boost::shared_mutex> guard(mutex);
     auto it = std::find_if(filters.begin(), filters.end(), [=](const filter_info_t& info) {
         return info.id == filter_id;
@@ -66,7 +66,7 @@ bool metafilter_t::empty() const {
 
 filter_result_t metafilter_t::apply(blackhole::severity_t severity,
                                     blackhole::attribute_pack& attributes) {
-    std::vector<filter_t::id_type> ids_to_remove;
+    std::vector<filter_t::id_t> ids_to_remove;
     filter_t::deadline_t now = filter_t::clock_t::now();
     filter_result_t result = filter_result_t::reject;
     boost::shared_lock<boost::shared_mutex> guard(mutex);
@@ -95,11 +95,12 @@ filter_result_t metafilter_t::apply(blackhole::severity_t severity,
     return result;
 }
 
-void metafilter_t::each(const callable_t& visitor) const {
+void metafilter_t::each(const callable_t& fn) const {
     boost::shared_lock<boost::shared_mutex> guard(mutex);
     for (const auto& filter_info : filters) {
-        visitor(filter_info);
+        fn(filter_info);
     }
 }
+
 }
 }  // namespace cocaine::logging

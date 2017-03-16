@@ -114,8 +114,8 @@ describe :Unicorn do
 
   it 'should return error for invalid path' do
 		result = create("INVALID NODE", "VALUE")
-		expect(result[1][0][0]).to eq ZK_ERROR_CATEGORY
-		expect(result[1][0][1]).to eq ZBADARGUMENTS
+		expect(result[1][0][0]).to eq UNICORN_ERROR_CATEGORY
+		expect(result[1][0][1]).to eq INVALID_PATH
 	end
 
 	it 'should perform simple "create"' do
@@ -470,8 +470,8 @@ describe :Unicorn do
   it 'should free lock on close without recv' do
     sleep(10)
     node = '/test/test_lock'
-    unicorn = Cocaine::Service.new(:unicorn)
-    unicorn2 = Cocaine::Service.new(:unicorn)
+    unicorn = new_unicorn()
+    unicorn2 = new_unicorn()
 
     tx, rx = unicorn.lock(node)
     tx.close

@@ -47,13 +47,13 @@ public:
 
     void add_filter(filter_info_t filter);
 
-    bool remove_filter(filter_t::id_type filter_id);
+    bool remove_filter(filter_t::id_t filter_id);
 
     bool empty() const;
 
     typedef std::function<void(const logging::filter_info_t&)> callable_t;
 
-    void each(const callable_t& visitor) const;
+    void each(const callable_t& fn) const;
 
     struct counter_t {
         size_t accepted;
@@ -71,6 +71,7 @@ private:
 
     std::unique_ptr<logger_t> logger;
     std::vector<filter_info_t> filters;
+
     mutable boost::shared_mutex mutex;
 };
 }

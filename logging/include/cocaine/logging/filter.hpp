@@ -38,7 +38,7 @@ enum class filter_result_t { accept, reject };
 class filter_t {
 public:
     typedef uint64_t seconds_t;
-    typedef uint64_t id_type;
+    typedef uint64_t id_t;
     typedef dynamic_t representation_t;
     // TODO: FIXME, use proper type
     enum class disposition_t { local, cluster };
@@ -89,7 +89,7 @@ private:
 struct filter_info_t {
     filter_info_t(filter_t _filter,
                   filter_t::deadline_t _deadline,
-                  filter_t::id_type _id,
+                  filter_t::id_t _id,
                   filter_t::disposition_t _disposition,
                   std::string _logger_name);
 
@@ -97,7 +97,7 @@ struct filter_info_t {
 
     filter_t filter;
     filter_t::deadline_t deadline;
-    filter_t::id_type id;
+    filter_t::id_t id;
     filter_t::disposition_t disposition;
     std::string logger_name;
 
