@@ -578,12 +578,7 @@ private:
             // avoid possible deadlocks.
             parent.loop->dispatch(std::bind(&app_state_t::cancel, &parent, ec));
 
-            // Attempt to finish node service's request.
-            try {
-                parent.deferred.abort({}, ec, msg);
-            } catch (const std::exception&) {
-                // Ignore if the client has been disconnected.
-            }
+            parent.deferred.abort({}, ec, msg);
         }
         virtual
         void
@@ -616,15 +611,11 @@ private:
         }
 
         // Attempt to finish node service's request.
-        try {
-            if (ec) {
-                cancel(ec);
-                deferred.abort({}, ec, ec.message());
-            } else {
-                deferred.close({});
-            }
-        } catch (const std::exception&) {
-            // Ignore if the client has been disconnected.
+        if (ec) {
+            cancel(ec);
+            deferred.abort({}, ec, ec.message());
+        } else {
+            deferred.close({});
         }
     }
 };
