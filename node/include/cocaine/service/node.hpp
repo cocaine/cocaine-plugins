@@ -20,6 +20,8 @@
 
 #pragma once
 
+#include <future>
+
 #include <cocaine/api/service.hpp>
 #include <cocaine/idl/context.hpp>
 #include <cocaine/locked_ptr.hpp>
@@ -37,7 +39,11 @@ class node_t :
     public api::service_t,
     public dispatch<io::node_tag>
 {
-    const std::unique_ptr<logging::logger_t> log;
+public:
+    using callback_type = std::function<void(std::future<void> future)>;
+
+private:
+    const std::shared_ptr<logging::logger_t> log;
 
     context_t& context;
 
@@ -54,7 +60,10 @@ public:
     auto prototype() const -> const io::basic_dispatch_t& override;
 
     auto list() const -> dynamic_t;
-    auto start_app(const std::string& name, const std::string& profile) -> deferred<void>;
+
+    auto
+    start_app(const std::string& name, const std::string& profile, callback_type callback) -> void;
+
     auto pause_app(const std::string& name) -> void;
 
     // TODO: Flags are bad!
@@ -63,6 +72,9 @@ public:
     auto overseer(const std::string& name) const -> std::shared_ptr<node::overseer_t>;
 
 private:
+    auto
+    start_app(const std::string& name, const std::string& profile) -> deferred<void>;
+
     auto on_context_shutdown() -> void;
 };
 

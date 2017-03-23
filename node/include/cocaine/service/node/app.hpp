@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+#include <future>
 #include <string>
 
 #include <boost/thread/thread.hpp>
@@ -29,8 +31,11 @@ private:
     std::shared_ptr<app_state_t> state;
 
 public:
-    app_t(context_t& context, const std::string& manifest, const std::string& profile, deferred<void> deferred);
-   ~app_t();
+    app_t(context_t& context,
+          const std::string& manifest,
+          const std::string& profile,
+          std::function<void(std::future<void> future)> callback);
+    ~app_t();
 
     std::string
     name() const;
