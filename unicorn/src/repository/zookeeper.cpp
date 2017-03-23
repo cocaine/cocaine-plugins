@@ -16,19 +16,19 @@ static auto do_log(void* handler, const char* buf, size_t size) -> int {
         return 0;
     }
 
-    int severity = 0;
+    cocaine::logging::priorities severity = cocaine::logging::debug;
     switch (message[pos + 4]) {
     case 'D':
-        severity = 0;
+        severity = cocaine::logging::debug;
         break;
     case 'I':
-        severity = 1;
+        severity = cocaine::logging::info;
         break;
     case 'W':
-        severity = 2;
+        severity = cocaine::logging::warning;
         break;
     case 'E':
-        severity = 3;
+        severity = cocaine::logging::error;
         break;
     default:
         ;
