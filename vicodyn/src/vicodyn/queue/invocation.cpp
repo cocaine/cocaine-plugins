@@ -42,7 +42,7 @@ auto invocation_t::append(const msgpack::object& message,
                           const io::graph_node_t& incoming_protocol,
                           stream_ptr_t backward_stream) -> std::shared_ptr<stream_t>
 {
-    auto forward_stream = std::make_shared<stream_t>();
+    auto forward_stream = std::make_shared<stream_t>(stream_t::direction_t::forward);
     m_session.apply([&](std::shared_ptr<session_t>& session) mutable {
         if(!session) {
             m_operations.resize(m_operations.size()+1);

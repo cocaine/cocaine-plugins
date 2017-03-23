@@ -20,7 +20,6 @@ namespace cocaine {
 namespace vicodyn {
 
 peer_t::~peer_t(){
-    VICODYN_DEBUG("peer dtor");
 }
 
 peer_t::peer_t(context_t& _context, asio::io_service& _loop) :

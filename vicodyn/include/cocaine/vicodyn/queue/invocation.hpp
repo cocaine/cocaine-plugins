@@ -27,10 +27,6 @@ public:
 
     auto connected() -> bool;
 
-    ~invocation_t() {
-            VICODYN_DEBUG("queue dtor, use count - {}", m_session->use_count());
-    }
-
 private:
     struct operation_t {
         // msgpack object

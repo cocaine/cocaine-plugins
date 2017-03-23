@@ -75,6 +75,10 @@ auto dispatch_t::process(const io::decoder_t::message_type& incoming_message, co
     return boost::optional<io::dispatch_ptr_t>(shared_from_this());
 }
 
+auto dispatch_t::discard(const std::error_code& ec) const -> void {
+    proxy_stream->discard(ec);
+}
+
 }
 }
 } // namesapce cocaine

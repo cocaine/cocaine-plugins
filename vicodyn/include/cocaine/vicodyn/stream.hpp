@@ -14,7 +14,11 @@ namespace vicodyn {
 
 class stream_t {
 public:
-    stream_t();
+    enum class direction_t {
+        forward,
+        backward
+    };
+    stream_t(direction_t);
     stream_t(const stream_t&) = delete;
     stream_t& operator=(const stream_t&) = delete;
     stream_t(stream_t&&) = default;
@@ -24,6 +28,8 @@ public:
     auto attach(std::shared_ptr<session_t> session) -> void;
 
     auto append(const msgpack::object& message, uint64_t event_id, hpack::header_storage_t headers) -> void;
+
+    auto discard(std::error_code) -> void;
 
 private:
     struct operation_t {
@@ -42,6 +48,12 @@ private:
         // message headers
         hpack::header_storage_t headers;
     };
+
+    auto try_discard() -> void;
+
+    synchronized<void> attach_mutex;
+    direction_t direction;
+    boost::optional<std::error_code> discard_code;
 
     // Operation log.
     std::vector<operation_t> operations;

@@ -21,6 +21,8 @@ public:
     auto process(const io::decoder_t::message_type& incoming_message, const io::upstream_ptr_t&) const
         -> boost::optional<io::dispatch_ptr_t> override;
 
+    auto discard(const std::error_code& ec) const -> void override;
+
 private:
     std::shared_ptr<stream_t> proxy_stream;
     mutable std::string full_name;
