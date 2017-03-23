@@ -28,6 +28,7 @@
 #include <cocaine/api/authentication.hpp>
 #include <cocaine/api/authorization/unicorn.hpp>
 #include <cocaine/context.hpp>
+#include <cocaine/format/vector.hpp>
 #include <cocaine/logging.hpp>
 
 #include "cocaine/traits/unicorn.hpp"
@@ -90,7 +91,8 @@ public:
         auto log = std::make_shared<blackhole::wrapper_t>(*service.log, blackhole::attributes_t{
             {"event", std::string(Event::alias())},
             {"path", path},
-            {"uids", cocaine::format("[{}]", boost::join(ident.uids() | boost::adaptors::transformed(static_cast<std::string(*)(auth::uid_t)>(std::to_string)), ";"))},
+            {"cids", cocaine::format("{}", ident.cids())},
+            {"uids", cocaine::format("{}", ident.uids())},
         });
 
         Response response;
@@ -121,7 +123,7 @@ public:
                     {"code", ec.value()},
                     {"error", ec.message()},
                 });
-                upstream.template send<typename protocol::error>(ec);
+                upstream.template send<typename protocol::error>(ec, ec.message());
                 return;
             }
 

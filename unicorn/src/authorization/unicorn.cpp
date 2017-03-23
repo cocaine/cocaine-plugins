@@ -5,6 +5,7 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/range/adaptor/transformed.hpp>
+#include <boost/range/numeric.hpp>
 
 #include <blackhole/wrapper.hpp>
 
@@ -15,11 +16,91 @@
 #include <cocaine/errors.hpp>
 #include <cocaine/executor/asio.hpp>
 #include <cocaine/format.hpp>
+#include <cocaine/format/vector.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/memory.hpp>
+#include <cocaine/traits/enum.hpp>
+#include <cocaine/traits/map.hpp>
+#include <cocaine/traits/tuple.hpp>
 #include <cocaine/unicorn/value.hpp>
 
 #include "cocaine/idl/unicorn.hpp"
+
+namespace cocaine {
+
+template<>
+struct dynamic_converter<authorization::unicorn::metainfo_t> {
+    using result_type = authorization::unicorn::metainfo_t;
+
+    using underlying_type = std::tuple<
+        std::map<auth::cid_t, authorization::unicorn::flags_t>,
+        std::map<auth::uid_t, authorization::unicorn::flags_t>
+    >;
+
+    static
+    result_type
+    convert(const dynamic_t& from) {
+        auto& tuple = from.as_array();
+        if (tuple.size() != 2) {
+            throw std::bad_cast();
+        }
+
+        return result_type{
+            dynamic_converter::convert<auth::cid_t, authorization::unicorn::flags_t>(tuple.at(0)),
+            dynamic_converter::convert<auth::uid_t, authorization::unicorn::flags_t>(tuple.at(1)),
+        };
+    }
+
+    static
+    bool
+    convertible(const dynamic_t& from) {
+        return from.is_array() && from.as_array().size() == 2;
+    }
+
+private:
+    // TODO: Temporary until `dynamic_t` teaches how to convert into maps with non-string keys.
+    template<typename K, typename T>
+    static
+    std::map<K, authorization::unicorn::flags_t>
+    convert(const dynamic_t& from) {
+        std::map<K, authorization::unicorn::flags_t> result;
+        const dynamic_t::object_t& object = from.as_object();
+
+        for(auto it = object.begin(); it != object.end(); ++it) {
+            result.insert(std::make_pair(boost::lexical_cast<K>(it->first), it->second.to<T>()));
+        }
+
+        return result;
+    }
+};
+
+} // namespace cocaine
+
+namespace cocaine { namespace io {
+
+template<>
+struct type_traits<authorization::unicorn::metainfo_t> {
+    typedef authorization::unicorn::metainfo_t type;
+    typedef boost::mpl::list<
+        std::map<auth::cid_t, authorization::unicorn::flags_t>,
+        std::map<auth::uid_t, authorization::unicorn::flags_t>
+    > underlying_type;
+
+    template<class Stream>
+    static inline
+    void
+    pack(msgpack::packer<Stream>& target, const type& source) {
+        type_traits<underlying_type>::pack(target, source.c_perms, source.u_perms);
+    }
+
+    static inline
+    void
+    unpack(const msgpack::object& source, type& target) {
+        type_traits<underlying_type>::unpack(source, target.c_perms, target.u_perms);
+    }
+};
+
+}} // namespace cocaine::io
 
 namespace cocaine {
 namespace authorization {
@@ -75,6 +156,24 @@ extract_prefix(const std::string& path) -> boost::optional<std::string> {
     }
 }
 
+template<typename S, typename P>
+auto
+extract_permissions(const S& subjects, P& perms) -> std::size_t {
+    using value_type = typename S::value_type;
+
+    if (subjects.empty()) {
+        return flags_t::none;
+    }
+
+    return boost::accumulate(
+        subjects,
+        static_cast<std::size_t>(flags_t::both),
+        [&](std::size_t acc, value_type id) {
+            return acc & perms[id];
+        }
+    );
+}
+
 } // namespace
 
 enabled_t::enabled_t(context_t& context, const std::string& service, const dynamic_t& args) :
@@ -102,13 +201,15 @@ enabled_t::verify(std::size_t event, const std::string& path, const auth::identi
     // Operation id.
     const auto id = ++counter;
 
+    auto cids = identity.cids();
     auto uids = identity.uids();
     auto log_ = std::make_shared<blackhole::wrapper_t>(*log, blackhole::attributes_t{
         {"id", id},
         {"path", path},
         {"event", event},
         {"prefix", *prefix},
-        {"uids", cocaine::format("[{}]", boost::join(uids | boost::adaptors::transformed(static_cast<std::string(*)(auth::uid_t)>(std::to_string)), ";"))},
+        {"cids", cocaine::format("{}", cids)},
+        {"uids", cocaine::format("{}", uids)},
     });
 
     // Cleans up scopes and invokes the callback.
@@ -142,26 +243,15 @@ enabled_t::verify(std::size_t event, const std::string& path, const auth::identi
         const auto op = operation_t::from(event);
 
         if (metainfo.empty()) {
-            if (op.is_modify() && uids.size() > 0) {
-                COCAINE_LOG_INFO(log_, "initializing ACL for '{}' prefix for uid(s) [{}]", *prefix,
-                    [&](std::ostream& stream) -> std::ostream& {
-                        return stream << boost::join(uids | boost::adaptors::transformed(static_cast<std::string(*)(auth::uid_t)>(std::to_string)), ", ");
-                    }
-                );
+            if (op.is_modify() && (cids.size() > 0 || uids.size() > 0)) {
+                COCAINE_LOG_INFO(log_, "initializing ACL for '{}' prefix for cid(s) and uid(s)", *prefix);
 
-                metainfo.reserve(uids.size());
-                for (auto uid : uids) {
-                    metainfo.push_back(std::make_tuple(uid, flags_t::both));
+                for (auto cid : cids) {
+                    metainfo.c_perms.insert(std::make_pair(cid, flags_t::both));
                 }
-
-                // Sort by UID to allow binary search.
-                std::sort(
-                    std::begin(metainfo),
-                    std::end(metainfo),
-                    [](const node_t& le, const node_t& ri) -> bool {
-                        return std::get<0>(le) < std::get<0>(ri);
-                    }
-                );
+                for (auto uid : uids) {
+                    metainfo.u_perms.insert(std::make_pair(uid, flags_t::both));
+                }
 
                 COCAINE_LOG_DEBUG(log_, "starting ACL update operation");
                 scopes.apply([&](std::multimap<std::uint64_t, std::shared_ptr<api::unicorn_scope_t>>& scopes_) {
@@ -177,31 +267,16 @@ enabled_t::verify(std::size_t event, const std::string& path, const auth::identi
             return;
         }
 
-        BOOST_ASSERT(metainfo.size() > 0);
+        BOOST_ASSERT(!metainfo.empty());
 
-        const auto allowed = std::all_of(std::begin(uids), std::end(uids), [&](auth::uid_t uid) {
-            const auto it = std::find_if(
-                std::begin(metainfo),
-                std::end(metainfo),
-                [&](const node_t& node) {
-                    return std::get<0>(node) == uid;
-                }
-            );
-
-            if (it == std::end(metainfo)) {
-                return false;
-            }
-
-            return (std::get<1>(*it) & op.flag) == op.flag;
-        });
-
-        if (uids.empty()) {
-            throw std::system_error(std::make_error_code(std::errc::permission_denied));
-        }
+        auto c_perm = extract_permissions(cids, metainfo.c_perms);
+        auto u_perm = extract_permissions(uids, metainfo.u_perms);
+        auto allowed = ((c_perm | u_perm) & op.flag) == op.flag;
 
         if (!allowed) {
             throw std::system_error(std::make_error_code(std::errc::permission_denied));
         }
+
         finalize({});
     };
 
@@ -241,6 +316,10 @@ auto
 enabled_t::create_permissions(const std::string& prefix, metainfo_t metainfo, callback_type callback)
     -> std::shared_ptr<api::unicorn_scope_t>
 {
+    dynamic_t value = std::make_tuple(
+        std::move(metainfo.c_perms),
+        std::move(metainfo.u_perms)
+    );
     return backend->create([=](std::future<bool> future) mutable {
         try {
             const auto updated = future.get();
@@ -252,13 +331,18 @@ enabled_t::create_permissions(const std::string& prefix, metainfo_t metainfo, ca
         } catch (const std::system_error& err) {
             callback(err.code());
         }
-    }, make_path(prefix), value_t(std::move(metainfo)), false, false);
+    }, make_path(prefix), value_t(std::move(value)), false, false);
 }
 
 auto
 enabled_t::update_permissions(const std::string& prefix, metainfo_t metainfo, std::size_t version, callback_type callback)
     -> std::shared_ptr<api::unicorn_scope_t>
 {
+    dynamic_t value = std::make_tuple(
+        std::move(metainfo.c_perms),
+        std::move(metainfo.u_perms)
+    );
+
     return backend->put([=](std::future<std::tuple<bool, versioned_value_t>> future) mutable {
         try {
             bool updated;
@@ -271,7 +355,7 @@ enabled_t::update_permissions(const std::string& prefix, metainfo_t metainfo, st
         } catch (const std::system_error& err) {
             callback(err.code());
         }
-    }, make_path(prefix), value_t(std::move(metainfo)), version);
+    }, make_path(prefix), value_t(std::move(value)), version);
 }
 
 } // namespace unicorn

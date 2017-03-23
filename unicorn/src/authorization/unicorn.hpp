@@ -16,14 +16,27 @@ namespace unicorn {
 using cocaine::unicorn::versioned_value_t;
 
 enum flags_t: std::size_t {
+    none = 0x00,
     read = 0x01,
     both = read | 0x02,
 };
 
-class enabled_t : public api::authorization::unicorn_t {
-    using node_t = std::tuple<auth::uid_t, flags_t>;
-    using metainfo_t = std::vector<node_t>;
+struct metainfo_t {
+    std::map<auth::cid_t, flags_t> c_perms;
+    std::map<auth::uid_t, flags_t> u_perms;
 
+    auto
+    empty() const -> bool {
+        return c_perms.empty() && u_perms.empty();
+    }
+
+    auto
+    size() const -> std::size_t {
+        return c_perms.size() + u_perms.size();
+    }
+};
+
+class enabled_t : public api::authorization::unicorn_t {
     std::unique_ptr<logging::logger_t> log;
     std::shared_ptr<api::unicorn_t> backend;
     std::unique_ptr<api::executor_t> executor;
