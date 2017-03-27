@@ -1,3 +1,14 @@
+cocaine-plugins (0.12.13.0-alpha1) UNRELEASED; urgency=low
+
+  * Feature: weights based quantiles for histograms output in Node service.
+  * Feature: combined Unicorn authorization (#115).
+  * Feature: ACL check for Node service (#113).
+  * Fixed: delete filters from Unicorn on expiration.
+  * Fixed: use protocol extension to properly pass discard of a channel in
+    Vicodyn (#114).
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 27 Mar 2017 14:30:43 +0300
+
 cocaine-plugins (0.12.12.6) unstable; urgency=low
 
   * Fixed: prevent protocol violation in unicorn.
