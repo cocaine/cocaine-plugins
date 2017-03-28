@@ -42,7 +42,7 @@ auto dispatch_t::version() const -> int {
 }
 
 
-auto dispatch_t::process(const io::decoder_t::message_type& incoming_message, const io::upstream_ptr_t&) const
+auto dispatch_t::process(const io::decoder_t::message_type& incoming_message, const io::upstream_ptr_t&)
     -> boost::optional<io::dispatch_ptr_t>
 {
     VICODYN_DEBUG("processing dispatch {}/{}", incoming_message.span(), incoming_message.type());
@@ -75,7 +75,7 @@ auto dispatch_t::process(const io::decoder_t::message_type& incoming_message, co
     return boost::optional<io::dispatch_ptr_t>(shared_from_this());
 }
 
-auto dispatch_t::discard(const std::error_code& ec) const -> void {
+auto dispatch_t::discard(const std::error_code& ec) -> void {
     proxy_stream->discard(ec);
 }
 

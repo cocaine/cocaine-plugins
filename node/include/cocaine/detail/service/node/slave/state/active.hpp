@@ -28,7 +28,7 @@ public:
 
     auto name() const noexcept -> const char*;
     auto active() const noexcept -> bool;
-    auto inject(std::shared_ptr<const dispatch<io::stream_of<std::string>::tag>> dispatch)
+    auto inject(std::shared_ptr<dispatch<io::stream_of<std::string>::tag>> dispatch)
         -> io::upstream_ptr_t;
     auto seal() -> void;
 

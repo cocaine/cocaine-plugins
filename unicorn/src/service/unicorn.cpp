@@ -63,9 +63,9 @@ public:
     {}
 
     virtual
-    boost::optional<std::shared_ptr<const dispatch_type>>
+    boost::optional<std::shared_ptr<dispatch_type>>
     operator()(const std::vector<hpack::header_t>& headers, tuple_type&& args, upstream_type&& upstream) {
-        typedef boost::optional<std::shared_ptr<const dispatch_type>> result_dispatch_type;
+        typedef boost::optional<std::shared_ptr<dispatch_type>> result_dispatch_type;
 
         const auto& path = extract_path(args);
         if (!is_allowed(path)) {
@@ -291,7 +291,7 @@ unicorn_dispatch_t::attach(api::unicorn_scope_ptr nscope) -> void {
 }
 
 void
-unicorn_dispatch_t::discard(const std::error_code& /* ec */) const {
+unicorn_dispatch_t::discard(const std::error_code& /* ec */) {
     std::lock_guard<std::mutex> lock(mutex);
     state = state_t::discarded;
     if (scope) {

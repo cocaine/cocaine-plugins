@@ -50,7 +50,7 @@ public:
     auto cancel() -> void;
 
     /// Called on any I/O error.
-    virtual auto discard(const std::error_code& ec) const -> void;
+    virtual auto discard(const std::error_code& ec) -> void;
 
 private:
     auto on_heartbeat() -> void;

@@ -41,12 +41,6 @@ client_rpc_dispatch_t::attach(upstream<outcoming_tag> stream_, callback_type cal
 }
 
 void
-client_rpc_dispatch_t::discard(const std::error_code& ec) const {
-    // TODO: Consider something less weird.
-    const_cast<client_rpc_dispatch_t*>(this)->discard(ec);
-}
-
-void
 client_rpc_dispatch_t::discard(const std::error_code& ec) {
     if (ec) {
         this->ec = ec;

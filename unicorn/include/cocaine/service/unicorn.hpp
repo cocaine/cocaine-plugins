@@ -38,7 +38,7 @@ public:
     unicorn_service_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
 
     auto
-    prototype() const -> const io::basic_dispatch_t& override {
+    prototype() -> io::basic_dispatch_t& override {
         return *this;
     }
 
@@ -58,7 +58,7 @@ public:
     attach(api::unicorn_scope_ptr scope) -> void;
 
     void
-    discard(const std::error_code& ec) const override;
+    discard(const std::error_code& ec) override;
 
 private:
     // Because discard is marked as const.

@@ -57,7 +57,7 @@ public:
     node_t(context_t& context, asio::io_service& loop, const std::string& name, const dynamic_t& args);
     ~node_t();
 
-    auto prototype() const -> const io::basic_dispatch_t& override;
+    auto prototype() -> io::basic_dispatch_t& override;
 
     auto list() const -> dynamic_t;
 

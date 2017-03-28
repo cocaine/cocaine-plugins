@@ -56,12 +56,6 @@ worker_rpc_dispatch_t::worker_rpc_dispatch_t(std::shared_ptr<stream_t> stream_, 
 }
 
 void
-worker_rpc_dispatch_t::discard(const std::error_code& ec) const {
-    // TODO: Consider something less weird.
-    const_cast<worker_rpc_dispatch_t*>(this)->discard(ec);
-}
-
-void
 worker_rpc_dispatch_t::discard(const std::error_code& ec) {
     if (ec) {
         std::lock_guard<std::mutex> lock(mutex);

@@ -76,7 +76,7 @@ class control_slot_t:
 
         virtual
         void
-        discard(const std::error_code&) const {
+        discard(const std::error_code&) {
             COCAINE_LOG_DEBUG(p->log, "client has been disappeared, assuming direct control");
             if (auto overseer = p->overseer.lock()) {
                 overseer->o->control_population(0);
@@ -85,7 +85,7 @@ class control_slot_t:
     };
     typedef std::vector<hpack::header_t> meta_type;
 
-    typedef std::shared_ptr<const io::basic_slot<io::app::control>::dispatch_type> result_type;
+    typedef std::shared_ptr<io::basic_slot<io::app::control>::dispatch_type> result_type;
 
     const std::unique_ptr<logging::logger_t> log;
     std::weak_ptr<overseer_proxy_t> overseer;
@@ -138,7 +138,7 @@ public:
     {}
 
     virtual
-    boost::optional<std::shared_ptr<const dispatch_type>>
+    boost::optional<std::shared_ptr<dispatch_type>>
     operator()(const meta_type& headers,
                tuple_type&& args,
                upstream_type&& upstream)
@@ -181,7 +181,7 @@ public:
     }
 
 private:
-    std::shared_ptr<const dispatch<io::stream_of<std::string>::tag>>
+    std::shared_ptr<dispatch<io::stream_of<std::string>::tag>>
     on_enqueue(upstream<io::stream_of<std::string>::tag>&& upstream,
                const std::vector<hpack::header_t>& headers,
                std::tuple<std::string, std::string> args)

@@ -82,13 +82,13 @@ class control_slot_t:
         }
 
         void
-        discard(const std::error_code&) const override {
+        discard(const std::error_code&) override {
             overseer->control_population(0);
         }
     };
 
     typedef std::vector<hpack::header_t> meta_type;
-    typedef std::shared_ptr<const io::basic_slot<io::node::control_app>::dispatch_type> result_type;
+    typedef std::shared_ptr<io::basic_slot<io::node::control_app>::dispatch_type> result_type;
 
     node_t& parent;
 
@@ -266,7 +266,7 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
 node_t::~node_t() = default;
 
 auto
-node_t::prototype() const -> const io::basic_dispatch_t&{
+node_t::prototype() -> io::basic_dispatch_t&{
     return *this;
 }
 

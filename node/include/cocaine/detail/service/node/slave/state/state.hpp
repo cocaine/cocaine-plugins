@@ -49,7 +49,7 @@ public:
     /// Terminates the slave with the given error code.
     virtual auto terminate(const std::error_code& ec) -> void;
 
-    virtual auto inject(std::shared_ptr<const dispatch<io::stream_of<std::string>::tag>> dispatch)
+    virtual auto inject(std::shared_ptr<dispatch<io::stream_of<std::string>::tag>> dispatch)
         -> io::upstream_ptr_t;
 
 private:

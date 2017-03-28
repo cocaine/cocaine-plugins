@@ -32,7 +32,7 @@ proxy_t::proxy_t(context_t& context,
 }
 
 boost::optional<io::dispatch_ptr_t>
-proxy_t::process(const io::decoder_t::message_type& incoming_message, const io::upstream_ptr_t& raw_backward_stream) const {
+proxy_t::process(const io::decoder_t::message_type& incoming_message, const io::upstream_ptr_t& raw_backward_stream) {
     auto slot_id = incoming_message.type();
     auto protocol_it = m_protocol.find(slot_id);
     COCAINE_LOG_DEBUG(logger, "graph has {} handles", m_protocol.size());

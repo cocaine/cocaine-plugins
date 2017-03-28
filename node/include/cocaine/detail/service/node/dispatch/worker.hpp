@@ -44,10 +44,6 @@ public:
     /// The worker has been disconnected without closing its opened channels.
     ///
     /// In this case we should notify all users about the failure.
-    virtual
-    void
-    discard(const std::error_code& ec) const;
-
     void
     discard(const std::error_code& ec);
 

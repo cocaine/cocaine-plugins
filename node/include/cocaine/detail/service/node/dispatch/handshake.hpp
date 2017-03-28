@@ -32,7 +32,7 @@ public:
     forward_slot(F f) : f(std::move(f)) {}
 
     virtual
-    boost::optional<std::shared_ptr<const dispatch_type>>
+    boost::optional<std::shared_ptr<dispatch_type>>
     operator()(const meta_type& headers, tuple_type&& args, upstream_type&& upstream) {
         return f(std::move(upstream), headers, std::move(args));
     }
@@ -62,7 +62,7 @@ public:
     {
         auto handler = [=](upstream<io::worker::control_tag>&& upstream,
                            const std::vector<hpack::header_t>&,
-                           std::tuple<std::string> args) -> std::shared_ptr<const dispatch<io::worker::control_tag>>//std::shared_ptr<control_t>
+                           std::tuple<std::string> args) -> std::shared_ptr<dispatch<io::worker::control_tag>>//std::shared_ptr<control_t>
         {
             std::string uuid = std::get<0>(args);
             std::unique_lock<std::mutex> lock(mutex);

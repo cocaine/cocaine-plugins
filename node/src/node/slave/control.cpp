@@ -63,7 +63,7 @@ auto control_t::cancel() -> void {
     }
 }
 
-auto control_t::discard(const std::error_code& ec) const -> void {
+auto control_t::discard(const std::error_code& ec) -> void {
     if (ec && !closed) {
         COCAINE_LOG_DEBUG(slave->log, "control channel has been discarded: {}", ec.message());
 

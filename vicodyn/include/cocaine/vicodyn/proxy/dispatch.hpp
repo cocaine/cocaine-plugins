@@ -18,10 +18,10 @@ public:
 
     dispatch_t(const std::string& name, std::shared_ptr<stream_t> proxy_stream, const io::graph_node_t& _current_state);
 
-    auto process(const io::decoder_t::message_type& incoming_message, const io::upstream_ptr_t&) const
+    auto process(const io::decoder_t::message_type& incoming_message, const io::upstream_ptr_t&)
         -> boost::optional<io::dispatch_ptr_t> override;
 
-    auto discard(const std::error_code& ec) const -> void override;
+    auto discard(const std::error_code& ec) -> void override;
 
 private:
     std::shared_ptr<stream_t> proxy_stream;

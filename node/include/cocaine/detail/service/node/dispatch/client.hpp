@@ -66,10 +66,6 @@ public:
     /// The client has been disconnected without closing its opened channels.
     ///
     /// In this case we should call close callback to prevend resource leak.
-    virtual
-    void
-    discard(const std::error_code& ec) const;
-
     void
     discard(const std::error_code& ec);
 

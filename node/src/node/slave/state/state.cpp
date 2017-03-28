@@ -32,7 +32,7 @@ auto state_t::activate(std::shared_ptr<session_t>, upstream<io::worker::control_
     throw_invalid_state();
 }
 
-auto state_t::inject(std::shared_ptr<const dispatch<io::stream_of<std::string>::tag>>)
+auto state_t::inject(std::shared_ptr<dispatch<io::stream_of<std::string>::tag>>)
     -> io::upstream_ptr_t {
     throw_invalid_state();
 }

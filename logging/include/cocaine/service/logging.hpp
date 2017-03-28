@@ -41,7 +41,7 @@ namespace service {
 
 class logging_v2_t : public api::service_t, public dispatch<io::base_log_tag> {
 public:
-    virtual const io::basic_dispatch_t& prototype() const;
+    virtual io::basic_dispatch_t& prototype();
 
     logging_v2_t(context_t& context, asio::io_service& asio, const std::string& name, const dynamic_t& args);
 

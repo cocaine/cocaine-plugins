@@ -459,7 +459,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
 const std::string logging_v2_t::impl_t::default_key("default");
 const std::string logging_v2_t::impl_t::core_key("core");
 
-const io::basic_dispatch_t& logging_v2_t::prototype() const {
+io::basic_dispatch_t& logging_v2_t::prototype() {
     return *this;
 }
 
@@ -487,7 +487,7 @@ logging_v2_t::logging_v2_t(context_t& context, asio::io_service& asio, const std
     on<get>([&](const hpack::headers_t&, get_slot_t::tuple_type&& args, get_slot_t::upstream_type&&){
         auto mf_name = std::get<0>(args);
         auto metafilter = d->get_metafilter(mf_name);
-        auto dispatch = std::make_shared<const named_logging_t>(d->logger, std::move(mf_name), std::move(metafilter));
+        auto dispatch = std::make_shared<named_logging_t>(d->logger, std::move(mf_name), std::move(metafilter));
         return get_slot_t::result_type(std::move(dispatch));
     });
 

@@ -63,14 +63,14 @@ public:
     typedef typename io::basic_slot<io::isolate::spool>::dispatch_type dispatch_type;
 
     virtual
-    boost::optional<std::shared_ptr<const dispatch_type>>
+    boost::optional<std::shared_ptr<dispatch_type>>
     operator()(const std::vector<hpack::header_t>&, tuple_type&& args, upstream_type&& upstream)
     {
         COCAINE_LOG_INFO(log, "spool. {}, {}", boost::lexical_cast<std::string>(std::get<0>(args)), std::get<1>(args));
         sleep(1);
         upstream.send<protocol::value>();
         COCAINE_LOG_INFO(log, "spool. sent value");
-        return boost::optional<std::shared_ptr<const dispatch_type>>(std::make_shared<spooled_dispatch_t>());
+        return boost::optional<std::shared_ptr<dispatch_type>>(std::make_shared<spooled_dispatch_t>());
     }
 };
 
@@ -82,14 +82,14 @@ public:
     typedef typename io::basic_slot<io::isolate::spawn>::dispatch_type dispatch_type;
 
     virtual
-    boost::optional<std::shared_ptr<const dispatch_type>>
+    boost::optional<std::shared_ptr<dispatch_type>>
     operator()(tuple_type&& args, upstream_type&& upstream)
     {
         return operator()({}, std::move(args), std::move(upstream));
     }
 
     virtual
-    boost::optional<std::shared_ptr<const dispatch_type>>
+    boost::optional<std::shared_ptr<dispatch_type>>
     operator()(const std::vector<hpack::header_t>&, tuple_type&& args, upstream_type&& upstream)
     {
         auto formatter = [] (const std::map<std::string, std::string>& data) -> std::string {
@@ -117,7 +117,7 @@ public:
         upstream = upstream.send<protocol::chunk>("CHUNK2");
         upstream.send<protocol::choke>();
         COCAINE_LOG_INFO(log, "spawn. done");
-        return boost::optional<std::shared_ptr<const dispatch_type>>(std::make_shared<spawned_dispatch_t>());
+        return boost::optional<std::shared_ptr<dispatch_type>>(std::make_shared<spawned_dispatch_t>());
     }
 };
 
@@ -138,7 +138,7 @@ public:
 
     virtual
     auto
-    prototype() const -> const io::basic_dispatch_t& {
+    prototype() -> io::basic_dispatch_t& {
         return *this;
     }
 

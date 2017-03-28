@@ -41,7 +41,7 @@ auto active_t::active() const noexcept -> bool {
     return true;
 }
 
-auto active_t::inject(std::shared_ptr<const dispatch<io::stream_of<std::string>::tag>> dispatch)
+auto active_t::inject(std::shared_ptr<dispatch<io::stream_of<std::string>::tag>> dispatch)
     -> io::upstream_ptr_t {
     return session->fork(dispatch);
 }

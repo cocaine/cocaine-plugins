@@ -188,7 +188,7 @@ auto machine_t::inject(load_t& load, channel_handler handler) -> std::uint64_t {
     );
 
     // W2C dispatch.
-    auto dispatch = std::make_shared<const worker_rpc_dispatch_t>(
+    auto dispatch = std::make_shared<worker_rpc_dispatch_t>(
         load.downstream, [=](const std::error_code& ec) {
             if (ec) {
                 channel->close_both();
