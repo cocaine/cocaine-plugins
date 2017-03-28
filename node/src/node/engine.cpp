@@ -513,17 +513,23 @@ auto engine_t::assign(slave_t& slave, load_t& load) -> void {
         request_timeout = std::chrono::milliseconds(*timeout_from_header);
     }
 
+    const auto drop_event = [&] {
+        COCAINE_LOG_WARNING(log, "event {} has expired, dropping", event.name);
+        try {
+            load.downstream->error({}, error::deadline_error, "the event has expired in the queue");
+        } catch (const std::system_error& err) {
+            COCAINE_LOG_DEBUG(log, "failed to notify assignment failure: {}", error::to_string(err));
+        }
+    };
+
     if (event.birthstamp + request_timeout < std::chrono::high_resolution_clock::now()) {
-        COCAINE_LOG_ERROR(log, "event {} has expired, dropping", event.name);
-        load.downstream->error({}, error::deadline_error, "the event has expired in the queue");
+        drop_event();
         return;
     }
 
     // TODO: Drop due to replacement with header.
-    if (load.event.deadline && *load.event.deadline < std::chrono::high_resolution_clock::now()) {
-        COCAINE_LOG_DEBUG(log, "event has expired, dropping");
-
-        load.downstream->error({}, error::deadline_error, "the event has expired in the queue");
+    if (event.deadline && *event.deadline < std::chrono::high_resolution_clock::now()) {
+        drop_event();
         return;
     }
 
