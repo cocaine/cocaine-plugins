@@ -1,3 +1,17 @@
+cocaine-plugins (0.12.12.7) unstable; urgency=low
+
+  * Fixed: drop expired events properly.
+    If an event has expired and no one has interested in it anymore we’re
+    end up with an exception, which is accidentally caught by
+    event-assigner. It treats it as slave rejection, but in reality it is
+    not.
+    This led to the evil bug, where in the case of full queue there is no
+    way to flush it anymore, because each expired event will present in the
+    queue forever (until restarted).
+    This change fixes that behaviour by dropping event properly.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 28 Mar 2017 20:01:21 +0300
+
 cocaine-plugins (0.12.12.6) unstable; urgency=low
 
   * Fixed: prevent protocol violation in unicorn.
