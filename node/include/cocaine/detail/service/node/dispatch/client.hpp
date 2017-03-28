@@ -67,7 +67,7 @@ public:
     ///
     /// In this case we should call close callback to prevend resource leak.
     void
-    discard(const std::error_code& ec);
+    discard(const std::error_code& ec) override;
 
     auto write(hpack::header_storage_t headers, const std::string& data) -> void;
     auto abort(hpack::header_storage_t headers, const std::error_code& ec, const std::string& reason) -> void;

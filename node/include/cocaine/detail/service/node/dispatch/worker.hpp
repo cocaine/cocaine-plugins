@@ -45,7 +45,7 @@ public:
     ///
     /// In this case we should notify all users about the failure.
     void
-    discard(const std::error_code& ec);
+    discard(const std::error_code& ec) override;
 
 private:
     void
