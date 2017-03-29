@@ -446,13 +446,16 @@ private:
     }
 
     auto publish() -> void {
-        // Create a TCP server and publish it.
-        COCAINE_LOG_DEBUG(log, "publishing application service with the context");
-        context.insert(name, std::make_unique<actor_t>(
-            context,
-            std::make_shared<asio::io_service>(),
-            std::make_unique<app_dispatch_t>(context, name, overseer_)
-        ));
+        // Create a TCP server and publish it if it's not already there.
+        context.insert_with(name, [&] {
+            COCAINE_LOG_DEBUG(log, "publishing application service with the context");
+
+            return std::make_unique<actor_t>(
+                context,
+                std::make_shared<asio::io_service>(),
+                std::make_unique<app_dispatch_t>(context, name, overseer_)
+            );
+        });
     }
 
     auto maybe_unpublish() -> void {
