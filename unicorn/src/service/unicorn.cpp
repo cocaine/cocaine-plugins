@@ -73,15 +73,17 @@ public:
             return result_dispatch_type(std::make_shared<unicorn_dispatch_t>(service.name()));
         }
 
-        const auto identity = auth->identify(headers);
-
-        if (auto ec = boost::get<std::error_code>(&identity)) {
+        auth::identity_t identity;
+        try {
+            identity = auth->identify(headers);
+        } catch (const std::system_error& err) {
             COCAINE_LOG_WARNING(service.log, "failed to complete '{}' operation", Event::alias(), blackhole::attribute_list{
-                {"code", ec->value()},
-                {"error", ec->message()},
+                {"code", err.code().value()},
+                {"error", err.code().message()},
+                {"reason", error::to_string(err)},
             });
 
-            upstream.template send<typename protocol::error>(*ec, "permission denied");
+            upstream.template send<typename protocol::error>(err.code(), error::to_string(err));
             return result_dispatch_type(std::make_shared<unicorn_dispatch_t>(service.name()));
         }
 
