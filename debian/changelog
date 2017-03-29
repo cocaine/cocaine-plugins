@@ -3,10 +3,16 @@ cocaine-plugins (0.12.13.0-alpha1) UNRELEASED; urgency=low
   * Feature: weights based quantiles for histograms output in Node service.
   * Feature: combined Unicorn authorization (#115).
   * Feature: ACL check for Node service (#113).
+  * Feature: Node service should no longer create and destroy application
+    dispatches during failed attempt to insert the service due to publish
+    policy.
   * Fixed: delete filters from Unicorn on expiration.
   * Fixed: use protocol extension to properly pass discard of a channel in
     Vicodyn (#114).
   * Fixed: prevent SIGSEGV on long term spools (#116).
+  * Changed: drop tagged requests (#120).
+    It may be considered as dead code elimination, since no one uses them
+    for now.
 
  -- Evgeny Safronov <division494@gmail.com>  Mon, 27 Mar 2017 14:30:43 +0300
 
