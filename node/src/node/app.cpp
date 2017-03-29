@@ -187,8 +187,7 @@ private:
                std::tuple<std::string, std::string> args)
     {
         std::string event;
-        std::string id;
-        std::tie(event, id) = args;
+        std::tie(event, std::ignore) = args;
 
         COCAINE_LOG_DEBUG(log, "processing enqueue '{}' event", event);
 
@@ -196,11 +195,7 @@ private:
 
         try {
             if (auto overseer = this->overseer.lock()) {
-                if (id.empty()) {
-                    return overseer->o->enqueue(upstream, {event, hpack::header_storage_t(headers)}, boost::none);
-                } else {
-                    return overseer->o->enqueue(upstream, {event, hpack::header_storage_t(headers)}, service::node::slave::id_t(id));
-                }
+                return overseer->o->enqueue(upstream, {event, hpack::header_storage_t(headers)});
             } else {
                 // We shouldn't close the connection here, because there possibly can be events
                 // processing.

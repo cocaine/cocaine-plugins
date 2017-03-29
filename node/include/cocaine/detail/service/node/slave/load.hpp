@@ -21,9 +21,6 @@ struct load_t {
     /// Associcated trace.
     trace_t trace;
 
-    /// Optional slave id to be able to route events into the same slaves.
-    boost::optional<id_t> id;
-
     /// An TX dispatch.
     std::shared_ptr<client_rpc_dispatch_t> dispatch;
 

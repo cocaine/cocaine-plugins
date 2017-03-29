@@ -115,9 +115,8 @@ public:
     ///
     /// \param downstream represents the [Client <- Worker] stream.
     /// \param event an invocation event.
-    /// \param id represents slave id to be enqueued (may be none, which means any slave).
-    auto enqueue(upstream<io::stream_of<std::string>::tag> downstream, event_t event,
-                 boost::optional<id_t> id) -> std::shared_ptr<client_rpc_dispatch_t>;
+    auto enqueue(upstream<io::stream_of<std::string>::tag> downstream, event_t event)
+        -> std::shared_ptr<client_rpc_dispatch_t>;
 
     /// Enqueues the new event into the most appropriate slave.
     ///
@@ -127,10 +126,9 @@ public:
     /// \param rx a receiver stream which methods will be called when the appropriate messages
     ///     received.
     /// \param event an invocation event.
-    /// \param id represents slave id to be enqueued (may be none, which means any slave).
     /// \return a tx stream.
-    auto enqueue(std::shared_ptr<api::stream_t> rx, event_t event, boost::optional<id_t> id) ->
-        std::shared_ptr<api::stream_t>;
+    auto enqueue(std::shared_ptr<api::stream_t> rx, event_t event)
+        -> std::shared_ptr<api::stream_t>;
 
     /// Tries to keep alive at least `count` workers no matter what.
     ///

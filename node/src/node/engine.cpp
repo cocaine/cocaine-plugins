@@ -403,18 +403,16 @@ struct rx_stream_t : public api::stream_t {
 
 } // namespace
 
-auto engine_t::enqueue(upstream<io::stream_of<std::string>::tag> downstream,
-                       event_t event,
-                       boost::optional<id_t> id) -> std::shared_ptr<client_rpc_dispatch_t>
+auto engine_t::enqueue(upstream<io::stream_of<std::string>::tag> downstream, event_t event)
+    -> std::shared_ptr<client_rpc_dispatch_t>
 {
     const std::shared_ptr<api::stream_t> rx = std::make_shared<rx_stream_t>(std::move(downstream));
-    const auto tx = enqueue(std::move(rx), std::move(event), std::move(id));
+    const auto tx = enqueue(std::move(rx), std::move(event));
     return std::static_pointer_cast<tx_stream_t>(tx)->dispatch;
 }
 
-auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx,
-                       event_t event,
-                       boost::optional<id_t> id) -> std::shared_ptr<api::stream_t>
+auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx, event_t event)
+    -> std::shared_ptr<api::stream_t>
 {
     auto tx = std::make_shared<tx_stream_t>();
 
@@ -426,20 +424,11 @@ auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx,
                 throw std::system_error(error::queue_is_full);
             }
 
-            if (id) {
-                pool.apply([&](pool_type& pool) {
-                    if (pool.count(id->id()) == 0) {
-                        spawn(*id, pool);
-                    }
-                });
-            }
-
             tx->dispatch = std::make_shared<client_rpc_dispatch_t>(manifest().name);
 
             queue.push_back({
                 std::move(event),
                 trace_t::current(),
-                std::move(id),
                 tx->dispatch, // Explicitly copy.
                 std::move(rx)
             });
@@ -667,60 +656,33 @@ auto engine_t::rebalance_events() -> void {
 
                 COCAINE_LOG_DEBUG(log, "rebalancing event");
 
-                // If we are dealing with tagged events we need to find an active slave with the
-                // specified id.
-                if (load.id && pool.count(load.id->id()) != 0) {
-                    auto& slave = pool.at(load.id->id());
+                const auto range = pool | boost::adaptors::map_values | filtered(filter);
 
-                    if (filter(slave)) {
-                        // In case of tagged events the rejected event is an error, which can only
-                        // occur in the case of state (slave has died), out of the memory issues
-                        // or something else out of out control.
-                        // The only reasonable way is to notify the client about the error allowing
-                        // it to retry if required.
-                        try {
-                            assign(slave, load);
-                        } catch (const std::exception& err) {
-                            COCAINE_LOG_WARNING(log, "slave has rejected assignment: {}", err.what());
+                // Here we try to find an active non-overloaded slave with minimal load.
+                auto slave = boost::min_element(
+                    range, +[](const slave_t& lhs, const slave_t& rhs) -> bool {
+                        return lhs.load() < rhs.load();
+                    });
 
-                            try {
-                                load.downstream->error({}, error::invalid_assignment, err.what());
-                            } catch (const std::exception& err) {
-                                COCAINE_LOG_WARNING(log, "failed to notify assignment failure: {}", err.what());
-                            }
-                        }
-                        queue.pop_front();
-                        stats.queue_depth->add(queue.size());
-                    }
-                } else {
-                    const auto range = pool | boost::adaptors::map_values | filtered(filter);
+                // No free slaves found.
+                if (slave == boost::end(range)) {
+                    COCAINE_LOG_DEBUG(log, "no free slaves found, rebalancing is over");
+                    return;
+                }
 
-                    // Here we try to find an active non-overloaded slave with minimal load.
-                    auto slave = boost::min_element(
-                        range, +[](const slave_t& lhs, const slave_t& rhs) -> bool {
-                            return lhs.load() < rhs.load();
-                        });
-
-                    // No free slaves found.
-                    if (slave == boost::end(range)) {
-                        COCAINE_LOG_DEBUG(log, "no free slaves found, rebalancing is over");
-                        return;
-                    }
-
-                    try {
-                        assign(*slave, load);
-                        // The slave may become invalid and reject the assignment or reject for any
-                        // other reasons. We pop the channel only on successful assignment to
-                        // achieve strong exception guarantee.
-                        queue.pop_front();
-                        stats.queue_depth->add(queue.size());
-                    } catch (const std::exception& err) {
-                        COCAINE_LOG_WARNING(log, "slave has rejected assignment: {}", err.what());
-                        loop->post([&] {
-                            rebalance_slaves();
-                        });
-                        return;
-                    }
+                try {
+                    assign(*slave, load);
+                    // The slave may become invalid and reject the assignment or reject for any
+                    // other reasons. We pop the channel only on successful assignment to
+                    // achieve strong exception guarantee.
+                    queue.pop_front();
+                    stats.queue_depth->add(queue.size());
+                } catch (const std::exception& err) {
+                    COCAINE_LOG_WARNING(log, "slave has rejected assignment: {}", err.what());
+                    loop->post([&] {
+                        rebalance_slaves();
+                    });
+                    return;
                 }
             }
         });

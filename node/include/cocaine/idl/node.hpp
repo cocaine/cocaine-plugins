@@ -51,7 +51,9 @@ struct enqueue {
      /* Event name. This name is intentionally dynamic so that the underlying application can
         do whatever it wants using these event names, for example handle every possible one. */
         std::string,
-     /* Tag. Event can be enqueued to a specific worker with some user-defined name. */
+     /* Tag. Event can be enqueued to a specific worker with some user-defined name.
+
+        DEPRECATED: no longer used. */
         optional<std::string>
     >::type argument_type;
 
