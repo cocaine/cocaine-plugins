@@ -6,6 +6,7 @@ cocaine-plugins (0.12.13.0-alpha1) UNRELEASED; urgency=low
   * Feature: Node service should no longer create and destroy application
     dispatches during failed attempt to insert the service due to publish
     policy.
+  * Feature: prefix filtering for logging::v2 service.
   * Fixed: delete filters from Unicorn on expiration.
   * Fixed: use protocol extension to properly pass discard of a channel in
     Vicodyn (#114).
