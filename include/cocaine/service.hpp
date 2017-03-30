@@ -93,7 +93,7 @@ public:
 	elliptics_service_t(context_t &context, asio::io_service &reactor, const std::string &name,
 	                    const dynamic_t &args);
 
-	const io::basic_dispatch_t &prototype() const { return *this; }
+	io::basic_dispatch_t &prototype() { return *this; }
 
 	deferred<std::string> read(const std::string &collection, const std::string &key);
 
