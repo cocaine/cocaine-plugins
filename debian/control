@@ -8,7 +8,7 @@ Build-Depends: cmake,
  libarchive-dev,
  uuid-dev,
  libcgroup-dev,
- libboost-dev
+ libboost-dev,
  libboost-filesystem-dev,
  libboost-thread-dev,
  libswarm-dev (>= 0.6.1.0), libswarm-dev (<< 0.7),
