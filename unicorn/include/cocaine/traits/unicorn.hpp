@@ -43,7 +43,7 @@ unpack(const msgpack::object& source, cocaine::unicorn::versioned_value_t& targe
     cocaine::unicorn::version_t version;
     type_traits<cocaine::unicorn::value_t>::unpack(source.via.array.ptr[0], value);
     type_traits<cocaine::unicorn::version_t>::unpack(source.via.array.ptr[1], version);
-    target = cocaine::unicorn::versioned_value_t(value, version);
+    target = cocaine::unicorn::versioned_value_t(std::move(value), version);
 }
 };
 

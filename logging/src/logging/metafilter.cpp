@@ -50,14 +50,18 @@ bool metafilter_t::remove_filter(filter_t::id_t filter_id) {
         return info.id == filter_id;
     });
 
-    bool removed = (it != filters.end());
-    if(removed) {
-        since_change_accepted_cnt.store(0);
-        since_change_rejected_cnt.store(0);
-        filters.erase(it);
+    if(it == filters.end()) {
+        return false;
+    } else {
+        remove_filter(it);
+        return true;
     }
+}
 
-    return removed;
+std::vector<filter_info_t>::iterator metafilter_t::remove_filter(std::vector<filter_info_t>::iterator it) {
+    since_change_accepted_cnt.store(0);
+    since_change_rejected_cnt.store(0);
+    return filters.erase(it);
 }
 
 bool metafilter_t::empty() const {
@@ -71,9 +75,10 @@ filter_result_t metafilter_t::apply(blackhole::severity_t severity,
     filter_result_t result = filter_result_t::reject;
     boost::shared_lock<boost::shared_mutex> guard(mutex);
 
+    bool need_cleanup = false;
     for (const auto& filter_info : filters) {
         if (now > filter_info.deadline) {
-            ids_to_remove.push_back(filter_info.id);
+            need_cleanup = true;
         } else if (result == filter_result_t::reject &&
                    filter_info.filter.apply(severity, attributes) ==
                        filter_result_t::accept) {
@@ -81,8 +86,8 @@ filter_result_t metafilter_t::apply(blackhole::severity_t severity,
         }
     }
     guard.unlock();
-    for (auto id : ids_to_remove) {
-        remove_filter(id);
+    if(need_cleanup) {
+        cleanup();
     }
     if(result == filter_result_t::reject) {
         overall_rejected_cnt++;
@@ -99,6 +104,18 @@ void metafilter_t::each(const callable_t& fn) const {
     boost::shared_lock<boost::shared_mutex> guard(mutex);
     for (const auto& filter_info : filters) {
         fn(filter_info);
+    }
+}
+
+void metafilter_t::cleanup() {
+    filter_t::deadline_t now = filter_t::clock_t::now();
+    std::lock_guard<boost::shared_mutex> guard(mutex);
+    for (auto it = filters.begin(); it != filters.end(); ) {
+        if (now > it->deadline) {
+            it = remove_filter(it);
+        } else {
+            it++;
+        }
     }
 }
 

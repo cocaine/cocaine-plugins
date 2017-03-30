@@ -2,7 +2,7 @@ require 'securerandom'
 require 'cocaine'
 require 'rspec'
 
-Cocaine::LOG.level = Logger::DEBUG
+Cocaine::LOG.level = Logger::ERROR
 Celluloid.logger.level = Cocaine::LOG.level
 
 
@@ -10,8 +10,13 @@ def timeout
   1
 end
 
+def new_logger(host: 'localhost', port: 10053)
+#def new_logger(host = '2a02:6b8:0:1a71::3268', port = 10053)
+  Cocaine::Service.new('logging', [[host, port]])
+end
+
 def ensure_log(frontend, msg, verbosity=1, attributes = [])
-  logger = Cocaine::Service.new('logging::v2')
+  logger = new_logger()
   tx, rx = logger.get(frontend)
   tx.emit_ack(verbosity, msg, attributes)
   res = rx.recv(timeout)
@@ -23,7 +28,7 @@ def ensure_log(frontend, msg, verbosity=1, attributes = [])
 end
 
 def ensure_not_log(frontend, msg, verbosity=1, attributes = [])
-  logger = Cocaine::Service.new('logging::v2')
+  logger = new_logger()
   tx, rx = logger.get(frontend)
   tx.emit_ack(verbosity, msg, attributes)
   res = rx.recv(timeout)
@@ -33,14 +38,14 @@ def ensure_not_log(frontend, msg, verbosity=1, attributes = [])
 end
 
 def log(frontend, msg, verbosity=1, attributes = [[]])
-  logger = Cocaine::Service.new('logging::v2')
+  logger = new_logger()
   tx, rx = logger.get(frontend)
   tx.emit(msg, verbosity, attributes)
   logger.terminate
 end
 
 def set_filter(frontend, filter, ttl = 60)
-  logger = Cocaine::Service.new('logging::v2')
+  logger = new_logger()
   tx, rx = logger.set_filter(frontend, filter, ttl)
   result = rx.recv(timeout)
   expect(result[0]). to eq :value;
@@ -63,18 +68,18 @@ end
 
 describe :Logging do
   it 'should create named logger' do
-    logger = Cocaine::Service.new('logging::v2')
+    logger = new_logger()
     tx, rx = logger.get('test_logger')
   end
 
   it 'should log without attributes and verbosity via named logger' do
-    logger = Cocaine::Service.new('logging::v2')
+    logger = new_logger()
     tx, rx = logger.get('test_logger')
     tx.emit('simple log test')
   end
 
   it 'should log without attributes and with verbosity via named logger' do
-    logger = Cocaine::Service.new('logging::v2')
+    logger = new_logger()
     tx, rx = logger.get('test_logger')
     tx.emit('simple log with verbosity only test', 2)
   end
@@ -87,7 +92,7 @@ describe :Logging do
     backend = random_backend('test_logger_to_list')
     set_filter(backend, ['empty'])
     ensure_log(backend, 'YAY')
-    logger = Cocaine::Service.new('logging::v2')
+    logger = new_logger()
     tx, rx = logger.list_loggers()
     result = rx.recv(timeout)
     expect(result[0]).to eq :value
@@ -188,19 +193,28 @@ describe :Logging do
     id1 = set_filter(back1, filter)
     id2 = set_filter(back2, filter)
     id3 = set_filter(back3, filter)
-    logger = Cocaine::Service.new('logging::v2')
+    logger = new_logger()
     tx, rx = logger.list_filters()
     res = rx.recv(timeout)
     expect(res[0]).to eq :value
-    expect(res[1][0]).to include [back1, filter, id1, 0]
-    expect(res[1][0]).to include [back2, filter, id2, 0]
-    expect(res[1][0]).to include [back3, filter, id3, 0]
+    mapped = res[1][0].map! {|x| x.delete_at(3); x}
+    expect(mapped).to include [back1, filter, id1,  0]
+    expect(mapped).to include [back2, filter, id2, 0]
+    expect(mapped).to include [back3, filter, id3, 0]
   end
 
   it 'should correctly set cluster filter' do
     backend = random_backend('cluster_filter_test')
-    logger = Cocaine::Service.new('logging::v2', [['localhost', 10054]])
+    logger = new_logger(port: 10054)
     tx, rx = logger.set_cluster_filter(backend, ['==', 'another_attr', 42], 60)
     ensure_not_log(backend, invalid_msg, 2, [['another_attr', 1]])
+  end
+
+  it 'should correctly handle prefixes' do
+    backend = random_backend('prefixes_test')
+    logger = new_logger()
+    tx, rx = logger.set_filter(backend, ["severity", 0], 60)
+    bigger_backend = backend + random_backend('')
+    ensure_log(bigger_backend, 'prefix test', 2, [])
   end
 end

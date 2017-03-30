@@ -55,6 +55,8 @@ public:
 
     void each(const callable_t& fn) const;
 
+    void cleanup();
+
     struct counter_t {
         size_t accepted;
         size_t rejected;
@@ -64,6 +66,8 @@ public:
     counter_t since_last_change();
 
 private:
+    std::vector<filter_info_t>::iterator remove_filter(std::vector<filter_info_t>::iterator it);
+
     std::atomic<size_t> overall_accepted_cnt;
     std::atomic<size_t> overall_rejected_cnt;
     std::atomic<size_t> since_change_accepted_cnt;

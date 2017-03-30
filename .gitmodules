@@ -11,3 +11,6 @@
 	path = foreign/blackhole
 	url = https://github.com/3Hren/blackhole.git
 	branch = v0.2
+[submodule "logging/foreign/radix_tree"]
+	path = logging/foreign/radix_tree
+	url = https://github.com/ytakano/radix_tree.git

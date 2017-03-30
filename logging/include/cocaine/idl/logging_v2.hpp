@@ -178,6 +178,7 @@ struct base_log {
         typedef option_of<std::vector<std::tuple<std::string,
                                                  logging::filter_t::representation_t,
                                                  logging::filter_t::id_t,
+                                                 uint64_t /* deadline, s */,
                                                  logging::filter_t::disposition_t>>>::tag
             upstream_type;
     };
@@ -266,6 +267,7 @@ struct protocol<named_log_tag> {
 
     typedef boost::mpl::list<named_log::emit, named_log::emit_ack>::type messages;
 
+    typedef named_log_tag transition_type;
     typedef named_log scope;
 };
 }

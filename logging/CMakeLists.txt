@@ -20,7 +20,7 @@ TARGET_LINK_LIBRARIES(logging
 SET_TARGET_PROPERTIES(logging PROPERTIES
     PREFIX ""
     SUFFIX "${COCAINE_PLUGIN_SUFFIX}"
-    COMPILE_FLAGS "-std=c++0x -Wall -Wextra -pedantic -Winit-self -Wold-style-cast -Woverloaded-virtual -Wshadow -Wctor-dtor-privacy -Wnon-virtual-dtor")
+    COMPILE_FLAGS "-std=c++0x -Wall -Wextra -pedantic -Winit-self -Wold-style-cast -Woverloaded-virtual -Wctor-dtor-privacy -Wnon-virtual-dtor")
 
 INSTALL(TARGETS logging
     LIBRARY DESTINATION lib/cocaine

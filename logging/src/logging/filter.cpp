@@ -709,8 +709,8 @@ filter_t::filter_t(const dynamic_t& source) {
     if (!array[0].is_string()) {
         throw error_t("operator should be string");
     }
-    const auto filter_operator = array[0].as_string();
-    const auto operand1 = array[1];
+    const auto& filter_operator = array[0].as_string();
+    const auto& operand1 = array[1];
     if (array.size() == 1 && array[0].is_string() && array[0].as_string() == "empty") {
         inner.reset(new empty_filter_t());
     } else if (array.size() == 2) {

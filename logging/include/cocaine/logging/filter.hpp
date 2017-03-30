@@ -42,7 +42,7 @@ public:
     typedef dynamic_t representation_t;
     // TODO: FIXME, use proper type
     enum class disposition_t { local, cluster };
-    typedef std::chrono::high_resolution_clock clock_t;
+    typedef std::chrono::system_clock clock_t;
     typedef clock_t::time_point deadline_t;
 
     /**
