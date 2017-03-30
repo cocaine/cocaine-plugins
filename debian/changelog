@@ -1,4 +1,4 @@
-cocaine-plugins (0.12.13.0-alpha1) UNRELEASED; urgency=low
+cocaine-plugins (0.12.13.0-alpha1) unstable; urgency=low
 
   * Feature: weights based quantiles for histograms output in Node service.
   * Feature: combined Unicorn authorization (#115).
