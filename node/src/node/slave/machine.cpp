@@ -328,7 +328,7 @@ machine_t::shutdown(std::error_code ec) {
     COCAINE_LOG_DEBUG(log, "slave is shutting down from state {}: {}", state->name(), ec.message());
 
     state->cancel();
-    if(state->terminating()) {
+    if (state->terminating()) {
         // We don't consider any reason for termination in "terminating" state as an error
         ec.clear();
     }
@@ -338,7 +338,7 @@ machine_t::shutdown(std::error_code ec) {
         dump();
     }
 
-    data.timers.apply([&](timers_map_t& timers){
+    data.timers.apply([&](timers_map_t& timers) {
         timers.clear();
     });
 
@@ -442,9 +442,9 @@ machine_t::dump() {
 
     // TODO: this one is really only used to log any error during crashlog write. Maybe we can do it in a better way
     auto self = shared_from_this();
-    api::storage(context, "core")->put("crashlogs", key, dump, indexes, [=](std::future<void> f){
+    api::storage(context, "core")->put("crashlogs", key, dump, indexes, [=](std::future<void> future) {
         try {
-            f.get();
+            future.get();
         } catch (const std::exception& e) {
             COCAINE_LOG_WARNING(self->log, "slave is unable to save the crashlog: {}", e.what());
         }
