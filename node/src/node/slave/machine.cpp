@@ -335,7 +335,10 @@ machine_t::shutdown(std::error_code ec) {
     migrate(std::make_shared<inactive_t>(ec));
 
     if (ec && ec != error::overseer_shutdowning) {
-        dump();
+        auto self = shared_from_this();
+        loop.post([=] {
+            self->dump();
+        });
     }
 
     data.timers.apply([&](timers_map_t& timers) {
