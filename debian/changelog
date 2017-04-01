@@ -1,3 +1,11 @@
+cocaine-plugins (0.12.13.0-alpha2) unstable; urgency=low
+
+  * Fixed: dump stdout/stderr from the app event loop in App service.
+    This allows to avoid race condition, while shutting down from the
+    network thread.
+
+ -- Evgeny Safronov <division494@gmail.com>  Sat, 01 Apr 2017 20:55:37 +0300
+
 cocaine-plugins (0.12.13.0-alpha1) unstable; urgency=low
 
   * Feature: weights based quantiles for histograms output in Node service.
