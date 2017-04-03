@@ -111,6 +111,8 @@ using cocaine::unicorn::versioned_value_t;
 
 namespace {
 
+const std::string prefix_acls = "/.acls";
+
 struct operation_t {
     flags_t flag;
 
@@ -298,7 +300,7 @@ enabled_t::verify(std::size_t event, const std::string& path, const auth::identi
 
 auto
 enabled_t::make_path(const std::string& prefix) const -> std::string {
-    return cocaine::format("/.acls/{}", prefix);
+    return cocaine::format("{}/{}", prefix_acls, prefix);
 }
 
 auto
