@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.13.0-alpha3) unstable; urgency=low
+
+  * Fixed: really prevent concurrent access to the stdout keeper in
+    Node service.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 04 Apr 2017 15:43:18 +0300
+
 cocaine-plugins (0.12.13.0-alpha2) unstable; urgency=low
 
   * Fixed: dump stdout/stderr from the app event loop in App service.
