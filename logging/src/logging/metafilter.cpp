@@ -65,6 +65,7 @@ std::vector<filter_info_t>::iterator metafilter_t::remove_filter(std::vector<fil
 }
 
 bool metafilter_t::empty() const {
+    boost::shared_lock<boost::shared_mutex> guard(mutex);
     return filters.empty();
 }
 

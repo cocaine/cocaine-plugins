@@ -207,7 +207,10 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                 std::vector<std::string> empty;
                 for(auto& mf_pair: metafilters) {
                     mf_pair.second->cleanup();
-                    if(mf_pair.second->empty()){
+                    // NOTE: core metafilter is stored by shared_ptr in filtering lambda and it is a special case
+                    // We can introduce something like 'need_cleanup' or 'useless' method to metafilter,
+                    // but for now it looks like an overkill, so we just check in cleanup if the name is 'core'
+                    if(mf_pair.second->empty() && mf_pair.first != core_key){
                         empty.push_back(mf_pair.first);
                     }
                 }
