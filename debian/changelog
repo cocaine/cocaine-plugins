@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.13.0-alpha4) unstable; urgency=low
+
+  * Fixed: Do not drop core metafilter on cleanup from map,
+    allowing to control it from outside as it was before.
+
+ -- Anton Matveenko <antmat@me.com>  Tue, 04 Apr 2017 16:40:18 +0300
+
 cocaine-plugins (0.12.13.0-alpha3) unstable; urgency=low
 
   * Fixed: really prevent concurrent access to the stdout keeper in
