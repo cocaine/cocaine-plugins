@@ -297,14 +297,16 @@ machine_t::output(const char* data, size_t size) {
 
 void
 machine_t::output(const std::string& data) {
-    splitter.consume(data);
-    while (auto line = splitter.next()) {
-        lines.push_back(*line);
+    splitter.apply([&](splitter_t& splitter) {
+        splitter.consume(data);
+        while (auto line = splitter.next()) {
+            lines.push_back(*line);
 
-        if (profile.log_output) {
-            COCAINE_LOG_DEBUG(log, "slave's output: `{}`", *line);
+            if (profile.log_output) {
+                COCAINE_LOG_DEBUG(log, "slave's output: `{}`", *line);
+            }
         }
-    }
+    });
 }
 
 void
@@ -335,10 +337,7 @@ machine_t::shutdown(std::error_code ec) {
     migrate(std::make_shared<inactive_t>(ec));
 
     if (ec && ec != error::overseer_shutdowning) {
-        auto self = shared_from_this();
-        loop.post([=] {
-            self->dump();
-        });
+        dump();
     }
 
     data.timers.apply([&](timers_map_t& timers) {
@@ -412,16 +411,25 @@ machine_t::revoke(std::uint64_t id, channel_handler handler) {
 
 void
 machine_t::dump() {
-    if (lines.empty() && splitter.empty()) {
+    auto dump = splitter.apply([&](const splitter_t& splitter) {
+        std::vector<std::string> dump;
+        if (lines.empty() && splitter.empty()) {
+            return dump;
+        }
+
+        std::copy(std::begin(lines), std::end(lines), std::back_inserter(dump));
+
+        // Copy the last unsplitted output.
+        if (!splitter.empty()) {
+            dump.emplace_back(splitter.data());
+        }
+
+        return dump;
+    });
+
+    if (dump.empty()) {
         COCAINE_LOG_WARNING(log, "рабъ умеръ въ тишинѣ");
         return;
-    }
-
-    std::vector<std::string> dump;
-    std::copy(lines.begin(), lines.end(), std::back_inserter(dump));
-
-    if (!splitter.empty()) {
-        dump.emplace_back(splitter.data());
     }
 
     const auto now = std::chrono::system_clock::now().time_since_epoch();
