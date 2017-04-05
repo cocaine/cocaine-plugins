@@ -22,6 +22,8 @@
 
 #include <rapidjson/document.h>
 
+#include <blackhole/logger.hpp>
+
 #include <cocaine/logging.hpp>
 
 #include "cocaine/service/elasticsearch.hpp"
@@ -29,19 +31,19 @@
 namespace cocaine { namespace service {
 
 struct index_handler_t {
-    std::shared_ptr<cocaine::logging::log_t> log;
+    std::shared_ptr<logging::logger_t> log;
 
     template<typename Deferred = cocaine::deferred<response::index>>
     void
     operator()(Deferred& deferred, int code, const std::string& data) const {
         if (log) {
-            COCAINE_LOG_DEBUG(log, "Index request completed [%d]", code);
+            COCAINE_LOG_DEBUG(log, "Index request completed [{}]", code);
         }
 
         rapidjson::Document root;
         root.Parse<0>(data.c_str());
         if (root.HasParseError()) {
-            deferred.abort(asio::error::operation_aborted, cocaine::format("parsing failed - %s", root.GetParseError()));
+            deferred.abort(asio::error::operation_aborted, cocaine::format("parsing failed - {}", root.GetParseError()));
             return;
         }
 
@@ -51,7 +53,7 @@ struct index_handler_t {
         }
 
         if (log) {
-            COCAINE_LOG_DEBUG(log, "Received data: %s", data);
+            COCAINE_LOG_DEBUG(log, "Received data: {}", data);
         }
 
         deferred.write(std::make_tuple(true, std::string(root["_id"].GetString())));

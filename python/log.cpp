@@ -70,7 +70,7 @@ log_t::debug(log_t * self,
         message = PyString_AsString(object);
     }
 
-    COCAINE_LOG_DEBUG(self->base, "%s", message);
+    COCAINE_LOG_DEBUG(self->base, "{}", message);
 
     Py_RETURN_NONE;
 }
@@ -93,7 +93,7 @@ log_t::info(log_t * self,
         message = PyString_AsString(object);
     }
 
-    COCAINE_LOG_INFO(self->base, "%s", message);
+    COCAINE_LOG_INFO(self->base, "{}", message);
 
     Py_RETURN_NONE;
 }
@@ -116,7 +116,7 @@ log_t::warning(log_t * self,
         message = PyString_AsString(object);
     }
 
-    COCAINE_LOG_WARNING(self->base, "%s", message);
+    COCAINE_LOG_WARNING(self->base, "{}", message);
 
     Py_RETURN_NONE;
 }
@@ -139,7 +139,7 @@ log_t::error(log_t * self,
         message = PyString_AsString(object);
     }
 
-    COCAINE_LOG_ERROR(self->base, "%s", message);
+    COCAINE_LOG_ERROR(self->base, "{}", message);
 
     Py_RETURN_NONE;
 }

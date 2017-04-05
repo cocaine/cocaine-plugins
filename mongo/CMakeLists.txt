@@ -18,6 +18,7 @@ IF(MongoDB_FOUND)
 
     TARGET_LINK_LIBRARIES(mongodb
         cocaine-core
+        cocaine-io-util
         ${Boost_LIBRARIES}
         mongoclient)
 

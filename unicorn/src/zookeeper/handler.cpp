@@ -13,8 +13,11 @@
 * GNU General Public License for more details.
 */
 
-#include "cocaine/zookeeper/handler.hpp"
-#include "cocaine/zookeeper/zookeeper.hpp"
+#include "cocaine/detail/zookeeper/handler.hpp"
+#include "cocaine/detail/zookeeper/zookeeper.hpp"
+
+#include <atomic>
+#include <iostream>
 
 namespace zookeeper {
 namespace {
@@ -22,16 +25,33 @@ template <class Target>
 Target* back_cast(const void* data) {
     return const_cast<Target*>(static_cast<const Target*>(data));
 }
+
+std::atomic<size_t> callback_counter(1);
 }
+
+managed_handler_base_t::managed_handler_base_t(const handler_tag&) :
+    idx(callback_counter++)
+{}
 
 handler_dispatcher_t::handler_dispatcher_t() :
     storage_lock(),
-    callbacks()
+    callbacks(),
+    active(true)
 {}
 /**
 * All callback are called from C ZK client, convert previously passed void* to
 * matching callback and invoke it.
 */
+
+handler_dispatcher_t::~handler_dispatcher_t() {
+    decltype(callbacks) tmp_callbacks;
+    {
+        std::unique_lock<std::mutex> lock(storage_lock);
+        active = false;
+        tmp_callbacks.swap(callbacks);
+    }
+    tmp_callbacks.clear();
+}
 
 void
 handler_dispatcher_t::watcher_cb(zhandle_t* /*zh*/, int type, int state, const char* path, void* watcherCtx) {
@@ -112,14 +132,18 @@ handler_dispatcher_t& handler_dispatcher_t::instance() {
 
 void handler_dispatcher_t::add(managed_handler_base_t* callback) {
     std::unique_lock<std::mutex> lock(storage_lock);
-    callbacks.insert(std::make_pair(callback, handler_ptr(callback)));
+    if(active) {
+        callbacks.insert(std::make_pair(callback->get_id(), handler_ptr(callback)));
+    }
 }
 
 void handler_dispatcher_t::release(managed_handler_base_t* callback) {
     std::unique_lock<std::mutex> lock(storage_lock);
-    auto it = callbacks.find(callback);
+    auto it = callbacks.find(callback->get_id());
     if(it != callbacks.end()) {
         callbacks.erase(it);
+    } else {
+        std::cerr << "could not release managed callback - not found\n";
     }
 }
 
@@ -128,4 +152,16 @@ handler_scope_t::~handler_scope_t() {
         handler_dispatcher_t::instance().release(registered_callbacks[i]);
     }
 }
+
+void
+managed_string_handler_base_t::operator() (int rc, zookeeper::path_t value) {
+    if(!rc) {
+        assert(value.size() > prefix.size());
+        // TODO: Heavy assertion. Maybe we should delete it as we use asserts in prod.
+        assert(value.substr(0, prefix.size()) == prefix);
+        value.erase(0, prefix.size());
+    }
+    string_event(rc, std::move(value));
+}
+
 }

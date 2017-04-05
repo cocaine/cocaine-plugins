@@ -40,8 +40,8 @@ typedef result_of<io::elasticsearch::delete_index>::type delete_index;
 }
 
 class elasticsearch_t :
-        public api::service_t,
-        public dispatch<io::elasticsearch_tag>
+    public api::service_t,
+    public dispatch<io::elasticsearch_tag>
 {
     class impl_t;
     std::unique_ptr<impl_t> d;
@@ -55,7 +55,7 @@ public:
    ~elasticsearch_t();
 
     auto
-    prototype() const -> const io::basic_dispatch_t& {
+    prototype() -> io::basic_dispatch_t& {
         return *this;
     }
 

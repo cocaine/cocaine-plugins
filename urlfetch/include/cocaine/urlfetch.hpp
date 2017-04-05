@@ -43,7 +43,7 @@ class urlfetch_t:
 
         virtual
         auto
-        prototype() const -> const io::basic_dispatch_t& {
+        prototype() -> io::basic_dispatch_t& {
             return *this;
         }
 
@@ -73,7 +73,7 @@ class urlfetch_t:
                         bool follow_location);
 
     private:
-        std::shared_ptr<logging::log_t> log_;
+        std::shared_ptr<logging::logger_t> log_;
         ioremap::swarm::logger m_logger;
         boost::asio::io_service m_service;
         ioremap::swarm::boost_event_loop m_loop;

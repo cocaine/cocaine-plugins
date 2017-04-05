@@ -15,9 +15,11 @@ ADD_LIBRARY(elasticsearch MODULE
     src/module)
 
 TARGET_LINK_LIBRARIES(elasticsearch
+    blackhole
     swarm
     swarm_urlfetcher
-    cocaine-core)
+    cocaine-core
+    cocaine-io-util)
 
 SET_TARGET_PROPERTIES(elasticsearch PROPERTIES
     PREFIX ""

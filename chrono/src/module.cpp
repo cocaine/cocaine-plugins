@@ -15,13 +15,16 @@
 
 #include "cocaine/chrono.hpp"
 
+#include <cocaine/repository.hpp>
+#include <cocaine/repository/service.hpp>
+
 using namespace cocaine;
 using namespace cocaine::service;
 
 extern "C" {
     auto
     validation() -> api::preconditions_t {
-        return api::preconditions_t { COCAINE_MAKE_VERSION(0, 12, 0) };
+        return api::preconditions_t{ COCAINE_VERSION };
     }
 
     void

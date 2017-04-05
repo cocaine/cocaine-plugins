@@ -36,7 +36,7 @@ class chrono_t:
 
         virtual
         auto
-        prototype() const -> const io::basic_dispatch_t& {
+        prototype() -> io::basic_dispatch_t& {
             return *this;
         }
 
@@ -69,7 +69,7 @@ class chrono_t:
         streamed<io::timer_id_t>
         set_timer_impl(double first, double repeat, bool send_id);
 
-        std::unique_ptr<logging::log_t> log_;
+        std::unique_ptr<logging::logger_t> log_;
         synchronized<std::map<io::timer_id_t, timer_desc_t>> timers_;
         asio::io_service& asio_;
 };

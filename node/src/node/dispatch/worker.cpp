@@ -11,55 +11,71 @@ worker_rpc_dispatch_t::worker_rpc_dispatch_t(std::shared_ptr<stream_t> stream_, 
     callback(callback)
 {
     on<protocol::chunk>([&](const std::string& chunk) {
+        std::lock_guard<std::mutex> lock(mutex);
+
+        if (state == state_t::closed) {
+            return;
+        }
+
         try {
-            stream->write(chunk);
+            stream->write({}, chunk);
         } catch (const std::system_error&) {
-            finalize(asio::error::connection_aborted);
+            finalize(lock, asio::error::connection_aborted);
         }
     });
 
     on<protocol::error>([&](const std::error_code& ec, const std::string& reason) {
+        std::lock_guard<std::mutex> lock(mutex);
+
+        if (state == state_t::closed) {
+            return;
+        }
+
         try {
-            stream->error(ec, reason);
-            finalize();
+            stream->error({}, ec, reason);
+            finalize(lock);
         } catch (const std::system_error&) {
-            finalize(asio::error::connection_aborted);
+            finalize(lock, asio::error::connection_aborted);
         }
     });
 
     on<protocol::choke>([&]() {
+        std::lock_guard<std::mutex> lock(mutex);
+
+        if (state == state_t::closed) {
+            return;
+        }
+
         try {
-            stream->close();
-            finalize();
+            stream->close({});
+            finalize(lock);
         } catch (const std::system_error&) {
-            finalize(asio::error::connection_aborted);
+            finalize(lock, asio::error::connection_aborted);
         }
     });
-}
-
-void
-worker_rpc_dispatch_t::discard(const std::error_code& ec) const {
-    // TODO: Consider something less weird.
-    const_cast<worker_rpc_dispatch_t*>(this)->discard(ec);
 }
 
 void
 worker_rpc_dispatch_t::discard(const std::error_code& ec) {
     if (ec) {
+        std::lock_guard<std::mutex> lock(mutex);
+
+        if (state == state_t::closed) {
+            return;
+        }
+
         try {
-            stream->error(ec, "slave has been discarded");
+            stream->error({}, ec, "slave has been discarded");
         } catch (const std::exception&) {
             // Eat.
         }
 
-        finalize();
+        finalize(lock);
     }
 }
 
 void
-worker_rpc_dispatch_t::finalize(const std::error_code& ec) {
-    std::lock_guard<std::mutex> lock(mutex);
-
+worker_rpc_dispatch_t::finalize(std::lock_guard<std::mutex>&, const std::error_code& ec) {
     // Ensure that we call this method only once no matter what.
     if (state == state_t::closed) {
         // TODO: Log the error.

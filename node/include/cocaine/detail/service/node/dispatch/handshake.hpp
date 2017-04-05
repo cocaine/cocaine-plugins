@@ -9,17 +9,45 @@
 
 #include "cocaine/idl/rpc.hpp"
 
-#include "cocaine/detail/service/node/slot.hpp"
+#include "cocaine/detail/service/node/forwards.hpp"
 
 namespace cocaine {
 
-class control_t;
+using detail::service::node::slave::control_t;
+
+template<class Event, class F>
+class forward_slot : public io::basic_slot<Event> {
+public:
+    typedef Event event_type;
+
+    typedef std::vector<hpack::header_t> meta_type;
+    typedef typename io::basic_slot<event_type>::tuple_type    tuple_type;
+    typedef typename io::basic_slot<event_type>::dispatch_type dispatch_type;
+    typedef typename io::basic_slot<event_type>::upstream_type upstream_type;
+
+private:
+    const F f;
+
+public:
+    forward_slot(F f) : f(std::move(f)) {}
+
+    virtual
+    boost::optional<std::shared_ptr<dispatch_type>>
+    operator()(const meta_type& headers, tuple_type&& args, upstream_type&& upstream) {
+        return f(std::move(upstream), headers, std::move(args));
+    }
+};
+
+template<class Event, class F>
+auto make_forward_slot(F&& f) -> std::shared_ptr<io::basic_slot<Event>> {
+    return std::make_shared<forward_slot<Event, F>>(std::forward<F>(f));
+}
 
 /// Initial dispatch for slaves.
 ///
 /// Accepts only handshake messages and forwards it to the actual checker (i.e. to the Overseer).
 /// This is a single-shot dispatch, it will be invalidated after the first handshake processed.
-class handshake_t:
+class handshaking_t:
     public dispatch<io::worker_tag>
 {
     std::shared_ptr<session_t> session;
@@ -29,14 +57,14 @@ class handshake_t:
 
 public:
     template<class F>
-    handshake_t(const std::string& name, F&& fn):
-        dispatch<io::worker_tag>(format("%s/handshake", name))
+    handshaking_t(const std::string& name, F&& fn):
+        dispatch<io::worker_tag>(format("{}/handshake", name))
     {
-        typedef io::streaming_slot<io::worker::handshake> slot_type;
-
-        on<io::worker::handshake>(std::make_shared<slot_type>(
-            [=](slot_type::upstream_type&& stream, const std::string& uuid) -> std::shared_ptr<control_t>
+        auto handler = [=](upstream<io::worker::control_tag>&& upstream,
+                           const std::vector<hpack::header_t>&,
+                           std::tuple<std::string> args) -> std::shared_ptr<dispatch<io::worker::control_tag>>//std::shared_ptr<control_t>
         {
+            std::string uuid = std::get<0>(args);
             std::unique_lock<std::mutex> lock(mutex);
             // TODO: Perhaps we should use here `wait_for` to prevent forever waiting on slave, that
             // have been immediately killed.
@@ -44,15 +72,17 @@ public:
                 return !!session;
             });
 
-            return fn(uuid ,std::move(session), std::move(stream));
-        }));
+            return fn(uuid, std::move(session), std::move(upstream));
+        };
+
+        on<io::worker::handshake>(make_forward_slot<io::worker::handshake>(std::move(handler)));
     }
 
     void
     bind(std::shared_ptr<session_t> session) const {
         // Here we need that shitty const cast, because `dispatch_ptr_t` is a shared pointer over a
         // constant dispatch.
-        const_cast<handshake_t*>(this)->bind(std::move(session));
+        const_cast<handshaking_t*>(this)->bind(std::move(session));
     }
 
     void

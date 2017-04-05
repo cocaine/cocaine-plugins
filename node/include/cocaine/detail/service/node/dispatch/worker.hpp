@@ -5,15 +5,9 @@
 #include "cocaine/idl/node.hpp"
 #include "cocaine/idl/rpc.hpp"
 
+#include "cocaine/detail/service/node/forwards.hpp"
+
 namespace cocaine {
-
-namespace api {
-
-class stream_t;
-
-}  // namespace api
-
-class channel_t;
 
 using api::stream_t;
 
@@ -50,16 +44,12 @@ public:
     /// The worker has been disconnected without closing its opened channels.
     ///
     /// In this case we should notify all users about the failure.
-    virtual
     void
-    discard(const std::error_code& ec) const;
-
-    void
-    discard(const std::error_code& ec);
+    discard(const std::error_code& ec) override;
 
 private:
     void
-    finalize(const std::error_code& ec = std::error_code());
+    finalize(std::lock_guard<std::mutex>&, const std::error_code& ec = std::error_code());
 };
 
 } // namespace cocaine

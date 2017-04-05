@@ -23,8 +23,11 @@
 #include <tuple>
 
 #include <cocaine/context.hpp>
+#include <cocaine/dynamic.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/traits/tuple.hpp>
+
+#include <blackhole/logger.hpp>
 
 #include <swarm/urlfetcher/boost_event_loop.hpp>
 #include <swarm/urlfetcher/url_fetcher.hpp>
@@ -53,7 +56,7 @@ public:
     swarm::logger m_logger;
     mutable swarm::url_fetcher m_manager;
     const std::string m_endpoint;
-    std::shared_ptr<logging::log_t> m_log;
+    std::shared_ptr<logging::logger_t> m_log;
 
     impl_t(cocaine::context_t &context,
            asio::io_service &asio,
@@ -64,7 +67,7 @@ public:
         m_endpoint(extract_endpoint(args)),
         m_log(context.log(name))
     {
-        COCAINE_LOG_INFO(m_log, "Elasticsearch endpoint: %s", m_endpoint);
+        COCAINE_LOG_INFO(m_log, "Elasticsearch endpoint: {}", m_endpoint);
     }
 
     template<typename T, typename Handler>
@@ -112,7 +115,7 @@ private:
     extract_endpoint(const cocaine::dynamic_t& args) {
         const std::string& host = args.as_object().at("host", "127.0.0.1").as_string();
         const uint16_t port = args.as_object().at("port", 9200).to<uint16_t>();
-        return cocaine::format("http://%s:%d", host, port);
+        return cocaine::format("http://{}:{}", host, port);
     }
 };
 
@@ -137,7 +140,7 @@ cocaine::deferred<response::get>
 elasticsearch_t::get(const std::string& index,
                      const std::string& type,
                      const std::string& id) const {
-    const std::string& url = cocaine::format("%s/%s/%s/%s/", d->m_endpoint, index, type, id);
+    const std::string& url = cocaine::format("{}/{}/{}/{}/", d->m_endpoint, index, type, id);
     get_handler_t handler { d->m_log };
     return d->do_get<response::get>(url, handler);
 }
@@ -147,7 +150,7 @@ elasticsearch_t::index(const std::string& data,
                        const std::string& index,
                        const std::string& type,
                        const std::string& id) const {
-    const std::string& url = cocaine::format("%s/%s/%s/%s", d->m_endpoint, index, type, id);
+    const std::string& url = cocaine::format("{}/{}/{}/{}", d->m_endpoint, index, type, id);
     index_handler_t handler { d->m_log };
     return d->do_post<response::index>(url, data, handler);
 }
@@ -162,7 +165,7 @@ elasticsearch_t::search(const std::string& index,
         //throw cocaine::error_t("desired search size (%d) must be positive number", size);
     }
 
-    const std::string& url = cocaine::format("%s/%s/%s/_search?q=%s&size=%d", d->m_endpoint, index, type, query, size);
+    const std::string& url = cocaine::format("{}/{}/{}/_search?q={}&size={}", d->m_endpoint, index, type, query, size);
     search_handler_t handler { d->m_log };
     return d->do_get<response::search>(url, handler);
 }
@@ -171,7 +174,7 @@ cocaine::deferred<response::delete_index>
 elasticsearch_t::delete_index(const std::string& index,
                               const std::string& type,
                               const std::string& id) const {
-    const std::string& url = cocaine::format("%s/%s/%s/%s", d->m_endpoint, index, type, id);
+    const std::string& url = cocaine::format("{}/{}/{}/{}", d->m_endpoint, index, type, id);
     delete_handler_t handler { d->m_log };
     return d->do_delete<response::delete_index>(url, handler);
 }

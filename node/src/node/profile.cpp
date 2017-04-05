@@ -18,13 +18,14 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "cocaine/detail/service/node/profile.hpp"
+#include <cocaine/service/node/profile.hpp>
+#include "cocaine/service/node/profile.hpp"
 
-#include "cocaine/defaults.hpp"
+#include <cocaine/defaults.hpp>
+#include <cocaine/errors.hpp>
+#include <cocaine/traits/dynamic.hpp>
 
-#include "cocaine/traits/dynamic.hpp"
-
-using namespace cocaine;
+namespace cocaine {
 
 profile_t::profile_t(context_t& context, const std::string& name_):
     cached<dynamic_t>(context, "profiles", name_),
@@ -40,6 +41,7 @@ profile_t::profile_t(context_t& context, const std::string& name_):
     timeout.seal      = static_cast<uint64_t>(1000 * config.at("seal-timeout", 60.0).to<double>());
     timeout.terminate = static_cast<uint64_t>(1000 * config.at("terminate-timeout", 10.0).to<double>());
     timeout.idle      = static_cast<uint64_t>(1000 * config.at("idle-timeout", 600.0f).to<double>());
+    //timeout.request   = static_cast<uint64_t>(1000 * config.at("request-timeout", 86400.0f).to<double>());
 
     concurrency         = as_object().at("concurrency", 10L).to<uint64_t>();
     crashlog_limit      = as_object().at("crashlog-limit", 50L).to<uint64_t>();
@@ -54,10 +56,8 @@ profile_t::profile_t(context_t& context, const std::string& name_):
 
     const auto isolate_config = as_object().at("isolate", dynamic_t::empty_object).as_object();
 
-    isolate = {
-        isolate_config.at("type", "process").as_string(),
-        isolate_config.at("args", dynamic_t::empty_object)
-    };
+    isolate.type = isolate_config.at("type", "process").as_string();
+    isolate.args = isolate_config.at("args", dynamic_t::empty_object);
 
     // Validation
 
@@ -72,4 +72,27 @@ profile_t::profile_t(context_t& context, const std::string& name_):
     if(concurrency == 0) {
         throw cocaine::error_t("engine concurrency must be positive");
     }
+
+    if (publish_on() > pool_limit) {
+        throw cocaine::error_t("publish threshold must not be greater than pool limit");
+    }
+
+    if (publish_on() < unpublish_under()) {
+        throw cocaine::error_t("publish threshold must not be less than unpublish one");
+    }
 }
+
+auto profile_t::publish_on() const -> std::uint32_t {
+    return this->as_object().at("publish-on", 0u).as_uint();
+}
+
+auto profile_t::unpublish_under() const -> std::uint32_t {
+    return this->as_object().at("unpublish-under", 0u).as_uint();
+}
+
+unsigned long
+profile_t::request_timeout() const {
+    return static_cast<uint64_t>(1000 * as_object().at("request-timeout", 86400.0f).to<double>());
+}
+
+} //  namespace cocaine

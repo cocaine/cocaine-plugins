@@ -25,6 +25,8 @@ struct node_category_t:
             return "no resources available to complete invocation";
         case node_errors::timeout_error:
             return "invocation has timed out";
+        case node_errors::invalid_assignment:
+            return "failed to assign event to a slave";
         case node_errors::already_started:
             return "application has already been started";
         case node_errors::not_running:

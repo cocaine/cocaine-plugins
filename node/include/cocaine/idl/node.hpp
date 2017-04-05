@@ -51,7 +51,9 @@ struct enqueue {
      /* Event name. This name is intentionally dynamic so that the underlying application can
         do whatever it wants using these event names, for example handle every possible one. */
         std::string,
-     /* Tag. Event can be enqueued to a specific worker with some user-defined name. */
+     /* Tag. Event can be enqueued to a specific worker with some user-defined name.
+
+        DEPRECATED: no longer used. */
         optional<std::string>
     >::type argument_type;
 
@@ -114,7 +116,7 @@ struct node {
 struct start_app {
     typedef node_tag tag;
 
-    static const char* alias() {
+    static const char* alias() noexcept {
         return "start_app";
     }
 
@@ -135,6 +137,25 @@ struct pause_app {
      /* Name of the app to susped. */
         std::string
     >::type argument_type;
+};
+
+struct control_app {
+    typedef node_tag tag;
+
+    static const char* alias() noexcept {
+        return "control";
+    }
+
+    typedef boost::mpl::list<
+     /* Name of the application to be controlled. */
+        std::string
+    > argument_type;
+
+    typedef stream_of<
+     /* Number of workers we want the Node Service for App to be kept alive. Non-positive values
+        means rolling back to the default logic. */
+        int
+    >::tag dispatch_type;
 };
 
 struct info {
@@ -195,7 +216,8 @@ struct protocol<node_tag> {
         node::start_app,
         node::pause_app,
         node::list,
-        node::info
+        node::info,
+        node::control_app
     >::type messages;
 
     typedef node scope;
@@ -206,9 +228,12 @@ struct protocol<node_tag> {
 namespace cocaine { namespace error {
 
 enum node_errors {
+    /// Event has expired in the queue due to deadline.
     deadline_error = 1,
     resource_error,
+    /// Event has timed out while communicating with worker.
     timeout_error,
+    invalid_assignment,
 
     /// App has been already started.
     already_started,
@@ -224,6 +249,8 @@ enum node_errors {
 
 const std::error_category&
 node_category();
+
+size_t constexpr node_category_id = 0x51FF;
 
 std::error_code
 make_error_code(node_errors code);
