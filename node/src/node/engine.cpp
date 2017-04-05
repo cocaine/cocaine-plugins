@@ -414,6 +414,8 @@ auto engine_t::enqueue(upstream<io::stream_of<std::string>::tag> downstream, eve
 auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx, event_t event)
     -> std::shared_ptr<api::stream_t>
 {
+    stats.meter->mark();
+
     auto tx = std::make_shared<tx_stream_t>();
 
     try {
@@ -436,7 +438,6 @@ auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx, event_t event)
         });
 
         stats.requests.accepted->fetch_add(1);
-        stats.meter->mark();
         rebalance_events();
         rebalance_slaves();
     } catch (...) {
