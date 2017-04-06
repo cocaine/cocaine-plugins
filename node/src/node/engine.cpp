@@ -1,6 +1,5 @@
 #include "cocaine/detail/service/node/engine.hpp"
 
-#include <boost/accumulators/statistics/extended_p_square.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
 
@@ -27,7 +26,7 @@
 #include "cocaine/detail/service/node/slave/stats.hpp"
 
 #include "pool_observer.hpp"
-#include "util/bound.hpp"
+#include "stdext/clamp.hpp"
 
 namespace cocaine {
 namespace detail {
@@ -703,9 +702,9 @@ auto engine_t::rebalance_slaves() -> void {
     const auto pool_target = static_cast<std::size_t>(this->pool_target.load());
 
     // Bound current pool target between [1; limit].
-    const auto target = util::bound(
-        1ul,
+    const auto target = stdext::clamp(
         pool_target ? pool_target : load / profile.grow_threshold,
+        1ul,
         profile.pool_limit
     );
 
