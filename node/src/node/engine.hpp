@@ -112,9 +112,9 @@ public:
     /// \return the dispatch object, which is ready for processing the appropriate protocol
     /// messages.
     ///
-    /// \param downstream represents the [Client <- Worker] stream.
     /// \param event an invocation event.
-    auto enqueue(upstream<io::stream_of<std::string>::tag> downstream, event_t event)
+    /// \param downstream represents the [Client <- Worker] stream.
+    auto enqueue(event_t event, upstream<io::stream_of<std::string>::tag> downstream)
         -> std::shared_ptr<client_rpc_dispatch_t>;
 
     /// Enqueues the new event into the most appropriate slave.
@@ -122,11 +122,11 @@ public:
     /// The event will be put into the queue if there are no slaves available at this moment or all
     /// of them are busy.
     ///
+    /// \param event an invocation event.
     /// \param rx a receiver stream which methods will be called when the appropriate messages
     ///     received.
-    /// \param event an invocation event.
     /// \return a tx stream.
-    auto enqueue(std::shared_ptr<api::stream_t> rx, event_t event)
+    auto enqueue(event_t event, std::shared_ptr<api::stream_t> rx)
         -> std::shared_ptr<api::stream_t>;
 
     /// Tries to keep alive at least `count` workers no matter what.

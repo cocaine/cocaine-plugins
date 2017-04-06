@@ -7,9 +7,9 @@
 
 #include "cocaine/service/node/slave/id.hpp"
 
-#include "cocaine/detail/service/node/engine.hpp"
 #include "cocaine/detail/service/node/slave.hpp"
 
+#include "engine.hpp"
 #include "pool_observer.hpp"
 
 namespace cocaine {
@@ -56,16 +56,16 @@ auto overseer_t::control_population(int count) -> void {
     return engine->control_population(count);
 }
 
-auto overseer_t::enqueue(upstream<io::stream_of<std::string>::tag> downstream, app::event_t event)
+auto overseer_t::enqueue(app::event_t event, upstream<io::stream_of<std::string>::tag> downstream)
     -> std::shared_ptr<client_rpc_dispatch_t>
 {
-    return engine->enqueue(std::move(downstream), std::move(event));
+    return engine->enqueue(std::move(event), std::move(downstream));
 }
 
-auto overseer_t::enqueue(std::shared_ptr<api::stream_t> rx, app::event_t event)
+auto overseer_t::enqueue(app::event_t event, std::shared_ptr<api::stream_t> rx)
     -> std::shared_ptr<api::stream_t>
 {
-    return engine->enqueue(std::move(rx), std::move(event));
+    return engine->enqueue(std::move(event), std::move(rx));
 }
 
 auto overseer_t::prototype() -> io::dispatch_ptr_t {

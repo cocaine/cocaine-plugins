@@ -1,4 +1,4 @@
-#include "cocaine/detail/service/node/engine.hpp"
+#include "engine.hpp"
 
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
@@ -163,15 +163,15 @@ struct rx_stream_t : public api::stream_t {
 
 } // namespace
 
-auto engine_t::enqueue(upstream<io::stream_of<std::string>::tag> downstream, event_t event)
+auto engine_t::enqueue(event_t event, upstream<io::stream_of<std::string>::tag> downstream)
     -> std::shared_ptr<client_rpc_dispatch_t>
 {
     const std::shared_ptr<api::stream_t> rx = std::make_shared<rx_stream_t>(std::move(downstream));
-    const auto tx = enqueue(std::move(rx), std::move(event));
+    const auto tx = enqueue(std::move(event), std::move(rx));
     return std::static_pointer_cast<tx_stream_t>(tx)->dispatch;
 }
 
-auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx, event_t event)
+auto engine_t::enqueue(event_t event, std::shared_ptr<api::stream_t> rx)
     -> std::shared_ptr<api::stream_t>
 {
     stats.meter->mark();
@@ -499,7 +499,7 @@ auto engine_t::rebalance_slaves() -> void {
                     });
 
                     // All slaves are now inactive due to some external conditions.
-                    if (!slave) {
+                    if (slave == boost::end(range)) {
                         break;
                     }
 

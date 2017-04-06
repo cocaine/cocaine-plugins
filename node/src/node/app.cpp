@@ -195,7 +195,7 @@ private:
 
         try {
             if (auto overseer = this->overseer.lock()) {
-                return overseer->o->enqueue(upstream, {event, hpack::header_storage_t(headers)});
+                return overseer->o->enqueue({event, hpack::header_storage_t(headers)}, upstream);
             } else {
                 // We shouldn't close the connection here, because there possibly can be events
                 // processing.

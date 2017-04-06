@@ -68,8 +68,8 @@ public:
     ///
     /// \return the dispatch object, which is ready for processing the appropriate protocol
     ///     messages.
-    auto enqueue(upstream<io::stream_of<std::string>::tag> downstream,
-                 app::event_t event) -> std::shared_ptr<client_rpc_dispatch_t>;
+    auto enqueue(app::event_t event, upstream<io::stream_of<std::string>::tag> downstream)
+        -> std::shared_ptr<client_rpc_dispatch_t>;
 
     /// Enqueues the new event into the most appropriate slave.
     ///
@@ -81,8 +81,8 @@ public:
     /// \param event an invocation event.
     ///
     /// \return a tx stream.
-    auto enqueue(std::shared_ptr<api::stream_t> rx,
-                 app::event_t event) -> std::shared_ptr<api::stream_t>;
+    auto enqueue(app::event_t event, std::shared_ptr<api::stream_t> rx)
+        -> std::shared_ptr<api::stream_t>;
 
     /// Tries to keep alive at least `count` workers no matter what.
     ///
