@@ -3,6 +3,10 @@ Language:        Cpp
 # BasedOnStyle:  Google
 AccessModifierOffset: -4
 
+
+SpaceAfterTemplateKeyword: false
+FixNamespaceComments: true
+
 AlignAfterOpenBracket: true
 AlignConsecutiveAssignments: false
 AlignEscapedNewlinesLeft: true
@@ -14,7 +18,7 @@ AllowShortCaseLabelsOnASingleLine: false
 AllowShortFunctionsOnASingleLine: Empty
 AllowShortIfStatementsOnASingleLine: false
 AllowShortLoopsOnASingleLine: false
-AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterDefinitionReturnType: All
 AlwaysBreakBeforeMultilineStrings: true
 AlwaysBreakTemplateDeclarations: true
 BinPackArguments: false
@@ -23,7 +27,7 @@ BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Attach
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: false
-ColumnLimit:     100
+ColumnLimit:     120
 CommentPragmas:  '^ IWYU pragma:'
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ConstructorInitializerIndentWidth: 4
@@ -32,7 +36,6 @@ Cpp11BracedListStyle: true
 DerivePointerAlignment: true
 DisableFormat:   false
 ExperimentalAutoDetectBinPacking: false
-ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH ]
 IndentCaseLabels: false
 IndentWidth:     4
 IndentWrappedFunctionNames: false
@@ -55,7 +58,7 @@ SpaceAfterCStyleCast: false
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: false
-SpacesBeforeTrailingComments: 2
+SpacesBeforeTrailingComments: 1
 SpacesInAngles:  false
 SpacesInContainerLiterals: true
 SpacesInCStyleCastParentheses: false
