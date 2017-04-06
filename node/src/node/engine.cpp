@@ -167,8 +167,8 @@ auto engine_t::enqueue(event_t event, upstream<io::stream_of<std::string>::tag> 
     -> std::shared_ptr<client_rpc_dispatch_t>
 {
     const std::shared_ptr<api::stream_t> rx = std::make_shared<rx_stream_t>(std::move(downstream));
-    const auto tx = enqueue(std::move(event), std::move(rx));
-    return std::static_pointer_cast<tx_stream_t>(tx)->dispatch;
+    auto tx = enqueue(std::move(event), std::move(rx));
+    return std::static_pointer_cast<tx_stream_t>(std::move(tx))->dispatch;
 }
 
 auto engine_t::enqueue(event_t event, std::shared_ptr<api::stream_t> rx)
