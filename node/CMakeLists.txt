@@ -34,6 +34,11 @@ add_library(${PLUGIN_NAME} SHARED
     ${CGROUP_SOURCES}
     src/isolate/external.cpp
     src/isolate/fetcher.cpp
+
+    src/node/info/manifest.cpp
+    src/node/info/profile.cpp
+    src/node/info/collector.cpp
+
     src/module.cpp
     src/node.cpp
     src/node/app.cpp

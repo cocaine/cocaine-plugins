@@ -9,6 +9,7 @@
 #include "cocaine/idl/rpc.hpp"
 
 #include "cocaine/service/node/app/event.hpp"
+#include "cocaine/service/node/fwd.hpp"
 #include "cocaine/service/node/manifest.hpp"
 #include "cocaine/service/node/profile.hpp"
 #include "cocaine/service/node/slave/id.hpp"
@@ -16,8 +17,6 @@
 #include "cocaine/detail/service/node/slave.hpp"
 #include "cocaine/detail/service/node/slave/load.hpp"
 #include "cocaine/detail/service/node/stats.hpp"
-
-#include "node/pool_observer.hpp"
 
 namespace cocaine {
 namespace detail {
