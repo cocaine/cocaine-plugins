@@ -1,3 +1,14 @@
+cocaine-plugins (0.12.13.0-alpha5) unstable; urgency=low
+
+  * Feature: zero-sized queue (#128).
+    This commit introduces zero-sized queue for App service. It allows to
+    immediately inject events without (almost) putting them into the queue.
+    Also if all slaves are busy the new policy will reject new events
+    without putting them into the queue.
+  * Fixed: always count RPS regardless of accept/reject (#127).
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 07 Apr 2017 16:10:59 +0300
+
 cocaine-plugins (0.12.13.0-alpha4) unstable; urgency=low
 
   * Fixed: Do not drop core metafilter on cleanup from map,
