@@ -151,11 +151,11 @@ public:
     auto cancel() -> void;
 
 private:
-    /// Spawns a new slave using current manifest and profile.
+    /// Spawns a slave using current manifest and profile.
     auto spawn(pool_type& pool) -> void;
 
-    /// Spawns a new slave with the given id using current manifest and profile.
-    auto spawn(const id_t& id, pool_type& pool) -> void;
+    /// Spawns a slave with the given id using current manifest and profile.
+    auto spawn(id_t id, pool_type& pool) -> void;
 
     /// \warning must be called under the pool lock.
     auto assign(slave_t& slave, load_t& load) -> void;
@@ -171,7 +171,13 @@ private:
 
     auto on_slave_death(const std::error_code& ec, std::string uuid) -> void;
 
+    auto select_slave(pool_type& pool) -> boost::optional<slave_t&>;
+    auto select_slave(pool_type& pool, std::function<bool(const slave_t& slave)> filter) -> boost::optional<slave_t&>;
+
+    auto pool_pressure(pool_type& pool) -> std::size_t;
+
     auto rebalance_events() -> void;
+    auto rebalance_events(pool_type& pool, queue_type& queue) -> void;
 
     auto rebalance_slaves() -> void;
 
