@@ -2,7 +2,7 @@ require 'securerandom'
 require 'cocaine'
 require 'rspec'
 
-Cocaine::LOG.level = Logger::ERROR
+Cocaine::LOG.level = Logger::DEBUG
 Celluloid.logger.level = Cocaine::LOG.level
 
 
@@ -15,9 +15,14 @@ def new_logger(host: 'localhost', port: 10053)
   Cocaine::Service.new('logging', [[host, port]])
 end
 
-def ensure_log(frontend, msg, verbosity=1, attributes = [])
+def ensure_log(frontend, msg, verbosity=1, attributes = [], headers = {})
   logger = new_logger()
-  tx, rx = logger.get(frontend)
+  if headers.empty?
+    tx, rx = logger.get(frontend)
+  else
+    tx, rx = logger.get(frontend, **headers)
+  end
+
   tx.emit_ack(verbosity, msg, attributes)
   res = rx.recv(timeout)
   tx.emit_ack(verbosity, msg, attributes)
@@ -213,8 +218,16 @@ describe :Logging do
   it 'should correctly handle prefixes' do
     backend = random_backend('prefixes_test')
     logger = new_logger()
-    tx, rx = logger.set_filter(backend, ["severity", 0], 60)
+    tx, rx = logger.set_filter(backend, ['severity', 0], 60)
     bigger_backend = backend + random_backend('')
     ensure_log(bigger_backend, 'prefix test', 2, [])
+  end
+
+  it 'should correctly handle trace_bit filter' do
+    backend = random_backend('trace_bit_test')
+    logger = new_logger()
+    tx, rx = logger.set_filter(backend, ['traced'], 60)
+    ensure_log(backend, 'trace_bit_test', 0, [], {trace_bit: '1', trace_id: 'aaaaaaaa', span_id: 'aaaaaaaa', parent_id: 'aaaaaaaa'})
+    ensure_not_log(backend, invalid_msg, 0, [])
   end
 end
