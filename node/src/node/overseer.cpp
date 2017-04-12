@@ -19,7 +19,7 @@ namespace node {
 overseer_t::overseer_t(context_t& context,
                        manifest_t manifest,
                        profile_t profile,
-                       pool_observer& observer,
+                       std::shared_ptr<pool_observer> observer,
                        std::shared_ptr<asio::io_service> loop)
     : engine(std::make_shared<engine_t>(context, manifest, profile, observer, loop)) {}
 

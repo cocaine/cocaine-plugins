@@ -42,7 +42,7 @@ public:
 
     virtual
     std::unique_ptr<api::cancellation_t>
-    spool(std::shared_ptr<api::spool_handle_base_t> handler);
+    spool(std::shared_ptr<api::spool_handle_base_t> handle);
 
     virtual
     std::unique_ptr<api::cancellation_t>
@@ -50,6 +50,10 @@ public:
           const api::args_t& args,
           const api::env_t& environment,
           std::shared_ptr<api::spawn_handle_base_t> handle);
+
+    virtual
+    void
+    metrics(const dynamic_t& query, std::shared_ptr<api::metrics_handle_base_t> handle) const;
 
 private:
     context_t& m_context;

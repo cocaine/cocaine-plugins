@@ -337,8 +337,7 @@ public:
 
 /// The application has been published and currently running.
 class running_t:
-    public base_t,
-    public pool_observer
+    public base_t
 {
     logging::logger_t* const log;
 
@@ -361,7 +360,7 @@ public:
     {
         // Create an Overseer - slave spawner/despawner plus the event queue dispatcher.
         overseer_ = std::make_shared<overseer_proxy_t>(
-            std::make_shared<overseer_t>(context, manifest, profile, *this, loop)
+            std::make_shared<overseer_t>(context, manifest, profile, std::make_shared<observer_adapter_t>(*this), loop)
         );
 
         // Create an unix actor and bind to {manifest->name}.{pid} unix-socket.
@@ -470,6 +469,24 @@ private:
             COCAINE_LOG_WARNING(log, "failed to remove application service from the context: {}", err.what());
         }
     }
+
+    struct observer_adapter_t : public pool_observer {
+
+        observer_adapter_t(running_t& rstate) :
+            parent(rstate)
+        {}
+
+        auto despawned(const std::string&) -> void override {
+            parent.despawned();
+        }
+
+        auto spawned(const std::string&) -> void override {
+            parent.spawned();
+        }
+
+    private:
+        running_t& parent;
+    };
 };
 
 } // namespace state
@@ -477,7 +494,6 @@ private:
 class cocaine::service::node::app_state_t
     : public std::enable_shared_from_this<cocaine::service::node::app_state_t>
 {
-
     const std::unique_ptr<logging::logger_t> log;
 
     context_t& context;

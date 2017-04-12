@@ -65,7 +65,8 @@ public:
     std::chrono::system_clock::time_point last_failed;
     std::chrono::seconds last_timeout;
 
-    pool_observer& observer;
+    using observers_type = std::vector<std::shared_ptr<pool_observer>>;
+    synchronized<observers_type> observers;
 
     /// Pending queue.
     synchronized<queue_type> queue;
@@ -73,11 +74,16 @@ public:
     /// Statistics.
     stats_t stats;
 
+    /// Isolation daemon's workers metrics sampler.
+    /// Poll sequence should be initialized explicitly with
+    /// metrics_retriever_t::ignite_poll method or implicitly
+    /// within metrics_retriever_t::make_and_ignite.
+    std::shared_ptr<metrics_retriever_t> metrics_retriever;
 public:
     engine_t(context_t& context,
              manifest_t manifest,
              profile_t profile,
-             pool_observer& observer,
+             std::shared_ptr<pool_observer> observer,
              std::shared_ptr<asio::io_service> loop);
 
     ~engine_t();
@@ -150,6 +156,7 @@ public:
     /// Cancels all asynchronous pending operations, preparing for destruction.
     auto cancel() -> void;
 
+    auto attach_pool_observer(std::shared_ptr<pool_observer> observer) -> void;
 private:
     /// Spawns a slave using current manifest and profile.
     auto spawn(pool_type& pool) -> void;

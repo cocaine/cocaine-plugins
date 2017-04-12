@@ -12,6 +12,7 @@ namespace detail {
 namespace service {
 namespace node {
 
+class metrics_retriever_t;
 class engine_t;
 
 namespace slave {

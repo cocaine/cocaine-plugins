@@ -45,6 +45,7 @@ add_library(${PLUGIN_NAME} SHARED
     src/node/dispatch/client.cpp
     src/node/dispatch/worker.cpp
     src/node/engine.cpp
+    src/node/isometrics.cpp
     src/node/error.cpp
     src/node/manifest.cpp
     src/node/overseer.cpp

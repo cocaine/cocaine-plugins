@@ -35,6 +35,7 @@ struct isolate_spawned_tag;
 struct isolate_spooled_tag;
 
 struct isolate {
+
     struct spool {
         typedef isolate_tag tag;
 
@@ -80,6 +81,25 @@ struct isolate {
         >::tag upstream_type;
     };
 
+    struct metrics {
+        typedef isolate_tag tag;
+
+        static const char* alias() {
+            return "metrics";
+        }
+
+        typedef boost::mpl::list<
+            // Isolation daemon metrics query, in common cases - list of uuids.
+            dynamic_t
+        > argument_type;
+
+        typedef isolate_tag dispatch_type;
+
+        typedef option_of<
+            // Worker metrics grouped by uuids and application name.
+            dynamic_t
+        >::tag upstream_type;
+    };
 };
 
 struct isolate_spawned {
@@ -112,7 +132,8 @@ struct protocol<isolate_tag> {
 
     typedef mpl::list<
         isolate::spool,
-        isolate::spawn
+        isolate::spawn,
+        isolate::metrics
     > messages;
 
     typedef isolate scope;

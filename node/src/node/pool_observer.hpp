@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace cocaine {
 namespace service {
 namespace node {
@@ -11,12 +13,11 @@ public:
     /// Called when a slave was spawned.
     virtual
     auto
-    spawned() -> void = 0;
+    spawned(const std::string& id) -> void = 0;
 
-    /// Called when a slave was despawned.
     virtual
     auto
-    despawned() -> void = 0;
+    despawned(const std::string& id) -> void = 0;
 };
 
 } // namespace node
