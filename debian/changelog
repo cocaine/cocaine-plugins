@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.13.1) unstable; urgency=low
+
+  * Feature: detailed metrics for logging::v2 service.
+
+ -- Anton Matveenko <antmat@me.com>  Mon, 12 Apr 2017 18:02:59 +0300
+
 cocaine-plugins (0.12.13.0-alpha6) unstable; urgency=low
 
   * Feature: trace_bit "traced" filter for logging::v2.
