@@ -120,7 +120,8 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
     static const std::string default_key;
     static const std::string core_key;
 
-    impl_t(context_t& context, asio::io_service& io_context, const dynamic_t& config) :
+    impl_t(context_t& _context, asio::io_service& io_context, const dynamic_t& config) :
+        context(_context),
         internal_logger(context.log("logging_v2")),
         root_logger(new bh::root_logger_t(get_root_logger(context, config))),
         logger(std::unique_ptr<logging::logger_t>(new bh::wrapper_t(*root_logger, {}))),
@@ -159,7 +160,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
         });
         context.logger_filter(std::move(core_filter));
 
-        signal_dispatcher->on<io::context::os_signal>([=, &context](int signum, siginfo_t){
+        signal_dispatcher->on<io::context::os_signal>([=](int signum, siginfo_t){
             if(signum == SIGHUP) {
                 COCAINE_LOG_INFO(internal_logger, "resetting logging v2 root logger");
                 *root_logger = get_root_logger(context, config);
@@ -470,12 +471,13 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
             if (metafilter == nullptr) {
                 std::unique_ptr<logging::logger_t> mf_logger(new blackhole::wrapper_t(
                 *(internal_logger), {{"metafilter", name}}));
-                metafilter = std::make_shared<logging::metafilter_t>(std::move(mf_logger));
+                metafilter = std::make_shared<logging::metafilter_t>(context, name, std::move(mf_logger));
             }
             return metafilter;
         });
     }
 
+    context_t& context;
     std::unique_ptr<logging::logger_t> internal_logger;
     std::unique_ptr<bh::root_logger_t> root_logger;
     logging::trace_wrapper_t logger;

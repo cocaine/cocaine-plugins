@@ -26,6 +26,8 @@
 
 #include <boost/thread/shared_mutex.hpp>
 
+#include <metrics/metric.hpp>
+
 #include <atomic>
 
 namespace cocaine {
@@ -38,7 +40,7 @@ namespace logging {
  */
 class metafilter_t {
 public:
-    metafilter_t(std::unique_ptr<logger_t> logger);
+    metafilter_t(context_t& context, std::string name, std::unique_ptr<logger_t> _logger);
     metafilter_t(const metafilter_t&) = delete;
     metafilter_t& operator=(const metafilter_t&) = delete;
 
@@ -66,12 +68,23 @@ public:
     counter_t since_last_change();
 
 private:
-    std::vector<filter_info_t>::iterator remove_filter(std::vector<filter_info_t>::iterator it);
+    auto remove_filter(std::vector<filter_info_t>::iterator it) -> std::vector<filter_info_t>::iterator;
 
-    std::atomic<size_t> overall_accepted_cnt;
-    std::atomic<size_t> overall_rejected_cnt;
-    std::atomic<size_t> since_change_accepted_cnt;
-    std::atomic<size_t> since_change_rejected_cnt;
+    std::string name;
+
+    struct processed_t {
+        processed_t(context_t& context, const std::string& name, const std::string& type);
+
+        auto increment() -> void;
+        auto on_changed() -> void;
+
+        metrics::shared_metric<std::atomic<uint64_t>> count;
+        metrics::shared_metric<std::atomic<uint64_t>> overall_count;
+        metrics::shared_metric<std::atomic<uint64_t>> count_since_change;
+    };
+
+    processed_t accepted;
+    processed_t rejected;
 
     std::unique_ptr<logger_t> logger;
     std::vector<filter_info_t> filters;
