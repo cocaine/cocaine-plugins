@@ -439,7 +439,11 @@ auto engine_t::pool_pressure(pool_type& pool) -> std::size_t {
 }
 
 auto engine_t::rebalance_events() -> void {
-    rebalance_events(*pool.synchronize(), *queue.synchronize());
+    pool.apply([&](pool_type& pool) {
+        queue.apply([&](queue_type& queue) {
+            rebalance_events(pool, queue);
+        });
+    });
 }
 
 auto engine_t::rebalance_events(pool_type& pool, queue_type& queue) -> void {
