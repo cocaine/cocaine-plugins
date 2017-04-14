@@ -4,7 +4,7 @@ INCLUDE_DIRECTORIES(
     ${PROJECT_SOURCE_DIR}/unicorn/include)
 
 ADD_LIBRARY(logging MODULE
-        src/logging_v2.cpp
+    src/logging_v2.cpp
     src/module.cpp
     src/logging/filter.cpp
     src/logging/metafilter.cpp
@@ -15,6 +15,7 @@ TARGET_LINK_LIBRARIES(logging
     blackhole
     cocaine-core
     cocaine-io-util
+    metrics
 )
 
 SET_TARGET_PROPERTIES(logging PROPERTIES
