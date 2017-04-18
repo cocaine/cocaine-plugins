@@ -150,7 +150,7 @@ Package: libcocaine-plugin-node3
 Architecture: any
 Section: libs
 Depends: ${shlibs:Depends}, ${misc:Depends},
- libmetics3 (>= 3.1.0)
+ libmetrics3 (>= 3.1.0)
 Description: Cocaine - Node Service
  Node service for Cocaine.
 
