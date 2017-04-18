@@ -15,6 +15,7 @@ Build-Depends: cmake,
  libnl-3-dev, libnl-genl-3-dev, libcurl4-openssl-dev (>= 7.22.0),
  libzookeeper-mt-dev,
  blackhole-migration-dev (>= 1.0.0-1),
+ metrics3-dev (>= 3.1.0),
  libpqxx-dev
 # mongodb-dev (<< 1:2.5.0), mongodb-dev (>= 1:2.4.9)
 Standards-Version: 3.9.3
@@ -148,7 +149,8 @@ Description: Cocaine - v2 logging service (debug symbols)
 Package: libcocaine-plugin-node3
 Architecture: any
 Section: libs
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends},
+ libmetics3 (>= 3.1.0)
 Description: Cocaine - Node Service
  Node service for Cocaine.
 

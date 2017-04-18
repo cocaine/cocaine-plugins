@@ -8,6 +8,7 @@
 #include "cocaine/service/node/slave/id.hpp"
 
 #include "cocaine/detail/service/node/slave.hpp"
+#include "cocaine/detail/service/node/stats.hpp"
 
 #include "engine.hpp"
 #include "pool_observer.hpp"
@@ -26,6 +27,7 @@ overseer_t::overseer_t(context_t& context,
 overseer_t::~overseer_t() {
     COCAINE_LOG_DEBUG(engine->log, "overseer is processing terminate request");
 
+    engine->stats.deregister();
     engine->stopped = true;
     engine->control_population(0);
     engine->pool->clear();
