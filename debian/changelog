@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.13.3) unstable; urgency=low
+
+  * Fixed: remove app metrics explicitly during restart.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 18 Apr 2017 13:18:38 +0300
+
 cocaine-plugins (0.12.13.2) unstable; urgency=low
 
   * Fixed: deadlock elimination.
