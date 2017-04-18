@@ -15,7 +15,7 @@ Build-Depends: cmake,
  libnl-3-dev, libnl-genl-3-dev, libcurl4-openssl-dev (>= 7.22.0),
  libzookeeper-mt-dev,
  blackhole-migration-dev (>= 1.0.0-1),
- metrics3-dev (>= 3.1.0),
+ metrics-dev (>= 3.1.0),
  libpqxx-dev
 # mongodb-dev (<< 1:2.5.0), mongodb-dev (>= 1:2.4.9)
 Standards-Version: 3.9.3
