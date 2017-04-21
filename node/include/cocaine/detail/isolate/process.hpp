@@ -23,6 +23,9 @@
 
 #include "cocaine/api/isolate.hpp"
 
+#include <vector>
+#include <string>
+
 #include <cstdint>
 
 #include <boost/filesystem/path.hpp>
@@ -59,7 +62,7 @@ public:
         -> std::unique_ptr<api::cancellation_t> override;
 
     auto
-    metrics(const dynamic_t& query, std::shared_ptr<api::metrics_handle_base_t> handle) const
+    metrics(const std::vector<std::string>& query, std::shared_ptr<api::metrics_handle_base_t> handle) const
         -> void override;
 };
 

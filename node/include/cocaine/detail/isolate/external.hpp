@@ -24,6 +24,8 @@
 #include "cocaine/api/isolate.hpp"
 
 #include <memory>
+#include <vector>
+#include <string>
 
 namespace cocaine {
 namespace isolate {
@@ -51,7 +53,7 @@ public:
         -> std::unique_ptr<api::cancellation_t> override;
 
     auto
-    metrics(const dynamic_t& query, std::shared_ptr<api::metrics_handle_base_t> handle) const
+    metrics(const std::vector<std::string>& query, std::shared_ptr<api::metrics_handle_base_t> handle) const
         -> void override;
 };
 

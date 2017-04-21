@@ -22,7 +22,16 @@ overseer_t::overseer_t(context_t& context,
                        profile_t profile,
                        std::shared_ptr<pool_observer> observer,
                        std::shared_ptr<asio::io_service> loop)
-    : engine(std::make_shared<engine_t>(context, manifest, profile, observer, loop)) {}
+    : engine(std::make_shared<engine_t>(context, manifest, profile, observer, loop))
+{
+    try {
+        engine->start_isolate_metrics_poll();
+    } catch(const error_t& err) {
+        COCAINE_LOG_WARNING(engine->log,
+            "failed to init metrics poll sequence: error code {}, reason {}",
+            err.code(), err.what());
+    }
+}
 
 overseer_t::~overseer_t() {
     COCAINE_LOG_DEBUG(engine->log, "overseer is processing terminate request");

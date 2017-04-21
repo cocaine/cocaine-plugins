@@ -433,7 +433,7 @@ process_t::spawn(const std::string& path,
 }
 
 void
-process_t::metrics(const dynamic_t&, std::shared_ptr<api::metrics_handle_base_t> handle) const
+process_t::metrics(const std::vector<std::string>&, std::shared_ptr<api::metrics_handle_base_t> handle) const
 {
     assert(handle);
     return handle->on_data({});

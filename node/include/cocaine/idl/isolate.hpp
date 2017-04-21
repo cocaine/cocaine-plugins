@@ -27,6 +27,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 namespace cocaine { namespace io {
 
@@ -84,20 +85,32 @@ struct isolate {
     struct metrics {
         typedef isolate_tag tag;
 
+        using response_type =
+            std::map<
+                std::string, // worker id
+                std::map<
+                    std::string, // isolate
+                    std::map<
+                        std::string, // metric name
+                        dynamic_t
+                    >
+                >
+            >;
+
         static const char* alias() {
             return "metrics";
         }
 
         typedef boost::mpl::list<
             // Isolation daemon metrics query, in common cases - list of uuids.
-            dynamic_t
+            std::vector<std::string>
         > argument_type;
 
         typedef isolate_tag dispatch_type;
 
         typedef option_of<
             // Worker metrics grouped by uuids and application name.
-            dynamic_t
+            response_type
         >::tag upstream_type;
     };
 };

@@ -64,27 +64,6 @@ engine_t::engine_t(context_t& context,
     stats(context, manifest_.name, std::chrono::seconds(2))
 {
     attach_pool_observer(std::move(observer));
-
-    const auto isolate = context.repository().get<api::isolate_t>(
-        profile.isolate.type,
-        context,
-        *loop,
-        manifest_.name,
-        profile.isolate.type,
-        profile.isolate.args);
-
-    try {
-        metrics_retriever = metrics_retriever_t::make_and_ignite(
-            context,
-            manifest_.name,
-            isolate,
-            pool,
-            *loop,
-            observers);
-    } catch(const error::repository_errors& err) {
-        COCAINE_LOG_WARNING(log, "failed to init metrics poll sequence, error {}", err);
-    }
-
     COCAINE_LOG_DEBUG(log, "overseer has been initialized");
 }
 
@@ -102,6 +81,45 @@ auto engine_t::active_workers() const -> std::uint32_t {
         }
         return active;
     });
+}
+
+auto engine_t::pooled_workers_ids() const -> std::vector<std::string> {
+    using boost::adaptors::map_keys;
+
+    std::vector<std::string> ids;
+    return pool.apply([&](const pool_type& pool){
+        ids.reserve(pool.size());
+        boost::copy(pool | map_keys, std::back_inserter(ids));
+        return ids;
+    });
+}
+
+auto
+engine_t::start_isolate_metrics_poll() -> void
+{
+    auto isolate = profile_.apply([&](const profile_t& profile) {
+        return context.repository().get<api::isolate_t>(
+        profile.isolate.type,
+        context,
+        *loop,
+        manifest_.name,
+        profile.isolate.type,
+        profile.isolate.args);
+    });
+
+    metrics_retriever = metrics_retriever_t::make_and_ignite(
+        context,
+        manifest_.name,
+        isolate,
+        shared_from_this(),
+        *loop,
+        observers);
+}
+
+auto
+engine_t::stop_isolate_metrics_poll() -> void
+{
+    metrics_retriever.reset();
 }
 
 manifest_t

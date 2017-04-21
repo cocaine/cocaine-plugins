@@ -157,6 +157,16 @@ public:
     auto cancel() -> void;
 
     auto attach_pool_observer(std::shared_ptr<pool_observer> observer) -> void;
+
+    // TODO: may be some filter someday ('active', 'sealed', etc), + use std::set
+    auto pooled_workers_ids() const -> std::vector<std::string>;
+
+    // Moved from ctor, need to start poll sequence explicitly as in most general
+    // case we can't call engine_t::shared_from_this() (needed in poll object
+    // construction) from engine_t::ctor. stop_isolate_metrics_poll is
+    // currently unused, defined for symmetry.
+    auto start_isolate_metrics_poll() -> void;
+    auto stop_isolate_metrics_poll() -> void;
 private:
     /// Spawns a slave using current manifest and profile.
     auto spawn(pool_type& pool) -> void;

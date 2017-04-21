@@ -15,7 +15,8 @@
 
 #include <memory>
 
-#include "cocaine/idl/isolate.hpp"
+#include <cocaine/common.hpp>
+#include <cocaine/idl/isolate.hpp>
 
 #include <cocaine/dynamic.hpp>
 #include <cocaine/context.hpp>
@@ -23,11 +24,14 @@
 #include <blackhole/logger.hpp>
 
 #include <cocaine/api/service.hpp>
+
 #include <cocaine/logging.hpp>
 #include <cocaine/repository.hpp>
 #include <cocaine/repository/service.hpp>
 #include <cocaine/rpc/dispatch.hpp>
+
 #include <cocaine/traits/dynamic.hpp>
+#include <cocaine/traits/map.hpp>
 
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -106,7 +110,7 @@ public:
     }
 
     virtual
-    result_type    
+    result_type
     operator()(const std::vector<hpack::header_t>&, tuple_type&& args, upstream_type&& upstream)
     {
         aux::formatter_t formatter;
@@ -121,7 +125,7 @@ public:
         sleep(1);
         upstream = upstream.send<protocol::chunk>("");
         sleep(1);
-        upstream =  upstream.send<protocol::chunk>("CHUNK1");
+        upstream = upstream.send<protocol::chunk>("CHUNK1");
         sleep(1);
         upstream = upstream.send<protocol::chunk>("CHUNK2");
         sleep(1);
@@ -151,9 +155,7 @@ public:
     operator()(const std::vector<hpack::header_t>&, tuple_type&& args, upstream_type&& upstream)
     {
         const auto& query = std::get<0>(args);
-        COCAINE_LOG_INFO(log, "metrics. {}", boost::lexical_cast<std::string>(query));
-
-        sleep(1);
+        COCAINE_LOG_INFO(log, "metrics :: request size {} items", query.size());
 
         rusage ru;
         // note: values used as dummies and don't match real metrics meanings
@@ -161,39 +163,27 @@ public:
             // TODO: send errors?
         }
 
-        dynamic_t::array_t metrics_array;
-        dynamic_t::object_t uuids;
+        cocaine::io::isolate::metrics::response_type response;
 
-        for(const auto& uuid : query.as_object()["uuids"].as_array()) {
-                dynamic_t::object_t common;
-                dynamic_t::object_t metrics;
+        for(const auto& uuid : query) {
+            const auto total_time = ru.ru_utime.tv_sec + ru.ru_stime.tv_sec;
+            const auto cpu = total_time ?
+                ru.ru_utime.tv_sec / total_time * 100 :
+                0;
 
-                const auto total_time = ru.ru_utime.tv_sec + ru.ru_stime.tv_sec;
-                const auto cpu = total_time ?
-                    ru.ru_utime.tv_sec / total_time * 100 :
-                    0;
-
-                metrics["cpu.gauge"] = static_cast<std::uint64_t>(cpu % 100);
-
-                metrics["user_time.gauge"] = ru.ru_utime.tv_sec;
-                metrics["sys_time.gauge"] =  ru.ru_stime.tv_sec;
-
-                metrics["rss.gauge"] = ru.ru_maxrss;
-
-                metrics["ioread.counter"]  = ru.ru_inblock;
-                metrics["iowrite.counter"] = ru.ru_oublock;
-
-                common["common"] = metrics;
-                uuids[uuid.as_string()] = common;
+            response[uuid] = {{
+                "mock_isolate", {
+                    {"cpu", static_cast<std::uint64_t>(cpu % 100)},
+                    {"sys_time", ru.ru_stime.tv_sec},
+                    {"user_time", ru.ru_utime.tv_sec},
+                    {"rss", ru.ru_maxrss},
+                    {"ioread", ru.ru_inblock},
+                    {"iowrite", ru.ru_oublock},
+            }}};
         }
 
-        dynamic_t::object_t answer;
-        answer["test_app"] = uuids;
-
-        upstream.send<protocol::value>(answer);
-
+        upstream.send<protocol::value>(response);
         COCAINE_LOG_INFO(log, "metrics. done");
-
         return boost::none;
     }
 };

@@ -25,6 +25,8 @@
 
 #include <cocaine/api/isolate.hpp>
 
+#include <vector>
+#include <string>
 #include <mutex>
 
 namespace cocaine { namespace isolate {
@@ -53,7 +55,7 @@ public:
 
     virtual
     void
-    metrics(const dynamic_t& query, std::shared_ptr<api::metrics_handle_base_t> handle) const;
+    metrics(const std::vector<std::string>& query, std::shared_ptr<api::metrics_handle_base_t> handle) const;
 
 private:
     context_t& m_context;

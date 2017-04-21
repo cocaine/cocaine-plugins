@@ -21,18 +21,18 @@
 
 #include "node/pool_observer.hpp"
 
-#include "engine.hpp"
-
 namespace cocaine {
 namespace detail {
 namespace service {
 namespace node {
 
+class engine_t;
+
 namespace conf {
-    constexpr auto metrics_poll_interval_s = 2u;
+    constexpr auto metrics_poll_interval_s = 3u;
 }
 
-enum class counter_type_t : unsigned {
+enum class aggregate_t : unsigned {
         instant,   // treat value `as is`
         aggregate, // isolate returns accumalated value on each request (ioread, etc)
 };
@@ -44,7 +44,7 @@ struct worker_metrics_t {
     struct counter_metric_t {
         using value_type = std::uint64_t;
 
-        counter_type_t type;
+        aggregate_t type;
         metrics::shared_metric<std::atomic<value_type>> value;
         value_type delta; // if is_accumulated = true then delta = value - prev(value), used for app-wide aggration
     };
@@ -71,7 +71,7 @@ struct metrics_aggregate_proxy_t {
     struct counter_metric_t {
         using value_type = worker_metrics_t::counter_metric_t::value_type;
         // TODO: union?
-        counter_type_t type;
+        aggregate_t type;
         value_type values; // summation of worker_metrics values
         value_type deltas; // summation of worker_metrics deltas
     };
@@ -93,14 +93,12 @@ class metrics_retriever_t :
 public:
     using stats_table_type = std::unordered_map<std::string, worker_metrics_t>;
 private:
-    using pool_type = engine_t::pool_type;
-
     context_t& context;
 
     asio::deadline_timer metrics_poll_timer;
     std::shared_ptr<api::isolate_t> isolate;
 
-    synchronized<engine_t::pool_type>& pool;
+    std::weak_ptr<engine_t> parent_engine;
 
     const std::unique_ptr<cocaine::logging::logger_t> log;
 
@@ -119,9 +117,10 @@ private:
     synchronized<stats_table_type> metrics;
 
     struct self_metrics_t {
-        metrics::shared_metric<std::atomic<std::uint64_t>> uuid_requested;
-        metrics::shared_metric<std::atomic<std::uint64_t>> uuid_recieved;
+        metrics::shared_metric<std::atomic<std::uint64_t>> uuids_requested;
+        metrics::shared_metric<std::atomic<std::uint64_t>> uuids_recieved;
         metrics::shared_metric<std::atomic<std::uint64_t>> requests_send;
+        metrics::shared_metric<std::atomic<std::uint64_t>> empty_requests;
         metrics::shared_metric<std::atomic<std::uint64_t>> responses_received;
         metrics::shared_metric<std::atomic<std::uint64_t>> receive_errors;
         metrics::shared_metric<std::atomic<std::uint64_t>> posmortem_queue_size;
@@ -138,7 +137,7 @@ public:
         context_t& ctx,
         const std::string& name,
         std::shared_ptr<api::isolate_t> isolate,
-        synchronized<engine_t::pool_type>& pool,
+        const std::shared_ptr<engine_t>& parent_engine,
         asio::io_service& loop,
         const std::uint64_t poll_interval);
 
@@ -164,7 +163,7 @@ public:
         context_t& ctx,
         const std::string& name,
         std::shared_ptr<api::isolate_t> isolate,
-        synchronized<engine_t::pool_type>& pool,
+        const std::shared_ptr<engine_t>& parent_engine,
         asio::io_service& loop,
         synchronized<Observers>& observers) -> std::shared_ptr<metrics_retriever_t>;
 
@@ -172,7 +171,7 @@ public:
     ignite_poll() -> void;
 
     auto
-    make_observer() -> std::shared_ptr<pool_observer>;
+    make_observer() -> std::shared_ptr<cocaine::service::node::pool_observer>;
 
     //
     // Should be called on every pool::erase(id) invocation
@@ -196,12 +195,14 @@ private:
     // TODO: wip, possibility of redesign
     struct metrics_handle_t : public api::metrics_handle_base_t
     {
+        using response_type = api::metrics_handle_base_t::response_type;
+
         metrics_handle_t(std::shared_ptr<metrics_retriever_t> parent) :
             parent{parent}
         {}
 
         auto
-        on_data(const dynamic_t& data) -> void override;
+        on_data(const response_type& data) -> void override;
 
         auto
         on_error(const std::error_code&, const std::string& what) -> void override;
@@ -210,7 +211,7 @@ private:
     };
 
     // TODO: wip, possibility of redesign
-    struct metrics_pool_observer_t : public pool_observer {
+    struct metrics_pool_observer_t : public cocaine::service::node::pool_observer {
 
         metrics_pool_observer_t(metrics_retriever_t& p) :
             parent(p)
@@ -237,36 +238,42 @@ metrics_retriever_t::make_and_ignite(
     context_t& ctx,
     const std::string& name,
     std::shared_ptr<api::isolate_t> isolate,
-    synchronized<engine_t::pool_type>& pool,
+    const std::shared_ptr<engine_t>& parent_engine,
     asio::io_service& loop,
     synchronized<Observers>& observers) -> std::shared_ptr<metrics_retriever_t>
 {
+    if (!isolate) {
+        throw error_t(cocaine::error::component_not_registered, "isolate daemon object wasn't provided");
+    }
+
     // TODO: node service can be set with another name
     const auto node_config = ctx.config().component_group("services").get("node");
 
-    if (node_config && isolate) {
+    if (node_config) {
         const auto args = node_config->args().as_object();
 
         const auto& should_start = args.at("isolate_metrics", false).as_bool();
         const auto& poll_interval = args.at("isolate_metrics_poll_period_s", conf::metrics_poll_interval_s).as_uint();
 
-        if (should_start) {
-            auto retriever = std::make_shared<metrics_retriever_t>(
-                ctx,
-                name,
-                std::move(isolate),
-                pool,
-                loop,
-                poll_interval);
-
-            observers->emplace_back(retriever->make_observer());
-            retriever->ignite_poll();
-
-            return retriever;
+        if (!should_start) {
+            throw error_t(cocaine::error::component_not_registered, "'isolate_metrics' wasn't set in config");
         }
+
+        auto retriever = std::make_shared<metrics_retriever_t>(
+            ctx,
+            name,
+            std::move(isolate),
+            parent_engine,
+            loop,
+            poll_interval);
+
+        observers->emplace_back(retriever->make_observer());
+        retriever->ignite_poll();
+
+        return retriever;
     }
 
-    throw error::component_not_found;
+    throw error_t(cocaine::error::component_not_found, "node server config section wasn't found");
 }
 
 }  // namespace node

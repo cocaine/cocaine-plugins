@@ -24,6 +24,7 @@
 #include <cocaine/common.hpp>
 
 #include <cocaine/locked_ptr.hpp>
+#include <cocaine/idl/isolate.hpp>
 
 #include <map>
 #include <memory>
@@ -92,12 +93,14 @@ struct spawn_handle_base_t {
 };
 
 struct metrics_handle_base_t {
+    using response_type = cocaine::io::isolate::metrics::response_type;
+
     virtual
     ~metrics_handle_base_t() = default;
 
     virtual
     void
-    on_data(const dynamic_t& data) = 0;
+    on_data(const response_type& data) = 0;
 
     virtual
     void
@@ -124,7 +127,7 @@ struct isolate_t {
 
     virtual
     void
-    metrics(const dynamic_t& query,
+    metrics(const std::vector<std::string>& query,
         std::shared_ptr<api::metrics_handle_base_t> handler) const = 0;
 
     asio::io_service&
