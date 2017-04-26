@@ -458,9 +458,11 @@ private:
         }
     }
 
-    auto unpublish() noexcept -> void {
+    auto
+    unpublish() noexcept -> void {
         try {
-            // It can throw if someone has removed the service from the context, it's valid.
+            // It can throw if someone has removed the service from the context - this is valid.
+            //
             // Moreover if the context was unable to bootstrap itself it removes all services from
             // the service list (including child services). It can be that this app has been
             // removed earlier during bootstrap failure.
