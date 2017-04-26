@@ -151,7 +151,7 @@ public:
     /// accept the session or drop it.
     ///
     /// \note after successful accepting the balancer will be notified about pool's changes.
-    auto prototype() -> io::dispatch_ptr_t;
+    auto prototype() -> std::unique_ptr<io::basic_dispatch_t>;
 
     /// Cancels all asynchronous pending operations, preparing for destruction.
     auto cancel() -> void;

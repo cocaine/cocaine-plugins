@@ -79,7 +79,7 @@ auto overseer_t::enqueue(app::event_t event, std::shared_ptr<api::stream_t> rx)
     return engine->enqueue(std::move(event), std::move(rx));
 }
 
-auto overseer_t::prototype() -> io::dispatch_ptr_t {
+auto overseer_t::prototype() -> std::unique_ptr<io::basic_dispatch_t> {
     return engine->prototype();
 }
 

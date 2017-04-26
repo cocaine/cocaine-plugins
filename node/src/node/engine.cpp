@@ -276,8 +276,8 @@ auto engine_t::enqueue(event_t event, std::shared_ptr<api::stream_t> rx)
     return tx;
 }
 
-auto engine_t::prototype() -> io::dispatch_ptr_t {
-    return std::make_shared<handshaking_t>(
+auto engine_t::prototype() -> std::unique_ptr<io::basic_dispatch_t> {
+    return std::make_unique<handshaking_t>(
         manifest().name,
         std::bind(&engine_t::on_handshake, shared_from_this(), ph::_1, ph::_2, ph::_3)
     );

@@ -21,7 +21,7 @@ namespace gateway {
 
 namespace ph = std::placeholders;
 
-vicodyn_t::proxy_description_t::proxy_description_t(std::unique_ptr<actor_t> _actor, vicodyn::proxy_t& _proxy) :
+vicodyn_t::proxy_description_t::proxy_description_t(std::unique_ptr<tcp_actor_t> _actor, vicodyn::proxy_t& _proxy) :
         actor(std::move(_actor)),
         proxy(_proxy)
 {}
@@ -90,7 +90,7 @@ auto vicodyn_t::consume(const std::string& uuid,
                                                             protocol);
             auto& proxy_ref = *proxy;
             proxy->register_real(uuid, endpoints, uuid.empty());
-            auto actor = std::make_unique<actor_t>(context, asio, std::move(proxy));
+            auto actor = std::make_unique<tcp_actor_t>(context, std::move(proxy));
             actor->run();
             proxies.emplace(name, proxy_description_t(std::move(actor), proxy_ref));
             COCAINE_LOG_INFO(logger, "created new virtual service {}", name);

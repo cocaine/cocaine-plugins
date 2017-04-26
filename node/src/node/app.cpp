@@ -9,7 +9,6 @@
 #include <cocaine/logging.hpp>
 #include <cocaine/repository.hpp>
 #include <cocaine/rpc/actor.hpp>
-#include <cocaine/rpc/actor_unix.hpp>
 #include <cocaine/traits/dynamic.hpp>
 #include <cocaine/utility/future.hpp>
 
@@ -22,12 +21,12 @@
 
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 #include "cocaine/detail/service/node/dispatch/handshake.hpp"
-#include "cocaine/detail/service/node/dispatch/init.hpp"
 #include "cocaine/detail/service/node/slave/control.hpp"
 
 #include "cocaine/detail/service/node/slave/load.hpp"
 #include "cocaine/service/node/slave/id.hpp"
 
+#include "actor.hpp"
 #include "pool_observer.hpp"
 
 namespace ph = std::placeholders;
@@ -367,16 +366,11 @@ public:
         using namespace detail::service::node;
 
         COCAINE_LOG_DEBUG(log, "publishing worker service with the context");
-        engine.reset(new unix_actor_t(
+        engine = std::make_unique<unix_actor_t>(
             context,
             manifest.endpoint,
-            std::bind(&overseer_t::prototype, overseer()),
-            [](io::dispatch_ptr_t handshake, std::shared_ptr<session_t> session) {
-                std::static_pointer_cast<const handshaking_t>(handshake)->bind(session);
-            },
-            std::make_shared<asio::io_service>(),
-            std::make_unique<init_dispatch_t>(manifest.name)
-        ));
+            overseer()->prototype()
+        );
         engine->run();
 
         try {
@@ -444,9 +438,8 @@ private:
         context.insert_with(name, [&] {
             COCAINE_LOG_DEBUG(log, "publishing application service with the context");
 
-            return std::make_unique<actor_t>(
+            return std::make_unique<tcp_actor_t>(
                 context,
-                std::make_shared<asio::io_service>(),
                 std::make_unique<app_dispatch_t>(context, name, overseer_)
             );
         });
