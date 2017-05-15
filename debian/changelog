@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.1) unstable; urgency=low
+
+  * Feature: release.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 15 May 2017 18:17:08 +0300
+
 cocaine-plugins (0.12.13.4) unstable; urgency=medium
 
   * Fixed: rebuild package due to broken libmetrics3 dependency
