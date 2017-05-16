@@ -1,3 +1,9 @@
+cocaine-plugin-elliptics (0.12.14-1) unstable; urgency=low
+
+  * Rebuild with release version of cocaine 0.12.14.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 15 May 2017 19:01:33 +0300
+
 cocaine-plugin-elliptics (0.12.13-1) unstable; urgency=low
 
   * Rebuild with release version of cocaine 0.12.13.0-alpha1.
