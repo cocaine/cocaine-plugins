@@ -101,6 +101,9 @@ auto emit(std::shared_ptr<metafilter_t> filter, const std::string& backend, logg
     emit_ack(filter, backend, log, severity, message, attributes);
 }
 
+auto now() -> uint64_t {
+    return static_cast<uint64_t>(std::time(nullptr));
+}
 }
 
 struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::impl_t> {
@@ -108,7 +111,6 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
 
     // propagate filter_t typedefs for simplicity
     using id_t = filter_t::id_t;
-    using clock_t = filter_t::clock_t;
     using disposition_t = filter_t::disposition_t;
     using deadline_t = filter_t::deadline_t;
     using representation_t = filter_t::representation_t;
@@ -245,7 +247,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                 } else {
                     try {
                         logging::filter_info_t info(filter_value.value());
-                        if(info.deadline < clock_t::now()) {
+                        if(info.deadline < now()) {
                             COCAINE_LOG_INFO(internal_logger, "deadlined filter found - removing filter from unicorn");
                             remove_from_unicorn(filter_path(filter_id));
                         } else {
@@ -253,9 +255,9 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                             auto mf_name = info.logger_name;
                             metafilter->add_filter(std::move(info));
                         }
-                    } catch (const std::system_error& e) {
+                    } catch (const std::exception& e) {
                         COCAINE_LOG_ERROR(internal_logger, "can not parse filter value, erasing filter {} from unicorn - {}",
-                                          filter_id, error::to_string(e));
+                                          filter_id, e.what());
                         remove_from_unicorn(filter_path(filter_id));
                     }
                 }
@@ -288,8 +290,8 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                         }
                     });
                 }
-            } catch (const std::system_error& e) {
-                COCAINE_LOG_ERROR(internal_logger, "failed to receive filter list update - {}", error::to_string(e));
+            } catch (const std::exception& e) {
+                COCAINE_LOG_ERROR(internal_logger, "failed to receive filter list update - {}", e.what());
                 retry_timer.async_wait([&](std::error_code) {
                     load_filters();
                 });
@@ -359,7 +361,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
 
     auto set_filter(std::string name, filter_t filter, uint64_t ttl, disposition_t disposition) -> deferred<id_t> {
         deferred<id_t> deferred;
-        deadline_t deadline(clock_t::now() + std::chrono::seconds(ttl));
+        deadline_t deadline = now() + ttl;
         id_t id = generate_id();
         logging::filter_info_t info(std::move(filter), std::move(deadline), id, disposition, std::move(name));
 
@@ -430,8 +432,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
             filter_list_storage_t storage;
 
             auto callable = [&](const logging::filter_info_t& info) {
-                auto ts = clock_t::to_time_t(info.deadline);
-                storage.push_back(std::make_tuple(info.logger_name, info.filter.representation(), info.id, ts, info.disposition));
+                storage.push_back(std::make_tuple(info.logger_name, info.filter.representation(), info.id, info.deadline, info.disposition));
             };
             for (auto& metafilter_pair : mfs) {
                 metafilter_pair.second->each(callable);

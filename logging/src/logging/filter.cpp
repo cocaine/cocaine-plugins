@@ -262,8 +262,7 @@ filter_info_t::filter_info_t(const dynamic_t& value) {
         }
     }
     filter = filter_t(obj.at("filter"));
-    typedef filter_t::deadline_t dl_t;
-    deadline = dl_t(dl_t::duration(obj.at("deadline").as_uint()));
+    deadline = obj.at("deadline").as_uint();
     id = obj.at("id").as_uint();
 
     disposition = static_cast<filter_t::disposition_t>(obj.at("disposition").as_uint());
@@ -277,7 +276,7 @@ filter_info_t::filter_info_t(const dynamic_t& value) {
 dynamic_t filter_info_t::representation() {
     dynamic_t::object_t container;
     container["filter"] = filter.representation();
-    container["deadline"] = deadline.time_since_epoch().count();
+    container["deadline"] = deadline;
     container["id"] = id;
     container["logger_name"] = logger_name;
     container["disposition"] = static_cast<uint64_t>(disposition);

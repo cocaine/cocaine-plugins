@@ -2,7 +2,7 @@ require 'securerandom'
 require 'cocaine'
 require 'rspec'
 
-Cocaine::LOG.level = Logger::DEBUG
+Cocaine::LOG.level = Logger::ERROR
 Celluloid.logger.level = Cocaine::LOG.level
 
 
@@ -49,7 +49,7 @@ def log(frontend, msg, verbosity=1, attributes = [[]])
   logger.terminate
 end
 
-def set_filter(frontend, filter, ttl = 60)
+def set_filter(frontend, filter, ttl = 10)
   logger = new_logger()
   tx, rx = logger.set_filter(frontend, filter, ttl)
   result = rx.recv(timeout)
@@ -212,22 +212,32 @@ describe :Logging do
     backend = random_backend('cluster_filter_test')
     logger = new_logger(port: 10054)
     tx, rx = logger.set_cluster_filter(backend, ['==', 'another_attr', 42], 60)
+    id = rx.recv(timeout)[1][0]
     ensure_not_log(backend, invalid_msg, 2, [['another_attr', 1]])
+    logger.remove_filter(id)
   end
 
   it 'should correctly handle prefixes' do
     backend = random_backend('prefixes_test')
-    logger = new_logger()
-    tx, rx = logger.set_filter(backend, ['severity', 0], 60)
+    set_filter(backend, ['severity', 0])
     bigger_backend = backend + random_backend('')
     ensure_log(bigger_backend, 'prefix test', 2, [])
   end
 
   it 'should correctly handle trace_bit filter' do
     backend = random_backend('trace_bit_test')
-    logger = new_logger()
-    tx, rx = logger.set_filter(backend, ['traced'], 60)
+    set_filter(backend, ['traced'])
     ensure_log(backend, 'trace_bit_test', 0, [], {trace_bit: '1', trace_id: 'aaaaaaaa', span_id: 'aaaaaaaa', parent_id: 'aaaaaaaa'})
     ensure_not_log(backend, invalid_msg, 0, [])
   end
+
+  it 'should correctly handle big ttl' do
+    backend = random_backend('trace_bit_test')
+    logger = new_logger()
+    tx, rx = logger.set_cluster_filter(backend, ['e', 'super_attr'], 12000000000000000000)
+    id = rx.recv(timeout)[1][0]
+    ensure_log(backend, 'big_ttl_test', 0, [['super_attr', 'super']])
+    logger.remove_filter(id)
+  end
+
 end

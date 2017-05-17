@@ -97,7 +97,7 @@ bool metafilter_t::empty() const {
 filter_result_t metafilter_t::apply(blackhole::severity_t severity,
                                     blackhole::attribute_pack& attributes) {
     std::vector<filter_t::id_t> ids_to_remove;
-    filter_t::deadline_t now = filter_t::clock_t::now();
+    auto now = static_cast<uint64_t>(std::time(nullptr));
     filter_result_t result = filter_result_t::reject;
     boost::shared_lock<boost::shared_mutex> guard(mutex);
 
@@ -132,7 +132,7 @@ void metafilter_t::each(const callable_t& fn) const {
 }
 
 void metafilter_t::cleanup() {
-    filter_t::deadline_t now = filter_t::clock_t::now();
+    auto now = static_cast<uint64_t>(std::time(nullptr));
     std::lock_guard<boost::shared_mutex> guard(mutex);
     for (auto it = filters.begin(); it != filters.end(); ) {
         if (now > it->deadline) {
