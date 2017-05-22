@@ -189,13 +189,14 @@ auto machine_t::inject(load_t& load, channel_handler handler) -> std::uint64_t {
 
     // W2C dispatch.
     auto dispatch = std::make_shared<worker_rpc_dispatch_t>(
-        load.downstream, [=](const std::error_code& ec) {
+        load.downstream,
+        trace_t::bind([=](const std::error_code& ec) {
             if (ec) {
                 channel->close_both();
             } else {
                 channel->close_recv();
             }
-        }
+        })
     );
 
     auto state = *this->state.synchronize();
@@ -239,7 +240,7 @@ auto machine_t::inject(load_t& load, channel_handler handler) -> std::uint64_t {
             timers[id] = timer;
         });
         timer->expires_from_now(boost::posix_time::milliseconds(duration));
-        timer->async_wait([=](const std::error_code& ec) mutable {
+        timer->async_wait(trace_t::bind([=](const std::error_code& ec) mutable {
             if (ec == asio::error::operation_aborted) {
                 return;
             }
@@ -247,7 +248,7 @@ auto machine_t::inject(load_t& load, channel_handler handler) -> std::uint64_t {
             COCAINE_LOG_ERROR(this_->log, "channel {} has timed out, closing", id);
             into_worker_dispatch->discard(error::timeout_error);
             from_worker_dispatch->discard(error::timeout_error);
-        });
+        }));
     }
 
     COCAINE_LOG_DEBUG(log, "slave has started processing {} channel", id);
@@ -255,13 +256,13 @@ auto machine_t::inject(load_t& load, channel_handler handler) -> std::uint64_t {
     COCAINE_LOG_DEBUG(log, "slave has increased its load to {}", current, attribute_list({{"channel", id}}));
 
     // C2W dispatch.
-    load.dispatch->attach(upstream, [=](const std::error_code& ec) {
+    load.dispatch->attach(upstream, trace_t::bind([=](const std::error_code& ec) {
         if (ec) {
             channel->close_both();
         } else {
             channel->close_send();
         }
-    });
+    }));
 
     channel->watch();
 
