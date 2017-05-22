@@ -1,3 +1,16 @@
+cocaine-plugins (0.12.14.2) unstable; urgency=low
+
+  * Feature: trace channel lifetime (#136).
+    This adds missing wrappings around channel completion handlers
+    to see when a channel was finished either due to normal conditions or
+    because of timeout.
+  * Fixed: catch all type of exceptions in logging service, use unix time
+    for deadlines.
+    This change prevents to crash the entire cluster on invalid user input in
+    TTL field.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 22 May 2017 14:52:52 +0300
+
 cocaine-plugins (0.12.14.1) unstable; urgency=low
 
   * Feature: release.
