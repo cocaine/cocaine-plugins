@@ -50,6 +50,8 @@ auto make_forward_slot(F&& f) -> std::shared_ptr<io::basic_slot<Event>> {
 class handshaking_t:
     public dispatch<io::worker_tag>
 {
+    std::mutex mutex;
+    std::condition_variable cv;
     std::shared_ptr<session_t> session;
 
 public:
@@ -64,6 +66,12 @@ public:
         {
             std::string uuid;
             std::tie(uuid) = args;
+
+            std::unique_lock<std::mutex> lock(mutex);
+            cv.wait(lock, [&]() -> bool {
+                return !!session;
+            });
+
             return fn(std::move(uuid), std::move(session), std::move(upstream));
         };
 
@@ -72,7 +80,10 @@ public:
 
     auto
     attached(std::shared_ptr<session_t> session) -> void {
+        std::unique_lock<std::mutex> lock(mutex);
         this->session = std::move(session);
+        lock.unlock();
+        cv.notify_one();
     }
 };
 
