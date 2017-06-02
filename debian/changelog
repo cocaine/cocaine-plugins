@@ -1,6 +1,12 @@
+cocaine-plugins (0.12.14.4) UNRELEASED; urgency=low
+
+  * Fixed: eliminate race condition
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 02 Jun 2017 13:56:37 +0300
+
 cocaine-plugins (0.12.14.3) unstable; urgency=low
 
-  * Fixed: should no longer pass nullptr session to the overseer endine.
+  * Fixed: should no longer pass nullptr session to the overseer engine.
 
  -- Evgeny Safronov <division494@gmail.com>  Mon, 29 May 2017 13:25:00 +0300
 
