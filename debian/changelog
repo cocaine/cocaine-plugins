@@ -1,4 +1,4 @@
-cocaine-plugins (0.12.14.4) UNRELEASED; urgency=low
+cocaine-plugins (0.12.14.4) unstable; urgency=low
 
   * Fixed: eliminate race condition
 
