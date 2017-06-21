@@ -37,20 +37,13 @@ using namespace cocaine::logging;
 using namespace cocaine::storage;
 namespace ell = ioremap::elliptics;
 
-static logging::priorities convert(ell::log_level level) {
-	switch (level) {
-	case DNET_LOG_DEBUG:
-		return logging::debug;
-	case DNET_LOG_NOTICE:
-	case DNET_LOG_INFO:
-		return logging::info;
-	case DNET_LOG_WARNING:
-		return logging::warning;
-	case DNET_LOG_ERROR:
-	default:
-		return logging::error;
-	};
+auto map_severity(blackhole::severity_t severity) -> blackhole::severity_t {
+	if(severity) {
+		severity -= 1;
+	}
+    return severity;
 }
+
 
 class frontend_t : public blackhole::base_frontend_t {
 public:
