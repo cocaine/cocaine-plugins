@@ -150,11 +150,11 @@ private:
     friend auto watch_cb(zhandle_t* zh, int type, int state, const char* path, void* watch_data) -> void;
 
     template<class ZooFunction, class Replier, class CCallback, class... Args>
-    auto zoo_command(ZooFunction f, const path_t& path, Replier replier, CCallback cb, Args... args) -> void;
+    auto zoo_command(ZooFunction f, const path_t& path, Replier&& replier, CCallback cb, Args&&... args) -> void;
 
-    template<class ZooFunction, class Replier, class CCallback, class Watcher, class... Args>
-    auto zoo_watched_command(ZooFunction f, const path_t& path, Replier replier, CCallback cb,
-                             Watcher watcher, Args... args) -> void;
+    template<class ZooFunction, class Replier, class CCallback, class... Args>
+    auto zoo_watched_command(ZooFunction f, const path_t& path, Replier&& replier, CCallback cb,
+                             replier_ptr<watch_reply_t> watcher, Args&&... args) -> void;
 
     auto create_prefix() -> void;
 

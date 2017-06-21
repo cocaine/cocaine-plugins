@@ -101,13 +101,13 @@ path_t zookeeper::connection_t::format_path(const path_t& path) {
 
 auto put_cb(int rc, const stat_t* stat, const void* data) -> void {
     auto replier = unpack_ptr<put_reply_t>(data);
-    stat_t empty_stat = {};
+    stat_t empty_stat = stat_t();
     replier->operator()({rc, rc ? empty_stat : *stat});
 }
 
 auto get_cb(int rc, const char* value, int value_len, const stat_t* stat, const void* data) -> void {
     auto replier = unpack_ptr<get_reply_t>(data);
-    stat_t empty_stat = {};
+    stat_t empty_stat = stat_t();
     replier->operator()({rc, rc ? std::string() : std::string(value, value_len), rc ? empty_stat : *stat});
 }
 
@@ -128,14 +128,14 @@ auto delete_cb(int rc, const void* data) -> void {
 
 auto exists_cb(int rc, const stat_t* stat, const void* data) -> void {
     auto replier = unpack_ptr<exists_reply_t>(data);
-    stat_t empty_stat = {};
+    stat_t empty_stat = stat_t();
     replier->operator()({rc, rc ? empty_stat : *stat});
 }
 
 auto children_cb(int rc, const struct String_vector* strings, const stat_t* stat, const void* data) -> void {
     auto replier = unpack_ptr<children_reply_t>(data);
     std::vector<std::string> children;
-    stat_t empty_stat = {};
+    stat_t empty_stat = stat_t();
     if(!rc) {
         for(int i = 0; i < strings->count; i++) {
             children.emplace_back(strings->data[i]);
@@ -166,21 +166,20 @@ auto watch_cb(zhandle_t* zh, int type, int state, const char* path, void* watch_
 }
 
 template<class ZooFunction, class Replier, class CCallback, class... Args>
-auto connection_t::zoo_command(ZooFunction f, const path_t& path, Replier replier, CCallback cb, Args... args) -> void {
+auto connection_t::zoo_command(ZooFunction f, const path_t& path, Replier&& replier, CCallback cb, Args&&... args) -> void {
     check_connectivity();
     auto prefixed_path = format_path(path);
     auto ctx = pack_ptr(std::forward<Replier>(replier));
-    zhandle.apply([&](const zhandle_ptr& zh){
-        check_rc(
-                f(zh.get(), prefixed_path.c_str(), std::forward<Args>(args)..., cb, ctx.get())
-        );
-    });
+    auto zh_lock = zhandle.synchronize();
+    check_rc(
+        f(zh_lock->get(), prefixed_path.c_str(), std::forward<Args>(args)..., cb, ctx.get())
+    );
     ctx.release();
-};
+}
 
-template<class ZooFunction, class Replier, class CCallback, class Watcher, class... Args>
-auto connection_t::zoo_watched_command(ZooFunction f, const path_t& path, Replier replier, CCallback cb,
-                                       Watcher watcher, Args... args) -> void
+template<class ZooFunction, class Replier, class CCallback, class... Args>
+auto connection_t::zoo_watched_command(ZooFunction f, const path_t& path, Replier&& replier, CCallback cb,
+                                       replier_ptr<watch_reply_t> watcher, Args&&... args) -> void
 {
     if(watcher) {
         void* id = watchers.apply([&](watchers_t& watchers){
@@ -192,7 +191,7 @@ auto connection_t::zoo_watched_command(ZooFunction f, const path_t& path, Replie
     } else {
         zoo_command(f, path, std::forward<Replier>(replier), cb, std::forward<Args>(args)..., nullptr, nullptr);
     }
-};
+}
 
 
 auto connection_t::put(const path_t& path, const std::string& value, version_t version, replier_ptr<put_reply_t> handler) -> void {
