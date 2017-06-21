@@ -17,6 +17,7 @@
 
 #include <zookeeper/zookeeper.h>
 
+namespace cocaine {
 namespace zookeeper {
 
 /**
@@ -26,29 +27,26 @@ class session_t {
 public:
     session_t();
 
-    const clientid_t*
-    native();
+    auto native() -> const clientid_t*;
 
     /**
     * Reset session. Used to reset expired sesions
     */
-    void
-    reset();
+    auto reset() -> void;
 
     /**
     * Assign native handle to session
     */
-    void
-    assign(const clientid_t& native);
+    auto assign(const clientid_t& native) -> void;
 
     /**
     * Check if session was filled with valid native handle
     */
-    bool
-    valid() const;
+    auto valid() const -> bool;
     
 private:
     clientid_t zk_session;
 };
 
 } //namespace zookeeper
+} //namespace cocaine

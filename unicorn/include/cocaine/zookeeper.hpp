@@ -15,33 +15,46 @@
 
 #pragma once
 
-#include <string>
+#include <cocaine/api/unicorn.hpp>
 
+#include <zookeeper/zookeeper.h>
+
+#include <string>
+#include <system_error>
+
+namespace cocaine {
 namespace zookeeper {
 
 typedef std::string path_t;
-typedef std::string value_t;
 typedef long long version_t;
+typedef Stat stat_t;
 
 /**
 * Get nth parent of path (starting from 1)
 * For path /A/B/C/D 1th parent is /A/B/C
 */
-path_t
-path_parent(const path_t& path, unsigned int depth);
+auto path_parent(const path_t& path, unsigned int depth) -> path_t;
 
 /**
 * Check if node has a sequence on it's end
 */
-bool is_valid_sequence_node(const path_t& path);
+auto is_valid_sequence_node(const path_t& path) -> bool;
+
+auto get_node_name(const path_t& path) -> std::string;
 
 /**
-* Get sequence number from nodes created via automated sequence
+* Serializes service representation of value to zookepeers representation.
+* Currently ZK store msgpacked data, and service uses cocaine::dynamic_t
 */
-unsigned long
-get_sequence_from_node_name_or_path(const path_t& path);
+auto serialize(const unicorn::value_t& val) -> std::string;
 
-std::string
-get_node_name(const path_t& path);
+auto unserialize(const std::string& val) -> unicorn::value_t;
 
-}
+auto map_zoo_error(int rc) -> std::error_code;
+
+auto event_to_string(int event) -> std::string;
+
+auto state_to_string(int state) -> std::string;
+
+} // namespace zookeeper
+} // namespace cocaine

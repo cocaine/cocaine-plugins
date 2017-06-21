@@ -122,8 +122,12 @@ unicorn_cluster_t::scope(std::map<size_t, api::unicorn_scope_ptr>& _scopes) {
 
 void
 unicorn_cluster_t::drop_scope(size_t id) {
-    scopes.apply([&](std::map<size_t, api::unicorn_scope_ptr>& _scopes){
-        _scopes.erase(id);
+    scopes.apply([&](std::map<size_t, api::unicorn_scope_ptr>& scopes){
+        auto it = scopes.find(id);
+        if(it != scopes.end()) {
+            it->second->close();
+            scopes.erase(id);
+        }
     });
 }
 

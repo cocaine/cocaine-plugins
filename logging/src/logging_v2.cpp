@@ -53,7 +53,6 @@
 #include "../foreign/radix_tree/radix_tree.hpp"
 
 #include <random>
-#include <cocaine/detail/zookeeper/errors.hpp>
 
 namespace ph = std::placeholders;
 namespace bh = blackhole;
@@ -262,7 +261,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                     }
                 }
             } catch (const std::system_error& e) {
-                if(e.code().value() != ZNONODE) {
+                if(e.code().value() != error::no_node) {
                     COCAINE_LOG_ERROR(internal_logger, "can not fetch cluster filter - {}", error::to_string(e));
                 }
                 remove();
@@ -304,7 +303,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                 result.get();
                 COCAINE_LOG_DEBUG(internal_logger, "created filter path in unicorn");
             } catch (const std::system_error& e) {
-                if(e.code().value() != ZNODEEXISTS) {
+                if(e.code().value() != error::node_exists) {
                     COCAINE_LOG_ERROR(internal_logger, "failed to create filter in unicorn - {}", error::to_string(e));
                     retry_timer.async_wait([&](std::error_code) {
                         load_filters();
@@ -330,7 +329,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                 future.get();
                 COCAINE_LOG_INFO(internal_logger, "removed filter from unicorn from {}", filter_path);
             } catch (const std::system_error& e) {
-                if(e.code().value() != ZNONODE) {
+                if(e.code().value() != error::no_node) {
                     COCAINE_LOG_WARNING(internal_logger, "failed to remove filter on {} from ZK - {}",
                                         filter_path, error::to_string(e));
                 } else {
@@ -404,7 +403,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                 result.write(true);
                 COCAINE_LOG_INFO(internal_logger, "removed filter from unicorn from {}", path);
             } catch (const std::system_error& e) {
-                if(e.code().value() != ZNONODE) {
+                if(e.code().value() != error::no_node) {
                     result.abort(e.code(), "failed to remove filter from unicorn");
                     COCAINE_LOG_WARNING(internal_logger, "failed to remove filter on {} from ZK - {}", path, error::to_string(e));
                 } else {
