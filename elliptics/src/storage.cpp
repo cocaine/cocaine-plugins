@@ -18,7 +18,9 @@
  * along with Elliptics.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cocaine/storage.hpp>
+#include "cocaine/storage.hpp"
+
+#include "cocaine/elliptics_logger.hpp"
 
 #include <cocaine/context.hpp>
 #include <cocaine/dynamic.hpp>
@@ -27,6 +29,7 @@
 #include <blackhole/formatter/string.hpp>
 #include <blackhole/v1/attribute.hpp>
 #include <blackhole/v1/logger.hpp>
+#include <cocaine/storage.hpp>
 
 namespace cocaine { namespace storage {
 
@@ -36,46 +39,6 @@ using namespace cocaine;
 using namespace cocaine::logging;
 using namespace cocaine::storage;
 namespace ell = ioremap::elliptics;
-
-auto map_severity(blackhole::severity_t severity) -> blackhole::severity_t {
-	if(severity) {
-		severity -= 1;
-	}
-    return severity;
-}
-
-
-class frontend_t : public blackhole::base_frontend_t {
-public:
-	frontend_t(std::shared_ptr<logging::logger_t> log, ell::log_level severity)
-	: log(std::move(log))
-	, severity(severity)
-	, formatter("%(message)s %(...::)s") {}
-
-	virtual void handle(const blackhole::log::record_t& record) {
-		const auto level =
-		    record.extract<dnet_log_level>(blackhole::keyword::severity<dnet_log_level>().name());
-
-		if (level < severity) {
-			return;
-		}
-
-		const auto mapped = convert(level);
-
-		log->log(static_cast<int>(mapped), formatter.format(record));
-	}
-
-private:
-	std::shared_ptr<logging::logger_t> log;
-	ell::log_level severity;
-	blackhole::formatter::string_t formatter;
-};
-
-log_adapter_t::log_adapter_t(std::shared_ptr<logging::logger_t> log, ell::log_level level)
-: ell::logger_base() {
-	verbosity(DNET_LOG_DEBUG);
-	add_frontend(std::unique_ptr<frontend_t>(new frontend_t(log, level)));
-}
 
 namespace {
 
@@ -94,16 +57,18 @@ dnet_config parse_json_config(const dynamic_t::object_t& args) {
 
 }
 
+std::unique_ptr<logging::logger_t> elliptics_storage_t::make_elliptics_logger(const std::string& name) const {
+	auto logger_name = format("storage/{}/elliptics_client", name);
+	return std::unique_ptr<logging::logger_t>(new elliptics_logger_t(m_context.log(logger_name)));
+}
+
 elliptics_storage_t::elliptics_storage_t(context_t &context, const std::string &name, const dynamic_t &args)
 : category_type(context, name, args)
 , m_context(context)
-, m_log(context.log(name)) // TODO: It was with attributes: {{"storage", "elliptics"}}.
-, // XXX: dynamic_t from cocaine can't convert int to uint, and DNET_LOG_INFO being an enum value is int
-  m_log_adapter(m_log, static_cast<ioremap::elliptics::log_level>(
-                           args.as_object().at("verbosity", uint(DNET_LOG_INFO)).as_uint()))
+, m_log(context.log(name, {{"storage", "elliptics"}}))
 , m_read_latest(args.as_object().at("read_latest", false).as_bool())
 , m_config(parse_json_config(args.as_object()))
-, m_node(ell::logger(m_log_adapter, blackhole::log::attributes_t{{"storage", {"elliptics"}}}), m_config)
+, m_node(make_elliptics_logger(name), m_config)
 , m_session(m_node) {
 	dynamic_t::array_t nodes = args.as_object().at("nodes").as_array();
 
@@ -224,29 +189,31 @@ void elliptics_storage_t::remove(const std::string &collection, const std::strin
 	});
 }
 
-ell::async_read_result elliptics_storage_t::async_read(const std::string &collection, const std::string &key)
-{
-	using namespace std::placeholders;
-
-	COCAINE_LOG_DEBUG(m_log, "reading the '{}' object, collection: '{}'", key, collection);
-
+ell::session elliptics_storage_t::prepare_session(const std::string collection, int timeout) {
 	ell::session session = m_session.clone();
 	session.set_namespace(collection.data(), collection.size());
-	session.set_timeout(m_timeouts.read);
+	session.set_timeout(timeout);
+	auto trace = trace_t::current();
+	if(!trace.empty()) {
+		session.set_trace_id(trace.get_trace_id());
+	}
+	if(trace.verbose()) {
+		session.set_trace_bit(true);
+	}
+	return session;
+}
 
+ell::async_read_result elliptics_storage_t::async_read(const std::string &collection, const std::string &key)
+{
+	COCAINE_LOG_DEBUG(m_log, "reading the '{}' object, collection: '{}'", key, collection);
+	ell::session session =  prepare_session(collection, m_timeouts.read);
 	return session.read_data(key, 0, 0);
 }
 
 ell::async_read_result elliptics_storage_t::async_read_latest(const std::string &collection, const std::string &key)
 {
-	using namespace std::placeholders;
-
 	COCAINE_LOG_DEBUG(m_log, "reading the '{}' object, collection: '{}'", key, collection);
-
-	ell::session session = m_session.clone();
-	session.set_namespace(collection.data(), collection.size());
-	session.set_timeout(m_timeouts.read);
-
+	ell::session session =  prepare_session(collection, m_timeouts.read);
 	return session.read_latest(key, 0, 0);
 }
 
@@ -258,26 +225,18 @@ ell::async_write_result elliptics_storage_t::async_write(const std::string &coll
 
 	COCAINE_LOG_DEBUG(m_log, "writing the '{}' object, collection: '{}'", key, collection);
 
-	ell::session session = m_session.clone();
-	session.set_namespace(collection.data(), collection.size());
+	ell::session session = prepare_session(collection, m_timeouts.write);
 	session.set_filter(ioremap::elliptics::filters::all_with_ack);
-	session.set_timeout(m_timeouts.write);
 	session.set_checker(m_success_copies_num);
-
 	return session.write_data(key, blob, 0);
 }
 
 ell::async_remove_result elliptics_storage_t::async_remove(const std::string &collection, const std::string &key)
 {
-	using namespace std::placeholders;
-
 	COCAINE_LOG_DEBUG(m_log, "removing the '{}' object, collection: '{}'", key, collection);
 
-	ell::session session = m_session.clone();
-	session.set_namespace(collection.data(), collection.size());
-	session.set_timeout(m_timeouts.remove);
+	ell::session session = prepare_session(collection, m_timeouts.remove);
 	session.set_checker(m_success_copies_num);
-
 	return session.remove(key);
 }
 
@@ -285,11 +244,8 @@ ioremap::elliptics::async_read_result elliptics_storage_t::async_cache_read(cons
 {
 	COCAINE_LOG_DEBUG(m_log, "cache reading the '{}' object, collection: '{}'", key, collection);
 
-	ell::session session = m_session.clone();
-	session.set_namespace(collection.data(), collection.size());
+	ell::session session = prepare_session(collection, m_timeouts.read);
 	session.set_ioflags(DNET_IO_FLAGS_CACHE | DNET_IO_FLAGS_CACHE_ONLY);
-	session.set_timeout(m_timeouts.read);
-
 	return session.read_data(key, 0, 0);
 }
 
@@ -298,12 +254,9 @@ ioremap::elliptics::async_write_result elliptics_storage_t::async_cache_write(co
 {
 	COCAINE_LOG_DEBUG(m_log, "cache writing the '{}' object, collection: '{}'", key, collection);
 
-	ell::session session = m_session.clone();
-	session.set_namespace(collection.data(), collection.size());
+	ell::session session = prepare_session(collection, m_timeouts.write);
 	session.set_ioflags(DNET_IO_FLAGS_CACHE | DNET_IO_FLAGS_CACHE_ONLY);
-	session.set_timeout(m_timeouts.write);
 	session.set_checker(m_success_copies_num);
-
 	return session.write_cache(key, blob, timeout);
 }
 
@@ -312,9 +265,7 @@ std::pair<ioremap::elliptics::async_read_result, elliptics_storage_t::key_name_m
 {
 	COCAINE_LOG_DEBUG(m_log, "bulk reading, collection: '{}'", collection);
 
-	ell::session session = m_session.clone();
-	session.set_namespace(collection.data(), collection.size());
-	session.set_timeout(m_timeouts.read);
+	ell::session session = prepare_session(collection, m_timeouts.read);
 
 	key_name_map keys_map;
 	dnet_raw_id id;
@@ -332,10 +283,8 @@ ioremap::elliptics::async_write_result elliptics_storage_t::async_bulk_write(con
 {
 	COCAINE_LOG_DEBUG(m_log, "bulk writing, collection: '{}'", collection);
 
-	ell::session session = m_session.clone();
-	session.set_namespace(collection.data(), collection.size());
+	ell::session session = prepare_session(collection, m_timeouts.write);
 	session.set_filter(ell::filters::all);
-	session.set_timeout(m_timeouts.write);
 	session.set_checker(m_success_copies_num);
 
 	std::vector<dnet_io_attr> ios;

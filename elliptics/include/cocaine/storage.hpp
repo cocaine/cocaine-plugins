@@ -36,18 +36,9 @@ class elliptics_service_t;
 
 namespace cocaine { namespace storage {
 
-/*
- * Wraps the v1.0 logger into the v0.2 interface to be usable within Elliptics.
- */
-class log_adapter_t : public ioremap::elliptics::logger_base {
-public:
-	log_adapter_t(std::shared_ptr<logging::logger_t> wrapped, ioremap::elliptics::log_level severity);
-};
-
 class elliptics_storage_t : public api::storage_t {
 public:
 	typedef api::storage_t category_type;
-	typedef std::shared_ptr<logging::logger_t> log_ptr;
 	typedef std::map<dnet_raw_id, std::string, ioremap::elliptics::dnet_raw_id_less_than<>> key_name_map;
 
 	elliptics_storage_t(context_t &context, const std::string &name, const dynamic_t &args);
@@ -71,20 +62,17 @@ protected:
 		const std::vector<std::string> &blobs);
 	ioremap::elliptics::async_read_result async_read_latest(const std::string &collection, const std::string &key);
 
-	static std::vector<std::string> convert_list_result(const ioremap::elliptics::sync_find_indexes_result &result);
-
 private:
-	std::string id(const std::string &collection,
-	const std::string &key)
-	{
+	std::string id(const std::string &collection, const std::string &key) {
 		return collection + '\0' + key;
 	}
+	std::unique_ptr<logging::logger_t> make_elliptics_logger(const std::string& name) const;
+	ioremap::elliptics::session prepare_session(const std::string collection, int timeout);
 
 private:
 	context_t &m_context;
-	log_ptr m_log;
+	std::unique_ptr<logging::logger_t> m_log;
 
-	log_adapter_t m_log_adapter;
 	// Perform read latest operation on read request.
 	bool m_read_latest;
 	dnet_config m_config;

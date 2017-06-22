@@ -23,9 +23,6 @@
 
 #include "cocaine/tuple.hpp"
 
-#define debug() if (1) {} else std::cerr
-//#define debug() std::cerr << __PRETTY_FUNCTION__ << ": " << __LINE__ << " "
-
 namespace cocaine {
 
 namespace ph = std::placeholders;
@@ -38,8 +35,6 @@ elliptics_service_t::elliptics_service_t(context_t &context, asio::io_service &r
 , dispatch<io::elliptics_tag>(name)
 , m_storage(api::storage(context, args.as_object().at("source", "core").as_string()))
 , m_elliptics(dynamic_cast<storage::elliptics_storage_t *>(m_storage.get())) {
-	debug() << m_elliptics << std::endl;
-
 	if (!m_elliptics) {
 		throw std::system_error(-1, std::generic_category(),
 		                        "to be able to use elliptics service, storage must be also elliptics");
@@ -56,7 +51,6 @@ elliptics_service_t::elliptics_service_t(context_t &context, asio::io_service &r
 }
 
 deferred<std::string> elliptics_service_t::read(const std::string &collection, const std::string &key) {
-	debug() << "read, collection: " << collection << ", key: " << key << std::endl;
 	deferred<std::string> promise;
 
 	m_elliptics->async_read(collection, key).connect(std::bind(&on_read_completed,
@@ -66,7 +60,6 @@ deferred<std::string> elliptics_service_t::read(const std::string &collection, c
 }
 
 deferred<std::string> elliptics_service_t::read_latest(const std::string &collection, const std::string &key) {
-	debug() << "read_latest, collection: " << collection << ", key: " << key << std::endl;
 	deferred<std::string> promise;
 
 	m_elliptics->async_read_latest(collection, key).connect(std::bind(&on_read_completed,
@@ -77,7 +70,6 @@ deferred<std::string> elliptics_service_t::read_latest(const std::string &collec
 
 deferred<void> elliptics_service_t::write(const std::string &collection, const std::string &key,
                                           const std::string &blob, const std::vector<std::string> &tags) {
-	debug() << "write, collection: " << collection << ", key: " << key << std::endl;
 	deferred<void> promise;
 
 	m_elliptics->async_write(collection, key, blob, tags).connect(std::bind(&on_write_completed,
@@ -97,7 +89,6 @@ deferred<std::vector<std::string>> elliptics_service_t::find(const std::string &
 }
 
 deferred<void> elliptics_service_t::remove(const std::string &collection, const std::string &key) {
-	debug() << "remove, collection: " << collection << ", key: " << key << std::endl;
 	deferred<void> promise;
 
 	m_elliptics->async_remove(collection, key).connect(std::bind(&on_remove_completed,
