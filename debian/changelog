@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.14.5) unstable; urgency=low
+
+  * Refactored: fully reworked unicorn plugin.
+  * Feature: elliptic is the part of plugins(again).
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 22 Jun 2017 13:57:37 +0300
+
 cocaine-plugins (0.12.14.4) unstable; urgency=low
 
   * Fixed: eliminate race condition
