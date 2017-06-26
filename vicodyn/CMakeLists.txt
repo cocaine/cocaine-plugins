@@ -2,14 +2,15 @@ INCLUDE_DIRECTORIES(
         ${PROJECT_SOURCE_DIR}/vicodyn/include)
 
 ADD_LIBRARY(vicodyn SHARED
-        src/api/peer/pool.cpp
+        src/api/vicodyn/balancer.cpp
         src/gateway/vicodyn.cpp
         src/module.cpp
+        src/vicodyn/balancer/simple.cpp
         src/vicodyn/debug.cpp
+        src/vicodyn/pool.cpp
         src/vicodyn/proxy.cpp
         src/vicodyn/proxy/dispatch.cpp
         src/vicodyn/peer.cpp
-        src/vicodyn/peer/pool/basic.cpp
         src/vicodyn/queue/invocation.cpp
         src/vicodyn/session.cpp
         src/vicodyn/stream.cpp
@@ -21,6 +22,7 @@ TARGET_LINK_LIBRARIES(vicodyn
         blackhole
         cocaine-core
         cocaine-io-util
+        metrics
         ${Boost_LIBRARIES})
 
 SET_TARGET_PROPERTIES(vicodyn PROPERTIES

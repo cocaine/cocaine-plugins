@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cocaine/api/peer/pool.hpp"
+#include "cocaine/vicodyn/pool.hpp"
 
 #include <cocaine/api/service.hpp>
 #include <cocaine/forwards.hpp>
@@ -30,19 +30,19 @@ public:
         boost::optional<io::dispatch_ptr_t> override;
 
     auto register_real(std::string uuid, std::vector<asio::ip::tcp::endpoint> endpoints, bool local) -> void {
-        pool->register_real(uuid, endpoints, local);
+        pool.register_real(uuid, endpoints, local);
     }
 
     auto deregister_real(const std::string& uuid) -> void {
-        pool->deregister_real(uuid);
+        pool.deregister_real(uuid);
     }
 
     auto empty() -> bool {
-        return pool->empty();
+        return pool.size() == 0;
     }
 
     auto size() -> size_t {
-        return pool->size();
+        return pool.size();
     }
 
 private:
@@ -50,7 +50,7 @@ private:
     const std::unique_ptr<logging::logger_t> logger;
     const io::graph_root_t m_protocol;
     const unsigned int m_version;
-    api::peer::pool_ptr pool;
+    pool_t pool;
 };
 
 } // namespace vicodyn
