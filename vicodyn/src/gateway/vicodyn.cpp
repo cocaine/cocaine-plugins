@@ -81,9 +81,7 @@ auto vicodyn_t::consume(const std::string& uuid,
             it->second.proxy.register_real(uuid, endpoints, uuid.empty());
             COCAINE_LOG_INFO(logger, "registered real in existing {} virtual service", name);
         } else {
-            auto asio = std::make_shared<asio::io_service>();
             auto proxy = std::make_unique<vicodyn::proxy_t>(context,
-                                                            asio,
                                                             "virtual::" + name,
                                                             dynamic_t(),
                                                             version,

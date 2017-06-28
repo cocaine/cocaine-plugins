@@ -41,6 +41,7 @@ auto peer_t::switch_state(state_t expected_current_state, state_t desired_state)
         throw error_t("invalid state - {}, should be {}", d.state, expected_current_state);
     }
     d.state = desired_state;
+    COCAINE_LOG_DEBUG(logger, "switched peer {} state from {} to {}", uuid(), expected_current_state, desired_state);
     auto self = shared_from_this();
     loop.post([=](){
         self->state_cb(state_result_t{{}, shared_from_this(), expected_current_state, desired_state});
@@ -48,6 +49,7 @@ auto peer_t::switch_state(state_t expected_current_state, state_t desired_state)
 }
 
 auto peer_t::connect() -> void {
+    COCAINE_LOG_DEBUG(logger, "connecting peer {} to {}", uuid(), endpoints());
     switch_state(state_t::disconnected, state_t::connecting);
     auto socket = std::make_shared<asio::ip::tcp::socket>(loop);
 

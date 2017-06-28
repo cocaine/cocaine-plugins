@@ -5,6 +5,9 @@
 #include <cocaine/format.hpp>
 #include <cocaine/format/base.hpp>
 #include <cocaine/format/map.hpp>
+#include <cocaine/format/vector.hpp>
+
+#include <asio/ip/basic_endpoint.hpp>
 
 #include <iomanip>
 
@@ -55,13 +58,8 @@ struct display<vicodyn::peer_t> {
     static
     auto
     apply(std::ostream& stream, const vicodyn::peer_t& value) -> std::ostream& {
-        stream << format("{{state: {}, "
-                          "uuid: {}, "
-                          "local: {}, "
-                          "freezed_till: {}, "
-                          "last_used: {}"
-                          "endpoints: {}}}",
-                         value.state(), value.uuid(), value.local(), value.freezed_till(), value.last_used());
+        stream << format("{{state: {}, uuid: {}, local: {}, freezed_till: {}, last_used: {}, endpoints: {}}}",
+                         value.state(), value.uuid(), value.local(), value.freezed_till(), value.last_used(), value.endpoints());
         return stream;
     }
 };
