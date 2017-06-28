@@ -61,7 +61,7 @@ public:
         std::string path;
         std::vector<asio::ip::tcp::endpoint> endpoints;
 
-        boost::optional<api::auto_scope_t> scope;
+        api::auto_scope_t scope;
 
     public:
         announcer_t(unicorn_cluster_t& parent);
@@ -83,7 +83,7 @@ public:
     class subscriber_t {
         struct locator_subscription_t {
             std::vector<asio::ip::tcp::endpoint> endpoints;
-            boost::optional<api::auto_scope_t> scope;
+            api::auto_scope_t scope;
         };
 
         using subscriptions_t = std::map<std::string, locator_subscription_t>;
@@ -91,7 +91,7 @@ public:
         synchronized<subscriptions_t> subscriptions;
         unicorn_cluster_t& parent;
         timer_t timer;
-        boost::optional<api::auto_scope_t> children_scope;
+        api::auto_scope_t children_scope;
 
     public:
         subscriber_t(unicorn_cluster_t& parent);
