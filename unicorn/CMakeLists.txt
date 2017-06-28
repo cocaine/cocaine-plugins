@@ -1,4 +1,5 @@
 INCLUDE_DIRECTORIES(
+    ${PROJECT_SOURCE_DIR}/foreign/asio
     ${PROJECT_SOURCE_DIR}/unicorn/include
     ${PROJECT_SOURCE_DIR}/unicorn/src)
 
