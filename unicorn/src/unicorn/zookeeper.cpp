@@ -175,7 +175,6 @@ public:
     {}
 
     auto run() -> void {
-        parent.zk.reconnect();
         if(version < 0) {
             throw error_t(error::version_not_allowed, "negative version is not allowed for put");
         }
