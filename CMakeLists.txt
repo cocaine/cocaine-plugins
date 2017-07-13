@@ -23,6 +23,7 @@ OPTION(NODE "Build Node service plugin" ON)
 OPTION(POSTGRES "Build Postgress index storage plugin" ON)
 OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(UNICORN "Build Unified configuration service plugin" ON)
+OPTION(UNICAT  "Build Unified cocaine acl tooling plugin" ON)
 OPTION(METRICS "Build metrics service plugin" ON)
 OPTION(VICODYN "Build virtual cocaine dynamic proxy service plugin" ON)
 
@@ -69,6 +70,7 @@ SET(PLUGINS
     mongo
     node
     postgres
+    unicat
     unicorn
     urlfetch
     vicodyn

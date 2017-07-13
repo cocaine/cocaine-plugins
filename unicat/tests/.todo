@@ -1,0 +1,6 @@
+Tests:
+    ☐ unit test for alter template
+    ☐ load test + bench for grant/revoke methods
+    ☐ functionality tests for grant/revoke sequences
+    ☐ marginal cases: no acl, empty acl, broken acl, no entity record, etc.
+    ☐ incorrect input: wrong permissions, cids, uids, entity names.
