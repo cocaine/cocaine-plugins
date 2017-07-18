@@ -34,6 +34,9 @@ namespace service {
 
 namespace cu = cocaine::unicat;
 
+using completion_state_ptr = std::shared_ptr<cu::base_completion_state_t>;
+using identity_ptr = std::shared_ptr<auth::identity_t>;
+
 namespace detail {
 
     const auto DEFAULT_SERVICE_NAME = std::string{"core"};
@@ -76,7 +79,7 @@ namespace detail {
         const std::error_code ec,
         const cu::completion_t::Opcode opcode,
         const cu::url_t url,
-        std::shared_ptr<auth::identity_t>& identity,
+        identity_ptr& identity,
         const std::string& message) -> void {
 
         COCAINE_LOG_WARNING(log, "access error: {} {}, {}",
@@ -129,11 +132,11 @@ namespace dbg {
 
 struct on_write_t : unicat::async::write_handler_t {
     const cu::url_t url;
-    std::shared_ptr<auth::identity_t> identity;
-    std::shared_ptr<cu::base_completion_state_t> completion_state;
+    identity_ptr identity;
+    completion_state_ptr completion_state;
 
-    on_write_t(const cu::url_t url, std::shared_ptr<auth::identity_t> identity, std::shared_ptr<cu::base_completion_state_t> completion_state) :
-        url(url),
+    on_write_t(const cu::url_t url, identity_ptr identity, completion_state_ptr completion_state) :
+        url(std::move(url)),
         identity(std::move(identity)),
         completion_state(std::move(completion_state))
     {}
@@ -165,18 +168,18 @@ struct on_read_t :
 {
     std::shared_ptr<cu::backend_t> backend;
     const cu::url_t url;
-    std::shared_ptr<auth::identity_t> identity;
+    identity_ptr identity;
     auth::alter_data_t alter_data;
-    std::shared_ptr<cu::base_completion_state_t> completion_state;
+    completion_state_ptr completion_state;
 
     on_read_t(
         std::shared_ptr<cu::backend_t> backend,
         const cu::url_t url,
-        const std::shared_ptr<auth::identity_t> identity,
+        const identity_ptr identity,
         auth::alter_data_t alter_data,
-        std::shared_ptr<cu::base_completion_state_t> completion_state) :
+        completion_state_ptr completion_state) :
             backend(std::move(backend)),
-            url(url),
+            url(std::move(url)),
             identity(std::move(identity)),
             alter_data(std::move(alter_data)),
             completion_state(std::move(completion_state))
@@ -289,7 +292,7 @@ struct alter_slot_t :
                 for(const auto entity : entities) {
                     auto url = cu::url_t{scheme, name, entity};
 
-                    auto on_verify_write = cu::async::verify_handler_t{
+                    auto on_verify_read = cu::async::verify_handler_t{
                         identity,
                         [=] (std::error_code ec) mutable -> void {
                             if (ec) {
@@ -297,21 +300,21 @@ struct alter_slot_t :
                                     *completion_state,
                                     backend->logger(),
                                     ec,
-                                    cu::completion_t::Opcode::WriteOp,
+                                    cu::completion_t::Opcode::ReadOp,
                                     url, identity,
-                                    "'write' access error");
+                                    "'read' access error");
                             }
 
-                            auto on_verify_read = cu::async::verify_handler_t{
+                            auto on_verify_write = cu::async::verify_handler_t{
                                 identity,
                                 [=] (std::error_code ec) mutable -> void {
                                     if (ec) {
                                         return detail::abort_deferred(
                                             *completion_state,
                                             backend->logger(),
-                                            ec, cu::completion_t::Opcode::ReadOp,
+                                            ec, cu::completion_t::Opcode::WriteOp,
                                             url, identity,
-                                            "'read' access error");
+                                            "'write' access error");
                                     }
 
                                     auto on_read = std::make_shared<on_read_t<Event>>(
@@ -323,13 +326,13 @@ struct alter_slot_t :
 
                                     backend->async_read_metainfo(entity, std::move(on_read));
                                 }
-                            }; // on_verify_read{}
+                            }; // on_verify_write{}
 
-                            backend->async_verify_read(entity, on_verify_read);
+                            backend->async_verify_read(entity, on_verify_write);
                         }
-                    }; // on_verify_write{}
+                    }; // on_verify_read{}
 
-                    backend->async_verify_write(entity, on_verify_write);
+                    backend->async_verify_read(entity, on_verify_read);
                 } // for entities
             } // for services
         } // for schemes
