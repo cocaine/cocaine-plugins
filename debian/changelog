@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.8) unstable; urgency=low
+
+  * Fixed: change order of rd/wr access checks (#148).
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 18 Jul 2017 15:12:26 +0300
+
 cocaine-plugins (0.12.14.7) unstable; urgency=low
 
   * Feature: Unified Cocaine ACL Tooling (#140).
