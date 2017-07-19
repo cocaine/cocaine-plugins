@@ -23,7 +23,7 @@ struct uniresis {
         typedef boost::mpl::list<>::type argument_type;
 
         typedef option_of<
-            unsigned int
+            uint
         >::tag upstream_type;
     };
 
