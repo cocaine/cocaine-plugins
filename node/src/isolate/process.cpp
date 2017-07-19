@@ -32,6 +32,7 @@
 #include <array>
 #include <iostream>
 
+#include <cassert>
 #include <csignal>
 
 #include <asio/deadline_timer.hpp>
@@ -429,6 +430,13 @@ process_t::spawn(const std::string& path,
     }
 
     std::_Exit(EXIT_FAILURE);
+}
+
+void
+process_t::metrics(const std::vector<std::string>&, std::shared_ptr<api::metrics_handle_base_t> handle) const
+{
+    assert(handle);
+    return handle->on_data({});
 }
 
 } // namespace isolate

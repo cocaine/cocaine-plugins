@@ -14,10 +14,9 @@
 * GNU General Public License for more details.
 */
 
-#include "cocaine/api/peer/pool.hpp"
-#include "cocaine/repository/peer/pool.hpp"
 #include "cocaine/gateway/vicodyn.hpp"
-#include "cocaine/vicodyn/peer/pool/basic.hpp"
+#include "cocaine/vicodyn/balancer/simple.hpp"
+#include "cocaine/repository/vicodyn/balancer.hpp"
 
 #include <cocaine/errors.hpp>
 #include <cocaine/repository.hpp>
@@ -33,7 +32,7 @@ validation() -> api::preconditions_t {
 void
 initialize(api::repository_t& repository) {
     repository.insert<gateway::vicodyn_t>("vicodyn");
-    repository.insert<vicodyn::peer::pool::basic_t>("basic");
+    repository.insert<vicodyn::balancer::simple_t>("simple");
 }
 
 }

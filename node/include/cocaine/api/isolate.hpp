@@ -24,6 +24,7 @@
 #include <cocaine/common.hpp>
 
 #include <cocaine/locked_ptr.hpp>
+#include <cocaine/idl/isolate.hpp>
 
 #include <map>
 #include <memory>
@@ -63,7 +64,7 @@ struct cancellation_wrapper :
 
 struct spool_handle_base_t {
     virtual
-    ~spool_handle_base_t() {}
+    ~spool_handle_base_t() = default;
 
     virtual
     void
@@ -76,7 +77,7 @@ struct spool_handle_base_t {
 
 struct spawn_handle_base_t {
     virtual
-    ~spawn_handle_base_t() {}
+    ~spawn_handle_base_t() = default;
 
     virtual
     void
@@ -91,6 +92,21 @@ struct spawn_handle_base_t {
     on_data(const std::string& data) = 0;
 };
 
+struct metrics_handle_base_t {
+    using response_type = cocaine::io::isolate::metrics::response_type;
+
+    virtual
+    ~metrics_handle_base_t() = default;
+
+    virtual
+    void
+    on_data(const response_type& data) = 0;
+
+    virtual
+    void
+    on_error(const std::error_code& ec, const std::string& msg) = 0;
+};
+
 typedef std::map<std::string, std::string> args_t;
 typedef std::map<std::string, std::string> env_t;
 
@@ -98,9 +114,7 @@ struct isolate_t {
     typedef isolate_t category_type;
 
     virtual
-    ~isolate_t() {
-        // Empty.
-    }
+    ~isolate_t() = default;
 
     virtual
     std::unique_ptr<cancellation_t>
@@ -109,7 +123,12 @@ struct isolate_t {
     virtual
     std::unique_ptr<cancellation_t>
     spawn(const std::string& path, const args_t& args, const env_t& environment,
-                std::shared_ptr<api::spawn_handle_base_t> handle) = 0;
+                std::shared_ptr<api::spawn_handle_base_t> handler) = 0;
+
+    virtual
+    void
+    metrics(const std::vector<std::string>& query,
+        std::shared_ptr<api::metrics_handle_base_t> handler) const = 0;
 
     asio::io_service&
     get_io_service() {

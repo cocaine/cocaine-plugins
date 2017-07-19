@@ -15,9 +15,7 @@
 
 #include "cocaine/cluster/unicorn.hpp"
 
-#include "cocaine/detail/unicorn/zookeeper.hpp"
-
-#include "cocaine/detail/zookeeper/errors.hpp"
+#include "cocaine/unicorn/zookeeper.hpp"
 
 #include "cocaine/service/unicorn.hpp"
 
@@ -35,19 +33,16 @@ using namespace cocaine;
 
 extern "C" {
 
-auto
-validation() -> api::preconditions_t {
+auto validation() -> api::preconditions_t {
     return api::preconditions_t{ COCAINE_VERSION };
 }
 
-void
-initialize(api::repository_t& repository) {
-    repository.insert<unicorn::zookeeper_t>("zookeeper", std::make_unique<api::zookeeper_factory_t>());
 
+auto initialize(api::repository_t& repository) -> void {
+    repository.insert<unicorn::zookeeper_t>("zookeeper", std::make_unique<api::zookeeper_factory_t>());
     repository.insert<cluster::unicorn_cluster_t>("unicorn");
     repository.insert<authorization::unicorn::enabled_t>("unicorn");
     repository.insert<service::unicorn_service_t>("unicorn");
-    error::registrar::add(error::zookeeper_category(), error::zookeeper_category_id);
 }
 
 }

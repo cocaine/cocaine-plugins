@@ -20,16 +20,41 @@
 
 #include "cocaine/logging/metafilter.hpp"
 
+#include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
 
 #include <blackhole/logger.hpp>
+
+#include <metrics/registry.hpp>
 
 #include <mutex>
 
 namespace cocaine {
 namespace logging {
 
-metafilter_t::metafilter_t(std::unique_ptr<logger_t> _logger) : logger(std::move(_logger)) {}
+metafilter_t::processed_t::processed_t(context_t& context, const std::string& name, const std::string& type) :
+    count(context.metrics_hub().counter<uint64_t>(format("logging.{}.{}.count", name, type))),
+    overall_count(context.metrics_hub().counter<uint64_t>(format("logging.{}.sum.count", name, type))),
+    count_since_change(context.metrics_hub().counter<uint64_t>(format("logging.{}.{}.count_since_change", name, type)))
+{
+}
+
+auto metafilter_t::processed_t::increment() -> void {
+    count->operator++();
+    overall_count->operator++();
+    count_since_change->operator++();
+}
+
+auto metafilter_t::processed_t::on_changed() -> void {
+    count_since_change->store(0ull);
+}
+
+metafilter_t::metafilter_t(context_t& context, std::string _name, std::unique_ptr<logger_t> _logger) :
+        name(std::move(_name)),
+        accepted(context, name, "accepted"),
+        rejected(context, name, "rejected"),
+        logger(std::move(_logger))
+{}
 
 void metafilter_t::add_filter(filter_info_t filter) {
     std::lock_guard<boost::shared_mutex> guard(mutex);
@@ -39,8 +64,8 @@ void metafilter_t::add_filter(filter_info_t filter) {
     });
     if(it == filters.end()) {
         filters.push_back(std::move(filter));
-        since_change_accepted_cnt.store(0);
-        since_change_rejected_cnt.store(0);
+        accepted.on_changed();
+        rejected.on_changed();
     }
 }
 
@@ -59,19 +84,20 @@ bool metafilter_t::remove_filter(filter_t::id_t filter_id) {
 }
 
 std::vector<filter_info_t>::iterator metafilter_t::remove_filter(std::vector<filter_info_t>::iterator it) {
-    since_change_accepted_cnt.store(0);
-    since_change_rejected_cnt.store(0);
+    accepted.on_changed();
+    rejected.on_changed();
     return filters.erase(it);
 }
 
 bool metafilter_t::empty() const {
+    boost::shared_lock<boost::shared_mutex> guard(mutex);
     return filters.empty();
 }
 
 filter_result_t metafilter_t::apply(blackhole::severity_t severity,
                                     blackhole::attribute_pack& attributes) {
     std::vector<filter_t::id_t> ids_to_remove;
-    filter_t::deadline_t now = filter_t::clock_t::now();
+    auto now = static_cast<uint64_t>(std::time(nullptr));
     filter_result_t result = filter_result_t::reject;
     boost::shared_lock<boost::shared_mutex> guard(mutex);
 
@@ -90,11 +116,9 @@ filter_result_t metafilter_t::apply(blackhole::severity_t severity,
         cleanup();
     }
     if(result == filter_result_t::reject) {
-        overall_rejected_cnt++;
-        since_change_rejected_cnt++;
+        rejected.increment();
     } else {
-        overall_accepted_cnt++;
-        since_change_accepted_cnt++;
+        accepted.increment();
     }
 
     return result;
@@ -108,7 +132,7 @@ void metafilter_t::each(const callable_t& fn) const {
 }
 
 void metafilter_t::cleanup() {
-    filter_t::deadline_t now = filter_t::clock_t::now();
+    auto now = static_cast<uint64_t>(std::time(nullptr));
     std::lock_guard<boost::shared_mutex> guard(mutex);
     for (auto it = filters.begin(); it != filters.end(); ) {
         if (now > it->deadline) {

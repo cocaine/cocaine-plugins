@@ -22,6 +22,7 @@
 
 #include <cocaine/errors.hpp>
 #include <cocaine/format.hpp>
+#include <cocaine/trace/trace.hpp>
 
 #include <blackhole/attribute.hpp>
 
@@ -261,8 +262,7 @@ filter_info_t::filter_info_t(const dynamic_t& value) {
         }
     }
     filter = filter_t(obj.at("filter"));
-    typedef filter_t::deadline_t dl_t;
-    deadline = dl_t(dl_t::duration(obj.at("deadline").as_uint()));
+    deadline = obj.at("deadline").as_uint();
     id = obj.at("id").as_uint();
 
     disposition = static_cast<filter_t::disposition_t>(obj.at("disposition").as_uint());
@@ -276,7 +276,7 @@ filter_info_t::filter_info_t(const dynamic_t& value) {
 dynamic_t filter_info_t::representation() {
     dynamic_t::object_t container;
     container["filter"] = filter.representation();
-    container["deadline"] = deadline.time_since_epoch().count();
+    container["deadline"] = deadline;
     container["id"] = id;
     container["logger_name"] = logger_name;
     container["disposition"] = static_cast<uint64_t>(disposition);
@@ -618,6 +618,18 @@ struct xor_filter_t : public filter_t::inner_t {
     };
 };
 
+struct traced_filter_t : public filter_t::inner_t {
+    traced_filter_t() {}
+
+    virtual filter_result_t apply(blackhole::severity_t, blackhole::attribute_pack&) const {
+        return trace_t::current().verbose() ? fr::accept : fr::reject;
+    }
+
+    virtual dynamic_t representation() const {
+        return dynamic_t(std::make_tuple(std::string("traced")));
+    };
+};
+
 inner_t unary_operator_factory(const std::string& filter_operator, const dynamic_t& operand) {
     if (operand.is_string()) {
         if (filter_operator == "e") {
@@ -711,16 +723,21 @@ filter_t::filter_t(const dynamic_t& source) {
     }
     const auto& filter_operator = array[0].as_string();
     const auto& operand1 = array[1];
-    if (array.size() == 1 && array[0].is_string() && array[0].as_string() == "empty") {
-        inner.reset(new empty_filter_t());
+    if (array.size() == 1 && array[0].is_string()) {
+        if(array[0].as_string() == "empty") {
+            inner.reset(new empty_filter_t());
+        } else if(array[0].as_string() == "traced") {
+            inner.reset(new traced_filter_t());
+        } else {
+            throw error_t("unknown single argument filter specification", array[0].as_string());
+        }
     } else if (array.size() == 2) {
         inner = unary_operator_factory(filter_operator, operand1);
     } else if (array.size() == 3) {
         const auto operand2 = array[2];
         inner = binary_operator_factory(filter_operator, operand1, operand2);
     } else {
-        throw error_t(
-            format("representation should contain 3 elements for operator {}", filter_operator));
+        throw error_t("representation should contain 3 elements for operator {}", filter_operator);
     }
 }
 }

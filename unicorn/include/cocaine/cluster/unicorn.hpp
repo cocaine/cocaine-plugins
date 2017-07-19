@@ -20,7 +20,10 @@
 #include <cocaine/forwards.hpp>
 #include <cocaine/locked_ptr.hpp>
 
+#include <boost/optional/optional.hpp>
+
 #include <set>
+
 namespace cocaine { namespace cluster {
 
 class unicorn_cluster_t:
@@ -37,56 +40,80 @@ public:
         size_t check_interval;
     };
 
+    class timer_t {
+        unicorn_cluster_t& parent;
+        synchronized<asio::deadline_timer> timer;
+        std::function<void()> callback;
+
+    public:
+        timer_t(unicorn_cluster_t& parent, std::function<void()> callback);
+        auto defer_retry() -> void;
+        auto defer_check() -> void;
+
+    private:
+        auto defer(const boost::posix_time::time_duration& duration) -> void;
+    };
+
+    class announcer_t {
+        unicorn_cluster_t& parent;
+
+        timer_t timer;
+        std::string path;
+        std::vector<asio::ip::tcp::endpoint> endpoints;
+
+        api::auto_scope_t scope;
+
+    public:
+        announcer_t(unicorn_cluster_t& parent);
+
+        auto announce() -> void;
+
+    private:
+        auto on_set(std::future<response::create> future) -> void;
+
+        auto on_check(std::future<response::subscribe> future) -> void;
+
+        auto set_and_check_endpoints() -> bool;
+
+        auto set_timer(const boost::posix_time::time_duration& duration) -> void;
+
+        auto defer_announce_retry() -> void;
+    };
+
+    class subscriber_t {
+        struct locator_subscription_t {
+            std::vector<asio::ip::tcp::endpoint> endpoints;
+            api::auto_scope_t scope;
+        };
+
+        using subscriptions_t = std::map<std::string, locator_subscription_t>;
+
+        synchronized<subscriptions_t> subscriptions;
+        unicorn_cluster_t& parent;
+        timer_t timer;
+        api::auto_scope_t children_scope;
+
+    public:
+        subscriber_t(unicorn_cluster_t& parent);
+        auto subscribe() -> void;
+
+    private:
+        auto on_children(std::future<response::children_subscribe> future) -> void;
+        auto on_node(std::string uuid, std::future<response::subscribe> future) -> void;
+        auto update_state(std::vector<std::string> nodes) -> void;
+    };
+
+
     unicorn_cluster_t(context_t& context, interface& locator, mode_t mode, const std::string& name, const dynamic_t& args);
 
 private:
-    struct on_announce;
-    struct on_update;
-    struct on_fetch;
-    struct on_list_update;
-
-    std::pair<size_t, api::unicorn_scope_ptr&>
-    scope(std::map<size_t, api::unicorn_scope_ptr>& _scopes);
-
-    void
-    drop_scope(size_t);
-
-    void
-    announce();
-
-    void
-    subscribe();
-
-    void
-    on_announce_timer(const std::error_code& ec);
-
-    void
-    on_subscribe_timer(const std::error_code& ec);
-
-    void
-    on_node_list_change(size_t scope_id, std::future<response::children_subscribe> new_list);
-
-    void
-    on_node_fetch(size_t scope_id, const std::string& uuid, std::future<response::get> node_endpoints);
-
-    void
-    on_announce_set(size_t scope_id, std::future<response::create> future);
-
-    void
-    on_announce_checked(size_t scope_id, std::future<response::subscribe> future);
-
     std::shared_ptr<logging::logger_t> log;
     cfg_t config;
     cocaine::context_t& context;
     cluster_t::interface& locator;
-    std::vector<asio::ip::tcp::endpoint> endpoints;
-    asio::deadline_timer announce_timer;
-    asio::deadline_timer subscribe_timer;
     api::unicorn_ptr unicorn;
-    std::atomic<size_t> scope_counter;
-    synchronized<std::map<size_t, api::unicorn_scope_ptr>> scopes;
-    typedef std::map<std::string, std::vector<asio::ip::tcp::endpoint>> locator_endpoints_t;
-    synchronized<locator_endpoints_t> registered_locators;
+    announcer_t announcer;
+    subscriber_t subscriber;
 };
 
 }}

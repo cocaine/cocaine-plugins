@@ -53,7 +53,6 @@
 #include "../foreign/radix_tree/radix_tree.hpp"
 
 #include <random>
-#include <cocaine/detail/zookeeper/errors.hpp>
 
 namespace ph = std::placeholders;
 namespace bh = blackhole;
@@ -101,6 +100,9 @@ auto emit(std::shared_ptr<metafilter_t> filter, const std::string& backend, logg
     emit_ack(filter, backend, log, severity, message, attributes);
 }
 
+auto now() -> uint64_t {
+    return static_cast<uint64_t>(std::time(nullptr));
+}
 }
 
 struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::impl_t> {
@@ -108,7 +110,6 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
 
     // propagate filter_t typedefs for simplicity
     using id_t = filter_t::id_t;
-    using clock_t = filter_t::clock_t;
     using disposition_t = filter_t::disposition_t;
     using deadline_t = filter_t::deadline_t;
     using representation_t = filter_t::representation_t;
@@ -120,7 +121,8 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
     static const std::string default_key;
     static const std::string core_key;
 
-    impl_t(context_t& context, asio::io_service& io_context, const dynamic_t& config) :
+    impl_t(context_t& _context, asio::io_service& io_context, const dynamic_t& config) :
+        context(_context),
         internal_logger(context.log("logging_v2")),
         root_logger(new bh::root_logger_t(get_root_logger(context, config))),
         logger(std::unique_ptr<logging::logger_t>(new bh::wrapper_t(*root_logger, {}))),
@@ -159,7 +161,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
         });
         context.logger_filter(std::move(core_filter));
 
-        signal_dispatcher->on<io::context::os_signal>([=, &context](int signum, siginfo_t){
+        signal_dispatcher->on<io::context::os_signal>([=](int signum, siginfo_t){
             if(signum == SIGHUP) {
                 COCAINE_LOG_INFO(internal_logger, "resetting logging v2 root logger");
                 *root_logger = get_root_logger(context, config);
@@ -207,7 +209,10 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                 std::vector<std::string> empty;
                 for(auto& mf_pair: metafilters) {
                     mf_pair.second->cleanup();
-                    if(mf_pair.second->empty()){
+                    // NOTE: core metafilter is stored by shared_ptr in filtering lambda and it is a special case
+                    // We can introduce something like 'need_cleanup' or 'useless' method to metafilter,
+                    // but for now it looks like an overkill, so we just check in cleanup if the name is 'core'
+                    if(mf_pair.second->empty() && mf_pair.first != core_key){
                         empty.push_back(mf_pair.first);
                     }
                 }
@@ -241,7 +246,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                 } else {
                     try {
                         logging::filter_info_t info(filter_value.value());
-                        if(info.deadline < clock_t::now()) {
+                        if(info.deadline < now()) {
                             COCAINE_LOG_INFO(internal_logger, "deadlined filter found - removing filter from unicorn");
                             remove_from_unicorn(filter_path(filter_id));
                         } else {
@@ -249,14 +254,14 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                             auto mf_name = info.logger_name;
                             metafilter->add_filter(std::move(info));
                         }
-                    } catch (const std::system_error& e) {
+                    } catch (const std::exception& e) {
                         COCAINE_LOG_ERROR(internal_logger, "can not parse filter value, erasing filter {} from unicorn - {}",
-                                          filter_id, error::to_string(e));
+                                          filter_id, e.what());
                         remove_from_unicorn(filter_path(filter_id));
                     }
                 }
             } catch (const std::system_error& e) {
-                if(e.code().value() != ZNONODE) {
+                if(e.code().value() != error::no_node) {
                     COCAINE_LOG_ERROR(internal_logger, "can not fetch cluster filter - {}", error::to_string(e));
                 }
                 remove();
@@ -284,8 +289,8 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                         }
                     });
                 }
-            } catch (const std::system_error& e) {
-                COCAINE_LOG_ERROR(internal_logger, "failed to receive filter list update - {}", error::to_string(e));
+            } catch (const std::exception& e) {
+                COCAINE_LOG_ERROR(internal_logger, "failed to receive filter list update - {}", e.what());
                 retry_timer.async_wait([&](std::error_code) {
                     load_filters();
                 });
@@ -298,7 +303,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                 result.get();
                 COCAINE_LOG_DEBUG(internal_logger, "created filter path in unicorn");
             } catch (const std::system_error& e) {
-                if(e.code().value() != ZNODEEXISTS) {
+                if(e.code().value() != error::node_exists) {
                     COCAINE_LOG_ERROR(internal_logger, "failed to create filter in unicorn - {}", error::to_string(e));
                     retry_timer.async_wait([&](std::error_code) {
                         load_filters();
@@ -324,7 +329,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                 future.get();
                 COCAINE_LOG_INFO(internal_logger, "removed filter from unicorn from {}", filter_path);
             } catch (const std::system_error& e) {
-                if(e.code().value() != ZNONODE) {
+                if(e.code().value() != error::no_node) {
                     COCAINE_LOG_WARNING(internal_logger, "failed to remove filter on {} from ZK - {}",
                                         filter_path, error::to_string(e));
                 } else {
@@ -355,7 +360,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
 
     auto set_filter(std::string name, filter_t filter, uint64_t ttl, disposition_t disposition) -> deferred<id_t> {
         deferred<id_t> deferred;
-        deadline_t deadline(clock_t::now() + std::chrono::seconds(ttl));
+        deadline_t deadline = now() + ttl;
         id_t id = generate_id();
         logging::filter_info_t info(std::move(filter), std::move(deadline), id, disposition, std::move(name));
 
@@ -398,7 +403,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                 result.write(true);
                 COCAINE_LOG_INFO(internal_logger, "removed filter from unicorn from {}", path);
             } catch (const std::system_error& e) {
-                if(e.code().value() != ZNONODE) {
+                if(e.code().value() != error::no_node) {
                     result.abort(e.code(), "failed to remove filter from unicorn");
                     COCAINE_LOG_WARNING(internal_logger, "failed to remove filter on {} from ZK - {}", path, error::to_string(e));
                 } else {
@@ -426,8 +431,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
             filter_list_storage_t storage;
 
             auto callable = [&](const logging::filter_info_t& info) {
-                auto ts = clock_t::to_time_t(info.deadline);
-                storage.push_back(std::make_tuple(info.logger_name, info.filter.representation(), info.id, ts, info.disposition));
+                storage.push_back(std::make_tuple(info.logger_name, info.filter.representation(), info.id, info.deadline, info.disposition));
             };
             for (auto& metafilter_pair : mfs) {
                 metafilter_pair.second->each(callable);
@@ -467,12 +471,13 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
             if (metafilter == nullptr) {
                 std::unique_ptr<logging::logger_t> mf_logger(new blackhole::wrapper_t(
                 *(internal_logger), {{"metafilter", name}}));
-                metafilter = std::make_shared<logging::metafilter_t>(std::move(mf_logger));
+                metafilter = std::make_shared<logging::metafilter_t>(context, name, std::move(mf_logger));
             }
             return metafilter;
         });
     }
 
+    context_t& context;
     std::unique_ptr<logging::logger_t> internal_logger;
     std::unique_ptr<bh::root_logger_t> root_logger;
     logging::trace_wrapper_t logger;

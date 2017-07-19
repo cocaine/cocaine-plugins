@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
 Build-Depends: cmake,
  debhelper (>= 7.0.13),
- libcocaine-dev (>= 0.12.13),
+ libcocaine-dev (>= 0.12.14.6),
  libarchive-dev,
  uuid-dev,
  libcgroup-dev,
@@ -15,7 +15,9 @@ Build-Depends: cmake,
  libnl-3-dev, libnl-genl-3-dev, libcurl4-openssl-dev (>= 7.22.0),
  libzookeeper-mt-dev,
  blackhole-migration-dev (>= 1.0.0-1),
- libpqxx-dev
+ metrics-dev (>= 3.1.0),
+ libpqxx-dev,
+ elliptics-dev (>= 2.27.2.5)
 # mongodb-dev (<< 1:2.5.0), mongodb-dev (>= 1:2.4.9)
 Standards-Version: 3.9.3
 Vcs-Git: git://github.com/cocaine/cocaine-plugins.git
@@ -148,7 +150,8 @@ Description: Cocaine - v2 logging service (debug symbols)
 Package: libcocaine-plugin-node3
 Architecture: any
 Section: libs
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends},
+ libmetrics3 (>= 3.1.0)
 Description: Cocaine - Node Service
  Node service for Cocaine.
 
@@ -285,3 +288,23 @@ Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Vicodyn gateway (dev files)
  Vicodyn gateway (dev files)
+
+Package: libcocaine-plugin-elliptics3
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, elliptics-client2.27 (>= 2.27.2.5), libcocaine-core3 (>= 0.12.14)
+Conflicts: libcocaine-plugin-elliptics
+Replaces: libcocaine-plugin-elliptics
+Description: Distributed hash table storage (cocaine plugin)
+ Elliptics network is a fault tolerant distributed hash table object storage.
+
+Package: libcocaine-plugin-elliptics-dbg
+Architecture: any
+Depends: ${misc:Depends}, libcocaine-plugin-elliptics3 (= ${binary:Version})
+Description: Distributed hash table storage (cocaine plugin debug files)
+ Elliptics network is a fault tolerant distributed hash table object storage.
+
+Package: libcocaine-plugin-elliptics-dev
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+Description: Distributed hash table storage (cocaine plugin includes)
+ Elliptics network is a fault tolerant distributed hash table object storage.

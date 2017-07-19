@@ -13,12 +13,13 @@
 * GNU General Public License for more details.
 */
 
-#include "cocaine/detail/zookeeper/session.hpp"
+#include "cocaine/zookeeper/session.hpp"
 
 #include <zookeeper/zookeeper.h>
 
 #include <algorithm>
 
+namespace cocaine {
 namespace zookeeper {
 
 session_t::session_t() :
@@ -46,4 +47,6 @@ void session_t::assign(const clientid_t& native_handle) {
     zk_session.client_id = native_handle.client_id;
     std::copy(native_handle.passwd, native_handle.passwd+16, zk_session.passwd);
 }
-}
+
+} // namespace zookeeper
+} // namespace cocaine

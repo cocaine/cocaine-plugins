@@ -27,7 +27,7 @@ public:
     overseer_t(context_t& context,
                manifest_t manifest,
                profile_t profile,
-               pool_observer& observer,
+               std::shared_ptr<pool_observer> observer,
                std::shared_ptr<asio::io_service> loop);
 
     /// TODO: Docs.
@@ -68,8 +68,8 @@ public:
     ///
     /// \return the dispatch object, which is ready for processing the appropriate protocol
     ///     messages.
-    auto enqueue(upstream<io::stream_of<std::string>::tag> downstream,
-                 app::event_t event) -> std::shared_ptr<client_rpc_dispatch_t>;
+    auto enqueue(app::event_t event, upstream<io::stream_of<std::string>::tag> downstream)
+        -> std::shared_ptr<client_rpc_dispatch_t>;
 
     /// Enqueues the new event into the most appropriate slave.
     ///
@@ -81,8 +81,8 @@ public:
     /// \param event an invocation event.
     ///
     /// \return a tx stream.
-    auto enqueue(std::shared_ptr<api::stream_t> rx,
-                 app::event_t event) -> std::shared_ptr<api::stream_t>;
+    auto enqueue(app::event_t event, std::shared_ptr<api::stream_t> rx)
+        -> std::shared_ptr<api::stream_t>;
 
     /// Tries to keep alive at least `count` workers no matter what.
     ///
@@ -98,7 +98,7 @@ public:
     ///
     /// The handshake message should contain its peer id (likely uuid) by comparing that we either
     /// accept the session or drop it.
-    auto prototype() -> io::dispatch_ptr_t;
+    auto prototype() -> std::unique_ptr<io::basic_dispatch_t>;
 };
 
 }  // namespace node

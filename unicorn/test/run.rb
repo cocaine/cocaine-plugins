@@ -7,17 +7,9 @@ Cocaine::LOG.level = Logger::ERROR
 Celluloid.logger.level = Cocaine::LOG.level
 
 ## This one is defined as hash of category name in cocaine.
-ZK_ERROR_CATEGORY = 16639
 UNICORN_ERROR_CATEGORY = 11
 
 ## These are zookeeper error codes
-
-ZBADARGUMENTS = -8 # Invalid arguments */
-ZAPIERROR = -100
-ZNONODE = -101 # Node does not exist */
-ZBADVERSION = -103 # Version conflict */
-ZNODEEXISTS = -110 # The node already exists */
-ZNOTEMPTY = -111 # The node has children */
 
 CHILD_NOT_ALLOWED = 1
 INVALID_TYPE = 2
@@ -26,9 +18,14 @@ UNKNOWN_ERROR = 4
 INVALID_NODE_NAME = 5
 INVALID_PATH = 6
 VERSION_NOT_ALLOWED = 7
+NO_NODE = 8
+NODE_EXISTS = 9
+CONNECTION_LOSS = 10
+BACKEND_INTERNAL_ERROR = 11
 
 def new_unicorn
-  Cocaine::Service.new(:unicorn, [[Default::Locator.host, Default::Locator.port]])
+  #Cocaine::Service.new(:unicorn, [[Cocaine::Default::Locator.host, Cocaine::Default::Locator.port]])
+  Cocaine::Service.new(:unicorn, [['localhost', Cocaine::Default::Locator.port]])
 end
 
 def node_gen
@@ -146,8 +143,8 @@ describe :Unicorn do
     node_val = node_val_gen
     ensure_create(node, node_val)
     result = create(node, "Q")
-    expect(result[1][0][0]).to eq ZK_ERROR_CATEGORY
-    expect(result[1][0][1]).to eq ZNODEEXISTS
+    expect(result[1][0][0]).to eq UNICORN_ERROR_CATEGORY
+    expect(result[1][0][1]).to eq NODE_EXISTS
     ensure_del(node)
   end
 
@@ -157,8 +154,8 @@ describe :Unicorn do
     inner_node = node + '/' + SecureRandom.hex
     ensure_create(inner_node, node_val)
     result = create(node, node_val)
-    expect(result[1][0][0]).to eq ZK_ERROR_CATEGORY
-    expect(result[1][0][1]).to eq ZNODEEXISTS
+    expect(result[1][0][0]).to eq UNICORN_ERROR_CATEGORY
+    expect(result[1][0][1]).to eq NODE_EXISTS
     ensure_del(inner_node)
     ensure_del(node)
   end
@@ -214,8 +211,8 @@ describe :Unicorn do
     expect(result[1][0][0]).to eq UNICORN_ERROR_CATEGORY
     expect(result[1][0][1]).to eq VERSION_NOT_ALLOWED
     result = put(node, node_val, 0)
-    expect(result[1][0][0]).to eq ZK_ERROR_CATEGORY
-    expect(result[1][0][1]).to eq ZNONODE
+    expect(result[1][0][0]).to eq UNICORN_ERROR_CATEGORY
+    expect(result[1][0][1]).to eq NO_NODE
   end
 
   # it 'should correctly handle "put" error on node with children' do
@@ -242,7 +239,7 @@ describe :Unicorn do
     expect(result[1][0][1]).to eq -1
     expect{
       rx.recv(fast_timeout)
-    }.to raise_error(Celluloid::TimeoutError)
+    }.to raise_error(Celluloid::TaskTimeout)
     ensure_create(node, node_val)
     result = rx.recv(fast_timeout)
     expect(result[1][0][0]).to eq node_val
@@ -250,17 +247,17 @@ describe :Unicorn do
 
     expect{
       rx.recv(fast_timeout)
-    }.to raise_error(Celluloid::TimeoutError)
+    }.to raise_error(Celluloid::TaskTimeout)
     ensure_del(node)
     result = rx.recv(fast_timeout)
-    expect(result[1][0][0]).to eq ZK_ERROR_CATEGORY
-    expect(result[1][0][1]).to eq ZNONODE
+    expect(result[1][0][0]).to eq UNICORN_ERROR_CATEGORY
+    expect(result[1][0][1]).to eq NO_NODE
 
     # After error subscription is cancelled
     ensure_create(node, node_val)
     expect{
       rx.recv(fast_timeout)
-    }.to raise_error(Celluloid::TimeoutError)
+    }.to raise_error(Celluloid::TaskTimeout)
 
     ensure_del(node)
     tx.close
@@ -277,8 +274,8 @@ describe :Unicorn do
     expect(result[1][0][1]).to eq 0
     ensure_del(node)
     result = rx.recv(timeout)
-    expect(result[1][0][0]).to eq ZK_ERROR_CATEGORY
-    expect(result[1][0][1]).to eq ZNONODE
+    expect(result[1][0][0]).to eq UNICORN_ERROR_CATEGORY
+    expect(result[1][0][1]).to eq NO_NODE
     tx.close
   end
 
@@ -288,8 +285,8 @@ describe :Unicorn do
     for i in [-1, 0, 1]
       tx, rx = unicorn.del(node, i)
       result = rx.recv(timeout)
-      expect(result[1][0][0]).to be ZK_ERROR_CATEGORY
-      expect(result[1][0][1]).to be ZNONODE
+      expect(result[1][0][0]).to be UNICORN_ERROR_CATEGORY
+      expect(result[1][0][1]).to be NO_NODE
     end
   end
 
@@ -300,8 +297,8 @@ describe :Unicorn do
     unicorn = new_unicorn()
     tx, rx = unicorn.del(node, 42)
     result = rx.recv(timeout)
-    expect(result[1][0][0]).to be ZK_ERROR_CATEGORY
-    expect(result[1][0][1]).to be ZBADVERSION
+    expect(result[1][0][0]).to be UNICORN_ERROR_CATEGORY
+    expect(result[1][0][1]).to be VERSION_NOT_ALLOWED
   end
 
   it 'should handle "del" correctly on valid path and version' do
@@ -316,12 +313,12 @@ describe :Unicorn do
     node_val = "TEST_VALUE2"
     put(node, node_val, 1)
     result = del(node, 42)
-    expect(result[1][0][0]).to be ZK_ERROR_CATEGORY
-    expect(result[1][0][1]).to be ZBADVERSION
+    expect(result[1][0][0]).to be UNICORN_ERROR_CATEGORY
+    expect(result[1][0][1]).to be VERSION_NOT_ALLOWED
     ensure_del(node, 2)
     result = del(node, 42)
-    expect(result[1][0][0]).to be ZK_ERROR_CATEGORY
-    expect(result[1][0][1]).to be ZNONODE
+    expect(result[1][0][0]).to be UNICORN_ERROR_CATEGORY
+    expect(result[1][0][1]).to be NO_NODE
   end
 
   it 'should handle "increment" on new node' do
@@ -398,8 +395,8 @@ describe :Unicorn do
     unicorn = new_unicorn()
     tx, rx = unicorn.children_subscribe(node)
     result = rx.recv(timeout)
-    expect(result[1][0][0]).to be ZK_ERROR_CATEGORY
-    expect(result[1][0][1]).to be ZNONODE
+    expect(result[1][0][0]).to be UNICORN_ERROR_CATEGORY
+    expect(result[1][0][1]).to be NO_NODE
   end
 
   it 'should handle "children_subscribe" correctly' do
@@ -425,7 +422,7 @@ describe :Unicorn do
       expect(Set.new(result[1][1])).to eq subnodes
       expect{
         rx.recv(fast_timeout)
-      }.to raise_error(Celluloid::TimeoutError)
+      }.to raise_error(Celluloid::TaskTimeout)
     end
     for subnode in subnodes.to_a do
       ensure_del(node + '/' + subnode)
@@ -436,12 +433,12 @@ describe :Unicorn do
       expect(Set.new(result[1][1])).to eq subnodes
       expect{
         rx.recv(fast_timeout)
-      }.to raise_error(Celluloid::TimeoutError)
+      }.to raise_error(Celluloid::TaskTimeout)
     end
     ensure_del(node)
     result = rx.recv
-    expect(result[1][0][0]).to be ZK_ERROR_CATEGORY
-    expect(result[1][0][1]).to be ZNONODE
+    expect(result[1][0][0]).to be UNICORN_ERROR_CATEGORY
+    expect(result[1][0][1]).to be NO_NODE
   end
 
   it 'should lock properly and pass lock to other connection on close' do
@@ -456,7 +453,7 @@ describe :Unicorn do
     tx2, rx2 = unicorn2.lock(node)
     expect{
       rx2.recv(fast_timeout)
-    }.to raise_error(Celluloid::TimeoutError)
+    }.to raise_error(Celluloid::TaskTimeout)
 
     tx.close
     result = rx2.recv

@@ -14,6 +14,9 @@
 namespace cocaine {
 
 struct stats_t {
+    std::string name;
+    metrics::registry_t& metrics_hub;
+
     struct {
         /// Number of requests, that are pushed into the queue.
         metrics::shared_metric<std::atomic<std::int64_t>> accepted;
@@ -39,6 +42,8 @@ struct stats_t {
     metrics::shared_metric<metrics::timer<metrics::accumulator::decaying::exponentially_t>> timer;
 
     stats_t(context_t& context, const std::string& name, std::chrono::high_resolution_clock::duration interval);
+
+    auto deregister() -> void;
 };
 
 }  // namespace cocaine

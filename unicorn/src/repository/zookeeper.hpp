@@ -6,7 +6,7 @@
 #include <cocaine/repository.hpp>
 #include <cocaine/repository/unicorn.hpp>
 
-#include "cocaine/detail/unicorn/zookeeper.hpp"
+#include "cocaine/unicorn/zookeeper.hpp"
 
 namespace cocaine {
 namespace api {

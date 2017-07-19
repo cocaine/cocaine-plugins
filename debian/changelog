@@ -1,3 +1,120 @@
+cocaine-plugins (0.12.14.8) unstable; urgency=low
+
+  * Fixed: change order of rd/wr access checks (#148).
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 18 Jul 2017 15:12:26 +0300
+
+cocaine-plugins (0.12.14.7) unstable; urgency=low
+
+  * Feature: Unified Cocaine ACL Tooling (#140).
+  * Fixed: build on GCC - do not use optional for move-only types.
+  * Fixed: remove redundant reconnect in zookeeper::put_t::run() (#147).
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 14 Jul 2017 12:37:19 +0300
+
+cocaine-plugins (0.12.14.6) unstable; urgency=low
+
+  * Fixed: fix multiple subscriptions in unicorn cluster.
+  * Fixed: run vicodyn io_loop after core refactoring.
+
+ -- Anton Matveenko <antmat@me.com>  Wed, 28 Jun 2017 16:50:37 +0300
+
+cocaine-plugins (0.12.14.5) unstable; urgency=low
+
+  * Refactored: fully reworked unicorn plugin.
+  * Feature: elliptic is the part of plugins(again).
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 22 Jun 2017 13:57:37 +0300
+
+cocaine-plugins (0.12.14.4) unstable; urgency=low
+
+  * Fixed: eliminate race condition
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 02 Jun 2017 13:56:37 +0300
+
+cocaine-plugins (0.12.14.3) unstable; urgency=low
+
+  * Fixed: should no longer pass nullptr session to the overseer engine.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 29 May 2017 13:25:00 +0300
+
+cocaine-plugins (0.12.14.2) unstable; urgency=low
+
+  * Feature: trace channel lifetime (#136).
+    This adds missing wrappings around channel completion handlers
+    to see when a channel was finished either due to normal conditions or
+    because of timeout.
+  * Fixed: catch all type of exceptions in logging service, use unix time
+    for deadlines.
+    This change prevents to crash the entire cluster on invalid user input in
+    TTL field.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 22 May 2017 14:52:52 +0300
+
+cocaine-plugins (0.12.14.1) unstable; urgency=low
+
+  * Feature: release.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 15 May 2017 18:17:08 +0300
+
+cocaine-plugins (0.12.13.4) unstable; urgency=medium
+
+  * Fixed: rebuild package due to broken libmetrics3 dependency
+    introduced in the previous build.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 18 Apr 2017 20:00:29 +0300
+
+cocaine-plugins (0.12.13.3) unstable; urgency=low
+
+  * Fixed: remove app metrics explicitly during restart.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 18 Apr 2017 13:18:38 +0300
+
+cocaine-plugins (0.12.13.2) unstable; urgency=low
+
+  * Fixed: deadlock elimination.
+    The fixed deadlock is triggered due to unspecified arguments evaluation
+    order.
+
+ -- Evgeny Safronov <division494@gmail.com>  Thu, 13 Apr 2017 20:23:15 +0300
+
+cocaine-plugins (0.12.13.1) unstable; urgency=low
+
+  * Feature: detailed metrics for logging::v2 service.
+
+ -- Anton Matveenko <antmat@me.com>  Mon, 12 Apr 2017 18:02:59 +0300
+
+cocaine-plugins (0.12.13.0-alpha6) unstable; urgency=low
+
+  * Feature: trace_bit "traced" filter for logging::v2.
+
+ -- Anton Matveenko <antmat@me.com>  Mon, 10 Apr 2017 15:45:59 +0300
+
+cocaine-plugins (0.12.13.0-alpha5) unstable; urgency=low
+
+  * Feature: zero-sized queue (#128).
+    This commit introduces zero-sized queue for App service. It allows to
+    immediately inject events without (almost) putting them into the queue.
+    Also if all slaves are busy the new policy will reject new events
+    without putting them into the queue.
+  * Fixed: always count RPS regardless of accept/reject (#127).
+
+ -- Evgeny Safronov <division494@gmail.com>  Fri, 07 Apr 2017 16:10:59 +0300
+
+cocaine-plugins (0.12.13.0-alpha4) unstable; urgency=low
+
+  * Fixed: Do not drop core metafilter on cleanup from map,
+    allowing to control it from outside as it was before.
+
+ -- Anton Matveenko <antmat@me.com>  Tue, 04 Apr 2017 16:40:18 +0300
+
+cocaine-plugins (0.12.13.0-alpha3) unstable; urgency=low
+
+  * Fixed: really prevent concurrent access to the stdout keeper in
+    Node service.
+
+ -- Evgeny Safronov <division494@gmail.com>  Tue, 04 Apr 2017 15:43:18 +0300
+
 cocaine-plugins (0.12.13.0-alpha2) unstable; urgency=low
 
   * Fixed: dump stdout/stderr from the app event loop in App service.

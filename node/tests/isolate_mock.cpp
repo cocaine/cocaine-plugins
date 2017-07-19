@@ -15,7 +15,8 @@
 
 #include <memory>
 
-#include "cocaine/idl/isolate.hpp"
+#include <cocaine/common.hpp>
+#include <cocaine/idl/isolate.hpp>
 
 #include <cocaine/dynamic.hpp>
 #include <cocaine/context.hpp>
@@ -23,13 +24,35 @@
 #include <blackhole/logger.hpp>
 
 #include <cocaine/api/service.hpp>
+
 #include <cocaine/logging.hpp>
 #include <cocaine/repository.hpp>
 #include <cocaine/repository/service.hpp>
 #include <cocaine/rpc/dispatch.hpp>
+
 #include <cocaine/traits/dynamic.hpp>
+#include <cocaine/traits/map.hpp>
+
+#include <sys/time.h>
+#include <sys/resource.h>
 
 namespace cocaine { namespace service {
+
+namespace aux {
+    struct formatter_t {
+        auto
+        operator()(const std::map<std::string, std::string>& data) -> std::string {
+            std::string result;
+            for(auto& pair: data) {
+                if(!result.empty()) {
+                    result += ", ";
+                }
+                result += pair.first + ":" + pair.second;
+            }
+            return result;
+        }
+    };
+}
 
 std::unique_ptr<cocaine::logging::logger_t> log;
 
@@ -60,17 +83,16 @@ struct spool_slot_t:
 {
 public:
     typedef typename io::aux::protocol_impl<typename io::event_traits<io::isolate::spool>::upstream_type>::type protocol;
-    typedef typename io::basic_slot<io::isolate::spool>::dispatch_type dispatch_type;
 
     virtual
-    boost::optional<std::shared_ptr<dispatch_type>>
+    result_type
     operator()(const std::vector<hpack::header_t>&, tuple_type&& args, upstream_type&& upstream)
     {
         COCAINE_LOG_INFO(log, "spool. {}, {}", boost::lexical_cast<std::string>(std::get<0>(args)), std::get<1>(args));
         sleep(1);
         upstream.send<protocol::value>();
         COCAINE_LOG_INFO(log, "spool. sent value");
-        return boost::optional<std::shared_ptr<dispatch_type>>(std::make_shared<spooled_dispatch_t>());
+        return result_type(std::make_shared<spooled_dispatch_t>());
     }
 };
 
@@ -79,29 +101,20 @@ struct spawn_slot_t:
 {
 public:
     typedef typename io::aux::protocol_impl<typename io::event_traits<io::isolate::spawn>::upstream_type>::type protocol;
-    typedef typename io::basic_slot<io::isolate::spawn>::dispatch_type dispatch_type;
 
     virtual
-    boost::optional<std::shared_ptr<dispatch_type>>
+    result_type
     operator()(tuple_type&& args, upstream_type&& upstream)
     {
         return operator()({}, std::move(args), std::move(upstream));
     }
 
     virtual
-    boost::optional<std::shared_ptr<dispatch_type>>
+    result_type
     operator()(const std::vector<hpack::header_t>&, tuple_type&& args, upstream_type&& upstream)
     {
-        auto formatter = [] (const std::map<std::string, std::string>& data) -> std::string {
-            std::string result;
-            for(auto& pair: data) {
-                if(!result.empty()) {
-                    result += ", ";
-                }
-                result += pair.first + ":" + pair.second;
-            }
-            return result;
-        };
+        aux::formatter_t formatter;
+
         COCAINE_LOG_INFO(log, "spawn. {}, {}, {}, {}, {}",
                          boost::lexical_cast<std::string>(std::get<0>(args)),
                          std::get<1>(args),
@@ -112,12 +125,66 @@ public:
         sleep(1);
         upstream = upstream.send<protocol::chunk>("");
         sleep(1);
-        upstream =  upstream.send<protocol::chunk>("CHUNK1");
+        upstream = upstream.send<protocol::chunk>("CHUNK1");
         sleep(1);
         upstream = upstream.send<protocol::chunk>("CHUNK2");
+        sleep(1);
+        upstream = upstream.send<protocol::chunk>("CHUNK3");
+        sleep(1);
         upstream.send<protocol::choke>();
         COCAINE_LOG_INFO(log, "spawn. done");
-        return boost::optional<std::shared_ptr<dispatch_type>>(std::make_shared<spawned_dispatch_t>());
+        return result_type(std::make_shared<spawned_dispatch_t>());
+    }
+};
+
+struct metrics_slot_t:
+    public io::basic_slot<io::isolate::metrics>
+{
+public:
+    typedef typename io::aux::protocol_impl<typename io::event_traits<io::isolate::metrics>::upstream_type>::type protocol;
+
+    virtual
+    result_type
+    operator()(tuple_type&& args, upstream_type&& upstream)
+    {
+        return operator()({}, std::move(args), std::move(upstream));
+    }
+
+    virtual
+    result_type
+    operator()(const std::vector<hpack::header_t>&, tuple_type&& args, upstream_type&& upstream)
+    {
+        const auto& query = std::get<0>(args);
+        COCAINE_LOG_INFO(log, "metrics :: request size {} items", query.size());
+
+        rusage ru;
+        // note: values used as dummies and don't match real metrics meanings
+        if (getrusage(RUSAGE_SELF, &ru)) {
+            // TODO: send errors?
+        }
+
+        cocaine::io::isolate::metrics::response_type response;
+
+        for(const auto& uuid : query) {
+            const auto total_time = ru.ru_utime.tv_sec + ru.ru_stime.tv_sec;
+            const auto cpu = total_time ?
+                ru.ru_utime.tv_sec / total_time * 100 :
+                0;
+
+            response[uuid] = {{
+                "mock_isolate", {
+                    {"cpu", static_cast<std::uint64_t>(cpu % 100)},
+                    {"sys_time", ru.ru_stime.tv_sec},
+                    {"user_time", ru.ru_utime.tv_sec},
+                    {"rss", ru.ru_maxrss},
+                    {"ioread", ru.ru_inblock},
+                    {"iowrite", ru.ru_oublock},
+            }}};
+        }
+
+        upstream.send<protocol::value>(response);
+        COCAINE_LOG_INFO(log, "metrics. done");
+        return boost::none;
     }
 };
 
@@ -133,8 +200,8 @@ public:
         log = context.log("isolate_mock");
         on<io::isolate::spool>(std::make_shared<spool_slot_t>());
         on<io::isolate::spawn>(std::make_shared<spawn_slot_t>());
+        on<io::isolate::metrics>(std::make_shared<metrics_slot_t>());
     }
-
 
     virtual
     auto
@@ -145,7 +212,6 @@ public:
 private:
 };
 }}
-
 
 extern "C" {
 auto

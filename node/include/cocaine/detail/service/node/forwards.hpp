@@ -14,6 +14,7 @@ namespace api {
 struct cancellation_t;
 struct spool_handle_base_t;
 struct spawn_handle_base_t;
+struct metrics_handle_base_t;
 
 class stream_t;
 

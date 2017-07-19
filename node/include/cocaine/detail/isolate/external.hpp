@@ -24,35 +24,40 @@
 #include "cocaine/api/isolate.hpp"
 
 #include <memory>
+#include <vector>
+#include <string>
 
-namespace cocaine { namespace isolate {
+namespace cocaine {
+namespace isolate {
 
 class external_t:
     public api::isolate_t,
     public std::enable_shared_from_this<external_t>
 {
 public:
-    external_t(context_t& context, asio::io_service& io_context, const std::string& name, const std::string& type, const dynamic_t& args);
-
-    virtual
-    std::unique_ptr<api::cancellation_t>
-    spool(std::shared_ptr<api::spool_handle_base_t> handler);
-
-    virtual
-    std::unique_ptr<api::cancellation_t>
-    spawn(const std::string& path,
-                const api::args_t& args,
-                const api::env_t& environment,
-                std::shared_ptr<api::spawn_handle_base_t>);
-
     struct inner_t;
 
 private:
     // This pimpl is here to prevent calling some "init" method to safely call shared_from_this to pass to timer.
     std::shared_ptr<inner_t> inner;
+
+public:
+    external_t(context_t& context, asio::io_service& io_context, const std::string& name, const std::string& type, const dynamic_t& args);
+
+    auto
+    spool(std::shared_ptr<api::spool_handle_base_t> handler)
+        -> std::unique_ptr<api::cancellation_t> override;
+
+    auto
+    spawn(const std::string& path, const api::args_t& args, const api::env_t& environment, std::shared_ptr<api::spawn_handle_base_t>)
+        -> std::unique_ptr<api::cancellation_t> override;
+
+    auto
+    metrics(const std::vector<std::string>& query, std::shared_ptr<api::metrics_handle_base_t> handle) const
+        -> void override;
 };
 
-}} // namespace cocaine::isolate
-
+} // namespace isolate
+} // namespace cocaine
 
 #endif

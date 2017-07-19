@@ -9,7 +9,6 @@
 #include <cocaine/logging.hpp>
 #include <cocaine/repository.hpp>
 #include <cocaine/rpc/actor.hpp>
-#include <cocaine/rpc/actor_unix.hpp>
 #include <cocaine/traits/dynamic.hpp>
 #include <cocaine/utility/future.hpp>
 
@@ -22,12 +21,12 @@
 
 #include "cocaine/detail/service/node/dispatch/client.hpp"
 #include "cocaine/detail/service/node/dispatch/handshake.hpp"
-#include "cocaine/detail/service/node/dispatch/init.hpp"
 #include "cocaine/detail/service/node/slave/control.hpp"
 
 #include "cocaine/detail/service/node/slave/load.hpp"
 #include "cocaine/service/node/slave/id.hpp"
 
+#include "actor.hpp"
 #include "pool_observer.hpp"
 
 namespace ph = std::placeholders;
@@ -195,7 +194,7 @@ private:
 
         try {
             if (auto overseer = this->overseer.lock()) {
-                return overseer->o->enqueue(upstream, {event, hpack::header_storage_t(headers)});
+                return overseer->o->enqueue({event, hpack::header_storage_t(headers)}, upstream);
             } else {
                 // We shouldn't close the connection here, because there possibly can be events
                 // processing.
@@ -337,8 +336,7 @@ public:
 
 /// The application has been published and currently running.
 class running_t:
-    public base_t,
-    public pool_observer
+    public base_t
 {
     logging::logger_t* const log;
 
@@ -361,23 +359,18 @@ public:
     {
         // Create an Overseer - slave spawner/despawner plus the event queue dispatcher.
         overseer_ = std::make_shared<overseer_proxy_t>(
-            std::make_shared<overseer_t>(context, manifest, profile, *this, loop)
+            std::make_shared<overseer_t>(context, manifest, profile, std::make_shared<observer_adapter_t>(*this), loop)
         );
 
         // Create an unix actor and bind to {manifest->name}.{pid} unix-socket.
         using namespace detail::service::node;
 
         COCAINE_LOG_DEBUG(log, "publishing worker service with the context");
-        engine.reset(new unix_actor_t(
+        engine = std::make_unique<unix_actor_t>(
             context,
             manifest.endpoint,
-            std::bind(&overseer_t::prototype, overseer()),
-            [](io::dispatch_ptr_t handshake, std::shared_ptr<session_t> session) {
-                std::static_pointer_cast<const handshaking_t>(handshake)->bind(session);
-            },
-            std::make_shared<asio::io_service>(),
-            std::make_unique<init_dispatch_t>(manifest.name)
-        ));
+            overseer()->prototype()
+        );
         engine->run();
 
         try {
@@ -445,9 +438,8 @@ private:
         context.insert_with(name, [&] {
             COCAINE_LOG_DEBUG(log, "publishing application service with the context");
 
-            return std::make_unique<actor_t>(
+            return std::make_unique<tcp_actor_t>(
                 context,
-                std::make_shared<asio::io_service>(),
                 std::make_unique<app_dispatch_t>(context, name, overseer_)
             );
         });
@@ -459,9 +451,11 @@ private:
         }
     }
 
-    auto unpublish() noexcept -> void {
+    auto
+    unpublish() noexcept -> void {
         try {
-            // It can throw if someone has removed the service from the context, it's valid.
+            // It can throw if someone has removed the service from the context - this is valid.
+            //
             // Moreover if the context was unable to bootstrap itself it removes all services from
             // the service list (including child services). It can be that this app has been
             // removed earlier during bootstrap failure.
@@ -470,6 +464,24 @@ private:
             COCAINE_LOG_WARNING(log, "failed to remove application service from the context: {}", err.what());
         }
     }
+
+    struct observer_adapter_t : public pool_observer {
+
+        observer_adapter_t(running_t& rstate) :
+            parent(rstate)
+        {}
+
+        auto despawned(const std::string&) -> void override {
+            parent.despawned();
+        }
+
+        auto spawned(const std::string&) -> void override {
+            parent.spawned();
+        }
+
+    private:
+        running_t& parent;
+    };
 };
 
 } // namespace state
@@ -477,7 +489,6 @@ private:
 class cocaine::service::node::app_state_t
     : public std::enable_shared_from_this<cocaine::service::node::app_state_t>
 {
-
     const std::unique_ptr<logging::logger_t> log;
 
     context_t& context;

@@ -1,19 +1,25 @@
-#include "cocaine/detail/service/node/engine.hpp"
+#include "engine.hpp"
 
-#include <boost/accumulators/statistics/extended_p_square.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/range/numeric.hpp>
 
 #include <blackhole/logger.hpp>
 #include <blackhole/scope/holder.hpp>
 
-#include <metrics/registry.hpp>
-
+#include <cocaine/format.hpp>
 #include <cocaine/context.hpp>
 #include <cocaine/logging.hpp>
+#include <cocaine/repository.hpp>
+
+#include <metrics/factory.hpp>
+#include <metrics/registry.hpp>
 
 #include "cocaine/api/authentication.hpp"
+#include "cocaine/api/isolate.hpp"
 #include "cocaine/api/stream.hpp"
+
+#include "cocaine/repository/isolate.hpp"
 
 #include "cocaine/service/node/manifest.hpp"
 #include "cocaine/service/node/profile.hpp"
@@ -24,10 +30,14 @@
 #include "cocaine/detail/service/node/dispatch/handshake.hpp"
 #include "cocaine/detail/service/node/dispatch/worker.hpp"
 #include "cocaine/detail/service/node/slave/control.hpp"
-#include "cocaine/detail/service/node/slave/stats.hpp"
 
+#include "isometrics.hpp"
 #include "pool_observer.hpp"
-#include "util/bound.hpp"
+#include "stdext/clamp.hpp"
+
+#include "info/collector.hpp"
+#include "info/manifest.hpp"
+#include "info/profile.hpp"
 
 namespace cocaine {
 namespace detail {
@@ -36,29 +46,10 @@ namespace node {
 
 namespace ph = std::placeholders;
 
-struct collector_t {
-    std::size_t active;
-    std::size_t cumload;
-
-    explicit
-    collector_t(const engine_t::pool_type& pool):
-        active{},
-        cumload{}
-    {
-        for (const auto& it : pool) {
-            const auto load = it.second.load();
-            if (it.second.active() && load) {
-                active++;
-                cumload += load;
-            }
-        }
-    }
-};
-
 engine_t::engine_t(context_t& context,
                    manifest_t manifest,
                    profile_t profile,
-                   pool_observer& observer,
+                   std::shared_ptr<pool_observer> observer,
                    std::shared_ptr<asio::io_service> loop):
     log(context.log(format("{}/overseer", manifest.name))),
     context(context),
@@ -70,9 +61,9 @@ engine_t::engine_t(context_t& context,
     loop(loop),
     pool_target{},
     last_timeout(std::chrono::seconds(1)),
-    observer(observer),
     stats(context, manifest_.name, std::chrono::seconds(2))
 {
+    attach_pool_observer(std::move(observer));
     COCAINE_LOG_DEBUG(log, "overseer has been initialized");
 }
 
@@ -92,6 +83,45 @@ auto engine_t::active_workers() const -> std::uint32_t {
     });
 }
 
+auto engine_t::pooled_workers_ids() const -> std::vector<std::string> {
+    using boost::adaptors::map_keys;
+
+    std::vector<std::string> ids;
+    return pool.apply([&](const pool_type& pool){
+        ids.reserve(pool.size());
+        boost::copy(pool | map_keys, std::back_inserter(ids));
+        return ids;
+    });
+}
+
+auto
+engine_t::start_isolate_metrics_poll() -> void
+{
+    auto isolate = profile_.apply([&](const profile_t& profile) {
+        return context.repository().get<api::isolate_t>(
+        profile.isolate.type,
+        context,
+        *loop,
+        manifest_.name,
+        profile.isolate.type,
+        profile.isolate.args);
+    });
+
+    metrics_retriever = metrics_retriever_t::make_and_ignite(
+        context,
+        manifest_.name,
+        isolate,
+        shared_from_this(),
+        *loop,
+        observers);
+}
+
+auto
+engine_t::stop_isolate_metrics_poll() -> void
+{
+    metrics_retriever.reset();
+}
+
 manifest_t
 engine_t::manifest() const {
     return manifest_;
@@ -102,244 +132,26 @@ engine_t::profile() const {
     return *profile_.synchronize();
 }
 
-namespace {
-
-// Helper tagged struct.
-struct queue_t {
-    unsigned long capacity;
-
-    const synchronized<engine_t::queue_type>* queue;
-    metrics::usts::ewma_t& queue_depth;
-};
-
-// Helper tagged struct.
-struct pool_t {
-    unsigned long capacity;
-
-    std::int64_t spawned;
-    std::int64_t crashed;
-
-    const synchronized<engine_t::pool_type>* pool;
-};
-
-class info_visitor_t {
-    const io::node::info::flags_t flags;
-
-    dynamic_t::object_t& result;
-
-public:
-    info_visitor_t(io::node::info::flags_t flags, dynamic_t::object_t* result):
-        flags(flags),
-        result(*result)
-    {}
-
-    void
-    visit(const manifest_t& value) {
-        if (flags & io::node::info::expand_manifest) {
-            result["manifest"] = value.object();
-        }
-    }
-
-    void
-    visit(const profile_t& value) {
-        dynamic_t::object_t info;
-
-        // Useful when you want to edit the profile.
-        info["name"] = value.name;
-
-        if (flags & io::node::info::expand_profile) {
-            info["data"] = value.object();
-        }
-
-        result["profile"] = info;
-    }
-
-    // Incoming requests.
-    void
-    visit(std::int64_t accepted, std::int64_t rejected) {
-        dynamic_t::object_t info;
-
-        info["accepted"] = accepted;
-        info["rejected"] = rejected;
-
-        result["requests"] = info;
-    }
-
-    // Pending events queue.
-    void
-    visit(const queue_t& value) {
-        dynamic_t::object_t info;
-
-        info["capacity"] = value.capacity;
-
-        const auto now = std::chrono::high_resolution_clock::now();
-
-        value.queue->apply([&](const engine_t::queue_type& queue) {
-            info["depth"] = queue.size();
-
-            // Wake up aggregator.
-            value.queue_depth.add(queue.size());
-            info["depth_average"] = trunc(value.queue_depth.get(), 3);
-
-            typedef engine_t::queue_type::value_type value_type;
-
-            if (queue.empty()) {
-                info["oldest_event_age"] = 0;
-            } else {
-                const auto min = *boost::min_element(queue |
-                    boost::adaptors::transformed(+[](const value_type& cur) {
-                        return cur.event.birthstamp;
-                    })
-                );
-
-                const auto duration = std::chrono::duration_cast<
-                    std::chrono::milliseconds
-                >(now - min).count();
-
-                info["oldest_event_age"] = duration;
-            }
-        });
-
-        result["queue"] = info;
-    }
-
-    void
-    visit(metrics::meter_t& meter) {
-        dynamic_t::array_t info {{
-            trunc(meter.m01rate(), 3),
-            trunc(meter.m05rate(), 3),
-            trunc(meter.m15rate(), 3)
-        }};
-
-        result["rate"] = info;
-        result["rate_mean"] = trunc(meter.mean_rate(), 3);
-    }
-
-    inline
-    double
-    trunc(double v, uint n) noexcept {
-        BOOST_ASSERT(n < 10);
-
-        static const long long table[10] = {
-            1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000
-        };
-
-        return std::ceil(v * table[n]) / table[n];
-    }
-
-    template<typename Accumulate>
-    void
-    visit(metrics::timer<Accumulate>& timer) {
-        const auto snapshot = timer.snapshot();
-
-        dynamic_t::object_t info;
-
-        info["50.00%"] = trunc(snapshot.median() / 1e6, 3);
-        info["75.00%"] = trunc(snapshot.p75() / 1e6, 3);
-        info["90.00%"] = trunc(snapshot.p90() / 1e6, 3);
-        info["95.00%"] = trunc(snapshot.p95() / 1e6, 3);
-        info["98.00%"] = trunc(snapshot.p98() / 1e6, 3);
-        info["99.00%"] = trunc(snapshot.p99() / 1e6, 3);
-        info["99.95%"] = trunc(snapshot.value(0.9995) / 1e6, 3);
-
-        result["timings"] = info;
-
-        dynamic_t::object_t reversed;
-
-        const auto find = [&](const double ms) -> double {
-            return 100.0 * snapshot.phi(ms);
-        };
-
-        reversed["1ms"]    = trunc(find(1e6), 2);
-        reversed["2ms"]    = trunc(find(2e6), 2);
-        reversed["5ms"]    = trunc(find(5e6), 2);
-        reversed["10ms"]   = trunc(find(10e6), 2);
-        reversed["20ms"]   = trunc(find(20e6), 2);
-        reversed["50ms"]   = trunc(find(50e6), 2);
-        reversed["100ms"]  = trunc(find(100e6), 2);
-        reversed["500ms"]  = trunc(find(500e6), 2);
-        reversed["1000ms"] = trunc(find(1000e6), 2);
-
-        result["timings_reversed"] = reversed;
-    }
-
-    void
-    visit(const pool_t& value) {
-        const auto now = std::chrono::high_resolution_clock::now();
-
-        value.pool->apply([&](const engine_t::pool_type& pool) {
-            collector_t collector(pool);
-
-            // Cumulative load on the app over all the slaves.
-            result["load"] = collector.cumload;
-
-            dynamic_t::object_t slaves;
-            for (const auto& kv : pool) {
-                const auto& name = kv.first;
-                const auto& slave = kv.second;
-
-                const auto stats = slave.stats();
-
-                dynamic_t::object_t stat;
-                stat["accepted"]   = stats.total;
-                stat["load:tx"]    = stats.tx;
-                stat["load:rx"]    = stats.rx;
-                stat["load:total"] = stats.load;
-                stat["state"]      = stats.state;
-                stat["uptime"]     = slave.uptime();
-
-                // NOTE: Collects profile info.
-                const auto profile = slave.profile();
-
-                dynamic_t::object_t profile_info;
-                profile_info["name"] = profile.name;
-                if (flags & io::node::info::expand_profile) {
-                    profile_info["data"] = profile.object();
-                }
-
-                stat["profile"] = profile_info;
-
-                if (stats.age) {
-                    const auto duration = std::chrono::duration_cast<
-                        std::chrono::milliseconds
-                    >(now - *stats.age).count();
-                    stat["oldest_channel_age"] = duration;
-                } else {
-                    stat["oldest_channel_age"] = 0;
-                }
-
-                slaves[name] = stat;
-            }
-
-            dynamic_t::object_t pinfo;
-            pinfo["active"]   = collector.active;
-            pinfo["idle"]     = pool.size() - collector.active;
-            pinfo["capacity"] = value.capacity;
-            pinfo["slaves"]   = slaves;
-            pinfo["total:spawned"] = value.spawned;
-            pinfo["total:crashed"] = value.crashed;
-
-            result["pool"] = pinfo;
-        });
-    }
-};
-
-} // namespace
+void
+engine_t::attach_pool_observer(std::shared_ptr<pool_observer> observer) {
+    observers->emplace_back(std::move(observer));
+}
 
 auto engine_t::info(io::node::info::flags_t flags) const -> dynamic_t::object_t {
     dynamic_t::object_t result;
 
     result["uptime"] = uptime().count();
 
-    info_visitor_t visitor(flags, &result);
     auto profile = this->profile();
-    visitor.visit(manifest());
-    visitor.visit(profile);
-    visitor.visit(stats.requests.accepted->load(), stats.requests.rejected->load());
-    visitor.visit({profile.queue_limit, &queue, *stats.queue_depth});
-    visitor.visit(*stats.meter.get());
-    visitor.visit(*stats.timer.get());
-    visitor.visit({profile.pool_limit, stats.slaves.spawned->load(), stats.slaves.crashed->load(), &pool});
+    cocaine::service::node::info::manifest_t(manifest(), flags).apply(result);
+    cocaine::service::node::info::profile_t(profile, flags).apply(result);
+
+    cocaine::service::node::info::info_collector_t collector(flags, &result);
+    collector.visit(stats.requests.accepted->load(), stats.requests.rejected->load());
+    collector.visit({profile.queue_limit, &queue, *stats.queue_depth});
+    collector.visit(*stats.meter.get());
+    collector.visit(*stats.timer.get());
+    collector.visit({profile.pool_limit, stats.slaves.spawned->load(), stats.slaves.crashed->load(), &pool});
 
     return result;
 }
@@ -403,41 +215,56 @@ struct rx_stream_t : public api::stream_t {
 
 } // namespace
 
-auto engine_t::enqueue(upstream<io::stream_of<std::string>::tag> downstream, event_t event)
+auto engine_t::enqueue(event_t event, upstream<io::stream_of<std::string>::tag> downstream)
     -> std::shared_ptr<client_rpc_dispatch_t>
 {
     const std::shared_ptr<api::stream_t> rx = std::make_shared<rx_stream_t>(std::move(downstream));
-    const auto tx = enqueue(std::move(rx), std::move(event));
-    return std::static_pointer_cast<tx_stream_t>(tx)->dispatch;
+    auto tx = enqueue(std::move(event), std::move(rx));
+    return std::static_pointer_cast<tx_stream_t>(std::move(tx))->dispatch;
 }
 
-auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx, event_t event)
+auto engine_t::enqueue(event_t event, std::shared_ptr<api::stream_t> rx)
     -> std::shared_ptr<api::stream_t>
 {
+    stats.meter->mark();
+
     auto tx = std::make_shared<tx_stream_t>();
 
+    const auto profile = this->profile();
+    const auto limit = profile.queue_limit;
+
     try {
-        queue.apply([&](queue_type& queue) {
-            const auto limit = profile().queue_limit;
+        pool.apply([&](pool_type& pool) {
+            queue.apply([&](queue_type& queue) {
+                if (limit > 0 && queue.size() >= limit) {
+                    throw std::system_error(error::queue_is_full);
+                }
 
-            if (queue.size() >= limit && limit > 0) {
-                throw std::system_error(error::queue_is_full);
-            }
+                tx->dispatch = std::make_shared<client_rpc_dispatch_t>(manifest().name);
+                auto load = load_t{
+                    std::move(event),
+                    trace_t::current(),
+                    tx->dispatch, // Explicitly copy.
+                    std::move(rx)
+                };
 
-            tx->dispatch = std::make_shared<client_rpc_dispatch_t>(manifest().name);
+                if (limit == 0) {
+                    auto pressure = pool_pressure(pool);
+                    auto vacant = profile.pool_limit * profile.concurrency - pressure;
 
-            queue.push_back({
-                std::move(event),
-                trace_t::current(),
-                tx->dispatch, // Explicitly copy.
-                std::move(rx)
+                    if (queue.size() >= vacant) {
+                        throw std::system_error(error::queue_is_full);
+                    }
+                }
+
+                queue.push_back(load);
+                stats.queue_depth->add(queue.size());
+
+                stats.requests.accepted->fetch_add(1);
+                rebalance_events(pool, queue);
             });
-            stats.queue_depth->add(queue.size());
         });
 
-        stats.requests.accepted->fetch_add(1);
-        stats.meter->mark();
-        rebalance_events();
         rebalance_slaves();
     } catch (...) {
         stats.requests.rejected->fetch_add(1);
@@ -449,8 +276,8 @@ auto engine_t::enqueue(std::shared_ptr<api::stream_t> rx, event_t event)
     return tx;
 }
 
-auto engine_t::prototype() -> io::dispatch_ptr_t {
-    return std::make_shared<handshaking_t>(
+auto engine_t::prototype() -> std::unique_ptr<io::basic_dispatch_t> {
+    return std::make_unique<handshaking_t>(
         manifest().name,
         std::bind(&engine_t::on_handshake, shared_from_this(), ph::_1, ph::_2, ph::_3)
     );
@@ -460,7 +287,7 @@ auto engine_t::spawn(pool_type& pool) -> void {
     spawn(id_t(), pool);
 }
 
-auto engine_t::spawn(const id_t& id, pool_type& pool) -> void {
+auto engine_t::spawn(id_t id, pool_type& pool) -> void {
     const auto profile = this->profile();
     if (pool.size() >= profile.pool_limit) {
         throw std::system_error(error::pool_is_full, "the pool is full");
@@ -472,15 +299,8 @@ auto engine_t::spawn(const id_t& id, pool_type& pool) -> void {
     // constructor.
     pool.insert(std::make_pair(
         id.id(),
-        slave_t(
-            context,
-            id,
-            manifest(),
-            profile,
-            auth,
-            *loop,
-            std::bind(&engine_t::on_slave_death, shared_from_this(), ph::_1, id.id())
-        )
+        slave_t(context, id, manifest(), profile, auth, *loop,
+            std::bind(&engine_t::on_slave_death, shared_from_this(), ph::_1, id.id()))
     ));
 
     stats.slaves.spawned->fetch_add(1);
@@ -520,12 +340,15 @@ auto engine_t::assign(slave_t& slave, load_t& load) -> void {
     auto timer = std::make_shared<metrics::timer_t::context_t>(stats.timer->context());
     slave.inject(load, [this, self, timer](std::uint64_t) {
         // TODO: Hack, but at least it saves from the deadlock.
-        loop->post(std::bind(&engine_t::rebalance_events, self));
+        loop->post([&, self] {
+            rebalance_events();
+        });
     });
 }
 
 auto engine_t::despawn(const std::string& id, despawn_policy_t policy) -> void {
-    pool.apply([&](pool_type& pool) {
+
+    const auto was_despawned = pool.apply([&](pool_type& pool) {
         auto it = pool.find(id);
         if (it != pool.end()) {
             switch (policy) {
@@ -534,18 +357,27 @@ auto engine_t::despawn(const std::string& id, despawn_policy_t policy) -> void {
                 break;
             case despawn_policy_t::force:
                 pool.erase(it);
-                observer.despawned();
                 loop->post(std::bind(&engine_t::rebalance_slaves, shared_from_this()));
+                return true;
                 break;
             default:
                 BOOST_ASSERT(false);
             }
         }
+
+        return false;
     });
+
+    if (was_despawned) {
+        observers.apply([&](const observers_type& observers) {
+            for(auto& o : observers) {
+                o->despawned(id);
+            }
+        });
+    }
 }
 
-auto engine_t::on_handshake(const std::string& id, std::shared_ptr<session_t> session,
-                            upstream<io::worker::control_tag>&& stream)
+auto engine_t::on_handshake(const std::string& id, std::shared_ptr<session_t> session, upstream<io::worker::control_tag>&& stream)
     -> std::shared_ptr<control_t>
 {
     const blackhole::scope::holder_t scoped(*log, {{ "uuid", id }});
@@ -575,8 +407,16 @@ auto engine_t::on_handshake(const std::string& id, std::shared_ptr<session_t> se
     });
 
     if (control) {
-        observer.spawned();
-        loop->post(std::bind(&engine_t::rebalance_events, shared_from_this()));
+        auto self = shared_from_this();
+        loop->post([&, self] {
+            rebalance_events();
+        });
+
+        observers.apply([&](const observers_type& observers) {
+            for(auto& o : observers) {
+                o->spawned({});
+            }
+        });
     }
 
     return control;
@@ -621,7 +461,12 @@ auto engine_t::on_slave_death(const std::error_code& ec, std::string uuid) -> vo
         }
     });
 
-    observer.despawned();
+    observers.apply([&](const observers_type& observers) {
+        for(auto& o : observers) {
+            o->despawned(uuid);
+        }
+    });
+
     loop->post(std::bind(&engine_t::rebalance_slaves, shared_from_this()));
 }
 
@@ -634,59 +479,75 @@ auto engine_t::on_spawn_rate_timeout(const std::error_code&) -> void {
     rebalance_slaves();
 }
 
-auto engine_t::rebalance_events() -> void {
-    using boost::adaptors::filtered;
-
-    const auto concurrency = profile().concurrency;
-
-    // Find an active non-overloaded slave.
-    const auto filter = std::function<bool(const slave_t&)>([&](const slave_t& slave) -> bool {
+auto engine_t::select_slave(pool_type& pool) -> boost::optional<slave_t&> {
+    auto concurrency = profile().concurrency;
+    return select_slave(pool, [&](const slave_t& slave) -> bool {
         return slave.active() && slave.load() < concurrency;
     });
+}
 
+auto engine_t::select_slave(pool_type& pool, std::function<bool(const slave_t& slave)> filter) -> boost::optional<slave_t&> {
+    auto range = pool | boost::adaptors::map_values | boost::adaptors::filtered(filter);
+
+    auto slave = boost::min_element(range, +[](const slave_t& lhs, const slave_t& rhs) -> bool {
+        return lhs.load() < rhs.load();
+    });
+
+    if (slave == boost::end(range)) {
+        return boost::none;
+    } else {
+        return *slave;
+    }
+}
+
+auto engine_t::pool_pressure(pool_type& pool) -> std::size_t {
+    return boost::accumulate(pool |
+        boost::adaptors::map_values |
+        boost::adaptors::transformed(+[](const slave_t& slave) {
+            return slave.load();
+        }),
+        0
+    );
+}
+
+auto engine_t::rebalance_events() -> void {
     pool.apply([&](pool_type& pool) {
-        if (pool.empty()) {
-            return;
-        }
-
-        COCAINE_LOG_DEBUG(log, "rebalancing events queue");
         queue.apply([&](queue_type& queue) {
-            while (!queue.empty()) {
-                auto& load = queue.front();
-
-                COCAINE_LOG_DEBUG(log, "rebalancing event");
-
-                const auto range = pool | boost::adaptors::map_values | filtered(filter);
-
-                // Here we try to find an active non-overloaded slave with minimal load.
-                auto slave = boost::min_element(
-                    range, +[](const slave_t& lhs, const slave_t& rhs) -> bool {
-                        return lhs.load() < rhs.load();
-                    });
-
-                // No free slaves found.
-                if (slave == boost::end(range)) {
-                    COCAINE_LOG_DEBUG(log, "no free slaves found, rebalancing is over");
-                    return;
-                }
-
-                try {
-                    assign(*slave, load);
-                    // The slave may become invalid and reject the assignment or reject for any
-                    // other reasons. We pop the channel only on successful assignment to
-                    // achieve strong exception guarantee.
-                    queue.pop_front();
-                    stats.queue_depth->add(queue.size());
-                } catch (const std::exception& err) {
-                    COCAINE_LOG_WARNING(log, "slave has rejected assignment: {}", err.what());
-                    loop->post([&] {
-                        rebalance_slaves();
-                    });
-                    return;
-                }
-            }
+            rebalance_events(pool, queue);
         });
     });
+}
+
+auto engine_t::rebalance_events(pool_type& pool, queue_type& queue) -> void {
+    if (pool.empty()) {
+        return;
+    }
+
+    COCAINE_LOG_DEBUG(log, "rebalancing events queue");
+    while (!queue.empty()) {
+        auto& load = queue.front();
+        COCAINE_LOG_DEBUG(log, "rebalancing event");
+
+        if (auto slave = select_slave(pool)) {
+            try {
+                assign(*slave, load);
+                // The slave may become invalid and reject the assignment or reject for any
+                // other reasons. We pop the channel only on successful assignment to
+                // achieve strong exception guarantee.
+                queue.pop_front();
+                stats.queue_depth->add(queue.size());
+            } catch (const std::exception& err) {
+                COCAINE_LOG_WARNING(log, "slave has rejected assignment: {}", err.what());
+                loop->post([&] {
+                    rebalance_slaves();
+                });
+                break;
+            }
+        } else {
+            COCAINE_LOG_DEBUG(log, "no free slaves found, rebalancing is over");
+            break;
+        }
+    }
 }
 
 auto engine_t::rebalance_slaves() -> void {
@@ -694,51 +555,64 @@ auto engine_t::rebalance_slaves() -> void {
         return;
     }
 
-    using boost::adaptors::filtered;
-
     const auto load = queue->size();
     const auto profile = this->profile();
 
-    const auto pool_target = static_cast<std::size_t>(this->pool_target.load());
+    const auto manual_target = static_cast<std::size_t>(this->pool_target.load());
+
+    std::size_t target;
+    if (manual_target > 0) {
+        target = manual_target;
+    } else {
+        if (profile.queue_limit > 0) {
+            target = load / profile.grow_threshold;
+        } else {
+            target = pool.apply([&](pool_type& pool) {
+                auto pressure = pool_pressure(pool);
+                auto vacant = pool.size() * profile.concurrency - pressure;
+
+                std::size_t lack = 0;
+                if (load < vacant) {
+                    lack = 0;
+                } else {
+                    lack = std::ceil((load - vacant) / static_cast<double>(profile.concurrency));
+                }
+
+                return pool.size() +  lack;
+            });
+        }
+    }
 
     // Bound current pool target between [1; limit].
-    const auto target = util::bound(
-        1ul,
-        pool_target ? pool_target : load / profile.grow_threshold,
-        profile.pool_limit
-    );
+    target = stdext::clamp(target, 1ul, profile.pool_limit);
 
     if (*on_spawn_rate_timer.synchronize()) {
         return;
     }
 
     pool.apply([&](pool_type& pool) {
-        if (pool_target) {
+        if (manual_target) {
             COCAINE_LOG_DEBUG(log, "attempting to rebalance slaves using direct policy", {
                 {"load", load},
                 {"slaves", pool.size()},
-                {"target", target}
+                {"target", target},
             });
 
             if (target <= pool.size()) {
-                auto active = static_cast<std::size_t>(boost::count_if(pool | boost::adaptors::map_values, +[](const slave_t& slave) -> bool {
+                std::size_t active = boost::count_if(pool | boost::adaptors::map_values, +[](const slave_t& slave) -> bool {
                     return slave.active();
-                }));
+                });
 
                 COCAINE_LOG_DEBUG(log, "sealing up to {} active slaves", active);
 
                 while (active-- > target) {
                     // Find active slave with minimal load.
-                    const auto range = pool | boost::adaptors::map_values | filtered(+[](const slave_t& slave) -> bool {
+                    auto slave = select_slave(pool, +[](const slave_t& slave) -> bool {
                         return slave.active();
                     });
 
-                    auto slave = boost::min_element(range, +[](const slave_t& lhs, const slave_t& rhs) -> bool {
-                        return lhs.load() < rhs.load();
-                    });
-
-                    // All slaves are now inactive by some external conditions.
-                    if (slave == boost::end(range)) {
+                    // All slaves are now inactive due to some external conditions.
+                    if (!slave) {
                         break;
                     }
 
@@ -746,7 +620,7 @@ auto engine_t::rebalance_slaves() -> void {
                         COCAINE_LOG_DEBUG(log, "sealing slave", {{"uuid", slave->id()}});
                         slave->seal();
                     } catch (const std::exception& err) {
-                        COCAINE_LOG_WARNING(log, "unable to seal slave: {}", err.what());
+                        COCAINE_LOG_WARNING(log, "failed to seal slave: {}", err.what());
                     }
                 }
             } else {
@@ -756,10 +630,12 @@ auto engine_t::rebalance_slaves() -> void {
             }
         } else {
             COCAINE_LOG_DEBUG(log, "attempting to rebalance slaves using automatic policy", {
-                {"load", load}, {"slaves", pool.size()}, {"target", target}
+                {"load", load},
+                {"slaves", pool.size()},
+                {"target", target},
             });
 
-            if (pool.size() >= profile.pool_limit || pool.size() * profile.grow_threshold >= load) {
+            if (pool.size() >= profile.pool_limit) {
                 return;
             }
 

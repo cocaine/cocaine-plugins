@@ -15,6 +15,7 @@
 #include <cocaine/traits/dynamic.hpp>
 #include <cocaine/traits/endpoint.hpp>
 #include <cocaine/traits/vector.hpp>
+#include <cocaine/traits/map.hpp>
 
 #include <blackhole/logger.hpp>
 #include <asio/ip/tcp.hpp>
@@ -91,6 +92,21 @@ struct spawn_dispatch_t :
     bool ready;
 };
 
+struct metrics_dispatch_t :
+    public dispatch<io::event_traits<io::isolate::metrics>::upstream_type>
+{
+    typedef io::protocol<io::event_traits<io::isolate::metrics>::upstream_type>::scope protocol;
+
+    metrics_dispatch_t(const std::string& name, std::shared_ptr<api::metrics_handle_base_t> handle)
+        : dispatch(name)
+    {
+        namespace ph = std::placeholders;
+
+        on<protocol::value>(std::bind(&api::metrics_handle_base_t::on_data, handle, ph::_1));
+        on<protocol::error>(std::bind(&api::metrics_handle_base_t::on_error, handle, ph::_1, ph::_2));
+    }
+};
+
 struct spool_load_t :
     public api::cancellation_t
 {
@@ -155,6 +171,27 @@ struct spawn_load_t :
     cancel() noexcept;
 };
 
+struct metrics_load_t {
+    std::shared_ptr<external_t::inner_t> inner;
+    std::shared_ptr<api::metrics_handle_base_t> handle;
+
+    std::vector<std::string> query;
+
+    io::upstream_ptr_t stream;
+
+    metrics_load_t(std::shared_ptr<external_t::inner_t> _inner,
+                   const std::vector<std::string>& _query,
+                   std::shared_ptr<api::metrics_handle_base_t> _handle
+    ) :
+        inner(std::move(_inner)),
+        handle(std::move(_handle)),
+        query(_query)
+    {}
+
+    void
+    apply();
+};
+
 struct external_t::inner_t :
     public std::enable_shared_from_this<inner_t>
 {
@@ -175,8 +212,6 @@ struct external_t::inner_t :
     std::chrono::milliseconds seal_time;
     static constexpr std::chrono::milliseconds min_seal_time {1000ul};
     static constexpr std::chrono::milliseconds max_seal_time {1000000ul};
-
-
 
     std::vector<std::shared_ptr<spool_load_t>> spool_queue;
     std::vector<std::shared_ptr<spawn_load_t>> spawn_queue;
@@ -299,6 +334,7 @@ void spool_load_t::apply() {
     if (!_inner) {
         return;
     }
+
     stream.apply([&](decltype(stream.unsafe())& stream){
         if (!cancelled) {
             try {
@@ -359,6 +395,19 @@ spawn_load_t::apply() {
             COCAINE_LOG_WARNING(_inner->log, "can not process spawn request - cancelled");
         }
     });
+}
+
+void
+metrics_load_t::apply() {
+    try {
+        stream = inner->session->fork(std::make_shared<metrics_dispatch_t>("external_metrics/" + inner->name, handle));
+        stream->send<io::isolate::metrics>(query);
+    } catch (const std::system_error& e) {
+        COCAINE_LOG_WARNING(inner->log, "could not process isolation metrics request: {}", error::to_string(e));
+        handle->on_error(e.code(), e.what());
+        inner->session->detach(e.code());
+        inner->connect();
+    }
 }
 
 void
@@ -432,6 +481,25 @@ external_t::spawn(const std::string& path,
         }
     });
     return std::unique_ptr<api::cancellation_t>(new api::cancellation_wrapper(load));
+}
+
+void
+external_t::metrics(const std::vector<std::string>& query, std::shared_ptr<api::metrics_handle_base_t> handle) const {
+
+    auto load = std::make_shared<metrics_load_t>(inner, query, handle);
+
+    inner->io_context.post([=](){
+        if(inner->session && inner->prepared) {
+            COCAINE_LOG_DEBUG(inner->log, "processing metrics request");
+            load->apply();
+        } else {
+            COCAINE_LOG_DEBUG(inner->log, "can't send metrics request, session not ready");
+            handle->on_error(error::not_connected, "session not ready");
+            if(inner->prepared) {
+                inner->connect();
+            }
+        }
+    });
 }
 
 }} // namespace cocaine::isolate

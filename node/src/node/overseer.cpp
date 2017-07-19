@@ -7,9 +7,10 @@
 
 #include "cocaine/service/node/slave/id.hpp"
 
-#include "cocaine/detail/service/node/engine.hpp"
 #include "cocaine/detail/service/node/slave.hpp"
+#include "cocaine/detail/service/node/stats.hpp"
 
+#include "engine.hpp"
 #include "pool_observer.hpp"
 
 namespace cocaine {
@@ -19,13 +20,23 @@ namespace node {
 overseer_t::overseer_t(context_t& context,
                        manifest_t manifest,
                        profile_t profile,
-                       pool_observer& observer,
+                       std::shared_ptr<pool_observer> observer,
                        std::shared_ptr<asio::io_service> loop)
-    : engine(std::make_shared<engine_t>(context, manifest, profile, observer, loop)) {}
+    : engine(std::make_shared<engine_t>(context, manifest, profile, observer, loop))
+{
+    try {
+        engine->start_isolate_metrics_poll();
+    } catch(const error_t& err) {
+        COCAINE_LOG_WARNING(engine->log,
+            "failed to init metrics poll sequence: error code {}, reason {}",
+            err.code(), err.what());
+    }
+}
 
 overseer_t::~overseer_t() {
     COCAINE_LOG_DEBUG(engine->log, "overseer is processing terminate request");
 
+    engine->stats.deregister();
     engine->stopped = true;
     engine->control_population(0);
     engine->pool->clear();
@@ -56,19 +67,19 @@ auto overseer_t::control_population(int count) -> void {
     return engine->control_population(count);
 }
 
-auto overseer_t::enqueue(upstream<io::stream_of<std::string>::tag> downstream, app::event_t event)
+auto overseer_t::enqueue(app::event_t event, upstream<io::stream_of<std::string>::tag> downstream)
     -> std::shared_ptr<client_rpc_dispatch_t>
 {
-    return engine->enqueue(std::move(downstream), std::move(event));
+    return engine->enqueue(std::move(event), std::move(downstream));
 }
 
-auto overseer_t::enqueue(std::shared_ptr<api::stream_t> rx, app::event_t event)
+auto overseer_t::enqueue(app::event_t event, std::shared_ptr<api::stream_t> rx)
     -> std::shared_ptr<api::stream_t>
 {
-    return engine->enqueue(std::move(rx), std::move(event));
+    return engine->enqueue(std::move(event), std::move(rx));
 }
 
-auto overseer_t::prototype() -> io::dispatch_ptr_t {
+auto overseer_t::prototype() -> std::unique_ptr<io::basic_dispatch_t> {
     return engine->prototype();
 }
 

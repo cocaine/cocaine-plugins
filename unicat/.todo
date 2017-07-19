@@ -1,0 +1,13 @@
+Redesigns:
+    ☐ make authorization more robust (for set of entities, probably will require redesign in core)
+    ☐ move metainfo/flags stuff to 'core'
+Additional commands:
+    ☐ view
+    ☐ reset (remove record for entity completly)
+
+No category:
+    ☐ init/create method
+    behaviour in case of absent:
+        ☐ acl collection,
+        ☐ record for key,
+        ☐ malfunction rights record

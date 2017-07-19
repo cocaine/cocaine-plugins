@@ -81,7 +81,7 @@ private:
     std::atomic<bool> closed;
     cleanup_handler cleanup;
 
-    splitter_t splitter;
+    synchronized<splitter_t> splitter;
     boost::circular_buffer<std::string> lines;
 
     std::atomic<bool> shutdowned;

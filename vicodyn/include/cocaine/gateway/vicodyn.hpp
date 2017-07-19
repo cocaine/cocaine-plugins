@@ -24,7 +24,7 @@ public:
     ~vicodyn_t();
 
     struct proxy_description_t {
-        proxy_description_t(std::unique_ptr<actor_t> _actor, vicodyn::proxy_t& _proxy);
+        proxy_description_t(std::unique_ptr<tcp_actor_t> _actor, vicodyn::proxy_t& _proxy);
 
         auto endpoints() const -> std::vector<asio::ip::tcp::endpoint>;
 
@@ -32,7 +32,7 @@ public:
 
         auto version() const -> unsigned int;
 
-        std::unique_ptr<actor_t> actor;
+        std::unique_ptr<tcp_actor_t> actor;
         vicodyn::proxy_t& proxy;
     };
 

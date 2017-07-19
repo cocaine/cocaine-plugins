@@ -23,6 +23,9 @@
 
 #include "cocaine/api/isolate.hpp"
 
+#include <vector>
+#include <string>
+
 #include <cstdint>
 
 #include <boost/filesystem/path.hpp>
@@ -50,14 +53,17 @@ public:
     virtual
    ~process_t();
 
-    virtual
-    std::unique_ptr<api::cancellation_t>
-    spool(std::shared_ptr<api::spool_handle_base_t> handler);
+    auto
+    spool(std::shared_ptr<api::spool_handle_base_t> handler)
+        -> std::unique_ptr<api::cancellation_t> override;
 
-    virtual
-    std::unique_ptr<api::cancellation_t>
-    spawn(const std::string& path, const api::args_t& args, const api::env_t& environment,
-                std::shared_ptr<api::spawn_handle_base_t>);
+    auto
+    spawn(const std::string& path, const api::args_t& args, const api::env_t& environment, std::shared_ptr<api::spawn_handle_base_t>)
+        -> std::unique_ptr<api::cancellation_t> override;
+
+    auto
+    metrics(const std::vector<std::string>& query, std::shared_ptr<api::metrics_handle_base_t> handle) const
+        -> void override;
 };
 
 }} // namespace cocaine::isolate
