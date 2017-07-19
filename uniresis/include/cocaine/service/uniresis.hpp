@@ -9,6 +9,8 @@ namespace cocaine {
 namespace service {
 
 class uniresis_t : public api::service_t , dispatch<io::uniresis_tag> {
+    unsigned int cpu;
+
 public:
     uniresis_t(context_t& context, asio::io_service& loop, const std::string& name, const dynamic_t& args);
 

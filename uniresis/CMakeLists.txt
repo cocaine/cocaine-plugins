@@ -3,8 +3,9 @@ include_directories(${PROJECT_SOURCE_DIR}/uniresis/include)
 set(MOD uniresis)
 
 add_library(uniresis MODULE
-    src/module
-    src/uniresis
+    src/module.cpp
+    src/uniresis.cpp
+    src/uniresis/error.cpp
 )
 
 target_link_libraries(${MOD}
