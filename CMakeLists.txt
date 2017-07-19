@@ -18,13 +18,14 @@ OPTION(ELLIPTICS "Build Elliptics Storage Service plugin" ON)
 OPTION(GRAPHITE "Build Graphite Service plugin" ON)
 OPTION(IPVS "Build IPVS Gateway Service plugin" ON)
 OPTION(LOGGING "Build logging v2 service plugin" ON)
+OPTION(METRICS "Build metrics service plugin" ON)
 OPTION(MONGO "Build MongoDB Storage plugin" OFF)
 OPTION(NODE "Build Node service plugin" ON)
 OPTION(POSTGRES "Build Postgress index storage plugin" ON)
-OPTION(URLFETCH "Build URLFetch Service plugin" ON)
-OPTION(UNICORN "Build Unified configuration service plugin" ON)
 OPTION(UNICAT  "Build Unified cocaine acl tooling plugin" ON)
-OPTION(METRICS "Build metrics service plugin" ON)
+OPTION(UNICORN "Build Unified configuration service plugin" ON)
+OPTION(UNIRESIS  "Build Unified resource tracking plugin" ON)
+OPTION(URLFETCH "Build URLFetch Service plugin" ON)
 OPTION(VICODYN "Build virtual cocaine dynamic proxy service plugin" ON)
 
 # Include our CMake libraries.
@@ -72,6 +73,7 @@ SET(PLUGINS
     postgres
     unicat
     unicorn
+	uniresis
     urlfetch
     vicodyn
 )
