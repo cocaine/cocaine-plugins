@@ -4,13 +4,16 @@
 #include <cocaine/rpc/dispatch.hpp>
 
 #include "cocaine/idl/uniresis.hpp"
+#include "cocaine/uniresis/resources.hpp"
 
 namespace cocaine {
 namespace service {
 
 class uniresis_t : public api::service_t , dispatch<io::uniresis_tag> {
-    uint cpu;
-    std::uint64_t mem;
+    class updater_t;
+
+    uniresis::resources_t resources;
+    std::shared_ptr<updater_t> updater;
     std::unique_ptr<logging::logger_t> log;
 
 public:

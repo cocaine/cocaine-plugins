@@ -1,11 +1,8 @@
 #include "cocaine/service/uniresis.hpp"
 
-#include <unistd.h>
-
-#include <thread>
-
 #include <blackhole/logger.hpp>
 
+#include <cocaine/api/unicorn.hpp>
 #include <cocaine/context.hpp>
 #include <cocaine/dynamic.hpp>
 
@@ -14,52 +11,68 @@
 namespace cocaine {
 namespace service {
 
-namespace {
+/// A task that will try to notify about resources information on the machine.
+class uniresis_t::updater_t {
+    std::shared_ptr<api::unicorn_t> unicorn;
 
-auto
-total_system_nemory() -> std::uint64_t {
-    long pages = ::sysconf(_SC_PHYS_PAGES);
-    long page_size = ::sysconf(_SC_PAGE_SIZE);
-    return pages * page_size;
-}
+public:
+    updater_t(std::shared_ptr<api::unicorn_t> unicorn) :
+        unicorn(std::move(unicorn))
+    {}
 
-} // namespace
+    auto
+    notify() -> void {
+        throw std::runtime_error("unimplemented");
+    }
+};
 
 uniresis_t::uniresis_t(context_t& context, asio::io_service& loop, const std::string& name, const dynamic_t& args) :
     api::service_t(context, loop, name, args),
     dispatch<io::uniresis_tag>(name),
-    cpu(std::thread::hardware_concurrency()),
-    mem(total_system_nemory()),
+    resources(),
+    updater(nullptr),
     log(context.log("uniresis"))
 {
-    if (cpu == 0) {
+    if (resources.cpu == 0) {
         throw std::system_error(uniresis::uniresis_errc::failed_calculate_cpu_count);
     }
 
-    if (mem == 0) {
+    if (resources.mem == 0) {
         throw std::system_error(uniresis::uniresis_errc::failed_calculate_system_memory);
     }
 
     auto restrictions = args.as_object().at("restrictions", dynamic_t::empty_object).as_object();
 
-    auto cpu_restricted = std::min(cpu, static_cast<uint>(restrictions.at("cpu", cpu).as_uint()));
-    if (cpu != cpu_restricted) {
-        cpu = cpu_restricted;
-        COCAINE_LOG_INFO(log, "restricted available CPU count to {}", cpu);
+    auto cpu_restricted = std::min(
+        resources.cpu,
+        static_cast<uint>(restrictions.at("cpu", resources.cpu).as_uint())
+    );
+
+    if (resources.cpu != cpu_restricted) {
+        resources.cpu = cpu_restricted;
+        COCAINE_LOG_INFO(log, "restricted available CPU count to {}", resources.cpu);
     }
 
-    auto mem_restricted = std::min(mem, static_cast<std::uint64_t>(restrictions.at("mem", mem).as_uint()));
-    if (mem != mem_restricted) {
-        mem = mem_restricted;
-        COCAINE_LOG_INFO(log, "restricted available system memory to {}", mem);
+    auto mem_restricted = std::min(
+        resources.mem,
+        static_cast<std::uint64_t>(restrictions.at("mem", resources.mem).as_uint())
+    );
+
+    if (resources.mem != mem_restricted) {
+        resources.mem = mem_restricted;
+        COCAINE_LOG_INFO(log, "restricted available system memory to {}", resources.mem);
     }
+
+    auto unicorn = api::unicorn(context, args.as_object().at("unicorn", "core").as_string());
+
+    updater = std::make_shared<updater_t>(std::move(unicorn));
 
     on<io::uniresis::cpu_count>([&] {
-        return cpu;
+        return resources.cpu;
     });
 
     on<io::uniresis::memory_count>([&] {
-        return mem;
+        return resources.mem;
     });
 }
 

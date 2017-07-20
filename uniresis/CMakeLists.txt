@@ -6,6 +6,7 @@ add_library(uniresis MODULE
     src/module.cpp
     src/uniresis.cpp
     src/uniresis/error.cpp
+    src/uniresis/resources.cpp
 )
 
 target_link_libraries(${MOD}
