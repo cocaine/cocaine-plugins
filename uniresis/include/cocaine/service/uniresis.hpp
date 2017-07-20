@@ -10,6 +10,7 @@ namespace service {
 
 class uniresis_t : public api::service_t , dispatch<io::uniresis_tag> {
     uint cpu;
+    std::uint64_t mem;
     std::unique_ptr<logging::logger_t> log;
 
 public:

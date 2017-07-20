@@ -15,6 +15,8 @@ public:
         switch (static_cast<uniresis_errc>(code)) {
         case uniresis_errc::failed_calculate_cpu_count:
             return "failed to calculate total CPU count";
+        case uniresis_errc::failed_calculate_system_memory:
+            return "failed to calculate the total system memort on a machine";
         }
 
         return format("{}: {}", name(), code);

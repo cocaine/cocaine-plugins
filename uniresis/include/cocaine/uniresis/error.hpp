@@ -9,6 +9,8 @@ namespace uniresis {
 enum class uniresis_errc {
     /// Failed to calculate the number of cores on a machine.
     failed_calculate_cpu_count,
+    /// Failed to calculate the total system memort on a machine.
+    failed_calculate_system_memory,
 };
 
 auto uniresis_category() -> const std::error_category&;
