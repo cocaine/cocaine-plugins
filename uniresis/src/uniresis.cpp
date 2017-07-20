@@ -17,7 +17,7 @@ namespace service {
 namespace {
 
 auto
-total_system_nemory() -> unsigned long long {
+total_system_nemory() -> std::uint64_t {
     long pages = ::sysconf(_SC_PHYS_PAGES);
     long page_size = ::sysconf(_SC_PAGE_SIZE);
     return pages * page_size;
