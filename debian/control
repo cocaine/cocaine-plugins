@@ -235,6 +235,20 @@ Depends: ${misc:Depends}, libcocaine-plugin-unicorn3 (= ${binary:Version})
 Description: Cocaine - Unicorn Service (debug symbols)
  Unified configuration service for cocaine. Debug symbols.
 
+Package: libcocaine-plugin-unicat3
+Architecture: any
+Section: libs
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Cocaine - Unicat Service
+ Unified Cocaine ACL tooling service.
+
+Package: libcocaine-plugin-unicat-dbg
+Architecture: any
+Section: debug
+Depends: ${misc:Depends}, libcocaine-plugin-unicat3 (= ${binary:Version})
+Description: Cocaine - Unicat Service (debug symbols)
+  Unified Cocaine ACL tooling service. Debug symbols.
+
 Package: libcocaine-plugin-postgres3
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libpqxx-4.0

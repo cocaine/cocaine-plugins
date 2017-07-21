@@ -17,7 +17,7 @@
 #include <cocaine/logging.hpp>
 #include <cocaine/traits/optional.hpp>
 
-#include "cocaine/service/unicat.hpp"
+#include "cocaine/service/unicat/unicat.hpp"
 #include "cocaine/idl/unicat.hpp"
 
 #include "backend/backend.hpp"

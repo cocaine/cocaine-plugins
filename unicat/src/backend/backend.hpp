@@ -19,7 +19,7 @@
 #include <cocaine/api/unicorn.hpp>
 #include <cocaine/unicorn/value.hpp>
 
-#include "cocaine/auth/metainfo.hpp"
+#include "cocaine/service/unicat/auth/metainfo.hpp"
 
 #include "auth_cache.hpp"
 

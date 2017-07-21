@@ -1,6 +1,6 @@
 #include <boost/range/algorithm/transform.hpp>
 
-#include "cocaine/auth/metainfo.hpp"
+#include "cocaine/service/unicat/auth/metainfo.hpp"
 #include "cocaine/idl/unicat.hpp"
 
 namespace cocaine { namespace auth {

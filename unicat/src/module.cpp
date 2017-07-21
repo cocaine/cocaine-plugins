@@ -1,4 +1,4 @@
-#include "cocaine/service/unicat.hpp"
+#include "cocaine/service/unicat/unicat.hpp"
 
 #include <cocaine/repository.hpp>
 #include <cocaine/repository/service.hpp>

@@ -128,20 +128,29 @@ struct async_completion_state_t : public base_completion_state_t {
             return errors;
         });
 
-        const auto count = state.synchronize()->size();
+        try {
+            const auto count = state.synchronize()->size();
 
-        if (errors_list.empty()) {
-            COCAINE_LOG_INFO(log, "all {} completions has been done with success, report result to client", count);
-            upstream.template send<typename Protocol::value>();
-            return;
-        }
+            if (errors_list.empty()) {
+                COCAINE_LOG_INFO(log,
+                    "all {} completions have been done with success, report result to client", count);
+                upstream.template send<typename Protocol::value>();
+                return;
+            }
 
-        const auto to_take = std::min(errors_list.size(), detail::TAKE_EXCEPT_TRACE);
-        COCAINE_LOG_WARNING(log, "there was {} exceptions, reporting first {} to client", errors_list.size(), to_take);
+            const auto to_take = std::min(errors_list.size(), detail::TAKE_EXCEPT_TRACE);
+            COCAINE_LOG_WARNING(log,
+                "there ware {} exception(s), reporting first {} to client", errors_list.size(), to_take);
 
-        upstream.template send<typename Protocol::error>(
-            error::uncaught_error,
-            boost::join(errors_list | sliced(0, to_take), ", "));
+            upstream.template send<typename Protocol::error>(
+                error::uncaught_error,
+                boost::join(errors_list | sliced(0, to_take), ", "));
+        } catch(const std::system_error& e) {
+            COCAINE_LOG_WARNING(log,
+                "failed to send completion result with {} {}", e.code(), e.what());
+        } catch(const std::exception& e) {
+            COCAINE_LOG_WARNING(log, "failed to send completion result with unknown exception: {}", e.what());
+        } // try/catch
     }
 };
 

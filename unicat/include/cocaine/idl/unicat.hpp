@@ -10,7 +10,7 @@
 
 #include <boost/mpl/list.hpp>
 
-#include "cocaine/auth/metainfo.hpp"
+#include "cocaine/service/unicat/auth/metainfo.hpp"
 
 #include "boost/optional.hpp"
 

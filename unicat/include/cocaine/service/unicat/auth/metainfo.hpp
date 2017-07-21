@@ -10,10 +10,9 @@
 #include <cocaine/format.hpp>
 #include <cocaine/dynamic.hpp>
 #include <cocaine/dynamic/converters.hpp>
-
-#include "cocaine/traits/enum.hpp"
-#include "cocaine/traits/map.hpp"
-#include "cocaine/traits/tuple.hpp"
+#include <cocaine/traits/enum.hpp>
+#include <cocaine/traits/map.hpp>
+#include <cocaine/traits/tuple.hpp>
 
 #include <boost/mpl/list.hpp>
 
