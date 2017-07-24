@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include <cocaine/api/service.hpp>
 #include <cocaine/rpc/dispatch.hpp>
 
@@ -12,9 +14,10 @@ namespace service {
 class uniresis_t : public api::service_t , dispatch<io::uniresis_tag> {
     class updater_t;
 
+    std::string uuid;
     uniresis::resources_t resources;
     std::shared_ptr<updater_t> updater;
-    std::unique_ptr<logging::logger_t> log;
+    std::shared_ptr<logging::logger_t> log;
 
 public:
     uniresis_t(context_t& context, asio::io_service& loop, const std::string& name, const dynamic_t& args);

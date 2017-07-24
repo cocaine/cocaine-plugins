@@ -41,6 +41,20 @@ struct uniresis {
             std::uint64_t
         >::tag upstream_type;
     };
+
+    struct uuid {
+        typedef uniresis_tag tag;
+
+        static constexpr auto alias() -> const char* {
+            return "uuid";
+        }
+
+        typedef boost::mpl::list<>::type argument_type;
+
+        typedef option_of<
+            std::string
+        >::tag upstream_type;
+    };
 };
 
 template<>
@@ -51,7 +65,8 @@ struct protocol<uniresis_tag> {
 
     typedef boost::mpl::list<
         uniresis::cpu_count,
-        uniresis::memory_count
+        uniresis::memory_count,
+        uniresis::uuid
     >::type messages;
 };
 
