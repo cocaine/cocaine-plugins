@@ -249,6 +249,18 @@ Depends: ${misc:Depends}, libcocaine-plugin-unicat3 (= ${binary:Version})
 Description: Cocaine - Unicat Service (debug symbols)
   Unified Cocaine ACL tooling service. Debug symbols.
 
+Package: libcocaine-plugin-uniresis3
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Universal Resources Discovery
+ Universal Resources Discovery for scheduling.
+
+Package: libcocaine-plugin-uniresis-dbg
+Architecture: any
+Depends: ${misc:Depends}
+Description: Universal Resources Discovery (debug files)
+ Universal Resources Discovery for scheduling (debug files).
+
 Package: libcocaine-plugin-postgres3
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, libpqxx-4.0
