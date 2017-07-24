@@ -330,7 +330,7 @@ private:
     auto on_reply(exists_reply_t reply) -> void override {
         COCAINE_LOG_DEBUG(parent.log, "handling exists reply in subscription on {}", path);
         if(reply.rc == ZOK) {
-            parent.zk.get(path, shared_from_this(), shared_from_this());
+            parent.zk.get(path, shared_from_this());
         } else {
             satisfy(versioned_value_t(value_t(), unicorn::not_existing_version));
         }
