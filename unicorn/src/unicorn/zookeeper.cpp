@@ -219,7 +219,12 @@ public:
 private:
     auto on_reply(get_reply_t reply) -> void override {
         if (reply.rc != 0) {
-            throw error_t(map_zoo_error(reply.rc), "failure during getting node value - {}", zerror(reply.rc));
+            // This behaviour was previously introduced in early version of unicorn, so we obliged to preserve it for compatibility.
+            if(reply.rc == ZNONODE) {
+                satisfy(versioned_value_t({}, not_existing_version));
+            } else {
+                throw error_t(map_zoo_error(reply.rc), "failure during getting node value - {}", zerror(reply.rc));
+            }
         } else if (reply.stat.numChildren != 0) {
             throw error_t(cocaine::error::child_not_allowed, "trying to read value of the node with childs");
         } else {
