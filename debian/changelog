@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.14.9) unstable; urgency=low
+
+  * Fixed: unicorn get behaviour restored.
+  * Fixed: unicorn double reply on subscribe.
+
+ -- Anton Matveenko <antmat@me.com>  Tue, 25 Jul 2017 12:54:26 +0300
+
 cocaine-plugins (0.12.14.8) unstable; urgency=low
 
   * Fixed: change order of rd/wr access checks (#148).
