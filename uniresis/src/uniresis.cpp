@@ -98,11 +98,11 @@ public:
 
 private:
     auto
-    make_value() -> dynamic_t {
+    make_value() const -> dynamic_t {
         dynamic_t::object_t result;
 
         std::vector<dynamic_t> endpoints;
-        for (auto endpoint : this->endpoints) {
+        for (auto& endpoint : this->endpoints) {
             endpoints.push_back({
                 std::vector<dynamic_t>{{endpoint.address().to_string()}, {endpoint.port()}}
             });

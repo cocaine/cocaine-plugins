@@ -11,7 +11,7 @@
 namespace cocaine {
 namespace service {
 
-class uniresis_t : public api::service_t , dispatch<io::uniresis_tag> {
+class uniresis_t : public api::service_t, public dispatch<io::uniresis_tag> {
     class updater_t;
 
     std::string uuid;

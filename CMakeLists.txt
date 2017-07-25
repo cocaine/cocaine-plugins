@@ -73,7 +73,7 @@ SET(PLUGINS
     postgres
     unicat
     unicorn
-	uniresis
+    uniresis
     urlfetch
     vicodyn
 )
