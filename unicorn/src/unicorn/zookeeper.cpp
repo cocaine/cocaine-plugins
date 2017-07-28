@@ -554,7 +554,6 @@ private:
         }
         if(it_pair.first == children.begin()) {
             satisfy(true);
-            parent.zk.get(created_sequence_path, shared_from_this(), shared_from_this());
         } else {
             auto previous_it = --it_pair.first;
             if(!is_valid_sequence_node(*previous_it)) {
@@ -563,6 +562,7 @@ private:
             prev_sequence_path = folder + "/" + *previous_it;
             parent.zk.exists(prev_sequence_path, shared_from_this(), shared_from_this());
         }
+        parent.zk.get(created_sequence_path, shared_from_this(), shared_from_this());
     }
 
     auto on_reply(get_reply_t reply) -> void override {
@@ -575,7 +575,6 @@ private:
     auto on_reply(exists_reply_t reply) -> void override {
         if(reply.rc == ZNONODE) {
             satisfy(true);
-            parent.zk.get(created_sequence_path, shared_from_this(), shared_from_this());
         } else if(reply.rc) {
             throw error_t(map_zoo_error(reply.rc), "error during fetching previous lock - {}", zerror(reply.rc));
         }
