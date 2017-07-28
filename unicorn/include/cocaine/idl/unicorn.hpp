@@ -295,6 +295,7 @@ struct protocol<unicorn_final_tag> {
     > messages;
 
     typedef unicorn scope;
+    typedef unicorn_final_tag transition_type;
 };
 
 }} // namespace cocaine::io
