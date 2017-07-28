@@ -457,7 +457,7 @@ private:
     }
 };
 
-class zookeeper_t::lock_t : public safe<bool, create_reply_t, children_reply_t, exists_reply_t, del_reply_t, watch_reply_t> {
+class zookeeper_t::lock_t : public safe<bool, create_reply_t, children_reply_t, get_reply_t, exists_reply_t, del_reply_t, watch_reply_t> {
 public:
     struct lock_scope_t: public scope_t {
         std::shared_ptr<lock_t> parent;
@@ -474,14 +474,12 @@ public:
         }
 
         auto on_abort() -> void override {
-            BOOST_ASSERT(parent);
-            if(!parent->created_sequence_node.empty()) {
-                auto lock_path = parent->folder + "/" + parent->created_sequence_node;
+            if(parent && !parent->created_sequence_path.empty()) {
                 try {
-                    parent->parent.zk.del(lock_path, parent->shared_from_this());
+                    parent->parent.zk.del(parent->created_sequence_path, parent->shared_from_this());
                 } catch(const std::system_error& e) {
                     COCAINE_LOG_ERROR(parent->parent.log, "can not delete lock on {} - {}, reconnecting as a last resort",
-                                      lock_path, error::to_string(e));
+                                      parent->created_sequence_path, error::to_string(e));
                     parent->parent.zk.reconnect();
                 }
                 parent = nullptr;
@@ -493,7 +491,8 @@ private:
     zookeeper_t& parent;
     path_t folder;
     path_t path;
-    path_t created_sequence_node;
+    path_t created_sequence_path;
+    path_t prev_sequence_path;
     value_t value;
     uint64_t depth;
 
@@ -519,11 +518,11 @@ private:
         if(reply.rc == ZOK) {
             if(depth == 0) {
                 return scope()->closed.apply([&](bool& closed){
-                    created_sequence_node = get_node_name(reply.created_path);
+                    created_sequence_path = reply.created_path;
                     if(!closed) {
                         parent.zk.childs(folder, shared_from_this());
                     } else {
-                        parent.zk.del(created_sequence_node, shared_from_this());
+                        parent.zk.del(created_sequence_path, shared_from_this());
                     }
                 });
             } else if(depth == 1) {
@@ -547,33 +546,43 @@ private:
         }
         auto& children = reply.children;
         std::sort(children.begin(), children.end());
-        COCAINE_LOG_DEBUG(parent.log, "children - {}, created path - {}", children, created_sequence_node);
-        auto it_pair = std::equal_range(children.begin(), children.end(), created_sequence_node);
+        COCAINE_LOG_DEBUG(parent.log, "children - {}, created path - {}", children, created_sequence_path);
+        auto node = get_node_name(created_sequence_path);
+        auto it_pair = std::equal_range(children.begin(), children.end(), node);
         if(it_pair.first == it_pair.second) {
             throw error_t("created path is not found in children");
         }
         if(it_pair.first == children.begin()) {
-            return satisfy(true);
+            satisfy(true);
+            parent.zk.get(created_sequence_path, shared_from_this(), shared_from_this());
         } else {
             auto previous_it = --it_pair.first;
             if(!is_valid_sequence_node(*previous_it)) {
                 throw error_t("trash data in lock folder");
             }
-            auto prev_node = folder + "/" + *previous_it;
-            parent.zk.exists(prev_node, shared_from_this(), shared_from_this());
+            prev_sequence_path = folder + "/" + *previous_it;
+            parent.zk.exists(prev_sequence_path, shared_from_this(), shared_from_this());
         }
+    }
+
+    auto on_reply(get_reply_t reply) -> void override {
+        if(reply.rc) {
+            throw error_t(map_zoo_error(reply.rc), "failed to get created node - {}", zerror(reply.rc));
+        }
+        COCAINE_LOG_DEBUG(parent.log, "fetched lock node, watching");
     }
 
     auto on_reply(exists_reply_t reply) -> void override {
         if(reply.rc == ZNONODE) {
             satisfy(true);
+            parent.zk.get(created_sequence_path, shared_from_this(), shared_from_this());
         } else if(reply.rc) {
             throw error_t(map_zoo_error(reply.rc), "error during fetching previous lock - {}", zerror(reply.rc));
         }
     }
 
     auto on_reply(watch_reply_t reply) -> void override {
-        if(reply.type == ZOO_DELETED_EVENT) {
+        if(reply.type == ZOO_DELETED_EVENT && reply.path == prev_sequence_path) {
             return satisfy(true);
         }
         throw_watch_event(reply);

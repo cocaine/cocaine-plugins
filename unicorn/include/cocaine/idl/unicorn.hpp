@@ -247,7 +247,7 @@ struct unicorn {
             cocaine::unicorn::path_t
         > argument_type;
 
-        typedef option_of <
+        typedef stream_of <
             bool
         >::tag upstream_type;
     };

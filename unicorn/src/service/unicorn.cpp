@@ -200,6 +200,11 @@ struct response_of<io::unicorn::children_subscribe> {
     typedef streamed<typename result_of<io::unicorn::children_subscribe>::type> type;
 };
 
+template<>
+struct response_of<io::unicorn::lock> {
+    typedef streamed<typename result_of<io::unicorn::lock>::type> type;
+};
+
 template<typename Event>
 struct method_of {
     typedef boost::mpl::map<
