@@ -1,5 +1,6 @@
 #include "cocaine/vicodyn/queue/invocation.hpp"
 
+#include "cocaine/vicodyn/invocation.hpp"
 #include "cocaine/vicodyn/proxy/dispatch.hpp"
 #include "cocaine/vicodyn/stream.hpp"
 
@@ -7,6 +8,7 @@
 #include <cocaine/rpc/upstream.hpp>
 #include <cocaine/rpc/session.hpp>
 #include <cocaine/rpc/graph.hpp>
+
 
 namespace cocaine {
 namespace vicodyn {
@@ -37,28 +39,25 @@ auto invocation_t::absorb(invocation_t& other) -> void {
     });
 }
 
-auto invocation_t::append(const msgpack::object& message,
-                          uint64_t event_id,
-                          hpack::header_storage_t headers,
-                          const io::graph_node_t& incoming_protocol,
-                          stream_ptr_t backward_stream) -> std::shared_ptr<stream_t>
-{
+auto invocation_t::append(invocation_request_t invocation) -> std::shared_ptr<stream_t> {
     auto forward_stream = std::make_shared<stream_t>(stream_t::direction_t::forward);
 
     operation_t operation = operation_t();
-    operation.event_id = event_id;
-    operation.headers = std::move(headers);
+    operation.event_id = invocation.message().type();
+    operation.headers = std::move(invocation.message().headers());
     operation.forward_stream = forward_stream;
-    operation.backward_stream = std::move(backward_stream);
-    operation.incoming_protocol = &incoming_protocol;
+    operation.backward_stream = invocation.backward_stream();
+    operation.backward_protocol = invocation.backward_protocol();
+    operation.invocation_name = invocation.name();
 
     m_session.apply([&](std::shared_ptr<session_t>& session) mutable {
         if(!session) {
             operation.zone = std::make_unique<msgpack::zone>();
             msgpack::packer<io::aux::encoded_message_t> packer(operation.encoded_message);
-            packer << message;
+            packer << invocation.message().args();
         } else {
-            operation.data = &message;
+            const auto& args = invocation.message().args();
+            operation.data = &args;
             execute(session, operation);
         }
     });
@@ -96,10 +95,8 @@ auto invocation_t::disconnect() -> void {
 }
 
 auto invocation_t::execute(std::shared_ptr<session_t> session, const operation_t& operation) -> void{
-    const auto& name = std::get<0>(operation.incoming_protocol->at(operation.event_id));
-
-    auto dispatch = std::make_shared<proxy::dispatch_t>(name, operation.backward_stream,
-                                                        *operation.incoming_protocol);
+    auto dispatch = std::make_shared<proxy::dispatch_t>(operation.invocation_name, operation.backward_stream,
+                                                        *operation.backward_protocol);
 
     operation.backward_stream->attach(session);
     operation.forward_stream->attach(session);

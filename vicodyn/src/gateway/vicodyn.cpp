@@ -1,9 +1,12 @@
 #include "cocaine/gateway/vicodyn.hpp"
 
+#include "../../node/include/cocaine/idl/node.hpp"
+
 #include "cocaine/vicodyn/debug.hpp"
 #include "cocaine/vicodyn/proxy.hpp"
 
 #include <cocaine/context.hpp>
+#include <cocaine/context/quote.hpp>
 #include <cocaine/context/signal.hpp>
 #include <cocaine/dynamic.hpp>
 #include <cocaine/idl/context.hpp>
@@ -41,6 +44,7 @@ auto vicodyn_t::proxy_description_t::version() const -> unsigned int {
 vicodyn_t::vicodyn_t(context_t& _context, const std::string& _local_uuid, const std::string& name, const dynamic_t& args) :
     gateway_t(_context, _local_uuid, name, args),
     context(_context),
+    args(args),
     local_uuid(_local_uuid),
     logger(context.log(name))
 {
@@ -58,6 +62,14 @@ vicodyn_t::~vicodyn_t() {
 }
 
 auto vicodyn_t::resolve(const std::string& name) const -> service_description_t {
+    static const io::graph_root_t app_root = io::traverse<io::app_tag>().get();
+    const auto local = context.locate(name);
+    if(local && local->prototype->root() != app_root) {
+        COCAINE_LOG_DEBUG(logger, "providing local non application service");
+        auto version = static_cast<unsigned int>(local->prototype->version());
+        return service_description_t {local->endpoints, local->prototype->root(), version};
+    }
+
     return proxy_map.apply([&](const proxy_map_t& proxies){
         auto it = proxies.find(name);
         if(it == proxies.end()) {
@@ -83,7 +95,7 @@ auto vicodyn_t::consume(const std::string& uuid,
         } else {
             auto proxy = std::make_unique<vicodyn::proxy_t>(context,
                                                             "virtual::" + name,
-                                                            dynamic_t(),
+                                                            args,
                                                             version,
                                                             protocol);
             auto& proxy_ref = *proxy;

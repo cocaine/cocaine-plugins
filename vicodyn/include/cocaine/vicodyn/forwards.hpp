@@ -67,6 +67,7 @@ class dispatch_t;
 namespace cocaine {
 namespace vicodyn {
 
+class invocation_t;
 class proxy_t;
 class peer_t;
 class peers_t;

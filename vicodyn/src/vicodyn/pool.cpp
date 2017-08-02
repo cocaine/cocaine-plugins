@@ -1,4 +1,5 @@
 #include "cocaine/vicodyn/pool.hpp"
+#include "cocaine/vicodyn/invocation.hpp"
 #include "cocaine/format/peer.hpp"
 
 #include <cocaine/context.hpp>
@@ -36,7 +37,7 @@ pool_t::pool_t(context_t& _context, asio::io_service& _io_loop, const std::strin
         logger(context.log(format("vicodyn/pool/{}", service_name))),
         io_loop(_io_loop),
         rebalance_timer(io_loop),
-        balancer(api::vicodyn::balancer(context, io_loop, args.as_object().at("balancer", "core").as_string(), name))
+        balancer(api::vicodyn::balancer(context, io_loop, args.as_object().at("balancer", dynamic_t::empty_object), name))
 {
     signal_dispatcher->on<io::context::shutdown>([=](){
         rebalance_timer.cancel();
@@ -48,14 +49,12 @@ pool_t::pool_t(context_t& _context, asio::io_service& _io_loop, const std::strin
 
 pool_t::~pool_t() = default;
 
-auto pool_t::invoke(const message_t& message, const io::graph_node_t& protocol, stream_ptr_t backward_stream)
-    -> stream_ptr_t
-{
+auto pool_t::invoke(invocation_t invocation) -> stream_ptr_t {
     return peers.apply([&](peers_t& peers){
-        std::shared_ptr<peer_t> peer = balancer->choose_peer(message, peers);
+        std::shared_ptr<peer_t> peer = balancer->choose_peer(invocation.message(), peers);
         try {
             COCAINE_LOG_DEBUG(logger, "processing invocation via {}", peer);
-            return peer->invoke(message, protocol, backward_stream);
+            return peer->invoke(std::move(invocation));
         } catch(std::system_error& e) {
             COCAINE_LOG_WARNING(logger, "peer errored: {}, peer: {}", error::to_string(e), peer);
             peer->freeze(freeze_time);

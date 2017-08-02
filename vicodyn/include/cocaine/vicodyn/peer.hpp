@@ -35,7 +35,7 @@ public:
 
     peer_t(context_t& context, std::string service_name, asio::io_service& loop, endpoints_t endpoints, std::string uuid, bool local);
 
-    auto invoke(const message_t& message, const io::graph_node_t& protocol, stream_ptr_t backward_stream) -> stream_ptr_t;
+    auto invoke(invocation_t invocation) -> stream_ptr_t;
 
     auto connect() -> void;
 

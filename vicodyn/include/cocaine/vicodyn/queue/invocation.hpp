@@ -17,9 +17,9 @@ namespace queue {
 
 class invocation_t {
 public:
+    using invocation_request_t = vicodyn::invocation_t;
 
-    auto append(const msgpack::object& message, uint64_t event_id, hpack::header_storage_t headers,
-                const io::graph_node_t& protocol, stream_ptr_t backward_stream) -> stream_ptr_t;
+    auto append(invocation_request_t invocation) -> stream_ptr_t;
 
     auto absorb(invocation_t& queue) -> void;
 
@@ -40,8 +40,10 @@ private:
         // message headers
         hpack::header_storage_t headers;
 
-        // incoming protocol to fork session to
-        const io::graph_node_t* incoming_protocol;
+        std::string invocation_name;
+
+        // backward protocol to fork session to
+        const io::graph_node_t* backward_protocol;
 
         //send queue to respond to
         stream_ptr_t backward_stream;

@@ -35,7 +35,7 @@ public:
 
 typedef std::shared_ptr<balancer_t> balancer_ptr;
 
-auto balancer(context_t& context, asio::io_service& io_service, const std::string& balancer_name, const std::string& service_name)
+auto balancer(context_t& context, asio::io_service& io_service, const dynamic_t& balancer_args, const std::string& service_name)
         -> balancer_ptr;
 
 } // namespace peer

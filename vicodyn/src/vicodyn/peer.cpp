@@ -1,5 +1,6 @@
 #include "cocaine/vicodyn/peer.hpp"
 
+#include "cocaine/vicodyn/invocation.hpp"
 #include "cocaine/format/peer.hpp"
 #include "cocaine/vicodyn/stream.hpp"
 
@@ -134,12 +135,8 @@ auto peer_t::endpoints() const -> const std::vector<asio::ip::tcp::endpoint>& {
     return d.endpoints;
 }
 
-auto peer_t::invoke(const io::decoder_t::message_type& incoming_message,
-                    const io::graph_node_t& protocol,
-                    stream_ptr_t backward_stream) -> std::shared_ptr<stream_t>
-{
-    return queue->append(incoming_message.args(), incoming_message.type(), incoming_message.headers(), protocol,
-                         std::move(backward_stream));
+auto peer_t::invoke(invocation_t invocation) -> std::shared_ptr<stream_t> {
+    return queue->append(std::move(invocation));
 }
 
 peers_t::peers_t() :

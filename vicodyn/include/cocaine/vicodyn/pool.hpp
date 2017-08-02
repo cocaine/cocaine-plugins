@@ -16,7 +16,7 @@ public:
 
     ~pool_t();
 
-    auto invoke(const message_t& incoming, const io::graph_node_t& protocol, stream_ptr_t backward_stream) -> stream_ptr_t;
+    auto invoke(invocation_t invocation) -> stream_ptr_t;
 
     auto register_real(std::string uuid, std::vector<asio::ip::tcp::endpoint> ep, bool) -> void;
 

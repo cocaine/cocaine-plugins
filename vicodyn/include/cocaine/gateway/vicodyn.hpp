@@ -5,6 +5,7 @@
 #include <cocaine/api/cluster.hpp>
 #include <cocaine/api/gateway.hpp>
 #include <cocaine/api/service.hpp>
+#include <cocaine/dynamic.hpp>
 #include <cocaine/idl/context.hpp>
 #include <cocaine/locked_ptr.hpp>
 #include <cocaine/rpc/graph.hpp>
@@ -61,6 +62,7 @@ private:
     auto cleanup(proxy_map_t& map, proxy_map_t::iterator it, const std::string uuid) -> proxy_map_t::iterator;
 
     context_t& context;
+    dynamic_t args;
     std::string local_uuid;
     std::unique_ptr<logging::logger_t> logger;
     synchronized<proxy_map_t> proxy_map;
