@@ -553,6 +553,7 @@ private:
             throw error_t("created path is not found in children");
         }
         if(it_pair.first == children.begin()) {
+            COCAINE_LOG_INFO(parent.log, "aquired lock on {} - created node is first", created_sequence_path);
             satisfy(true);
         } else {
             auto previous_it = --it_pair.first;
@@ -574,15 +575,15 @@ private:
 
     auto on_reply(exists_reply_t reply) -> void override {
         if(reply.rc == ZNONODE) {
-            satisfy(true);
+            parent.zk.childs(folder, shared_from_this());
         } else if(reply.rc) {
             throw error_t(map_zoo_error(reply.rc), "error during fetching previous lock - {}", zerror(reply.rc));
         }
     }
 
     auto on_reply(watch_reply_t reply) -> void override {
-        if(reply.type == ZOO_DELETED_EVENT && reply.path == prev_sequence_path) {
-            return satisfy(true);
+        if(reply.type == ZOO_DELETED_EVENT) {
+            return parent.zk.childs(folder, shared_from_this());
         }
         throw_watch_event(reply);
     }
