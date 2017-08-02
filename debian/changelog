@@ -1,3 +1,12 @@
+cocaine-plugins (0.12.14.11) unstable; urgency=low
+
+  * Fixed: vicodyn now do not request dispatch name from the wrong map.
+  * Refactored: vicodyn invocation param moved to separate class.
+  * Fixed: logical bug in unicorn lock - rerequest children after watch event,
+  we can not satisfy lock on previous node deleted event.
+
+ -- Anton Matveenko <antmat@me.com>  Tue, 02 Aug 2017 19:04:26 +0300
+
 cocaine-plugins (0.12.14.10) unstable; urgency=low
 
   * Fixed: in unicorn on_abort can be called many times.
