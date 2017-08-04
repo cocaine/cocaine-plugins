@@ -305,8 +305,10 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
             } catch (const std::system_error& e) {
                 if(e.code().value() != error::node_exists) {
                     COCAINE_LOG_ERROR(internal_logger, "failed to create filter in unicorn - {}", error::to_string(e));
-                    retry_timer.async_wait([&](std::error_code) {
-                        load_filters();
+                    retry_timer.async_wait([&](std::error_code ec) {
+                        if(!ec) {
+                            load_filters();
+                        }
                     });
                     retry_timer.expires_from_now(boost::posix_time::seconds(retry_time_seconds));
                     return;

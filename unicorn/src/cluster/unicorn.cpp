@@ -167,7 +167,16 @@ auto unicorn_cluster_t::subscriber_t::on_children(std::future<response::children
 
 auto unicorn_cluster_t::subscriber_t::update_state(std::vector<std::string> nodes) -> void {
     COCAINE_LOG_INFO(parent.log, "received uuid list from zookeeper, got {} uuids", nodes.size());
+    std::set<std::string> nodes_set(nodes.begin(), nodes.end());
     subscriptions.apply([&](subscriptions_t& subscriptions) {
+        for(auto it = subscriptions.begin(); it != subscriptions.end();) {
+            if(!nodes_set.count(it->first)) {
+                parent.locator.drop_node(it->first);
+                it = subscriptions.erase(it);
+            } else {
+                it++;
+            }
+        }
         for(const auto& node: nodes) {
             if(node == parent.locator.uuid()) {
                 continue;
@@ -210,7 +219,8 @@ auto unicorn_cluster_t::subscriber_t::on_node(std::string uuid, std::future<resp
             subscription.endpoints = std::move(endpoints);
             parent.locator.link_node(uuid, subscription.endpoints);
         } catch(const std::exception& e){
-            terminate(e.what());
+            subscriptions[uuid].endpoints.clear();
+            timer.defer_retry();
         }
     });
 }
