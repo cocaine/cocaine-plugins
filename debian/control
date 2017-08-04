@@ -305,7 +305,7 @@ Description: Vicodyn gateway (dev files)
 
 Package: libcocaine-plugin-elliptics3
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, elliptics-client2.27 (>= 2.27.2.5), libcocaine-core3 (>= 0.12.14)
+Depends: ${shlibs:Depends}, ${misc:Depends}, elliptics-client(>=2.27.2.5) | elliptics-client2.27(>= 2.27.2.5), libcocaine-core3 (>= 0.12.14)
 Conflicts: libcocaine-plugin-elliptics
 Replaces: libcocaine-plugin-elliptics
 Description: Distributed hash table storage (cocaine plugin)
