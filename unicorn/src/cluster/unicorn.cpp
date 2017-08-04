@@ -137,7 +137,7 @@ auto unicorn_cluster_t::announcer_t::on_check(std::future<response::subscribe> f
             timer.defer_retry();
         }
     } catch (const std::system_error& e) {
-        COCAINE_LOG_ERROR(parent.log, "announce disappeared: {} , retrying", error::to_string(e));
+        COCAINE_LOG_ERROR(parent.log, "announce disappeared: {}, retrying", error::to_string(e));
         timer.defer_retry();
     }
 }
@@ -160,7 +160,7 @@ auto unicorn_cluster_t::subscriber_t::on_children(std::future<response::children
     try {
         update_state(std::get<1>(future.get()));
     } catch (const std::system_error& e) {
-        COCAINE_LOG_WARNING(parent.log, "failure during subscription: {} , resubscribing", error::to_string(e));
+        COCAINE_LOG_WARNING(parent.log, "failure during subscription: {}, resubscribing", error::to_string(e));
         timer.defer_retry();
     }
 }
