@@ -125,7 +125,10 @@ auto stream_t::try_discard() -> void {
         return;
     }
 
-    if(direction == direction_t::forward && session) {
+    // This one is here to prevent cyclic dead lock of 2 sessions.
+    static std::error_code backward_ec = make_error_code(cocaine::error::dispatch_errors::not_connected);
+    if(direction == direction_t::forward && session && *discard_code != backward_ec) {
+        VICODYN_DEBUG("notifying server about channel discard");
         auto upstream = session->get().fork(std::make_shared<discard_dispatch_t>(session));
         try {
             upstream->send<io::control::revoke>(wrapped_stream->channel_id(), *discard_code);
@@ -135,7 +138,7 @@ auto stream_t::try_discard() -> void {
         discard_code = boost::none;
     }
     if(direction == direction_t::backward && wrapped_stream) {
-        wrapped_stream->detach_session(*discard_code);
+        wrapped_stream->session()->detach(backward_ec);
         discard_code = boost::none;
     }
 }
