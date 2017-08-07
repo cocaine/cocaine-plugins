@@ -253,10 +253,12 @@ auto connection_t::cancel_watches() -> void {
     watchers.apply([&](watchers_t& watchers) mutable {
         watchers_for_cancellation.swap(watchers);
     });
-    watch_reply_t reply {ZOO_SESSION_EVENT, ZOO_EXPIRED_SESSION_STATE, ""};
-    for(auto& w: watchers_for_cancellation) {
-        w.second->operator()(reply);
-    }
+    executor->spawn([=]{
+        watch_reply_t reply {ZOO_SESSION_EVENT, ZOO_EXPIRED_SESSION_STATE, ""};
+        for(auto& w: watchers_for_cancellation) {
+            w.second->operator()(reply);
+        }
+    });
 }
 
 auto connection_t::check_rc(int rc) -> void {
