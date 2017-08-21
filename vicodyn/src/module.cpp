@@ -14,6 +14,7 @@
 * GNU General Public License for more details.
 */
 
+#include "cocaine/api/vicodyn/balancer.hpp"
 #include "cocaine/gateway/vicodyn.hpp"
 #include "cocaine/vicodyn/balancer/simple.hpp"
 #include "cocaine/repository/vicodyn/balancer.hpp"
@@ -31,8 +32,8 @@ validation() -> api::preconditions_t {
 
 void
 initialize(api::repository_t& repository) {
-    repository.insert<gateway::vicodyn_t>("vicodyn");
     repository.insert<vicodyn::balancer::simple_t>("simple");
+    repository.insert<gateway::vicodyn_t>("vicodyn");
 }
 
 }

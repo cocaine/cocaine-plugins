@@ -204,6 +204,32 @@ struct list {
     >::tag upstream_type;
 };
 
+struct enqueue {
+    typedef node_tag tag;
+
+    typedef stream_of<
+        /* Allow clients to stream data into the apps. */
+        std::string
+    >::tag dispatch_type;
+
+    static const char* alias() {
+        return "enqueue";
+    }
+
+    typedef boost::mpl::list<
+        /* Application name */
+        std::string,
+        /* Event name. This name is intentionally dynamic so that the underlying application can
+           do whatever it wants using these event names, for example handle every possible one. */
+        std::string
+    >::type argument_type;
+
+    typedef stream_of<
+        /* Some other arbitrary sequence of bytes, streamed back to the client in chunks. */
+        std::string
+    >::tag upstream_type;
+};
+
 }; // struct node
 
 template<>
@@ -217,7 +243,8 @@ struct protocol<node_tag> {
         node::pause_app,
         node::list,
         node::info,
-        node::control_app
+        node::control_app,
+        node::enqueue
     >::type messages;
 
     typedef node scope;

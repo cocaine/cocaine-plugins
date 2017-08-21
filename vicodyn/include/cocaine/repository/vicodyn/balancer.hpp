@@ -32,7 +32,7 @@ struct category_traits<vicodyn::balancer_t> {
     struct factory_type : public basic_factory<vicodyn::balancer_t> {
         virtual
         auto get(context_t& context, asio::io_service& io_context, const std::string& name, const dynamic_t& args)
-                -> ptr_type = 0;
+            -> ptr_type = 0;
     };
 
     template<class T>

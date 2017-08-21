@@ -1,56 +1,61 @@
 #pragma once
 
-#include "cocaine/vicodyn/pool.hpp"
+#include "cocaine/vicodyn/forwards.hpp"
+#include "cocaine/vicodyn/peer.hpp"
 
 #include <cocaine/api/service.hpp>
 #include <cocaine/executor/asio.hpp>
 #include <cocaine/forwards.hpp>
-#include <cocaine/rpc/basic_dispatch.hpp>
+#include <cocaine/rpc/dispatch.hpp>
+#include <cocaine/idl/node.hpp>
+
+#include <asio/ip/tcp.hpp>
 
 namespace cocaine {
 namespace vicodyn {
 
-class proxy_t : public io::basic_dispatch_t {
+class proxy_t : public dispatch<io::app_tag> {
 public:
-    proxy_t(context_t& context,
-            const std::string& name,
-            const dynamic_t& args,
-            unsigned int version,
-            io::graph_root_t protocol);
+    using event_t = io::app::enqueue;
+    using slot_t = io::basic_slot<event_t>;
+    using result_t = io::basic_slot<event_t>::result_type;
+    using app_protocol = io::protocol<io::stream_of<std::string>::tag>::scope;
 
-    auto root() const -> const io::graph_root_t& override {
-        return m_protocol;
-    }
+    friend class forward_dispatch_t;
 
-    auto version() const -> int override {
-        return m_version;
-    }
+    struct mapping_t {
+        std::map<std::string, std::shared_ptr<peer_t>> node_peers;
+        std::vector<std::string> peers_with_app;
+    };
 
-    auto process(const io::decoder_t::message_type& incoming_message, const io::upstream_ptr_t& backward_stream) ->
-        boost::optional<io::dispatch_ptr_t> override;
+    proxy_t(context_t& context, const std::string& name, const dynamic_t& args);
 
-    auto register_real(std::string uuid, std::vector<asio::ip::tcp::endpoint> endpoints, bool local) -> void {
-        pool.register_real(uuid, endpoints, local);
-    }
+    auto register_node(const std::string& uuid, std::vector<asio::ip::tcp::endpoint> endpoints) -> void;
 
-    auto deregister_real(const std::string& uuid) -> void {
-        pool.deregister_real(uuid);
-    }
+    auto deregister_node(const std::string& uuid) -> void;
 
-    auto empty() -> bool {
-        return pool.size() == 0;
-    }
+    auto register_real(std::string uuid) -> void;
 
-    auto size() -> size_t {
-        return pool.size();
-    }
+    auto deregister_real(const std::string& uuid) -> void;
+
+    auto empty() -> bool;
+
+    auto size() -> size_t;
+
+    auto choose_peer(const hpack::headers_t& headers, const std::string& event)
+        -> std::shared_ptr<peer_t>;
 
 private:
+    auto make_balancer(const dynamic_t& args) -> api::vicodyn::balancer_ptr;
+
+    context_t& context;
+    std::string app_name;
     executor::owning_asio_t executor;
+    api::vicodyn::balancer_ptr balancer;
+
     const std::unique_ptr<logging::logger_t> logger;
-    const io::graph_root_t m_protocol;
-    const unsigned int m_version;
-    pool_t pool;
+
+    synchronized<mapping_t> mapping;
 };
 
 } // namespace vicodyn

@@ -19,6 +19,9 @@
 */
 
 #include "cocaine/service/node.hpp"
+#include "cocaine/service/node/app/event.hpp"
+#include "cocaine/service/node/slave/error.hpp"
+#include "cocaine/detail/service/node/dispatch/client.hpp"
 
 #include <cocaine/api/authorization/event.hpp>
 #include <cocaine/api/storage.hpp>
@@ -207,6 +210,42 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
     on<io::node::list>(std::bind(&node_t::list, this));
     on<io::node::info>(std::bind(&node_t::info, this, ph::_1, ph::_2));
     on<io::node::control_app>(std::make_shared<control_slot_t>(*this));
+
+
+    using enqueue_slot_t = io::basic_slot<io::node::enqueue>;
+    on<io::node::enqueue>(
+        [&](const hpack::headers_t& headers, enqueue_slot_t::tuple_type&& args, enqueue_slot_t::upstream_type&& upstream)
+            -> enqueue_slot_t::result_type
+        {
+            std::string app_name, event_name;
+            std::tie(app_name, event_name) = args;
+            using app_protocol = io::protocol<io::stream_of<std::string>::tag>::scope;
+            auto empty = [&](){
+                auto dispatch = std::make_shared<enqueue_slot_t::dispatch_type>(format("{}/{}/empty", app_name, event_name));
+                dispatch->on<app_protocol::error>([this](std::error_code, std::string){});
+                dispatch->on<app_protocol::chunk>([this](std::string){});
+                dispatch->on<app_protocol::choke>([this](){});
+                return dispatch;
+            };
+            return apps.apply([&](std::map<std::string, std::shared_ptr<node::app_t>>& apps){
+                auto it = apps.find(app_name);
+                if(it == apps.end()) {
+                    upstream.send<app_protocol::error>(make_error_code(error::not_running),
+                                                       format("application {} is not found", app_name));
+                    return empty();
+                } else {
+                    try {
+                        node::app::event_t event(event_name, headers);
+                        auto dispatch = it->second->overseer()->enqueue(event, upstream);
+                        return std::shared_ptr<enqueue_slot_t::dispatch_type>(dispatch);
+                    } catch (const std::system_error& e) {
+                        upstream.send<app_protocol::error>(e.code(), e.what());
+                        return empty();
+                    }
+                }
+            });
+        }
+    );
 
     // Context signal/slot.
     signal = std::make_shared<dispatch<io::context_tag>>(name);

@@ -56,8 +56,15 @@ public:
     auto total_count(const std::string& name) const -> size_t override;
 
 private:
-    // map an unchanged service name to proxy, which balances requests across peers
-    typedef std::map<std::string, proxy_description_t> proxy_map_t;
+    using uuid_t = std::string;
+    using app_name_t = std::string;
+    using proxy_map_t = std::map<app_name_t, proxy_description_t>;
+    using node_map_t = std::map<uuid_t, std::vector<asio::ip::tcp::endpoint>>;
+
+    struct mapping_t {
+        proxy_map_t proxy_map;
+        node_map_t node_map;
+    };
 
     auto cleanup(proxy_map_t& map, proxy_map_t::iterator it, const std::string uuid) -> proxy_map_t::iterator;
 
@@ -65,7 +72,7 @@ private:
     dynamic_t args;
     std::string local_uuid;
     std::unique_ptr<logging::logger_t> logger;
-    synchronized<proxy_map_t> proxy_map;
+    synchronized<mapping_t> mapping;
 };
 
 } // namespace gateway

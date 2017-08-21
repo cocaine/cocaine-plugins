@@ -1,24 +1,19 @@
 INCLUDE_DIRECTORIES(
-        ${PROJECT_SOURCE_DIR}/vicodyn/include)
+        ${PROJECT_SOURCE_DIR}/vicodyn/include
+        ${PROJECT_SOURCE_DIR}/node/include)
 
 ADD_LIBRARY(vicodyn SHARED
         src/api/vicodyn/balancer.cpp
         src/gateway/vicodyn.cpp
         src/module.cpp
         src/vicodyn/balancer/simple.cpp
-        src/vicodyn/debug.cpp
-        src/vicodyn/invocation.cpp
-        src/vicodyn/pool.cpp
         src/vicodyn/proxy.cpp
-        src/vicodyn/proxy/dispatch.cpp
         src/vicodyn/peer.cpp
-        src/vicodyn/queue/invocation.cpp
-        src/vicodyn/session.cpp
-        src/vicodyn/stream.cpp
         )
 
 ADD_DEFINITIONS("-DVICODYN_USE_DEBUG")
 TARGET_LINK_LIBRARIES(vicodyn
+        node
         msgpack
         blackhole
         cocaine-core

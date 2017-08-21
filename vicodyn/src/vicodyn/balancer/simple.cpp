@@ -1,80 +1,50 @@
 #include "cocaine/vicodyn/balancer/simple.hpp"
 
-#include "cocaine/format/peer.hpp"
-#include "cocaine/vicodyn/peer.hpp"
-
-#include <cocaine/context.hpp>
-#include <cocaine/dynamic.hpp>
-#include <cocaine/errors.hpp>
-
 namespace cocaine {
 namespace vicodyn {
 namespace balancer {
 
-simple_t::simple_t(context_t& context, asio::io_service& io_service, const std::string& service_name, const dynamic_t& conf) :
-    balancer_t(context, io_service, service_name, conf),
-    conf(conf),
-    logger(context.log(format("vicodyn/balancer/simple/{}", service_name)))
+simple_t::simple_t(context_t& ctx, asio::io_service& loop, const std::string& app_name, const dynamic_t& args) :
+    api::vicodyn::balancer_t(ctx, loop, app_name, args),
+    args(args)
 {}
 
-/// Process invocation inside pool. Peer selecting logic is usually applied before invocation.
-auto simple_t::choose_peer(const message_t&, const cocaine::vicodyn::peers_t& peers) -> std::shared_ptr<peer_t> {
-    return choose_peer(peers);
-}
-
-auto simple_t::choose_peer(const cocaine::vicodyn::peers_t& peers) -> std::shared_ptr<peer_t> {
-    using state_t = peer_t::state_t;
-    const peers_t::peer_storage_t* peer_group;
-    state_t chosen_state;
-    for(auto state: {state_t::connected, state_t::connecting, state_t::disconnected}) {
-        chosen_state = state;
-        peer_group = &peers.get(state);
-        if(!peer_group->empty()) {
-            break;
-        }
-        COCAINE_LOG_WARNING(logger, "no {} peers found", state);
-    }
-    if(peer_group->empty()) {
-        throw error_t("no suitable peers found - all peers are freezed");
-    }
-
-    COCAINE_LOG_DEBUG(logger, "choosing randomly from {} {} peers", peer_group->size(), chosen_state);
-    auto it = std::begin(*peer_group);
-    std::advance(it, rand() % peer_group->size());
-    return it->second;
-}
-
-auto simple_t::choose_intercept_peer(const cocaine::vicodyn::peers_t& peers)
-        -> std::shared_ptr<cocaine::vicodyn::peer_t>
+auto simple_t::choose_peer(synchronized<proxy_t::mapping_t>& mapping, const hpack::headers_t& /*headers*/,
+                           const std::string& /*event*/) -> std::shared_ptr<cocaine::vicodyn::peer_t>
 {
-    return choose_peer(peers);
+    return mapping.apply([&](proxy_t::mapping_t& mapping) {
+        auto sz = mapping.peers_with_app.size();
+        if(sz == 0) {
+            throw error_t("no peers found");
+        }
+        auto idx = std::rand() % sz;
+        for (size_t i = 0; i < sz; i++){
+            const auto& uuid = mapping.peers_with_app[idx];
+            auto it = mapping.node_peers.find(uuid);
+            if(it != mapping.node_peers.end()) {
+                return it->second;
+            }
+            idx++;
+            if(idx >= sz) {
+                idx = 0;
+            }
+        }
+        throw error_t("no peers found");
+    });
 }
 
-auto simple_t::rebalance_peers(const cocaine::vicodyn::peers_t& peers) -> void {
-    auto pool_size = conf.as_object().at("pool_size", 4u).as_uint();
-    auto connected = peers.get(peer_t::state_t::connected);
-    auto connecting = peers.get(peer_t::state_t::connecting);
-    auto disconnected = peers.get(peer_t::state_t::disconnected);
-    int64_t disconnected_cnt = static_cast<int64_t>(disconnected.size());
-    int64_t to_connect = pool_size - connected.size() - connecting.size();
-    if(to_connect <= 0 && !disconnected.empty()) {
-        auto it = std::begin(connected);
-        std::advance(it, rand() % connected.size());
-        it->second->disconnect();
-        to_connect++;
-    }
+auto simple_t::retry_count() -> size_t {
+    return args.as_object().at("retry_count", 10u).as_uint();
+}
 
-    to_connect = std::min(disconnected_cnt, to_connect);
-    for(int64_t i = 0; i < to_connect; i++) {
-        auto it = std::begin(disconnected);
-        std::advance(it, rand() % disconnected.size());
-        if(it->second->state() == peer_t::state_t::disconnected) {
-            it->second->connect();
-        } else {
-            COCAINE_LOG_DEBUG(logger, "missed, got {}, leaving this till next rebalance", it->second->state());
-        }
-    }
+auto simple_t::on_error(std::error_code, const std::string&) -> void {
+    // no op
+}
 
+auto simple_t::is_recoverable(std::error_code ec, std::shared_ptr<peer_t> /*peer*/) -> bool {
+    bool queue_is_full = (ec.category() == error::overseer_category() && ec.value() == error::queue_is_full);
+    bool unavailable = (ec.category() == error::node_category() && ec.value() == error::not_running);
+    return queue_is_full || unavailable;
 }
 
 } // namespace balancer

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cocaine/vicodyn/forwards.hpp"
+#include "cocaine/vicodyn/proxy.hpp"
 
 #include <cocaine/forwards.hpp>
 #include <cocaine/rpc/graph.hpp>
@@ -13,30 +14,26 @@ namespace vicodyn {
 
 class balancer_t {
 public:
-
-    typedef balancer_t category_type;
-
-    using message_t = io::aux::decoded_message_t;
-
-    virtual ~balancer_t() = default;
-
-    balancer_t(context_t& context, asio::io_service& io_service, const std::string& service_name, const dynamic_t& conf);
-
-    /// Process invocation inside pool. Peer selecting logic is usually applied before invocation.
-    virtual
-    auto choose_peer(const message_t& message, const cocaine::vicodyn::peers_t& peers) -> std::shared_ptr<cocaine::vicodyn::peer_t> = 0;
+    using category_type = balancer_t;
 
     virtual
-    auto choose_intercept_peer(const cocaine::vicodyn::peers_t& peers) -> std::shared_ptr<cocaine::vicodyn::peer_t> = 0;
+    ~balancer_t() = default;
+
+    balancer_t(context_t& context, asio::io_service& io_service, const std::string& app_name, const dynamic_t& conf);
 
     virtual
-    auto rebalance_peers(const cocaine::vicodyn::peers_t& peers) -> void = 0;
+    auto choose_peer(synchronized<cocaine::vicodyn::proxy_t::mapping_t>& mapping, const hpack::headers_t& headers,
+                     const std::string& event) -> std::shared_ptr<cocaine::vicodyn::peer_t> = 0;
+
+    virtual
+    auto retry_count() -> size_t = 0;
+
+    virtual
+    auto on_error(std::error_code ec, const std::string& msg) -> void = 0;
+
+    virtual
+    auto is_recoverable(std::error_code ec, std::shared_ptr<cocaine::vicodyn::peer_t> peer) -> bool = 0;
 };
-
-typedef std::shared_ptr<balancer_t> balancer_ptr;
-
-auto balancer(context_t& context, asio::io_service& io_service, const dynamic_t& balancer_args, const std::string& service_name)
-        -> balancer_ptr;
 
 } // namespace peer
 } // namespace api

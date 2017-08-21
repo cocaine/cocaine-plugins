@@ -1,14 +1,15 @@
 #pragma once
 
-#include "cocaine/vicodyn/debug.hpp"
+#include <memory>
 
 namespace cocaine {
 namespace api {
-namespace peer {
+namespace vicodyn {
 
-class pool_t;
+    class balancer_t;
+    using balancer_ptr = std::shared_ptr<balancer_t>;
 
-} // namespace peer
+} // namespace vicodyn
 } // namespace api
 } // namespace cocaine
 
@@ -20,47 +21,11 @@ class vicodyn_t;
 } // namespace service
 } // namespace cocaine
 
-
 namespace cocaine {
 namespace vicodyn {
-namespace proxy {
 
-struct appendable_t;
 class dispatch_t;
 
-} // namespace proxy
-} // namespace vicodyn
-} // namespace cocaine
-
-namespace cocaine {
-namespace vicodyn {
-namespace queue {
-
-class invocation_t;
-class send_t;
-
-} // namespace queue
-} // namespace vicodyn
-} // namespace cocaine
-
-namespace cocaine {
-namespace vicodyn {
-namespace stream {
-
-class wrapper_t;
-
-} // namespace stream
-} // namespace vicodyn
-} // namespace cocaine
-
-namespace cocaine {
-namespace vicodyn {
-namespace proxy {
-
-struct appendable_t;
-class dispatch_t;
-
-} // namespace proxy
 } // namespace vicodyn
 } // namespace cocaine
 
@@ -70,17 +35,6 @@ namespace vicodyn {
 class invocation_t;
 class proxy_t;
 class peer_t;
-class peers_t;
-class stream_t;
-class session_t;
-using stream_ptr_t = std::shared_ptr<stream_t>;
 
 } // namespace vicodyn
 } // namespace cocaine
-
-namespace msgpack {
-
-class unpacked;
-struct object;
-
-} // namespace msgpack
