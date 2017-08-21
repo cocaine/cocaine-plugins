@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.15) unstable; urgency=low
+
+  * Refact: vicodyn supports only app protocol and multiplexing.
+
+ -- Anton Matveenko <antmat@me.com>  Mon, 21 Aug 2017 12:26:26 +0300
+
 cocaine-plugins (0.12.14.14) unstable; urgency=low
 
   * Fixed: unicorn dead lock during watch cancellation.
