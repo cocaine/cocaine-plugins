@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.16) unstable; urgency=low
+
+  * Added: resource sharing plugin.
+
+ -- Evgeny Safronov <division494@gmail.com>  Mon, 28 Aug 2017 16:39:42 +0300
+
 cocaine-plugins (0.12.14.15) unstable; urgency=low
 
   * Refact: vicodyn supports only app protocol and multiplexing.
