@@ -64,6 +64,7 @@ class uniresis_t::updater_t : public std::enable_shared_from_this<uniresis_t::up
     uniresis::resources_t resources;
     std::shared_ptr<api::unicorn_t> unicorn;
     api::unicorn_scope_ptr scope;
+    api::unicorn_scope_ptr subscope;
     executor::owning_asio_t executor;
     asio::deadline_timer timer;
     std::shared_ptr<logging::logger_t> log;
@@ -79,6 +80,7 @@ public:
         resources(std::move(resources)),
         unicorn(std::move(unicorn)),
         scope(),
+        subscope(),
         executor(),
         timer(executor.asio()),
         log(std::move(log))
@@ -137,6 +139,7 @@ private:
 
             if (created) {
                 COCAINE_LOG_INFO(log, "registered machine's resources on `{}` path", path);
+                subscribe();
             } else {
                 COCAINE_LOG_ERROR(log, "failed to create `{}` node: already exists", path);
                 notify_later();
@@ -147,6 +150,32 @@ private:
         } catch (const std::exception& err) {
             COCAINE_LOG_ERROR(log, "failed to create `{}` node: {}", path, err.what());
             notify_later();
+        }
+    }
+
+    auto
+    subscribe() -> void {
+        COCAINE_LOG_DEBUG(log, "schedule resource node subscription on `{}` ...", path);
+        scope = unicorn->subscribe(
+            std::bind(&updater_t::on_subscribe, shared_from_this(), ph::_1),
+            path
+        );
+    }
+
+    auto
+    on_subscribe(std::future<unicorn::versioned_value_t> future) -> void {
+        COCAINE_LOG_DEBUG(log, "received node update on `{}` path", path);
+
+        try {
+            auto value = future.get();
+            if (value.version() == 0) {
+                return;
+            }
+
+            COCAINE_LOG_WARNING(log, "received node update on `{}`, but it shouldn't", path);
+        } catch (const std::exception& err) {
+            COCAINE_LOG_ERROR(log, "failed to hold subscription on `{}` node: {}", path, err.what());
+            notify();
         }
     }
 };
