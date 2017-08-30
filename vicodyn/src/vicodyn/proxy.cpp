@@ -56,13 +56,14 @@ class forward_dispatch_t : public dispatch<app_tag>, public std::enable_shared_f
     synchronized<data_t> d;
 
 public:
-    forward_dispatch_t(proxy_t& proxy, const std::string& name, upstream<app_tag> backward_stream, std::shared_ptr<peer_t> _peer) :
+    forward_dispatch_t(proxy_t& _proxy, const std::string& name, upstream<app_tag> backward_stream, std::shared_ptr<peer_t> _peer) :
         dispatch(name),
-        proxy(proxy),
+        proxy(_proxy),
         peer(std::move(_peer)),
         d(std::move(backward_stream))
     {
         on<protocol::chunk>().execute([this](const hpack::headers_t& headers, std::string chunk){
+            COCAINE_LOG_DEBUG(proxy.logger, "processing chunk in");
             d.apply([&](data_t& d){
                 try {
                     d.chunks.push_back(chunk);
@@ -75,6 +76,7 @@ public:
         });
 
         on<protocol::choke>().execute([this](const hpack::headers_t& headers){
+            COCAINE_LOG_DEBUG(proxy.logger, "processing choke");
             d.apply([&](data_t& d){
                 try {
                     d.choke_sent = true;
@@ -87,6 +89,7 @@ public:
         });
 
         on<protocol::error>().execute([this](const hpack::headers_t& headers, std::error_code ec, std::string msg){
+            COCAINE_LOG_DEBUG(proxy.logger, "processing error");
             d.apply([&](data_t& d){
                 d.buffering_enabled = false;
                 try {
@@ -111,6 +114,7 @@ public:
     }
 
     auto disable_buffering(data_t& d) -> void {
+        COCAINE_LOG_DEBUG(proxy.logger, "disabling buffernig");
         d.buffering_enabled = false;
         d.enqueue_frame.clear();
         d.enqueue_headers.clear();
@@ -119,6 +123,7 @@ public:
     }
 
     auto send_discard_frame() -> void {
+        COCAINE_LOG_DEBUG(proxy.logger, "sending discard frame");
         d.apply([&](data_t& d) {
             try {
                 auto ec = make_error_code(error::dispatch_errors::not_connected);
@@ -130,6 +135,7 @@ public:
     }
 
     auto enqueue(const hpack::headers_t& headers, std::string event) -> void {
+        COCAINE_LOG_DEBUG(proxy.logger, "processing enqueue");
         d.apply([&](data_t& d){
             try {
                 d.enqueue_frame = std::move(event);
@@ -144,25 +150,27 @@ public:
     auto retry() -> void;
 
     auto on_error(std::error_code ec, const std::string& msg) -> void {
-        return proxy.balancer->on_error(ec, msg);
+        return proxy.balancer->on_error(peer, ec, msg);
     }
 
     auto is_recoverable(std::error_code ec) -> bool {
-        return proxy.balancer->is_recoverable(ec, peer);
+        return proxy.balancer->is_recoverable(peer, ec);
     }
 };
 
 class backward_dispatch_t : public dispatch<app_tag> {
     using protocol = io::protocol<app_tag>::scope;
 
+    proxy_t& proxy;
     upstream<app_tag> backward_stream;
     std::shared_ptr<forward_dispatch_t> forward_dispatch;
 
 public:
-    backward_dispatch_t(const std::string& name, upstream<app_tag> back_stream,
+    backward_dispatch_t(const std::string& name, proxy_t& _proxy, upstream<app_tag> back_stream,
                         std::shared_ptr<forward_dispatch_t> f_dispatch
     ):
         dispatch(name),
+        proxy(_proxy),
         backward_stream(std::move(back_stream)),
         forward_dispatch(std::move(f_dispatch))
     {
@@ -176,6 +184,7 @@ public:
         });
 
         on<protocol::error>().execute([this](const hpack::headers_t& headers, std::error_code ec, std::string msg) mutable {
+            COCAINE_LOG_WARNING(proxy.logger, "received error from peer {}({}) - {}", ec.message(), ec.value(), msg);
             forward_dispatch->on_error(ec, msg);
             if(forward_dispatch->is_recoverable(ec)) {
                 try {
@@ -209,6 +218,7 @@ public:
 };
 
 auto forward_dispatch_t::retry() -> void {
+    COCAINE_LOG_DEBUG(proxy.logger, "retrying");
     d.apply([&](data_t& d){
         d.retry_counter++;
         if(!d.buffering_enabled) {
@@ -219,7 +229,7 @@ auto forward_dispatch_t::retry() -> void {
         }
         peer = proxy.choose_peer(d.enqueue_headers, d.enqueue_frame);
         auto dispatch_name = format("{}/{}/streaming/backward", proxy.name(), d.enqueue_frame);
-        auto backward_dispatch = std::make_shared<backward_dispatch_t>(dispatch_name, d.backward_stream, shared_from_this());
+        auto backward_dispatch = std::make_shared<backward_dispatch_t>(dispatch_name, proxy, d.backward_stream, shared_from_this());
         d.forward_stream = peer->open_stream(std::move(backward_dispatch));
         d.forward_stream->send<io::node::enqueue>(d.enqueue_headers, proxy.app_name, d.enqueue_frame);
         for(size_t i = 0; i < d.chunks.size(); i++) {
@@ -235,16 +245,18 @@ auto proxy_t::make_balancer(const dynamic_t& args) -> api::vicodyn::balancer_ptr
     auto balancer_conf = args.as_object().at("balancer", dynamic_t::empty_object);
     auto name = balancer_conf.as_object().at("type", "simple").as_string();
     auto balancer_args = balancer_conf.as_object().at("args", dynamic_t::empty_object).as_object();
-    return context.repository().get<api::vicodyn::balancer_t>(name, context, executor.asio(), app_name, balancer_args);
+    return context.repository().get<api::vicodyn::balancer_t>(name, context, peers, executor.asio(), app_name, balancer_args);
 }
 
-proxy_t::proxy_t(context_t& context, const std::string& name, const dynamic_t& args) :
+proxy_t::proxy_t(context_t& context, peers_t& peers, const std::string& name, const dynamic_t& args) :
     dispatch(name),
     context(context),
+    peers(peers),
     app_name(name.substr(sizeof("virtual::") - 1)),
     balancer(make_balancer(args)),
     logger(context.log(name))
 {
+    COCAINE_LOG_DEBUG(logger, "createed proxy for app {}", app_name);
     on<event_t>([&](const hpack::headers_t& headers, slot_t::tuple_type&& args, slot_t::upstream_type&& backward_stream){
         auto event = std::get<0>(args);
         try {
@@ -253,13 +265,14 @@ proxy_t::proxy_t(context_t& context, const std::string& name, const dynamic_t& a
             auto forward_dispatch = std::make_shared<forward_dispatch_t>(*this, dispatch_name, backward_stream, peer);
 
             dispatch_name = format("{}/{}/streaming/backward", this->name(), event);
-            auto backward_dispatch = std::make_shared<backward_dispatch_t>(dispatch_name, backward_stream,
+            auto backward_dispatch = std::make_shared<backward_dispatch_t>(dispatch_name, *this, backward_stream,
                                                                            forward_dispatch);
             auto forward_stream = peer->open_stream(backward_dispatch);
             forward_dispatch->attach(forward_stream);
             forward_dispatch->enqueue(headers, event);
             return result_t(forward_dispatch);
         } catch (const std::system_error& e) {
+            COCAINE_LOG_WARNING(logger, "could not process enqueue - {}", error::to_string(e));
             backward_stream.send<app_protocol::error>(e.code(), e.what());
             auto dispatch = std::make_shared<slot_t::dispatch_type>(format("{}/{}/empty", app_name, event));
             dispatch->on<app_protocol::error>([this](std::error_code, std::string){});
@@ -271,50 +284,34 @@ proxy_t::proxy_t(context_t& context, const std::string& name, const dynamic_t& a
 }
 
 auto proxy_t::choose_peer(const hpack::headers_t& headers, const std::string& event) -> std::shared_ptr<peer_t> {
-    return balancer->choose_peer(mapping, headers, event);
-}
-
-auto proxy_t::register_node(const std::string& uuid, std::vector<asio::ip::tcp::endpoint> endpoints) -> void {
-    mapping.apply([&](mapping_t& mapping){
-        auto peer = std::make_shared<peer_t>(context, name(), executor.asio(), std::move(endpoints), uuid);
-        peer->connect();
-        mapping.node_peers[uuid] = std::move(peer);
-    });
-}
-
-auto proxy_t::deregister_node(const std::string& uuid) -> void {
-    mapping.apply([&](mapping_t& mapping){
-        mapping.node_peers.erase(uuid);
-    });
+    return balancer->choose_peer(headers, event);
 }
 
 auto proxy_t::register_real(std::string uuid) -> void {
-    mapping.apply([&](mapping_t& mapping){
-        auto it = std::find(mapping.peers_with_app.begin(), mapping.peers_with_app.end(), uuid);
-        if(it == mapping.peers_with_app.end()) {
-            mapping.peers_with_app.push_back(std::move(uuid));
+    peers_with_app.apply([&](std::vector<std::string>& active){
+        auto it = std::find(active.begin(), active.end(), uuid);
+        if(it == active.end()) {
+            active.push_back(std::move(uuid));
         }
     });
 }
 
 auto proxy_t::deregister_real(const std::string& uuid) -> void {
-    mapping.apply([&](mapping_t& mapping){
-        auto it = std::find(mapping.peers_with_app.begin(), mapping.peers_with_app.end(), uuid);
-        if(it != mapping.peers_with_app.end()) {
-            mapping.peers_with_app.erase(it);
-        }
+    peers_with_app.apply([&](std::vector<std::string>& active){
+        auto it = std::remove(active.begin(), active.end(), uuid);
+        active.resize(it - active.begin());
     });
 }
 
 auto proxy_t::empty() -> bool {
-    return mapping.apply([&](mapping_t& mapping){
-        return mapping.peers_with_app.empty();
+    return peers_with_app.apply([&](std::vector<std::string>& active){
+        return active.empty();
     });
 }
 
 auto proxy_t::size() -> size_t {
-    return mapping.apply([&](mapping_t& mapping){
-        return mapping.peers_with_app.size();
+    return peers_with_app.apply([&](std::vector<std::string>& active){
+        return active.size();
     });
 }
 

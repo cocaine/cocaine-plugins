@@ -1,7 +1,9 @@
 #pragma once
 
 #include "cocaine/vicodyn/forwards.hpp"
+#include "cocaine/vicodyn/peer.hpp"
 
+#include <cocaine/executor/asio.hpp>
 #include <cocaine/api/cluster.hpp>
 #include <cocaine/api/gateway.hpp>
 #include <cocaine/api/service.hpp>
@@ -21,6 +23,8 @@ namespace gateway {
 
 class vicodyn_t : public api::gateway_t {
 public:
+    using endpoints_t = std::vector<asio::ip::tcp::endpoint>;
+
     vicodyn_t(context_t& context, const std::string& local_uuid, const std::string& name, const dynamic_t& args);
     ~vicodyn_t();
 
@@ -46,7 +50,7 @@ public:
     auto consume(const std::string& uuid,
                  const std::string& name,
                  unsigned int version,
-                 const std::vector<asio::ip::tcp::endpoint>& endpoints,
+                 const endpoints_t& endpoints,
                  const io::graph_root_t& protocol) -> void override;
 
     auto cleanup(const std::string& uuid, const std::string& name) -> void override;
@@ -59,20 +63,15 @@ private:
     using uuid_t = std::string;
     using app_name_t = std::string;
     using proxy_map_t = std::map<app_name_t, proxy_description_t>;
-    using node_map_t = std::map<uuid_t, std::vector<asio::ip::tcp::endpoint>>;
-
-    struct mapping_t {
-        proxy_map_t proxy_map;
-        node_map_t node_map;
-    };
 
     auto cleanup(proxy_map_t& map, proxy_map_t::iterator it, const std::string uuid) -> proxy_map_t::iterator;
 
     context_t& context;
+    vicodyn::peers_t peers;
     dynamic_t args;
     std::string local_uuid;
     std::unique_ptr<logging::logger_t> logger;
-    synchronized<mapping_t> mapping;
+    synchronized<proxy_map_t> mapping;
 };
 
 } // namespace gateway

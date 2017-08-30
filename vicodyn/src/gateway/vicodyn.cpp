@@ -43,6 +43,7 @@ auto vicodyn_t::proxy_description_t::version() const -> unsigned int {
 vicodyn_t::vicodyn_t(context_t& _context, const std::string& _local_uuid, const std::string& name, const dynamic_t& args) :
     gateway_t(_context, _local_uuid, name, args),
     context(_context),
+    peers(context),
     args(args),
     local_uuid(_local_uuid),
     logger(context.log(name))
@@ -52,11 +53,11 @@ vicodyn_t::vicodyn_t(context_t& _context, const std::string& _local_uuid, const 
 
 vicodyn_t::~vicodyn_t() {
     COCAINE_LOG_DEBUG(logger, "shutting down vicodyn gateway");
-    for (auto& proxy_pair: mapping.unsafe().proxy_map) {
+    for (auto& proxy_pair: mapping.unsafe()) {
         proxy_pair.second.actor->terminate();
         COCAINE_LOG_INFO(logger, "stopped {} virtual service", proxy_pair.first);
     }
-    mapping.unsafe().proxy_map.clear();
+    mapping.unsafe().clear();
 }
 
 auto vicodyn_t::resolve(const std::string& name) const -> service_description_t {
@@ -68,9 +69,9 @@ auto vicodyn_t::resolve(const std::string& name) const -> service_description_t 
         return service_description_t {local->endpoints, local->prototype->root(), version};
     }
 
-    return mapping.apply([&](const mapping_t& mapping){
-        auto it = mapping.proxy_map.find(name);
-        if(it == mapping.proxy_map.end()) {
+    return mapping.apply([&](const proxy_map_t& mapping){
+        auto it = mapping.find(name);
+        if(it == mapping.end()) {
             throw error_t(error::service_not_available, "service {} not found in vicodyn", name);
         }
         return service_description_t{it->second.endpoints(), it->second.protocol(), it->second.version()};
@@ -86,29 +87,21 @@ auto vicodyn_t::consume(const std::string& uuid,
     COCAINE_LOG_DEBUG(logger, "exposing {} service to vicodyn", name);
     static const io::graph_root_t node_protocol = io::traverse<io::node_tag>().get();
     static const io::graph_root_t app_protocol = io::traverse<io::app_tag>().get();
-    mapping.apply([&](mapping_t& mapping){
+    mapping.apply([&](proxy_map_t& mapping){
         if(protocol == node_protocol) {
             COCAINE_LOG_INFO(logger, "registering node service {} with uuid {}", name, uuid);
-            mapping.node_map[uuid] = endpoints;
-            for(auto& proxy_pair: mapping.proxy_map) {
-                proxy_pair.second.proxy.register_node(uuid, endpoints);
-            }
+            peers.register_peer(uuid, endpoints);
         } else if (protocol == app_protocol) {
-            auto it = mapping.proxy_map.find(name);
-            if(it != mapping.proxy_map.end()) {
-                it->second.proxy.register_real(uuid);
-                COCAINE_LOG_INFO(logger, "registered real in existing {} virtual service", name);
-            } else {
-                auto proxy = std::make_unique<vicodyn::proxy_t>(context, "virtual::" + name, args);
-                proxy->register_real(uuid);
-                auto node_it = mapping.node_map.find(uuid);
-                if(node_it != mapping.node_map.end()) {
-                    proxy->register_node(uuid, node_it->second);
-                }
+            COCAINE_LOG_INFO(logger, "registering app {} on uuid {}", name, uuid);
+            peers.register_app(uuid, name);
+            auto it = mapping.find(name);
+            if(it == mapping.end()) {
+                auto proxy = std::make_unique<vicodyn::proxy_t>(context, peers, "virtual::" + name, args);
                 auto& proxy_ref = *proxy;
+                proxy->register_real(uuid);
                 auto actor = std::make_unique<tcp_actor_t>(context, std::move(proxy));
                 actor->run();
-                mapping.proxy_map.emplace(name, proxy_description_t(std::move(actor), proxy_ref));
+                mapping.emplace(name, proxy_description_t(std::move(actor), proxy_ref));
                 COCAINE_LOG_INFO(logger, "created new virtual service {}", name);
             }
         } else {
@@ -119,33 +112,41 @@ auto vicodyn_t::consume(const std::string& uuid,
 }
 
 auto vicodyn_t::cleanup(const std::string& uuid, const std::string& name) -> void {
-    mapping.apply([&](mapping_t& mapping){
-        if(name == "node") {
-            for(auto& proxy_pair: mapping.proxy_map) {
-                proxy_pair.second.proxy.deregister_node(uuid);
-            }
-        } else {
-            auto it = mapping.proxy_map.find(name);
-            if(it != mapping.proxy_map.end()) {
+    if(name == "node") {
+        peers.erase_peer(uuid);
+    } else {
+        peers.erase_app(uuid, name);
+        mapping.apply([&](proxy_map_t& mapping){
+            auto it = mapping.find(name);
+            if(it != mapping.end()) {
                 it->second.proxy.deregister_real(uuid);
+                if(it->second.proxy.empty()) {
+                    it->second.actor->terminate();
+                    mapping.erase(it);
+                }
             }
-        }
-    });
+        });
+    }
 }
 
 auto vicodyn_t::cleanup(const std::string& uuid) -> void {
-    mapping.apply([&](mapping_t& mapping){
-        for(auto& proxy_pair: mapping.proxy_map) {
-            proxy_pair.second.proxy.deregister_node(uuid);
-            proxy_pair.second.proxy.deregister_real(uuid);
+    peers.erase(uuid);
+    mapping.apply([&](proxy_map_t& mapping){
+        for(auto it = mapping.begin(); it != mapping.end();) {
+            if(it->second.proxy.empty()) {
+                it->second.actor->terminate();
+                mapping.erase(it);
+            } else {
+                it++;
+            }
         }
     });
 }
 
 auto vicodyn_t::total_count(const std::string& name) const -> size_t {
-    return mapping.apply([&](const mapping_t& mapping) -> size_t {
-        auto it = mapping.proxy_map.find(name);
-        if(it == mapping.proxy_map.end()) {
+    return mapping.apply([&](const proxy_map_t& mapping) -> size_t {
+        auto it = mapping.find(name);
+        if(it == mapping.end()) {
             return 0u;
         }
         return it->second.proxy.size();

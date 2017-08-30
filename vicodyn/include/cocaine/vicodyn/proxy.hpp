@@ -20,19 +20,12 @@ public:
     using slot_t = io::basic_slot<event_t>;
     using result_t = io::basic_slot<event_t>::result_type;
     using app_protocol = io::protocol<io::stream_of<std::string>::tag>::scope;
+    using active_peers_t = std::vector<std::string>;
 
     friend class forward_dispatch_t;
+    friend class backward_dispatch_t;
 
-    struct mapping_t {
-        std::map<std::string, std::shared_ptr<peer_t>> node_peers;
-        std::vector<std::string> peers_with_app;
-    };
-
-    proxy_t(context_t& context, const std::string& name, const dynamic_t& args);
-
-    auto register_node(const std::string& uuid, std::vector<asio::ip::tcp::endpoint> endpoints) -> void;
-
-    auto deregister_node(const std::string& uuid) -> void;
+    proxy_t(context_t& context, peers_t& peers, const std::string& name, const dynamic_t& args);
 
     auto register_real(std::string uuid) -> void;
 
@@ -49,13 +42,15 @@ private:
     auto make_balancer(const dynamic_t& args) -> api::vicodyn::balancer_ptr;
 
     context_t& context;
+    peers_t& peers;
     std::string app_name;
     executor::owning_asio_t executor;
     api::vicodyn::balancer_ptr balancer;
 
     const std::unique_ptr<logging::logger_t> logger;
 
-    synchronized<mapping_t> mapping;
+
+    synchronized<active_peers_t> peers_with_app;
 };
 
 } // namespace vicodyn

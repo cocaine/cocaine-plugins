@@ -6,24 +6,29 @@
 
 #include <cocaine/errors.hpp>
 
+#include <blackhole/logger.hpp>
+
 namespace cocaine {
 namespace vicodyn {
 namespace balancer {
 
 class simple_t: public api::vicodyn::balancer_t {
+    peers_t& peers;
+    std::unique_ptr<logging::logger_t> logger;
     dynamic_t args;
+    std::string app_name;
 
 public:
-    simple_t(context_t& ctx, asio::io_service& loop, const std::string& app_name, const dynamic_t& args);
+    simple_t(context_t& ctx, peers_t& peers, asio::io_service& loop, const std::string& app_name, const dynamic_t& args);
 
-    auto choose_peer(synchronized<proxy_t::mapping_t>& mapping, const hpack::headers_t& /*headers*/,
-                     const std::string& /*event*/) -> std::shared_ptr<cocaine::vicodyn::peer_t> override;
+    auto choose_peer(const hpack::headers_t& /*headers*/, const std::string& /*event*/)
+        -> std::shared_ptr<cocaine::vicodyn::peer_t> override;
 
     auto retry_count() -> size_t override;
 
-    auto on_error(std::error_code, const std::string&) -> void override;
+    auto on_error(std::shared_ptr<peer_t>, std::error_code, const std::string&) -> void override;
 
-    auto is_recoverable(std::error_code ec, std::shared_ptr<peer_t> peer) -> bool override;
+    auto is_recoverable(std::shared_ptr<peer_t>, std::error_code ec) -> bool override;
 
 };
 

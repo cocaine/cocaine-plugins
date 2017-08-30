@@ -31,16 +31,16 @@ struct category_traits<vicodyn::balancer_t> {
 
     struct factory_type : public basic_factory<vicodyn::balancer_t> {
         virtual
-        auto get(context_t& context, asio::io_service& io_context, const std::string& name, const dynamic_t& args)
-            -> ptr_type = 0;
+        auto get(context_t& context, cocaine::vicodyn::peers_t& peers, asio::io_service& io_context,
+                 const std::string& name, const dynamic_t& args) -> ptr_type = 0;
     };
 
     template<class T>
     struct default_factory : public factory_type {
-        auto get(context_t& context, asio::io_service& io_context, const std::string& name, const dynamic_t& args)
-        -> ptr_type override
+        auto get(context_t& context, cocaine::vicodyn::peers_t& peers, asio::io_service& io_context,
+                 const std::string& name, const dynamic_t& args) -> ptr_type override
         {
-            return ptr_type(new T(context, io_context, name, args));
+            return ptr_type(new T(context, peers, io_context, name, args));
         }
     };
 };
