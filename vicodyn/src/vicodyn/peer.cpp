@@ -38,7 +38,7 @@ peer_t::peer_t(context_t& context, asio::io_service& loop, endpoints_t endpoints
     timer(loop),
     logger(context.log(format("vicodyn_peer/{}", uuid))),
     connecting(),
-    d({std::move(uuid), std::move(endpoints)})
+    d({std::move(uuid), std::move(endpoints), std::chrono::system_clock::now()})
 {}
 
 auto peer_t::open_stream(std::shared_ptr<io::basic_dispatch_t> dispatch) -> io::upstream_ptr_t {
@@ -202,6 +202,26 @@ auto peers_t::erase(const std::string& uuid) -> void {
 
 auto peers_t::inner() -> synchronized<data_t>& {
     return data;
+}
+
+auto peers_t::peer(const std::string& uuid) -> std::shared_ptr<peer_t> {
+    return data.apply([&](data_t& data) -> std::shared_ptr<peer_t>{
+        auto it = data.peers.find(uuid);
+        if (it != data.peers.end()) {
+            return it->second;
+        }
+        return nullptr;
+    });
+}
+
+auto peers_t::apps(const std::string& uuid) -> std::vector<std::string> {
+    return data.apply([&](data_t& data){
+        auto it = data.apps.find(uuid);
+        if(it != data.apps.end()) {
+            return it->second;
+        }
+        return std::vector<std::string>();
+    });
 }
 
 } // namespace vicodyn

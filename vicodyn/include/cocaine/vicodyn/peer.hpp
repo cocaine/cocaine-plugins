@@ -92,6 +92,10 @@ public:
     auto erase(const std::string& uuid) -> void;
 
     auto inner() -> synchronized<data_t>&;
+
+    auto peer(const std::string& uuid) -> std::shared_ptr<peer_t>;
+
+    auto apps(const std::string& uuid) -> std::vector<std::string>;
 };
 
 } // namespace vicodyn
