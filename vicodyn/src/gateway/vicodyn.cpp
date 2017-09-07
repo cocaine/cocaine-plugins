@@ -8,9 +8,13 @@
 #include <cocaine/context/quote.hpp>
 #include <cocaine/context/signal.hpp>
 #include <cocaine/dynamic.hpp>
+#include <cocaine/format/endpoint.hpp>
+#include <cocaine/format/vector.hpp>
 #include <cocaine/idl/context.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/memory.hpp>
+#include <cocaine/repository.hpp>
+#include <cocaine/repository/gateway.hpp>
 #include <cocaine/rpc/actor.hpp>
 #include <cocaine/traits/endpoint.hpp>
 #include <cocaine/traits/vector.hpp>
@@ -40,15 +44,24 @@ auto vicodyn_t::proxy_description_t::version() const -> unsigned int {
     return proxy.version();
 }
 
+auto vicodyn_t::create_wrapped_gateway() -> void {
+    auto wrapped_conf = args.as_object().at("wrapped", dynamic_t::empty_object).as_object();
+    auto wrapped_name = wrapped_conf.at("type", "adhoc").as_string();
+    auto wrapped_args = wrapped_conf.at("args", dynamic_t::empty_object);
+    wrapped_gateway = context.repository().get<gateway_t>(wrapped_name, context, local_uuid, "vicodyn/wrapped", wrapped_args);
+}
+
 vicodyn_t::vicodyn_t(context_t& _context, const std::string& _local_uuid, const std::string& name, const dynamic_t& args) :
     gateway_t(_context, _local_uuid, name, args),
     context(_context),
+    wrapped_gateway(),
     peers(context),
     args(args),
     local_uuid(_local_uuid),
-    logger(context.log(name))
+    logger(context.log(format("gateway/{}", name)))
 {
-    COCAINE_LOG_DEBUG(logger, "creating vicodyn service for  {} with local uuid {}", name, local_uuid);
+    create_wrapped_gateway();
+    COCAINE_LOG_DEBUG(logger, "creatied vicodyn service for  {} with local uuid {}", name, local_uuid);
 }
 
 vicodyn_t::~vicodyn_t() {
@@ -64,7 +77,7 @@ auto vicodyn_t::resolve(const std::string& name) const -> service_description_t 
     static const io::graph_root_t app_root = io::traverse<io::app_tag>().get();
     const auto local = context.locate(name);
     if(local && local->prototype->root() != app_root) {
-        COCAINE_LOG_DEBUG(logger, "providing local non application service");
+        COCAINE_LOG_DEBUG(logger, "providing local non-app service");
         auto version = static_cast<unsigned int>(local->prototype->version());
         return service_description_t {local->endpoints, local->prototype->root(), version};
     }
@@ -72,54 +85,57 @@ auto vicodyn_t::resolve(const std::string& name) const -> service_description_t 
     return mapping.apply([&](const proxy_map_t& mapping){
         auto it = mapping.find(name);
         if(it == mapping.end()) {
-            throw error_t(error::service_not_available, "service {} not found in vicodyn", name);
+            COCAINE_LOG_INFO(logger, "resolving non-app service via wrapped gateway");
+            return wrapped_gateway->resolve(name);
         }
+        COCAINE_LOG_INFO(logger, "providing virtual app service {} on {}", name, it->second.endpoints());
         return service_description_t{it->second.endpoints(), it->second.protocol(), it->second.version()};
     });
 }
 
 auto vicodyn_t::consume(const std::string& uuid,
                         const std::string& name,
-                        unsigned int,
+                        unsigned int version,
                         const std::vector<asio::ip::tcp::endpoint>& endpoints,
                         const io::graph_root_t& protocol) -> void
 {
-    COCAINE_LOG_DEBUG(logger, "exposing {} service to vicodyn", name);
     static const io::graph_root_t node_protocol = io::traverse<io::node_tag>().get();
     static const io::graph_root_t app_protocol = io::traverse<io::app_tag>().get();
     mapping.apply([&](proxy_map_t& mapping){
         if(protocol == node_protocol) {
-            COCAINE_LOG_INFO(logger, "registering node service {} with uuid {}", name, uuid);
             peers.register_peer(uuid, endpoints);
+            COCAINE_LOG_INFO(logger, "registered node service {} with uuid {}", name, uuid);
         } else if (protocol == app_protocol) {
-            COCAINE_LOG_INFO(logger, "registering app {} on uuid {}", name, uuid);
             peers.register_app(uuid, name);
             auto it = mapping.find(name);
             if(it == mapping.end()) {
                 auto proxy = std::make_unique<vicodyn::proxy_t>(context, peers, "virtual::" + name, args);
                 auto& proxy_ref = *proxy;
-                proxy->register_real(uuid);
                 auto actor = std::make_unique<tcp_actor_t>(context, std::move(proxy));
                 actor->run();
                 mapping.emplace(name, proxy_description_t(std::move(actor), proxy_ref));
                 COCAINE_LOG_INFO(logger, "created new virtual service {}", name);
+            } else {
+                COCAINE_LOG_INFO(logger, "registered app {} on uuid {} in existing virtual service", name, uuid);
             }
         } else {
-            COCAINE_LOG_INFO(logger, "unsupported protocol service {}", name);
+            COCAINE_LOG_INFO(logger, "delegating unknown protocol service {} to wrapped gateway", name);
+            wrapped_gateway->consume(uuid, name, version, endpoints, protocol);
             return;
         }
     });
+    COCAINE_LOG_INFO(logger, "exposed {} service to vicodyn", name);
 }
 
 auto vicodyn_t::cleanup(const std::string& uuid, const std::string& name) -> void {
     if(name == "node") {
         peers.erase_peer(uuid);
+        COCAINE_LOG_INFO(logger, "dropped node service on {}", uuid);
     } else {
         peers.erase_app(uuid, name);
         mapping.apply([&](proxy_map_t& mapping){
             auto it = mapping.find(name);
             if(it != mapping.end()) {
-                it->second.proxy.deregister_real(uuid);
                 if(it->second.proxy.empty()) {
                     it->second.actor->terminate();
                     mapping.erase(it);
@@ -127,6 +143,8 @@ auto vicodyn_t::cleanup(const std::string& uuid, const std::string& name) -> voi
             }
         });
     }
+    wrapped_gateway->cleanup(uuid, name);
+    COCAINE_LOG_INFO(logger, "dropped service {} on {}", name, uuid);
 }
 
 auto vicodyn_t::cleanup(const std::string& uuid) -> void {
@@ -141,13 +159,15 @@ auto vicodyn_t::cleanup(const std::string& uuid) -> void {
             }
         }
     });
+    wrapped_gateway->cleanup(uuid);
+    COCAINE_LOG_INFO(logger, "fully dropped uuid {}", uuid);
 }
 
 auto vicodyn_t::total_count(const std::string& name) const -> size_t {
     return mapping.apply([&](const proxy_map_t& mapping) -> size_t {
         auto it = mapping.find(name);
         if(it == mapping.end()) {
-            return 0u;
+            return wrapped_gateway->total_count(name);
         }
         return it->second.proxy.size();
     });

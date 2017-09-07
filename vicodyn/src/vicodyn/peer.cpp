@@ -99,7 +99,7 @@ auto peer_t::connect() -> void {
             return;
         }
         try {
-            COCAINE_LOG_INFO(logger, "connected peer {} to {}", uuid(), endpoints());
+            COCAINE_LOG_INFO(logger, "suceesfully connected peer {} to {}", uuid(), endpoints());
             auto ptr = std::make_unique<asio::ip::tcp::socket>(std::move(*socket));
             session.apply([&](std::shared_ptr<session_t>& session) {
                 connecting = false;

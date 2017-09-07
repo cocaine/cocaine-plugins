@@ -64,9 +64,11 @@ private:
     using app_name_t = std::string;
     using proxy_map_t = std::map<app_name_t, proxy_description_t>;
 
+    auto create_wrapped_gateway() -> void;
     auto cleanup(proxy_map_t& map, proxy_map_t::iterator it, const std::string uuid) -> proxy_map_t::iterator;
 
     context_t& context;
+    api::gateway_ptr wrapped_gateway;
     vicodyn::peers_t peers;
     dynamic_t args;
     std::string local_uuid;

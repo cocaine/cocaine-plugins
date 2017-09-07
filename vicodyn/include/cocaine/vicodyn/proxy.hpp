@@ -27,10 +27,6 @@ public:
 
     proxy_t(context_t& context, peers_t& peers, const std::string& name, const dynamic_t& args);
 
-    auto register_real(std::string uuid) -> void;
-
-    auto deregister_real(const std::string& uuid) -> void;
-
     auto empty() -> bool;
 
     auto size() -> size_t;
@@ -48,9 +44,6 @@ private:
     api::vicodyn::balancer_ptr balancer;
 
     const std::unique_ptr<logging::logger_t> logger;
-
-
-    synchronized<active_peers_t> peers_with_app;
 };
 
 } // namespace vicodyn

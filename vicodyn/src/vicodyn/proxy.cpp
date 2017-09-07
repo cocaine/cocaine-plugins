@@ -114,12 +114,12 @@ public:
     }
 
     auto disable_buffering(data_t& d) -> void {
-        COCAINE_LOG_DEBUG(proxy.logger, "disabling buffernig");
         d.buffering_enabled = false;
         d.enqueue_frame.clear();
         d.enqueue_headers.clear();
         d.chunk_headers.clear();
         d.chunks.clear();
+        COCAINE_LOG_DEBUG(proxy.logger, "disabled buffernig");
     }
 
     auto send_discard_frame() -> void {
@@ -287,31 +287,23 @@ auto proxy_t::choose_peer(const hpack::headers_t& headers, const std::string& ev
     return balancer->choose_peer(headers, event);
 }
 
-auto proxy_t::register_real(std::string uuid) -> void {
-    peers_with_app.apply([&](std::vector<std::string>& active){
-        auto it = std::find(active.begin(), active.end(), uuid);
-        if(it == active.end()) {
-            active.push_back(std::move(uuid));
-        }
-    });
-}
-
-auto proxy_t::deregister_real(const std::string& uuid) -> void {
-    peers_with_app.apply([&](std::vector<std::string>& active){
-        auto it = std::remove(active.begin(), active.end(), uuid);
-        active.resize(it - active.begin());
-    });
-}
-
 auto proxy_t::empty() -> bool {
-    return peers_with_app.apply([&](std::vector<std::string>& active){
-        return active.empty();
+    return peers.inner().apply([&](peers_t::data_t& data) -> bool {
+        auto it = data.apps.find(app_name);
+        if(it == data.apps.end() || it->second.empty()) {
+            return true;
+        }
+        return false;
     });
 }
 
 auto proxy_t::size() -> size_t {
-    return peers_with_app.apply([&](std::vector<std::string>& active){
-        return active.size();
+    return peers.inner().apply([&](peers_t::data_t& data) -> size_t {
+        auto it = data.apps.find(app_name);
+        if(it == data.apps.end()) {
+            return 0u;
+        }
+        return it->second.size();
     });
 }
 
