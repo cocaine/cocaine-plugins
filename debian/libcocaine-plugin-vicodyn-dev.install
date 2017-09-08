@@ -1,1 +1,5 @@
-usr/include/cocaine/*
+usr/include/cocaine/api/vicodyn/balancer.hpp
+usr/include/cocaine/api/vicodyn/balancer.hpp
+usr/include/cocaine/repository/vicodyn/balancer.hpp
+usr/include/cocaine/format/peer.hpp
+usr/include/cocaine/vicodyn/*

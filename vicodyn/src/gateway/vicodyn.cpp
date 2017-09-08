@@ -101,6 +101,7 @@ auto vicodyn_t::consume(const std::string& uuid,
 {
     static const io::graph_root_t node_protocol = io::traverse<io::node_tag>().get();
     static const io::graph_root_t app_protocol = io::traverse<io::app_tag>().get();
+    wrapped_gateway->consume(uuid, name, version, endpoints, protocol);
     mapping.apply([&](proxy_map_t& mapping){
         if(protocol == node_protocol) {
             peers.register_peer(uuid, endpoints);
@@ -120,7 +121,6 @@ auto vicodyn_t::consume(const std::string& uuid,
             }
         } else {
             COCAINE_LOG_INFO(logger, "delegating unknown protocol service {} to wrapped gateway", name);
-            wrapped_gateway->consume(uuid, name, version, endpoints, protocol);
             return;
         }
     });

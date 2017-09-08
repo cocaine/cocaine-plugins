@@ -4,12 +4,13 @@
 #include "cocaine/repository/vicodyn/balancer.hpp"
 
 #include "cocaine/vicodyn/peer.hpp"
-#include "../../../node/include/cocaine/service/node/slave/error.hpp"
+#include "cocaine/service/node/slave/error.hpp"
 
 #include <cocaine/context.hpp>
 #include <cocaine/dynamic.hpp>
 #include <cocaine/errors.hpp>
 #include <cocaine/format.hpp>
+#include <cocaine/format/exception.hpp>
 #include <cocaine/logging.hpp>
 
 #include <blackhole/logger.hpp>
@@ -213,7 +214,11 @@ public:
     }
 
     auto discard(const std::error_code& ec) -> void override {
-        backward_stream.send<protocol::error>(ec, "vicodyn upstream has been disconnected");
+        try {
+            backward_stream.send<protocol::error>(ec, "vicodyn upstream has been disconnected");
+        } catch (const std::exception& e) {
+            COCAINE_LOG_WARNING(proxy.logger, "could not send error {} to upstream - {}", ec, e);
+        }
     }
 };
 
