@@ -42,6 +42,7 @@
 #include <cocaine/context/config.hpp>
 #include <cocaine/context/filter.hpp>
 #include <cocaine/context/signal.hpp>
+#include <cocaine/format/vector.hpp>
 #include <cocaine/idl/context.hpp>
 #include <cocaine/idl/streaming.hpp>
 #include <cocaine/rpc/slot.hpp>
@@ -239,7 +240,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
 
             try {
                 auto filter_value = filter_future.get();
-                COCAINE_LOG_DEBUG(internal_logger, "received filter update for id {} ", filter_id);
+                COCAINE_LOG_INFO(internal_logger, "received filter update for id {} ", filter_id);
 
                 if(!filter_value.exists()) {
                     remove();
@@ -253,6 +254,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                             auto metafilter = get_metafilter(info.logger_name);
                             auto mf_name = info.logger_name;
                             metafilter->add_filter(std::move(info));
+                            COCAINE_LOG_INFO(internal_logger, "added filter {} to metafilter {} ", filter_id, info.logger_name);
                         }
                     } catch (const std::exception& e) {
                         COCAINE_LOG_ERROR(internal_logger, "can not parse filter value, erasing filter {} from unicorn - {}",
@@ -271,7 +273,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
         auto on_filter_list = safe([=](std::future<response::children_subscribe> future) {
             try {
                 auto filter_ids = std::get<1>(future.get());
-                COCAINE_LOG_DEBUG(internal_logger, "received filter list update, count - {}", filter_ids.size());
+                COCAINE_LOG_INFO(internal_logger, "received filter list update - {}", filter_ids);
                 for(auto& id_str : filter_ids) {
                     uint64_t filter_id;
                     try {
@@ -286,6 +288,9 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                         auto& scope = _scopes[filter_id];
                         if(!scope) {
                             scope = unicorn->subscribe(std::move(cb), filter_path(filter_id));
+                            COCAINE_LOG_INFO(internal_logger, "subscribed on filter {}", filter_id);
+                        } else {
+                            COCAINE_LOG_INFO(internal_logger, "subscribe scope exists for {}", filter_id);
                         }
                     });
                 }
@@ -301,7 +306,7 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
         auto on_create = safe([=](std::future<bool> result) {
             try {
                 result.get();
-                COCAINE_LOG_DEBUG(internal_logger, "created filter path in unicorn");
+                COCAINE_LOG_INFO(internal_logger, "created filter path in unicorn");
             } catch (const std::system_error& e) {
                 if(e.code().value() != error::node_exists) {
                     COCAINE_LOG_ERROR(internal_logger, "failed to create filter in unicorn - {}", error::to_string(e));
@@ -313,15 +318,16 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
                     retry_timer.expires_from_now(boost::posix_time::seconds(retry_time_seconds));
                     return;
                 } else {
-                    COCAINE_LOG_DEBUG(internal_logger, "filter path is already there");
+                    COCAINE_LOG_INFO(internal_logger, "filter path is already there");
                 }
             }
 
             list_scope = unicorn->children_subscribe(on_filter_list, filter_unicorn_path);
+            COCAINE_LOG_INFO(internal_logger, "subscribed on filter folder {}", filter_unicorn_path);
         });
-
         scopes->clear();
         create_scope = unicorn->create(std::move(on_create), filter_unicorn_path, unicorn::value_t(), false, false);
+        COCAINE_LOG_INFO(internal_logger, "restarted filter subscription");
     }
 
 
