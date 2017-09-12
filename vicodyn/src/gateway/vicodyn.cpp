@@ -48,12 +48,14 @@ auto vicodyn_t::create_wrapped_gateway() -> void {
     auto wrapped_conf = args.as_object().at("wrapped", dynamic_t::empty_object).as_object();
     auto wrapped_name = wrapped_conf.at("type", "adhoc").as_string();
     auto wrapped_args = wrapped_conf.at("args", dynamic_t::empty_object);
-    wrapped_gateway = context.repository().get<gateway_t>(wrapped_name, context, local_uuid, "vicodyn/wrapped", wrapped_args);
+    wrapped_gateway = context.repository().get<gateway_t>(wrapped_name, context, local_uuid, "vicodyn/wrapped", wrapped_args, locator_extra);
 }
 
-vicodyn_t::vicodyn_t(context_t& _context, const std::string& _local_uuid, const std::string& name, const dynamic_t& args) :
-    gateway_t(_context, _local_uuid, name, args),
+vicodyn_t::vicodyn_t(context_t& _context, const std::string& _local_uuid, const std::string& name, const dynamic_t& args,
+                     const dynamic_t::object_t& locator_extra) :
+    gateway_t(_context, _local_uuid, name, args, locator_extra),
     context(_context),
+    locator_extra(locator_extra),
     wrapped_gateway(),
     peers(context),
     args(args),
@@ -97,20 +99,21 @@ auto vicodyn_t::consume(const std::string& uuid,
                         const std::string& name,
                         unsigned int version,
                         const std::vector<asio::ip::tcp::endpoint>& endpoints,
-                        const io::graph_root_t& protocol) -> void
+                        const io::graph_root_t& protocol,
+                        const dynamic_t::object_t& extra) -> void
 {
     static const io::graph_root_t node_protocol = io::traverse<io::node_tag>().get();
     static const io::graph_root_t app_protocol = io::traverse<io::app_tag>().get();
-    wrapped_gateway->consume(uuid, name, version, endpoints, protocol);
+    wrapped_gateway->consume(uuid, name, version, endpoints, protocol, extra);
     mapping.apply([&](proxy_map_t& mapping){
         if(protocol == node_protocol) {
-            peers.register_peer(uuid, endpoints);
+            peers.register_peer(uuid, endpoints, extra);
             COCAINE_LOG_INFO(logger, "registered node service {} with uuid {}", name, uuid);
         } else if (protocol == app_protocol) {
             peers.register_app(uuid, name);
             auto it = mapping.find(name);
             if(it == mapping.end()) {
-                auto proxy = std::make_unique<vicodyn::proxy_t>(context, peers, "virtual::" + name, args);
+                auto proxy = std::make_unique<vicodyn::proxy_t>(context, peers, "virtual::" + name, args, extra);
                 auto& proxy_ref = *proxy;
                 auto actor = std::make_unique<tcp_actor_t>(context, std::move(proxy));
                 actor->run();

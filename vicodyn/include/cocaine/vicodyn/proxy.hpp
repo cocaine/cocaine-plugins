@@ -25,7 +25,7 @@ public:
     friend class forward_dispatch_t;
     friend class backward_dispatch_t;
 
-    proxy_t(context_t& context, peers_t& peers, const std::string& name, const dynamic_t& args);
+    proxy_t(context_t& context, peers_t& peers, const std::string& name, const dynamic_t& args, const dynamic_t::object_t& extra);
 
     auto empty() -> bool;
 
@@ -35,7 +35,7 @@ public:
         -> std::shared_ptr<peer_t>;
 
 private:
-    auto make_balancer(const dynamic_t& args) -> api::vicodyn::balancer_ptr;
+    auto make_balancer(const dynamic_t& args, const dynamic_t::object_t& extra) -> api::vicodyn::balancer_ptr;
 
     context_t& context;
     peers_t& peers;

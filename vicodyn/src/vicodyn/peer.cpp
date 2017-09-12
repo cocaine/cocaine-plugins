@@ -32,13 +32,13 @@ peer_t::~peer_t(){
     });
 }
 
-peer_t::peer_t(context_t& context, asio::io_service& loop, endpoints_t endpoints, std::string uuid) :
+peer_t::peer_t(context_t& context, asio::io_service& loop, endpoints_t endpoints, std::string uuid, dynamic_t::object_t extra) :
     context(context),
     loop(loop),
     timer(loop),
     logger(context.log(format("vicodyn_peer/{}", uuid))),
     connecting(),
-    d({std::move(uuid), std::move(endpoints), std::chrono::system_clock::now()})
+    d({std::move(uuid), std::move(endpoints), std::chrono::system_clock::now(), std::move(extra)})
 {}
 
 auto peer_t::open_stream(std::shared_ptr<io::basic_dispatch_t> dispatch) -> io::upstream_ptr_t {
@@ -131,21 +131,28 @@ auto peer_t::last_active() const -> std::chrono::system_clock::time_point {
     return d.last_active;
 }
 
+auto peer_t::extra() const -> const dynamic_t::object_t& {
+    return d.extra;
+}
+
+
 peers_t::peers_t(context_t& context):
     context(context),
     logger(context.log("vicodyn/peers_t"))
 {}
 
-auto peers_t::register_peer(const std::string& uuid, const endpoints_t& endpoints) -> std::shared_ptr<peer_t> {
+auto peers_t::register_peer(const std::string& uuid, const endpoints_t& endpoints, dynamic_t::object_t extra)
+    -> std::shared_ptr<peer_t>
+{
     return data.apply([&](data_t& data){
         auto& peer = data.peers[uuid];
         if(!peer) {
-            peer = std::make_shared<peer_t>(context, executor.asio(), endpoints, uuid);
+            peer = std::make_shared<peer_t>(context, executor.asio(), endpoints, uuid, std::move(extra));
             peer->connect();
         } else if (endpoints != peer->endpoints()) {
             COCAINE_LOG_ERROR(logger, "changed endpoints detected for uuid {}, previous {}, new {}", uuid,
                               peer->endpoints(), endpoints);
-            peer = std::make_shared<peer_t>(context, executor.asio(), endpoints, uuid);
+            peer = std::make_shared<peer_t>(context, executor.asio(), endpoints, uuid, extra);
             peer->connect();
         }
         return peer;

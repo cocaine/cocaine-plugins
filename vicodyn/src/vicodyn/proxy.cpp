@@ -246,19 +246,21 @@ auto forward_dispatch_t::retry() -> void {
     });
 }
 
-auto proxy_t::make_balancer(const dynamic_t& args) -> api::vicodyn::balancer_ptr {
+auto proxy_t::make_balancer(const dynamic_t& args, const dynamic_t::object_t& extra) -> api::vicodyn::balancer_ptr {
     auto balancer_conf = args.as_object().at("balancer", dynamic_t::empty_object);
     auto name = balancer_conf.as_object().at("type", "simple").as_string();
     auto balancer_args = balancer_conf.as_object().at("args", dynamic_t::empty_object).as_object();
-    return context.repository().get<api::vicodyn::balancer_t>(name, context, peers, executor.asio(), app_name, balancer_args);
+    return context.repository().get<api::vicodyn::balancer_t>(name, context, peers, executor.asio(), app_name,
+                                                              balancer_args, extra);
 }
 
-proxy_t::proxy_t(context_t& context, peers_t& peers, const std::string& name, const dynamic_t& args) :
+proxy_t::proxy_t(context_t& context, peers_t& peers, const std::string& name, const dynamic_t& args,
+                 const dynamic_t::object_t& extra) :
     dispatch(name),
     context(context),
     peers(peers),
     app_name(name.substr(sizeof("virtual::") - 1)),
-    balancer(make_balancer(args)),
+    balancer(make_balancer(args, extra)),
     logger(context.log(name))
 {
     COCAINE_LOG_DEBUG(logger, "createed proxy for app {}", app_name);

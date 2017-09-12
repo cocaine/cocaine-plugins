@@ -24,7 +24,7 @@ public:
 
     ~peer_t();
 
-    peer_t(context_t& context, asio::io_service& loop, endpoints_t endpoints, std::string uuid);
+    peer_t(context_t& context, asio::io_service& loop, endpoints_t endpoints, std::string uuid, dynamic_t::object_t extra);
 
     auto open_stream(std::shared_ptr<io::basic_dispatch_t> dispatch) -> io::upstream_ptr_t;
 
@@ -40,6 +40,8 @@ public:
 
     auto last_active() const -> std::chrono::system_clock::time_point;
 
+    auto extra() const -> const dynamic_t::object_t&;
+
 private:
     context_t& context;
     std::string service_name;
@@ -53,6 +55,7 @@ private:
         std::string uuid;
         std::vector<asio::ip::tcp::endpoint> endpoints;
         std::chrono::system_clock::time_point last_active;
+        dynamic_t::object_t extra;
     } d;
 
 };
@@ -80,7 +83,8 @@ private:
 public:
     peers_t(context_t& context);
 
-    auto register_peer(const std::string& uuid, const endpoints_t& endpoints) -> std::shared_ptr<peer_t>;
+    auto register_peer(const std::string& uuid, const endpoints_t& endpoints, dynamic_t::object_t extra) -> std::shared_ptr<peer_t>;
+
     auto register_peer(const std::string& uuid, std::shared_ptr<peer_t> peer) -> void;
 
     auto erase_peer(const std::string& uuid) -> void;

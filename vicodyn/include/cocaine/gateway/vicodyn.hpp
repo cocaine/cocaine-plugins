@@ -25,7 +25,8 @@ class vicodyn_t : public api::gateway_t {
 public:
     using endpoints_t = std::vector<asio::ip::tcp::endpoint>;
 
-    vicodyn_t(context_t& context, const std::string& local_uuid, const std::string& name, const dynamic_t& args);
+    vicodyn_t(context_t& context, const std::string& local_uuid, const std::string& name, const dynamic_t& args,
+              const dynamic_t::object_t& locator_extra);
     ~vicodyn_t();
 
     struct proxy_description_t {
@@ -51,7 +52,8 @@ public:
                  const std::string& name,
                  unsigned int version,
                  const endpoints_t& endpoints,
-                 const io::graph_root_t& protocol) -> void override;
+                 const io::graph_root_t& protocol,
+                 const dynamic_t::object_t& extra) -> void override;
 
     auto cleanup(const std::string& uuid, const std::string& name) -> void override;
 
@@ -68,6 +70,7 @@ private:
     auto cleanup(proxy_map_t& map, proxy_map_t::iterator it, const std::string uuid) -> proxy_map_t::iterator;
 
     context_t& context;
+    dynamic_t::object_t locator_extra;
     api::gateway_ptr wrapped_gateway;
     vicodyn::peers_t peers;
     dynamic_t args;

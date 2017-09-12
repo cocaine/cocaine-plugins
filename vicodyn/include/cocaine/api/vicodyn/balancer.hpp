@@ -19,7 +19,8 @@ public:
     virtual
     ~balancer_t() = default;
 
-    balancer_t(context_t& context, cocaine::vicodyn::peers_t& peers, asio::io_service& io_service, const std::string& app_name, const dynamic_t& conf);
+    balancer_t(context_t& context, cocaine::vicodyn::peers_t& peers, asio::io_service& io_service,
+               const std::string& app_name, const dynamic_t& conf, const dynamic_t::object_t& locator_extra);
 
     virtual
     auto choose_peer(const hpack::headers_t& headers, const std::string& event) -> std::shared_ptr<cocaine::vicodyn::peer_t> = 0;
