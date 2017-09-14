@@ -57,16 +57,16 @@ client_rpc_dispatch_t::discard(const std::error_code& ec) {
     }
 }
 
-auto client_rpc_dispatch_t::write(hpack::header_storage_t headers, const std::string& data) -> void {
+auto client_rpc_dispatch_t::write(hpack::headers_t headers, const std::string& data) -> void {
     stream().write(std::move(headers), data);
 }
 
-auto client_rpc_dispatch_t::abort(hpack::header_storage_t headers, const std::error_code& ec, const std::string& reason) -> void {
+auto client_rpc_dispatch_t::abort(hpack::headers_t headers, const std::error_code& ec, const std::string& reason) -> void {
     stream().abort(std::move(headers), ec, reason);
     finalize();
 }
 
-auto client_rpc_dispatch_t::close(hpack::header_storage_t headers) -> void {
+auto client_rpc_dispatch_t::close(hpack::headers_t headers) -> void {
     stream().close(std::move(headers));
     finalize();
 }

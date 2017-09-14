@@ -69,9 +69,9 @@ public:
     void
     discard(const std::error_code& ec) override;
 
-    auto write(hpack::header_storage_t headers, const std::string& data) -> void;
-    auto abort(hpack::header_storage_t headers, const std::error_code& ec, const std::string& reason) -> void;
-    auto close(hpack::header_storage_t headers) -> void;
+    auto write(hpack::headers_t headers, const std::string& data) -> void;
+    auto abort(hpack::headers_t headers, const std::error_code& ec, const std::string& reason) -> void;
+    auto close(hpack::headers_t headers) -> void;
 
 private:
     void

@@ -29,9 +29,9 @@ public:
     clock_type::time_point birthstamp;
     boost::optional<clock_type::time_point> deadline;
 
-    hpack::header_storage_t headers;
+    hpack::headers_t headers;
 
-    event_t(std::string name, hpack::header_storage_t headers)
+    event_t(std::string name, hpack::headers_t headers)
         : name(std::move(name)),
           birthstamp(clock_type::now()),
           headers(std::move(headers)) {}

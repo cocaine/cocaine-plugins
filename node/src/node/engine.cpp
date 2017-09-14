@@ -175,16 +175,16 @@ namespace {
 struct tx_stream_t : public api::stream_t {
     std::shared_ptr<client_rpc_dispatch_t> dispatch;
 
-    auto write(hpack::header_storage_t headers, const std::string& chunk) -> stream_t& {
+    auto write(hpack::headers_t headers, const std::string& chunk) -> stream_t& {
         dispatch->write(std::move(headers), chunk);
         return *this;
     }
 
-    auto error(hpack::header_storage_t headers, const std::error_code& ec, const std::string& reason) -> void {
+    auto error(hpack::headers_t headers, const std::error_code& ec, const std::string& reason) -> void {
         dispatch->abort(std::move(headers), ec, reason);
     }
 
-    auto close(hpack::header_storage_t headers) -> void {
+    auto close(hpack::headers_t headers) -> void {
         dispatch->close(std::move(headers));
     }
 };
@@ -199,16 +199,16 @@ struct rx_stream_t : public api::stream_t {
         stream(std::move(stream))
     {}
 
-    auto write(hpack::header_storage_t headers, const std::string& chunk) -> stream_t& {
+    auto write(hpack::headers_t headers, const std::string& chunk) -> stream_t& {
         stream = stream.send<protocol::chunk>(std::move(headers), chunk);
         return *this;
     }
 
-    auto error(hpack::header_storage_t headers, const std::error_code& ec, const std::string& reason) -> void {
+    auto error(hpack::headers_t headers, const std::error_code& ec, const std::string& reason) -> void {
         stream.send<protocol::error>(std::move(headers), ec, reason);
     }
 
-    auto close(hpack::header_storage_t headers) -> void {
+    auto close(hpack::headers_t headers) -> void {
         stream.send<protocol::choke>(std::move(headers));
     }
 };
