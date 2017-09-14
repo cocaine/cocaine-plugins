@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.22) unstable; urgency=low
+
+  * Fixed: proper x-cocaine-cluster analysis in vicodyn.
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 14 Sep 2017 18:37:12 +0300
+
 cocaine-plugins (0.12.14.21) unstable; urgency=low
 
   * Fixed: allow empty x-cocaine-cluster
