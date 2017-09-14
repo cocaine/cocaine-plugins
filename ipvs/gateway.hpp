@@ -36,6 +36,7 @@ class ipvs_config_t
 public:
     std::string  scheduler;
     unsigned int weight;
+    std::string x_cocaine_cluster;
 };
 
 class ipvs_t:
@@ -58,7 +59,8 @@ class ipvs_t:
 
     std::string local_uuid;
 public:
-    ipvs_t(context_t& context, const std::string& local_uuid, const std::string& name, const dynamic_t& args);
+    ipvs_t(context_t& context, const std::string& local_uuid, const std::string& name, const dynamic_t& args,
+           const dynamic_t::object_t& extra);
 
     virtual
    ~ipvs_t();
@@ -76,7 +78,8 @@ public:
             const std::string& name,
             unsigned int version,
             const std::vector<asio::ip::tcp::endpoint>& endpoints,
-            const io::graph_root_t& protocol) -> void override;
+            const io::graph_root_t& protocol,
+            const dynamic_t::object_t& extra) -> void override;
 
     auto
     cleanup(const std::string& uuid, const std::string& name) -> void override;
