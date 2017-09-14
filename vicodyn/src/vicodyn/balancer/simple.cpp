@@ -31,7 +31,7 @@ simple_t::simple_t(context_t& ctx, peers_t& peers, asio::io_service& loop, const
     logger(ctx.log(format("balancer/simple/{}", app_name))),
     args(args),
     app_name(app_name),
-    x_cocaine_cluster(locator_extra.at("x-cocaine-cluster").as_string())
+    x_cocaine_cluster(locator_extra.at("x-cocaine-cluster", "").as_string())
 {
     COCAINE_LOG_INFO(logger, "created simple balancer for app {}", app_name);
 }
@@ -47,7 +47,7 @@ auto simple_t::choose_peer(const hpack::headers_t& /*headers*/, const std::strin
             throw error_t("no peers found");
         }
         auto it = choose_random_if(mapping.peers.begin(), mapping.peers.end(), [&](const peers_t::peers_data_t::value_type pair){
-            return pair.second->extra().at("x-cocaine-cluster").as_string() == x_cocaine_cluster &&
+            return pair.second->extra().at("x-cocaine-cluster", "").as_string() == x_cocaine_cluster &&
                 mapping.apps.find(pair.second->uuid()) != mapping.apps.end();
         });
         if(it != mapping.peers.end()) {
