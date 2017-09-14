@@ -65,7 +65,7 @@ class peers_t {
 public:
     using endpoints_t = std::vector<asio::ip::tcp::endpoint>;
     using peers_data_t = std::map<std::string, std::shared_ptr<peer_t>>;
-    using app_data_t = std::map<std::string, std::vector<std::string>>;
+    using app_data_t = std::map<std::string, std::set<std::string>>;
 
     struct data_t {
         peers_data_t peers;
@@ -98,8 +98,6 @@ public:
     auto inner() -> synchronized<data_t>&;
 
     auto peer(const std::string& uuid) -> std::shared_ptr<peer_t>;
-
-    auto apps(const std::string& uuid) -> std::vector<std::string>;
 };
 
 } // namespace vicodyn

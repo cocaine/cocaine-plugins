@@ -4,6 +4,7 @@
 
 #include <cocaine/format.hpp>
 #include <cocaine/format/base.hpp>
+#include <cocaine/format/dynamic.hpp>
 #include <cocaine/format/map.hpp>
 #include <cocaine/format/vector.hpp>
 
@@ -18,7 +19,8 @@ struct display<vicodyn::peer_t> {
     static
     auto
     apply(std::ostream& stream, const vicodyn::peer_t& value) -> std::ostream& {
-        stream << format("{{uuid: {}, endpoints: {}}}", value.uuid(), value.endpoints());
+        const std::map<std::string, dynamic_t>& extra = value.extra();
+        stream << format("{{uuid: {}, endpoints: {}, extra: {}}}", value.uuid(), value.endpoints(), extra);
         return stream;
     }
 };

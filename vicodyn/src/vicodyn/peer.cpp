@@ -173,36 +173,21 @@ auto peers_t::erase_peer(const std::string& uuid) -> void {
 
 auto peers_t::register_app(const std::string& uuid, const std::string& name) -> void {
     data.apply([&](data_t& data) {
-        auto& apps = data.apps[name];
-        auto it = std::find(apps.begin(), apps.end(), uuid);
-        if(it == apps.end()) {
-            apps.push_back(uuid);
-        }
+        data.apps[name].insert(uuid);
     });
 }
 
 auto peers_t::erase_app(const std::string& uuid, const std::string& name) -> void {
     data.apply([&](data_t& data) {
-        auto& apps = data.apps[name];
-        auto it = std::remove(apps.begin(), apps.end(), uuid);
-        apps.resize(it - apps.begin());
-        if(apps.empty()) {
-            data.apps.erase(name);
-        }
+        data.apps[name].erase(uuid);
     });
 }
 
 auto peers_t::erase(const std::string& uuid) -> void {
     erase_peer(uuid);
     data.apply([&](data_t& data) {
-        for(auto it = data.apps.begin(); it != data.apps.end();) {
-            auto inner_it = std::remove(it->second.begin(), it->second.end(), uuid);
-            it->second.resize(inner_it - it->second.begin());
-            if(it->second.empty()) {
-                it = data.apps.erase(it);
-            } else {
-                it++;
-            }
+        for(auto pair : data.apps) {
+            pair.second.erase(uuid);
         }
     });
 }
@@ -218,16 +203,6 @@ auto peers_t::peer(const std::string& uuid) -> std::shared_ptr<peer_t> {
             return it->second;
         }
         return nullptr;
-    });
-}
-
-auto peers_t::apps(const std::string& uuid) -> std::vector<std::string> {
-    return data.apply([&](data_t& data){
-        auto it = data.apps.find(uuid);
-        if(it != data.apps.end()) {
-            return it->second;
-        }
-        return std::vector<std::string>();
     });
 }
 
