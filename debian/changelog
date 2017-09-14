@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.19) unstable; urgency=low
+
+  * Fixed: adapt to core 0.12.14.13
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 14 Sep 2017 13:05:12 +0300
+
 cocaine-plugins (0.12.14.18) unstable; urgency=low
 
   * Refactored: vicodyn now shares node connections.
