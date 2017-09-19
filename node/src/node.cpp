@@ -82,6 +82,12 @@ class control_slot_t:
             on<protocol::chunk>([&](int size) {
                 overseer->control_population(size);
             });
+            on<protocol::error>([&](std::error_code, const std::string&) {
+                overseer->control_population(0);
+            });
+            on<protocol::choke>([&]() {
+                overseer->control_population(0);
+            });
         }
 
         void
