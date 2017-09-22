@@ -9,6 +9,7 @@
 #include <cocaine/context/signal.hpp>
 #include <cocaine/dynamic.hpp>
 #include <cocaine/format/endpoint.hpp>
+#include <cocaine/format/exception.hpp>
 #include <cocaine/format/vector.hpp>
 #include <cocaine/idl/context.hpp>
 #include <cocaine/logging.hpp>
@@ -16,10 +17,77 @@
 #include <cocaine/repository.hpp>
 #include <cocaine/repository/gateway.hpp>
 #include <cocaine/rpc/actor.hpp>
+#include <cocaine/traits/dynamic.hpp>
 #include <cocaine/traits/endpoint.hpp>
 #include <cocaine/traits/vector.hpp>
 
 #include <blackhole/logger.hpp>
+
+namespace cocaine {
+
+template<class T>
+struct dynamic_constructor<std::set<T>> {
+    static const bool enable = true;
+
+    static inline
+    void
+    convert(const std::set<T>& from, dynamic_t::value_t& to) {
+        dynamic_constructor<dynamic_t::array_t>::convert(dynamic_t::array_t(), to);
+
+        auto& array = boost::get<detail::dynamic::incomplete_wrapper<dynamic_t::array_t>>(to).get();
+        array.reserve(from.size());
+
+        for(const auto& e: from) {
+            array.emplace_back(e);
+        }
+    }
+};
+
+template<class T>
+struct dynamic_constructor<std::shared_ptr<T>> {
+    static const bool enable = true;
+
+    static inline
+    void
+    convert(const std::shared_ptr<T>& from, dynamic_t::value_t& to) {
+        if(from) {
+            dynamic_constructor<typename std::remove_const<T>::type>::convert(*from, to);
+        } else {
+            to = dynamic_t::null_t();
+        }
+    }
+};
+
+template<>
+struct dynamic_constructor<asio::ip::tcp::endpoint> {
+    static const bool enable = true;
+
+    static inline
+    void
+    convert(const asio::ip::tcp::endpoint& from, dynamic_t::value_t& to) {
+        to = boost::lexical_cast<std::string>(from);
+    }
+};
+
+template<>
+struct dynamic_constructor<vicodyn::peer_t> {
+    static const bool enable = true;
+
+    static inline
+    void
+    convert(const vicodyn::peer_t& from, dynamic_t::value_t& to) {
+        dynamic_t::object_t data;
+        data["extra"] = from.extra();
+        data["connected"] = from.connected();
+        data["endpoints"] = from.endpoints();
+        data["last_active"] = std::chrono::system_clock::to_time_t(from.last_active());
+        data["uuid"] = from.uuid();
+        to = detail::dynamic::incomplete_wrapper<dynamic_t::object_t>();
+        boost::get<detail::dynamic::incomplete_wrapper<dynamic_t::object_t>>(to).set(std::move(data));
+    }
+};
+
+} // namespace cocaine
 
 
 namespace cocaine {
@@ -63,7 +131,54 @@ vicodyn_t::vicodyn_t(context_t& _context, const std::string& _local_uuid, const 
     logger(context.log(format("gateway/{}", name)))
 {
     create_wrapped_gateway();
-    COCAINE_LOG_DEBUG(logger, "creatied vicodyn service for  {} with local uuid {}", name, local_uuid);
+    COCAINE_LOG_INFO(logger, "created wrapped gateway");
+    auto d = std::make_unique<dispatch<io::vicodyn_tag>>("vicodyn");
+    d->on<io::vicodyn::peers>([&](std::string uuid) {
+        dynamic_t result = dynamic_t::empty_object;
+        dynamic_t& peers_result = result.as_object()["peers"];
+
+        peers.inner().apply([&](const vicodyn::peers_t::data_t& data) mutable {
+            if(uuid.empty()) {
+                peers_result = data.peers;
+            } else {
+                auto it = data.peers.find(uuid);
+                if(it != data.peers.end()) {
+                    peers_result = dynamic_t::empty_object;
+                    peers_result.as_object()[it->second->uuid()] = it->second;
+                }
+            }
+        });
+        return result;
+    });
+    d->on<io::vicodyn::apps>([&](std::string app) {
+        dynamic_t result = dynamic_t::empty_object;
+        dynamic_t& app_result = result.as_object()["apps"];
+        peers.inner().apply([&](const vicodyn::peers_t::data_t& data) mutable {
+            if(app.empty()) {
+                app_result = data.apps;
+            } else {
+                auto it = data.apps.find(app);
+                if(it != data.apps.end()) {
+                    app_result = dynamic_t::empty_object;
+                    app_result.as_object()[it->first] = it->second;
+                }
+            }
+        });
+        return result;
+    });
+    d->on<io::vicodyn::info>([&]() {
+        dynamic_t result = dynamic_t::empty_object;
+        peers.inner().apply([&](const vicodyn::peers_t::data_t& data) {
+            result.as_object()["apps"] = data.apps;
+            result.as_object()["peers"] = data.peers;
+        });
+        return result;
+    });
+    COCAINE_LOG_INFO(logger, "created dispatch");
+    auto actor = std::make_unique<tcp_actor_t>(context, std::move(d));
+    COCAINE_LOG_INFO(logger, "created vicodyn actor");
+    context.insert("vicodyn", std::move(actor));
+    COCAINE_LOG_DEBUG(logger, "created vicodyn service for  {} with local uuid {}", name, local_uuid);
 }
 
 vicodyn_t::~vicodyn_t() {

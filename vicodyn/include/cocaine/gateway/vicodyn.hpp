@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cocaine/idl/vicodyn.hpp"
 #include "cocaine/vicodyn/forwards.hpp"
 #include "cocaine/vicodyn/peer.hpp"
 
@@ -21,7 +22,7 @@
 namespace cocaine {
 namespace gateway {
 
-class vicodyn_t : public api::gateway_t {
+class vicodyn_t : public api::gateway_t{
 public:
     using endpoints_t = std::vector<asio::ip::tcp::endpoint>;
 
