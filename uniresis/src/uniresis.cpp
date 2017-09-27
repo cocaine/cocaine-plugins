@@ -60,7 +60,9 @@ auto resolve(const std::string& hostname) -> std::vector<tcp::endpoint> {
 /// A task that will try to notify about resources information on the machine.
 class uniresis_t::updater_t : public std::enable_shared_from_this<uniresis_t::updater_t> {
     std::string path;
+    std::string hostname;
     std::vector<tcp::endpoint> endpoints;
+    dynamic_t::object_t extra;
     uniresis::resources_t resources;
     std::shared_ptr<api::unicorn_t> unicorn;
     api::unicorn_scope_ptr scope;
@@ -71,12 +73,16 @@ class uniresis_t::updater_t : public std::enable_shared_from_this<uniresis_t::up
 
 public:
     updater_t(std::string path,
+              std::string hostname,
               std::vector<tcp::endpoint> endpoints,
+              dynamic_t::object_t extra,
               uniresis::resources_t resources,
               std::shared_ptr<api::unicorn_t> unicorn,
               std::shared_ptr<logging::logger_t> log) :
         path(std::move(path)),
+        hostname(std::move(hostname)),
         endpoints(std::move(endpoints)),
+        extra(std::move(extra)),
         resources(std::move(resources)),
         unicorn(std::move(unicorn)),
         scope(),
@@ -109,7 +115,9 @@ private:
                 std::vector<dynamic_t>{{endpoint.address().to_string()}, {endpoint.port()}}
             });
         }
+        result["hostname"] = hostname;
         result["endpoints"] = endpoints;
+        result["extra"] = extra;
 
         result["resources"].as_object()["cpu"] = resources.cpu;
         result["resources"].as_object()["mem"] = resources.mem;
@@ -221,11 +229,20 @@ uniresis_t::uniresis_t(context_t& context, asio::io_service& loop, const std::st
     auto prefix = args.as_object().at("prefix", defaults::resources_path).as_string();
     auto path = format("{}/{}", prefix, uuid);
 
-    auto endpoints = resolve(context.config().network().hostname());
+    auto hostname = context.config().network().hostname();
+    auto endpoints = resolve(hostname);
+    dynamic_t::object_t extra;
+    if (auto locator = context.config().services().get("locator")) {
+        extra = dynamic_converter<dynamic_t::object_t>::convert(
+            locator->args().as_object().at("extra_param", dynamic_t::empty_object)
+        );
+    }
     auto unicorn = api::unicorn(context, args.as_object().at("unicorn", defaults::unicorn_name).as_string());
     updater = std::make_shared<updater_t>(
         std::move(path),
+        std::move(hostname),
         std::move(endpoints),
+        std::move(extra),
         resources,
         std::move(unicorn),
         log
