@@ -44,6 +44,7 @@ peer_t::peer_t(context_t& context, asio::io_service& loop, endpoints_t endpoints
 auto peer_t::open_stream(std::shared_ptr<io::basic_dispatch_t> dispatch) -> io::upstream_ptr_t {
     return session.apply([&](std::shared_ptr<session_t>& session) {
         if(!session) {
+            schedule_reconnect(session);
             throw error_t(error::not_connected, "session is not connected");
         }
         d.last_active = std::chrono::system_clock::now();
@@ -54,24 +55,27 @@ auto peer_t::open_stream(std::shared_ptr<io::basic_dispatch_t> dispatch) -> io::
 auto peer_t::schedule_reconnect() -> void {
     COCAINE_LOG_DEBUG(logger, "scheduling reconnection of peer {} to {}", uuid(), endpoints());
     session.apply([&](std::shared_ptr<session_t>& session) {
-        if(connecting) {
-            COCAINE_LOG_DEBUG(logger, "reconnection is alredy in progress for {}", uuid());
-            return;
-        }
-        if(session) {
-            // In fact it should be detached already
-            session->detach(std::error_code());
-            session = nullptr;
-        }
-        timer.expires_from_now(boost::posix_time::seconds(1));
-        timer.async_wait([&](std::error_code ec) {
-            if(!ec) {
-                connect();
-            }
-        });
-        connecting = true;
-        COCAINE_LOG_INFO(logger, "scheduled reconnection of peer {} to {}", uuid(), endpoints());
+        schedule_reconnect(session);
     });
+}
+auto peer_t::schedule_reconnect(std::shared_ptr<cocaine::session_t> session) -> void {
+    if(connecting) {
+        COCAINE_LOG_DEBUG(logger, "reconnection is alredy in progress for {}", uuid());
+        return;
+    }
+    if(session) {
+        // In fact it should be detached already
+        session->detach(std::error_code());
+        session = nullptr;
+    }
+    timer.expires_from_now(boost::posix_time::seconds(1));
+    timer.async_wait([&](std::error_code ec) {
+        if(!ec) {
+            connect();
+        }
+    });
+    connecting = true;
+    COCAINE_LOG_INFO(logger, "scheduled reconnection of peer {} to {}", uuid(), endpoints());
 }
 
 auto peer_t::connect() -> void {
@@ -79,6 +83,7 @@ auto peer_t::connect() -> void {
     COCAINE_LOG_INFO(logger, "connecting peer {} to {}", uuid(), endpoints());
 
     auto socket = std::make_shared<asio::ip::tcp::socket>(loop);
+    auto timer = std::make_shared<asio::deadline_timer>(loop);
 
     std::weak_ptr<peer_t> weak_self(shared_from_this());
 
@@ -88,6 +93,10 @@ auto peer_t::connect() -> void {
     asio::async_connect(*socket, begin, end, [=](const std::error_code& ec, endpoints_t::const_iterator endpoint_it) {
         auto self = weak_self.lock();
         if(!self){
+            return;
+        }
+        if(!timer->cancel()) {
+            COCAINE_LOG_ERROR(logger, "could not connect to {} - timed out", *endpoint_it);
             return;
         }
         if(ec) {
@@ -111,6 +120,19 @@ auto peer_t::connect() -> void {
             schedule_reconnect();
         }
     });
+
+    timer->async_wait([=](std::error_code ec){
+        if(!ec) {
+            auto self = weak_self.lock();
+            if(!self){
+                return;
+            }
+            socket->cancel();
+            self->connecting = false;
+            self->schedule_reconnect();
+        }
+    });
+    timer->expires_from_now(boost::posix_time::seconds(60));
 }
 
 auto peer_t::uuid() const -> const std::string& {

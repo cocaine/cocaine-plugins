@@ -266,8 +266,9 @@ proxy_t::proxy_t(context_t& context, peers_t& peers, const std::string& name, co
     COCAINE_LOG_DEBUG(logger, "createed proxy for app {}", app_name);
     on<event_t>([&](const hpack::headers_t& headers, slot_t::tuple_type&& args, slot_t::upstream_type&& backward_stream){
         auto event = std::get<0>(args);
+        std::shared_ptr<peer_t> peer;
         try {
-            auto peer = choose_peer(headers, event);
+            peer = choose_peer(headers, event);
             auto dispatch_name = format("{}/{}/streaming/forward", this->name(), event);
             auto forward_dispatch = std::make_shared<forward_dispatch_t>(*this, dispatch_name, backward_stream, peer);
 
@@ -279,7 +280,7 @@ proxy_t::proxy_t(context_t& context, peers_t& peers, const std::string& name, co
             forward_dispatch->enqueue(headers, event);
             return result_t(forward_dispatch);
         } catch (const std::system_error& e) {
-            COCAINE_LOG_WARNING(logger, "could not process enqueue - {}", error::to_string(e));
+            COCAINE_LOG_WARNING(logger, "could not process enqueue via {} - {}", peer, error::to_string(e));
             backward_stream.send<app_protocol::error>(e.code(), e.what());
             auto dispatch = std::make_shared<slot_t::dispatch_type>(format("{}/{}/empty", app_name, event));
             dispatch->on<app_protocol::error>([this](std::error_code, std::string){});
