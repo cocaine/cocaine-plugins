@@ -150,6 +150,7 @@ public:
                 d.forward_stream->send<io::node::enqueue>(headers, proxy.app_name, d.enqueue_frame);
             } catch (const std::system_error& e) {
                 COCAINE_LOG_WARNING(proxy.logger, "failed to send enqueue to forward dispatch - {}", error::to_string(e));
+                peer->schedule_reconnect();
                 try {
                     retry(d);
                 } catch(std::system_error& e) {
@@ -283,7 +284,7 @@ proxy_t::proxy_t(context_t& context, peers_t& peers, const std::string& name, co
     balancer(make_balancer(args, extra)),
     logger(context.log(name))
 {
-    COCAINE_LOG_DEBUG(logger, "createed proxy for app {}", app_name);
+    COCAINE_LOG_DEBUG(logger, "created proxy for app {}", app_name);
     on<event_t>([&](const hpack::headers_t& headers, slot_t::tuple_type&& args, slot_t::upstream_type&& backward_stream){
         auto event = std::get<0>(args);
         std::shared_ptr<peer_t> peer;
