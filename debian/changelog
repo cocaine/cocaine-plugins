@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.29) unstable; urgency=low
+
+  * Changed: Uniresis uses context uuid instead of generated.
+
+ -- Anton Matveenko <antmat@me.com>  Fri, 29 Sep 2017 18:22:53 +0300
+
 cocaine-plugins (0.12.14.28) unstable; urgency=low
 
   * Fixed: Proper reconnection in vicodyn.
