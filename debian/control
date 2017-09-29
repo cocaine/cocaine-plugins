@@ -305,7 +305,7 @@ Description: Vicodyn gateway
 
 Package: libcocaine-plugin-vicodyn-dbg
 Architecture: any
-Depends: ${misc:Depends}
+Depends: ${misc:Depends}, libcocaine-plugin-vicodyn3 (= ${binary:Version})
 Description: Vicodyn gateway (debug files)
  Vicodyn gateway (debug files)
 

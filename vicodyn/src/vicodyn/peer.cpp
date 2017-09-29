@@ -83,20 +83,37 @@ auto peer_t::connect() -> void {
     COCAINE_LOG_INFO(logger, "connecting peer {} to {}", uuid(), endpoints());
 
     auto socket = std::make_shared<asio::ip::tcp::socket>(loop);
-    auto timer = std::make_shared<asio::deadline_timer>(loop);
+    auto connect_timer = std::make_shared<asio::deadline_timer>(loop);
 
     std::weak_ptr<peer_t> weak_self(shared_from_this());
 
     auto begin = d.endpoints.begin();
     auto end = d.endpoints.end();
-    //TODO: save socket in  peer
+
+    connect_timer->expires_from_now(boost::posix_time::seconds(60));
+    connect_timer->async_wait([=](std::error_code ec) {
+        auto self = weak_self.lock();
+        if(!self){
+            return;
+        }
+        if(!ec) {
+            COCAINE_LOG_INFO(logger, "connection timer expired, canceling socket, going to schedule reconnect");
+            socket->cancel();
+            self->connecting = false;
+            self->schedule_reconnect();
+        } else {
+            COCAINE_LOG_DEBUG(logger, "connection timer was cancelled");
+        }
+    });
+
     asio::async_connect(*socket, begin, end, [=](const std::error_code& ec, endpoints_t::const_iterator endpoint_it) {
         auto self = weak_self.lock();
         if(!self){
             return;
         }
-        if(!timer->cancel()) {
-            COCAINE_LOG_ERROR(logger, "could not connect to {} - timed out", *endpoint_it);
+        COCAINE_LOG_DEBUG(logger, "cancelling timer");
+        if(!connect_timer->cancel()) {
+            COCAINE_LOG_ERROR(logger, "could not connect to {} - timed out (timer could not be cancelled)", *endpoint_it);
             return;
         }
         if(ec) {
@@ -120,19 +137,6 @@ auto peer_t::connect() -> void {
             schedule_reconnect();
         }
     });
-
-    timer->async_wait([=](std::error_code ec){
-        if(!ec) {
-            auto self = weak_self.lock();
-            if(!self){
-                return;
-            }
-            socket->cancel();
-            self->connecting = false;
-            self->schedule_reconnect();
-        }
-    });
-    timer->expires_from_now(boost::posix_time::seconds(60));
 }
 
 auto peer_t::uuid() const -> const std::string& {

@@ -450,7 +450,6 @@ struct logging_v2_t::impl_t : public std::enable_shared_from_this<logging_v2_t::
 
     auto find_metafilter(const std::string& name) -> std::shared_ptr<logging::metafilter_t> {
         auto mf = metafilters.apply([&](metafilters_t& _metafilters) -> std::shared_ptr<logging::metafilter_t> {
-            COCAINE_LOG_DEBUG(internal_logger, "looking up longest match for {}", name);
             auto it = _metafilters.longest_match(name);
             if(it == _metafilters.end() || it->second->empty()) {
                 return nullptr;
