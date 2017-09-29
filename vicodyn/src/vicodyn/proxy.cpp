@@ -150,7 +150,12 @@ public:
                 d.forward_stream->send<io::node::enqueue>(headers, proxy.app_name, d.enqueue_frame);
             } catch (const std::system_error& e) {
                 COCAINE_LOG_WARNING(proxy.logger, "failed to send enqueue to forward dispatch - {}", error::to_string(e));
-                retry();
+                try {
+                    retry(d);
+                } catch(std::system_error& e) {
+                    COCAINE_LOG_WARNING(proxy.logger, "could not retry enqueue - {}", error::to_string(e));
+                    d.backward_stream.send<protocol::error>(e.code(), "failed to retry enqueue");
+                }
             }
         });
     }
@@ -164,6 +169,9 @@ public:
     auto is_recoverable(std::error_code ec) -> bool {
         return proxy.balancer->is_recoverable(peer, ec);
     }
+
+private:
+    auto retry(data_t& d) -> void;
 };
 
 class backward_dispatch_t : public dispatch<app_tag> {
@@ -230,27 +238,32 @@ public:
 };
 
 auto forward_dispatch_t::retry() -> void {
-    COCAINE_LOG_DEBUG(proxy.logger, "retrying");
-    d.apply([&](data_t& d){
-        d.retry_counter++;
-        if(!d.buffering_enabled) {
-            throw error_t("buffering is already disabled - response chunk was sent");
-        }
-        if(d.retry_counter > proxy.balancer->retry_count()) {
-            throw error_t("maximum number of retries reached");
-        }
-        peer = proxy.choose_peer(d.enqueue_headers, d.enqueue_frame);
-        auto dispatch_name = format("{}/{}/streaming/backward", proxy.name(), d.enqueue_frame);
-        auto backward_dispatch = std::make_shared<backward_dispatch_t>(dispatch_name, proxy, d.backward_stream, shared_from_this());
-        d.forward_stream = peer->open_stream(std::move(backward_dispatch));
-        d.forward_stream->send<io::node::enqueue>(d.enqueue_headers, proxy.app_name, d.enqueue_frame);
-        for(size_t i = 0; i < d.chunks.size(); i++) {
-            d.forward_stream->send<protocol::chunk>(d.chunk_headers[i], d.chunks[i]);
-        }
-        if(d.choke_sent) {
-            d.forward_stream->send<protocol::choke>(d.choke_headers);
-        }
+    d.apply([&](data_t& d) {
+        retry(d);
     });
+}
+
+auto forward_dispatch_t::retry(data_t& d) -> void {
+    COCAINE_LOG_DEBUG(proxy.logger, "retrying");
+    d.retry_counter++;
+    if(!d.buffering_enabled) {
+        throw error_t("buffering is already disabled - response chunk was sent");
+    }
+    if(d.retry_counter > proxy.balancer->retry_count()) {
+        throw error_t("maximum number of retries reached");
+    }
+    peer = proxy.choose_peer(d.enqueue_headers, d.enqueue_frame);
+    auto dispatch_name = format("{}/{}/streaming/backward", proxy.name(), d.enqueue_frame);
+    auto backward_dispatch = std::make_shared<backward_dispatch_t>(dispatch_name, proxy, d.backward_stream, shared_from_this());
+    d.forward_stream = peer->open_stream(std::move(backward_dispatch));
+    d.forward_stream->send<io::node::enqueue>(d.enqueue_headers, proxy.app_name, d.enqueue_frame);
+    for(size_t i = 0; i < d.chunks.size(); i++) {
+        d.forward_stream->send<protocol::chunk>(d.chunk_headers[i], d.chunks[i]);
+    }
+    if(d.choke_sent) {
+        d.forward_stream->send<protocol::choke>(d.choke_headers);
+    }
+
 }
 
 auto proxy_t::make_balancer(const dynamic_t& args, const dynamic_t::object_t& extra) -> api::vicodyn::balancer_ptr {
