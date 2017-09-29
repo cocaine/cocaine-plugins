@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.31) unstable; urgency=low
+
+  * Fixed: vicodyn reconnect peers on failed enqueue.
+
+ -- Anton Matveenko <antmat@me.com>  Fri, 29 Sep 2017 22:13:53 +0300
+
 cocaine-plugins (0.12.14.30) unstable; urgency=low
 
   * Fixed: dead lock in vicodyn.
