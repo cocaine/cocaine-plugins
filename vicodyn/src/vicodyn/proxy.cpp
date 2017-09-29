@@ -71,6 +71,8 @@ public:
                     d.chunk_headers.push_back(headers);
                     d.forward_stream->send<protocol::chunk>(headers, std::move(chunk));
                 } catch (const std::system_error& e) {
+                    COCAINE_LOG_WARNING(proxy.logger, "failed to send chunk to forward dispatch - {}", e);
+                    d.backward_stream.send<protocol::error>(e.code(), "failed to send chunk to forward dispatch");
                     peer->schedule_reconnect();
                 }
             });
@@ -84,6 +86,8 @@ public:
                     d.choke_headers = headers;
                     d.forward_stream->send<protocol::choke>(headers);
                 } catch (const std::system_error& e) {
+                    COCAINE_LOG_WARNING(proxy.logger, "failed to send choke to forward dispatch - {}", e);
+                    d.backward_stream.send<protocol::error>(e.code(), "failed to send choke to forward dispatch");
                     peer->schedule_reconnect();
                 }
             });
@@ -96,6 +100,8 @@ public:
                 try {
                     d.forward_stream->send<protocol::error>(headers, ec, msg);
                 } catch (const std::system_error& e) {
+                    COCAINE_LOG_WARNING(proxy.logger, "failed to send error to forward dispatch - {}", e);
+                    d.backward_stream.send<protocol::error>(e.code(), "failed to send error to forward dispatch");
                     peer->schedule_reconnect();
                 }
             });
@@ -143,7 +149,8 @@ public:
                 d.enqueue_headers = headers;
                 d.forward_stream->send<io::node::enqueue>(headers, proxy.app_name, d.enqueue_frame);
             } catch (const std::system_error& e) {
-                peer->schedule_reconnect();
+                COCAINE_LOG_WARNING(proxy.logger, "failed to send enqueue to forward dispatch - {}", e);
+                retry();
             }
         });
     }

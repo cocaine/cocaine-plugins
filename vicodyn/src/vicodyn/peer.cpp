@@ -58,7 +58,7 @@ auto peer_t::schedule_reconnect() -> void {
         schedule_reconnect(session);
     });
 }
-auto peer_t::schedule_reconnect(std::shared_ptr<cocaine::session_t> session) -> void {
+auto peer_t::schedule_reconnect(std::shared_ptr<cocaine::session_t>& session) -> void {
     if(connecting) {
         COCAINE_LOG_DEBUG(logger, "reconnection is alredy in progress for {}", uuid());
         return;

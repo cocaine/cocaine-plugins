@@ -43,7 +43,7 @@ public:
     auto extra() const -> const dynamic_t::object_t&;
 
 private:
-    auto schedule_reconnect(std::shared_ptr<cocaine::session_t> session) -> void;
+    auto schedule_reconnect(std::shared_ptr<cocaine::session_t>& session) -> void;
 
     context_t& context;
     std::string service_name;
