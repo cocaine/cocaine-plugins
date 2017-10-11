@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.14.32) unstable; urgency=low
+
+  * Fixed: vicodyn channel reordering.
+  * Perf: vicodyn.
+
+ -- Anton Matveenko <antmat@me.com>  Wed, 11 Oct 2017 18:11:53 +0300
+
 cocaine-plugins (0.12.14.31) unstable; urgency=low
 
   * Fixed: vicodyn reconnect peers on failed enqueue.
