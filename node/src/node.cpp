@@ -223,6 +223,29 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
         [&](const hpack::headers_t& headers, enqueue_slot_t::tuple_type&& args, enqueue_slot_t::upstream_type&& upstream)
             -> enqueue_slot_t::result_type
         {
+//            using event_t = io::app::enqueue;
+//            using slot_t = io::basic_slot<event_t>;
+//            using result_t = io::basic_slot<event_t>::result_type;
+//            using app_protocol = io::protocol<io::stream_of<std::string>::tag>::scope;
+//            io::aux::encoded_buffers_t buffer;
+//            msgpack::packer<io::aux::encoded_buffers_t> packer(buffer);
+//            io::type_traits<std::pair<unsigned , std::vector<std::pair<std::string, std::string>>>>::pack(packer, {200, {}});
+//            upstream = upstream.send<app_protocol::chunk>(std::string(buffer.data(), buffer.size()));
+//
+//
+//            io::aux::encoded_buffers_t buffer2;
+//            msgpack::packer<io::aux::encoded_buffers_t> packer2(buffer2);
+//            io::type_traits<std::string>::pack(packer2, "body");
+//
+//            upstream = upstream.send<app_protocol::chunk>(std::string(buffer2.data(), buffer2.size()));
+//            upstream.send<app_protocol::choke>();
+//            auto dispatch = std::make_shared<slot_t::dispatch_type>("");
+//            dispatch->on<app_protocol::error>([this](std::error_code, std::string){});
+//            dispatch->on<app_protocol::chunk>([this](std::string){});
+//            dispatch->on<app_protocol::choke>([this](){});
+//            return result_t(dispatch);
+
+
             std::string app_name, event_name;
             std::tie(app_name, event_name) = args;
             using app_protocol = io::protocol<io::stream_of<std::string>::tag>::scope;
@@ -233,23 +256,28 @@ node_t::node_t(context_t& context, asio::io_service& asio, const std::string& na
                 dispatch->on<app_protocol::choke>([this](){});
                 return dispatch;
             };
-            return apps.apply([&](std::map<std::string, std::shared_ptr<node::app_t>>& apps){
+            auto ovs = apps.apply([&](std::map<std::string, std::shared_ptr<node::app_t>>& apps) -> std::shared_ptr<overseer_t> {
                 auto it = apps.find(app_name);
                 if(it == apps.end()) {
-                    upstream.send<app_protocol::error>(make_error_code(error::not_running),
-                                                       format("application {} is not found", app_name));
-                    return empty();
+                    return nullptr;
                 } else {
-                    try {
-                        node::app::event_t event(event_name, headers);
-                        auto dispatch = it->second->overseer()->enqueue(event, upstream);
-                        return std::shared_ptr<enqueue_slot_t::dispatch_type>(dispatch);
-                    } catch (const std::system_error& e) {
-                        upstream.send<app_protocol::error>(e.code(), e.what());
-                        return empty();
-                    }
+                    return it->second->overseer();
                 }
             });
+            if(!ovs) {
+                upstream.send<app_protocol::error>(make_error_code(error::not_running),
+                                                   format("application {} is not found", app_name));
+                return empty();
+            } else {
+                try {
+                    node::app::event_t event(event_name, headers);
+                    auto dispatch = ovs->enqueue(event, upstream);
+                    return std::shared_ptr<enqueue_slot_t::dispatch_type>(dispatch);
+                } catch (const std::system_error& e) {
+                    upstream.send<app_protocol::error>(e.code(), e.what());
+                    return empty();
+                }
+            }
         }
     );
 

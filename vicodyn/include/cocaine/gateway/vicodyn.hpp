@@ -33,14 +33,15 @@ public:
     struct proxy_description_t {
         proxy_description_t(std::unique_ptr<tcp_actor_t> _actor, vicodyn::proxy_t& _proxy);
 
-        auto endpoints() const -> std::vector<asio::ip::tcp::endpoint>;
+        auto endpoints() const -> const std::vector<asio::ip::tcp::endpoint>&;
 
-        auto protocol() const -> io::graph_root_t;
+        auto protocol() const -> const io::graph_root_t&;
 
         auto version() const -> unsigned int;
 
         std::unique_ptr<tcp_actor_t> actor;
         vicodyn::proxy_t& proxy;
+        std::vector<asio::ip::tcp::endpoint> cached_endpoints;
     };
 
     auto resolve_policy() const -> resolve_policy_t override {

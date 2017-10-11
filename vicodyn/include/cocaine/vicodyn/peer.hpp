@@ -8,6 +8,8 @@
 #include <cocaine/forwards.hpp>
 #include <cocaine/locked_ptr.hpp>
 #include <cocaine/logging.hpp>
+#include <cocaine/rpc/session.hpp>
+#include <cocaine/rpc/upstream.hpp>
 
 #include <asio/ip/tcp.hpp>
 
@@ -26,7 +28,19 @@ public:
 
     peer_t(context_t& context, asio::io_service& loop, endpoints_t endpoints, std::string uuid, dynamic_t::object_t extra);
 
-    auto open_stream(std::shared_ptr<io::basic_dispatch_t> dispatch) -> io::upstream_ptr_t;
+    template<class Event, class ...Args>
+    auto open_stream(std::shared_ptr<io::basic_dispatch_t> dispatch, Args&& ...args) -> io::upstream_ptr_t {
+        auto locked = session.synchronize();
+        auto session = *locked;
+        if(!session) {
+            schedule_reconnect(session);
+            throw error_t(error::not_connected, "session is not connected");
+        }
+        d.last_active = std::chrono::system_clock::now();
+        auto stream = session->fork(std::move(dispatch));
+        stream->send<Event>(std::forward<Args>(args)...);
+        return stream;
+    }
 
     auto connect() -> void;
 

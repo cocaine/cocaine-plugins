@@ -97,14 +97,15 @@ namespace ph = std::placeholders;
 
 vicodyn_t::proxy_description_t::proxy_description_t(std::unique_ptr<tcp_actor_t> _actor, vicodyn::proxy_t& _proxy) :
         actor(std::move(_actor)),
-        proxy(_proxy)
+        proxy(_proxy),
+        cached_endpoints(this->actor->endpoints())
 {}
 
-auto vicodyn_t::proxy_description_t::endpoints() const -> std::vector<asio::ip::tcp::endpoint> {
-    return actor->endpoints();
+auto vicodyn_t::proxy_description_t::endpoints() const -> const std::vector<asio::ip::tcp::endpoint>& {
+    return cached_endpoints;
 }
 
-auto vicodyn_t::proxy_description_t::protocol() const -> io::graph_root_t {
+auto vicodyn_t::proxy_description_t::protocol() const -> const io::graph_root_t& {
     return proxy.root();
 }
 
@@ -191,22 +192,24 @@ vicodyn_t::~vicodyn_t() {
 }
 
 auto vicodyn_t::resolve(const std::string& name) const -> service_description_t {
-    static const io::graph_root_t app_root = io::traverse<io::app_tag>().get();
-    const auto local = context.locate(name);
-    if(local && local->prototype->root() != app_root) {
-        COCAINE_LOG_DEBUG(logger, "providing local non-app service");
-        auto version = static_cast<unsigned int>(local->prototype->version());
-        return service_description_t {local->endpoints, local->prototype->root(), version};
-    }
-
     return mapping.apply([&](const proxy_map_t& mapping){
         auto it = mapping.find(name);
-        if(it == mapping.end()) {
-            COCAINE_LOG_INFO(logger, "resolving non-app service via wrapped gateway");
-            return wrapped_gateway->resolve(name);
+        if(it != mapping.end()) {
+            COCAINE_LOG_INFO(logger, "providing virtual app service {} on {}, {}", name, it->second.endpoints(), mapping.size());
+            return service_description_t{it->second.endpoints(), it->second.protocol(), it->second.version()};
         }
-        COCAINE_LOG_INFO(logger, "providing virtual app service {} on {}", name, it->second.endpoints());
-        return service_description_t{it->second.endpoints(), it->second.protocol(), it->second.version()};
+
+        static const io::graph_root_t app_root = io::traverse<io::app_tag>().get();
+        const auto local = context.locate(name);
+        if(local) {
+            COCAINE_LOG_DEBUG(logger, "providing local non-app service");
+            auto version = static_cast<unsigned int>(local->prototype->version());
+            return service_description_t {local->endpoints, local->prototype->root(), version};
+        }
+
+        COCAINE_LOG_INFO(logger, "resolving non-app service via wrapped gateway");
+        return wrapped_gateway->resolve(name);
+
     });
 }
 

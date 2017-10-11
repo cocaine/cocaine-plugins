@@ -41,26 +41,15 @@ peer_t::peer_t(context_t& context, asio::io_service& loop, endpoints_t endpoints
     d({std::move(uuid), std::move(endpoints), std::chrono::system_clock::now(), std::move(extra)})
 {}
 
-auto peer_t::open_stream(std::shared_ptr<io::basic_dispatch_t> dispatch) -> io::upstream_ptr_t {
-    return session.apply([&](std::shared_ptr<session_t>& session) {
-        if(!session) {
-            schedule_reconnect(session);
-            throw error_t(error::not_connected, "session is not connected");
-        }
-        d.last_active = std::chrono::system_clock::now();
-        return session->fork(std::move(dispatch));
-    });
-}
-
 auto peer_t::schedule_reconnect() -> void {
-    COCAINE_LOG_DEBUG(logger, "scheduling reconnection of peer {} to {}", uuid(), endpoints());
+    COCAINE_LOG_INFO(logger, "scheduling reconnection of peer {} to {}", uuid(), endpoints());
     session.apply([&](std::shared_ptr<session_t>& session) {
         schedule_reconnect(session);
     });
 }
 auto peer_t::schedule_reconnect(std::shared_ptr<cocaine::session_t>& session) -> void {
     if(connecting) {
-        COCAINE_LOG_DEBUG(logger, "reconnection is alredy in progress for {}", uuid());
+        COCAINE_LOG_INFO(logger, "reconnection is alredy in progress for {}", uuid());
         return;
     }
     if(session) {

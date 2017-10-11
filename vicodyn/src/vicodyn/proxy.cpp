@@ -1,6 +1,8 @@
 #include "cocaine/vicodyn/proxy.hpp"
 
 #include "cocaine/api/vicodyn/balancer.hpp"
+#include "cocaine/format/ptr.hpp"
+#include "cocaine/format/peer.hpp"
 #include "cocaine/repository/vicodyn/balancer.hpp"
 
 #include "cocaine/vicodyn/peer.hpp"
@@ -14,7 +16,10 @@
 #include <cocaine/logging.hpp>
 
 #include <blackhole/logger.hpp>
+#include <blackhole/wrapper.hpp>
 #include <cocaine/rpc/slot.hpp>
+
+#include <cocaine/traits/map.hpp>
 
 namespace cocaine {
 namespace vicodyn {
@@ -24,8 +29,11 @@ using app_tag = io::stream_of<std::string>::tag;
 class forward_dispatch_t : public dispatch<app_tag>, public std::enable_shared_from_this<forward_dispatch_t> {
     using protocol = io::protocol<app_tag>::scope;
 
+    friend class backward_dispatch_t;
     proxy_t& proxy;
+    std::unique_ptr<logging::logger_t> logger;
     std::shared_ptr<peer_t> peer;
+    std::shared_ptr<dispatch<app_tag>> backward_dispatch;
 
     struct data_t {
 
@@ -57,21 +65,29 @@ class forward_dispatch_t : public dispatch<app_tag>, public std::enable_shared_f
     synchronized<data_t> d;
 
 public:
-    forward_dispatch_t(proxy_t& _proxy, const std::string& name, upstream<app_tag> backward_stream, std::shared_ptr<peer_t> _peer) :
+    forward_dispatch_t(proxy_t& _proxy, const std::string& name, upstream<app_tag> b_stream,
+                       std::shared_ptr<dispatch<app_tag>> b_dispatch, std::shared_ptr<peer_t> _peer) :
         dispatch(name),
         proxy(_proxy),
+        logger(new blackhole::wrapper_t(*proxy.logger, {{"peer", _peer->uuid()}})),
         peer(std::move(_peer)),
-        d(std::move(backward_stream))
+        backward_dispatch(std::move(b_dispatch)),
+        d(std::move(b_stream))
     {
         on<protocol::chunk>().execute([this](const hpack::headers_t& headers, std::string chunk){
-            COCAINE_LOG_DEBUG(proxy.logger, "processing chunk in");
+            COCAINE_LOG_DEBUG(logger, "processing chunk in");
             d.apply([&](data_t& d){
+                if(!d.forward_stream) {
+                    COCAINE_LOG_WARNING(logger, "skipping sending chunk - forward stream is missing"
+                        "(this can happen if enqueue was unsuccessfull)");
+                    return;
+                }
                 try {
-                    d.chunks.push_back(chunk);
+                    d.chunks.push_back(std::move(chunk));
                     d.chunk_headers.push_back(headers);
-                    d.forward_stream->send<protocol::chunk>(headers, std::move(chunk));
+                    d.forward_stream->send<protocol::chunk>(headers, d.chunks.back());
                 } catch (const std::system_error& e) {
-                    COCAINE_LOG_WARNING(proxy.logger, "failed to send chunk to forward dispatch - {}", error::to_string(e));
+                    COCAINE_LOG_WARNING(logger, "failed to send chunk to forward dispatch - {}", error::to_string(e));
                     d.backward_stream.send<protocol::error>(e.code(), "failed to send chunk to forward dispatch");
                     peer->schedule_reconnect();
                 }
@@ -79,14 +95,19 @@ public:
         });
 
         on<protocol::choke>().execute([this](const hpack::headers_t& headers){
-            COCAINE_LOG_DEBUG(proxy.logger, "processing choke");
+            COCAINE_LOG_DEBUG(logger, "processing choke");
             d.apply([&](data_t& d){
+                if(!d.forward_stream) {
+                    COCAINE_LOG_WARNING(logger, "skipping sending chunk - forward stream is missing"
+                        "(this can happen if enqueue was unsuccessfull)");
+                    return;
+                }
                 try {
                     d.choke_sent = true;
                     d.choke_headers = headers;
                     d.forward_stream->send<protocol::choke>(headers);
                 } catch (const std::system_error& e) {
-                    COCAINE_LOG_WARNING(proxy.logger, "failed to send choke to forward dispatch - {}", error::to_string(e));
+                    COCAINE_LOG_WARNING(logger, "failed to send choke to forward dispatch - {}", error::to_string(e));
                     d.backward_stream.send<protocol::error>(e.code(), "failed to send choke to forward dispatch");
                     peer->schedule_reconnect();
                 }
@@ -94,23 +115,23 @@ public:
         });
 
         on<protocol::error>().execute([this](const hpack::headers_t& headers, std::error_code ec, std::string msg){
-            COCAINE_LOG_DEBUG(proxy.logger, "processing error");
+            COCAINE_LOG_INFO(logger, "processing error");
+            COCAINE_LOG_ERROR(logger, "UPYACHKA!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
             d.apply([&](data_t& d){
                 d.buffering_enabled = false;
+                if(!d.forward_stream) {
+                    COCAINE_LOG_WARNING(logger, "skipping sending error - forward stream is missing"
+                        "(this can happen if enqueue was unsuccessfull)");
+                    return;
+                }
                 try {
                     d.forward_stream->send<protocol::error>(headers, ec, msg);
                 } catch (const std::system_error& e) {
-                    COCAINE_LOG_WARNING(proxy.logger, "failed to send error to forward dispatch - {}", error::to_string(e));
+                    COCAINE_LOG_WARNING(logger, "failed to send error to forward dispatch - {}", error::to_string(e));
                     d.backward_stream.send<protocol::error>(e.code(), "failed to send error to forward dispatch");
                     peer->schedule_reconnect();
                 }
             });
-        });
-    }
-
-    auto attach(io::upstream_ptr_t stream) -> void {
-        d.apply([&](data_t& d){
-            d.forward_stream = std::move(stream);
         });
     }
 
@@ -126,14 +147,17 @@ public:
         d.enqueue_headers.clear();
         d.chunk_headers.clear();
         d.chunks.clear();
-        COCAINE_LOG_DEBUG(proxy.logger, "disabled buffernig");
+        COCAINE_LOG_DEBUG(logger, "disabled buffernig");
     }
 
     auto send_discard_frame() -> void {
-        COCAINE_LOG_DEBUG(proxy.logger, "sending discard frame");
+        COCAINE_LOG_DEBUG(logger, "sending discard frame");
         d.apply([&](data_t& d) {
             try {
                 auto ec = make_error_code(error::dispatch_errors::not_connected);
+                if(!d.forward_stream) {
+                    return;
+                }
                 d.forward_stream->send<protocol::error>(hpack::headers_t{}, ec, "vicodyn client was disconnected");
             } catch (const std::system_error& e) {
                 // pass
@@ -142,19 +166,21 @@ public:
     }
 
     auto enqueue(const hpack::headers_t& headers, std::string event) -> void {
-        COCAINE_LOG_DEBUG(proxy.logger, "processing enqueue");
+        COCAINE_LOG_DEBUG(logger, "processing enqueue");
         d.apply([&](data_t& d){
             try {
                 d.enqueue_frame = std::move(event);
-                d.enqueue_headers = headers;
-                d.forward_stream->send<io::node::enqueue>(headers, proxy.app_name, d.enqueue_frame);
+                d.enqueue_headers = std::move(headers);
+                d.forward_stream = peer->open_stream<io::node::enqueue>(backward_dispatch, d.enqueue_headers,
+                                                                        proxy.app_name, d.enqueue_frame);
             } catch (const std::system_error& e) {
-                COCAINE_LOG_WARNING(proxy.logger, "failed to send enqueue to forward dispatch - {}", error::to_string(e));
+                COCAINE_LOG_WARNING(logger, "failed to send enqueue to forward stream - {}", error::to_string(e));
                 peer->schedule_reconnect();
+                //TODO: maybe cycle here?
                 try {
                     retry(d);
                 } catch(std::system_error& e) {
-                    COCAINE_LOG_WARNING(proxy.logger, "could not retry enqueue - {}", error::to_string(e));
+                    COCAINE_LOG_WARNING(logger, "could not retry enqueue - {}", error::to_string(e));
                     d.backward_stream.send<protocol::error>(e.code(), "failed to retry enqueue");
                 }
             }
@@ -183,13 +209,10 @@ class backward_dispatch_t : public dispatch<app_tag> {
     std::shared_ptr<forward_dispatch_t> forward_dispatch;
 
 public:
-    backward_dispatch_t(const std::string& name, proxy_t& _proxy, upstream<app_tag> back_stream,
-                        std::shared_ptr<forward_dispatch_t> f_dispatch
-    ):
+    backward_dispatch_t(const std::string& name, proxy_t& _proxy, upstream<app_tag> back_stream):
         dispatch(name),
         proxy(_proxy),
-        backward_stream(std::move(back_stream)),
-        forward_dispatch(std::move(f_dispatch))
+        backward_stream(std::move(back_stream))
     {
         on<protocol::chunk>().execute([this](const hpack::headers_t& headers, std::string chunk) mutable {
             forward_dispatch->disable_buffering();
@@ -201,7 +224,7 @@ public:
         });
 
         on<protocol::error>().execute([this](const hpack::headers_t& headers, std::error_code ec, std::string msg) mutable {
-            COCAINE_LOG_WARNING(proxy.logger, "received error from peer {}({}) - {}", ec.message(), ec.value(), msg);
+            COCAINE_LOG_WARNING(forward_dispatch->logger, "received error from peer {}({}) - {}", ec.message(), ec.value(), msg);
             forward_dispatch->on_error(ec, msg);
             if(forward_dispatch->is_recoverable(ec)) {
                 try {
@@ -229,11 +252,15 @@ public:
 
     }
 
+    auto attach(std::shared_ptr<forward_dispatch_t> f_dispatch) -> void {
+        forward_dispatch = std::move(f_dispatch);
+    }
+
     auto discard(const std::error_code& ec) -> void override {
         try {
             backward_stream.send<protocol::error>(ec, "vicodyn upstream has been disconnected");
         } catch (const std::exception& e) {
-            COCAINE_LOG_WARNING(proxy.logger, "could not send error {} to upstream - {}", ec, e);
+            COCAINE_LOG_WARNING(forward_dispatch->logger, "could not send error {} to upstream - {}", ec, e);
         }
     }
 };
@@ -245,7 +272,7 @@ auto forward_dispatch_t::retry() -> void {
 }
 
 auto forward_dispatch_t::retry(data_t& d) -> void {
-    COCAINE_LOG_DEBUG(proxy.logger, "retrying");
+    COCAINE_LOG_INFO(logger, "retrying");
     d.retry_counter++;
     if(!d.buffering_enabled) {
         throw error_t("buffering is already disabled - response chunk was sent");
@@ -254,10 +281,11 @@ auto forward_dispatch_t::retry(data_t& d) -> void {
         throw error_t("maximum number of retries reached");
     }
     peer = proxy.choose_peer(d.enqueue_headers, d.enqueue_frame);
-    auto dispatch_name = format("{}/{}/streaming/backward", proxy.name(), d.enqueue_frame);
-    auto backward_dispatch = std::make_shared<backward_dispatch_t>(dispatch_name, proxy, d.backward_stream, shared_from_this());
-    d.forward_stream = peer->open_stream(std::move(backward_dispatch));
-    d.forward_stream->send<io::node::enqueue>(d.enqueue_headers, proxy.app_name, d.enqueue_frame);
+    logger.reset(new blackhole::wrapper_t(*proxy.logger, {{"peer", peer->uuid()}}));
+//    auto dispatch_name = format("{}/{}/streaming/backward", proxy.name(), d.enqueue_frame);
+//    auto backward_dispatch = std::make_shared<backward_dispatch_t>(dispatch_name, proxy, d.backward_stream, shared_from_this());
+    //TODO: remove duplication
+    d.forward_stream = peer->open_stream<io::node::enqueue>(backward_dispatch, d.enqueue_headers, proxy.app_name, d.enqueue_frame);
     for(size_t i = 0; i < d.chunks.size(); i++) {
         d.forward_stream->send<protocol::chunk>(d.chunk_headers[i], d.chunks[i]);
     }
@@ -286,18 +314,39 @@ proxy_t::proxy_t(context_t& context, peers_t& peers, const std::string& name, co
 {
     COCAINE_LOG_DEBUG(logger, "created proxy for app {}", app_name);
     on<event_t>([&](const hpack::headers_t& headers, slot_t::tuple_type&& args, slot_t::upstream_type&& backward_stream){
+//        backward_stream = backward_stream.send<app_protocol::chunk>("");
+//        backward_stream = backward_stream.send<app_protocol::chunk>("HI");
+
+//        io::aux::encoded_buffers_t buffer;
+//        msgpack::packer<io::aux::encoded_buffers_t> packer(buffer);
+//        io::type_traits<std::pair<unsigned , std::vector<std::pair<std::string, std::string>>>>::pack(packer, {200, {}});
+//        backward_stream = backward_stream.send<app_protocol::chunk>(std::string(buffer.data(), buffer.size()));
+//
+//
+//        io::aux::encoded_buffers_t buffer2;
+//        msgpack::packer<io::aux::encoded_buffers_t> packer2(buffer2);
+//        io::type_traits<std::string>::pack(packer2, "body");
+//
+//        backward_stream = backward_stream.send<app_protocol::chunk>(std::string(buffer2.data(), buffer2.size()));
+//        backward_stream.send<app_protocol::choke>();
+//        auto dispatch = std::make_shared<slot_t::dispatch_type>("");
+//        dispatch->on<app_protocol::error>([this](std::error_code, std::string){});
+//        dispatch->on<app_protocol::chunk>([this](std::string){});
+//        dispatch->on<app_protocol::choke>([this](){});
+//        return result_t(dispatch);
+
         auto event = std::get<0>(args);
         std::shared_ptr<peer_t> peer;
         try {
             peer = choose_peer(headers, event);
-            auto dispatch_name = format("{}/{}/streaming/forward", this->name(), event);
-            auto forward_dispatch = std::make_shared<forward_dispatch_t>(*this, dispatch_name, backward_stream, peer);
+            COCAINE_LOG_DEBUG(logger, "chosen peer {}", peer);
+            auto dispatch_name = format("{}/{}/streaming/backward", this->name(), event);
+            auto backward_dispatch = std::make_shared<backward_dispatch_t>(dispatch_name, *this, backward_stream);
 
-            dispatch_name = format("{}/{}/streaming/backward", this->name(), event);
-            auto backward_dispatch = std::make_shared<backward_dispatch_t>(dispatch_name, *this, backward_stream,
-                                                                           forward_dispatch);
-            auto forward_stream = peer->open_stream(backward_dispatch);
-            forward_dispatch->attach(forward_stream);
+            dispatch_name = format("{}/{}/streaming/forward", this->name(), event);
+            auto forward_dispatch = std::make_shared<forward_dispatch_t>(*this, dispatch_name, backward_stream, backward_dispatch, peer);
+            //TODO: remove this and move creation of backward_disptch inside f_d
+            backward_dispatch->attach(forward_dispatch);
             forward_dispatch->enqueue(headers, event);
             return result_t(forward_dispatch);
         } catch (const std::system_error& e) {

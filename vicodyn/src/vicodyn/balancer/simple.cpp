@@ -46,7 +46,6 @@ auto simple_t::choose_peer(const hpack::headers_t& /*headers*/, const std::strin
             COCAINE_LOG_WARNING(logger, "peer list for app {} is empty", app_name);
             throw error_t("no peers found");
         }
-        COCAINE_LOG_DEBUG(logger, "x-cocaine-cluster is {}", x_cocaine_cluster);
         auto it = choose_random_if(mapping.peers.begin(), mapping.peers.end(),
             [&](const peers_t::peers_data_t::value_type pair) -> bool {
                 if(x_cocaine_cluster != pair.second->extra().at("x-cocaine-cluster", "").as_string()) {
