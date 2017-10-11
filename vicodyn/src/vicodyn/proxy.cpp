@@ -26,168 +26,292 @@ namespace vicodyn {
 
 using app_tag = io::stream_of<std::string>::tag;
 
-class forward_dispatch_t : public dispatch<app_tag>, public std::enable_shared_from_this<forward_dispatch_t> {
+template<class Tag>
+class discardable : public dispatch<Tag> {
+public:
+    using discarder_t = std::function<void(const std::error_code&)>;
+
+    discardable(const std::string& name):
+        dispatch<app_tag>(name)
+    {}
+
+    auto discard(const std::error_code& ec) -> void override {
+        if(discarder != nullptr) {
+            discarder(ec);
+        }
+    }
+
+    auto on_discard(discarder_t d) -> void {
+        discarder = std::move(d);
+    }
+
+private:
+    discarder_t discarder;
+};
+
+class safe_stream_t {
+    bool closed;
+    boost::optional<upstream<app_tag>> stream;
+
+public:
     using protocol = io::protocol<app_tag>::scope;
 
-    friend class backward_dispatch_t;
+    safe_stream_t(upstream<app_tag> stream) :
+        stream(std::move(stream)),
+        closed(false)
+    {}
+
+    safe_stream_t() :
+        stream(),
+        closed(false)
+    {}
+
+    operator bool() {
+        return stream;
+    }
+
+    auto chunk(const hpack::headers_t& headers, std::string data) -> void {
+        if(!closed && stream) {
+            stream = stream->send<protocol::chunk>(headers, std::move(data));
+        }
+    }
+
+    auto close(const hpack::headers_t& headers) -> void {
+        if(!closed && stream) {
+            stream->send<protocol::choke>(headers);
+        }
+        closed = true;
+    }
+
+    auto error(const hpack::headers_t& headers, std::error_code ec, std::string msg) -> void {
+        if(!closed && stream) {
+            stream->send<protocol::error>(headers, std::move(ec), std::move(msg));
+        }
+        closed = true;
+    }
+};
+
+class vicodyn_dispatch_t : public std::enable_shared_from_this<vicodyn_dispatch_t> {
+    using protocol = io::protocol<app_tag>::scope;
+
     proxy_t& proxy;
     std::unique_ptr<logging::logger_t> logger;
     std::shared_ptr<peer_t> peer;
-    std::shared_ptr<dispatch<app_tag>> backward_dispatch;
+    discardable<app_tag> forward_dispatch;
+    discardable<app_tag> backward_dispatch;
 
-    struct data_t {
+    safe_stream_t backward_stream;
+    safe_stream_t forward_stream;
 
-        upstream<io::stream_of<std::string>::tag> backward_stream;
+    std::string enqueue_frame;
+    hpack::headers_t enqueue_headers;
+    std::vector<std::string> chunks;
+    std::vector<hpack::headers_t> chunk_headers;
+    bool choke_sent;
+    hpack::headers_t choke_headers;
 
-        io::upstream_ptr_t forward_stream;
-        std::string enqueue_frame;
-        hpack::headers_t enqueue_headers;
+    bool buffering_enabled;
 
-        std::vector<std::string> chunks;
-        std::vector<hpack::headers_t> chunk_headers;
+    size_t retry_counter;
 
-        bool choke_sent;
-        hpack::headers_t choke_headers;
-
-        bool buffering_enabled;
-
-        size_t retry_counter;
-
-
-        data_t(upstream<app_tag> backward_stream):
-            backward_stream(std::move(backward_stream)),
-            choke_sent(false),
-            buffering_enabled(true),
-            retry_counter(0)
-        {}
-    };
-
-    synchronized<data_t> d;
+    synchronized<void> mutex;
 
 public:
-    forward_dispatch_t(proxy_t& _proxy, const std::string& name, upstream<app_tag> b_stream,
-                       std::shared_ptr<dispatch<app_tag>> b_dispatch, std::shared_ptr<peer_t> _peer) :
-        dispatch(name),
+    class check_stream_t {
+        vicodyn_dispatch_t* parent;
+    public:
+        explicit
+        check_stream_t(vicodyn_dispatch_t* parent) :
+            parent(parent)
+        {}
+
+        template<typename Event, typename F, typename... Args>
+        auto
+        operator()(F fn, Event, const hpack::headers_t& headers, Args&&... args) -> void {
+            if(!parent->forward_stream) {
+                COCAINE_LOG_WARNING(parent->logger, "skipping sending {} - forward stream is missing"
+                    "(this can happen if enqueue was unsuccessfull)", Event::alias());
+                return;
+            }
+            return fn(headers, std::forward<Args>(args)...);
+        }
+    };
+
+    class locked_t {
+        vicodyn_dispatch_t* parent;
+    public:
+        explicit
+        locked_t(vicodyn_dispatch_t* parent) :
+            parent(parent)
+        {}
+
+        template<typename Event, typename F, typename... Args>
+        auto
+        operator()(F fn, Event, const hpack::headers_t& headers, Args&&... args) -> void {
+            auto guard = parent->mutex.synchronize();
+            return fn(headers, std::forward<Args>(args)...);
+        }
+    };
+
+    class catcher_t {
+        vicodyn_dispatch_t* parent;
+    public:
+        explicit
+        catcher_t(vicodyn_dispatch_t* parent) :
+            parent(parent)
+        {}
+
+        template<typename Event, typename F, typename... Args>
+        auto
+        operator()(F fn, Event, const hpack::headers_t& headers, Args&&... args) -> void {
+            try {
+                return fn(headers, std::forward<Args>(args)...);
+            }
+            catch(const std::system_error& e) {
+                COCAINE_LOG_WARNING(parent->logger, "failed to send error to forward dispatch - {}", error::to_string(e));
+                parent->backward_stream.error({}, e.code(), "failed to send error to forward dispatch");
+                parent->peer->schedule_reconnect();
+            }
+        }
+    };
+
+    vicodyn_dispatch_t(proxy_t& _proxy, const std::string& name, upstream<app_tag> b_stream, std::shared_ptr<peer_t> _peer) :
         proxy(_proxy),
         logger(new blackhole::wrapper_t(*proxy.logger, {{"peer", _peer->uuid()}})),
         peer(std::move(_peer)),
-        backward_dispatch(std::move(b_dispatch)),
-        d(std::move(b_stream))
+        forward_dispatch(name + "/forward"),
+        backward_dispatch(name + "/backward"),
+        backward_stream(std::move(b_stream)),
+        forward_stream(),
+        buffering_enabled(true),
+        retry_counter(0)
     {
-        on<protocol::chunk>().execute([this](const hpack::headers_t& headers, std::string chunk){
-            COCAINE_LOG_DEBUG(logger, "processing chunk in");
-            d.apply([&](data_t& d){
-                if(!d.forward_stream) {
-                    COCAINE_LOG_WARNING(logger, "skipping sending chunk - forward stream is missing"
-                        "(this can happen if enqueue was unsuccessfull)");
-                    return;
-                }
-                try {
-                    d.chunks.push_back(std::move(chunk));
-                    d.chunk_headers.push_back(headers);
-                    d.forward_stream->send<protocol::chunk>(headers, d.chunks.back());
-                } catch (const std::system_error& e) {
-                    COCAINE_LOG_WARNING(logger, "failed to send chunk to forward dispatch - {}", error::to_string(e));
-                    d.backward_stream.send<protocol::error>(e.code(), "failed to send chunk to forward dispatch");
-                    peer->schedule_reconnect();
-                }
-            });
+        namespace ph = std::placeholders;
+
+        check_stream_t check_stream(this);
+        locked_t locked(this);
+        catcher_t catcher(this);
+        forward_dispatch.on<protocol::chunk>()
+            .with_middleware(locked)
+            .with_middleware(check_stream)
+            .with_middleware(catcher)
+            .execute(std::bind(&vicodyn_dispatch_t::on_forward_chunk, this, ph::_1, ph::_2));
+
+        forward_dispatch.on<protocol::choke>()
+            .with_middleware(locked)
+            .with_middleware(check_stream)
+            .with_middleware(catcher)
+            .execute(std::bind(&vicodyn_dispatch_t::on_forward_choke, this, ph::_1));
+
+        forward_dispatch.on<protocol::error>()
+            .with_middleware(locked)
+            .with_middleware(check_stream)
+            .with_middleware(catcher)
+            .execute(std::bind(&vicodyn_dispatch_t::on_forward_error, this, ph::_1, ph::_2, ph::_3));
+
+        forward_dispatch.on_discard([&](const std::error_code&){
+            on_client_disconnection();
         });
 
-        on<protocol::choke>().execute([this](const hpack::headers_t& headers){
-            COCAINE_LOG_DEBUG(logger, "processing choke");
-            d.apply([&](data_t& d){
-                if(!d.forward_stream) {
-                    COCAINE_LOG_WARNING(logger, "skipping sending chunk - forward stream is missing"
-                        "(this can happen if enqueue was unsuccessfull)");
-                    return;
-                }
-                try {
-                    d.choke_sent = true;
-                    d.choke_headers = headers;
-                    d.forward_stream->send<protocol::choke>(headers);
-                } catch (const std::system_error& e) {
-                    COCAINE_LOG_WARNING(logger, "failed to send choke to forward dispatch - {}", error::to_string(e));
-                    d.backward_stream.send<protocol::error>(e.code(), "failed to send choke to forward dispatch");
-                    peer->schedule_reconnect();
-                }
-            });
-        });
 
-        on<protocol::error>().execute([this](const hpack::headers_t& headers, std::error_code ec, std::string msg){
-            COCAINE_LOG_INFO(logger, "processing error");
-            COCAINE_LOG_ERROR(logger, "UPYACHKA!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            d.apply([&](data_t& d){
-                d.buffering_enabled = false;
-                if(!d.forward_stream) {
-                    COCAINE_LOG_WARNING(logger, "skipping sending error - forward stream is missing"
-                        "(this can happen if enqueue was unsuccessfull)");
-                    return;
-                }
-                try {
-                    d.forward_stream->send<protocol::error>(headers, ec, msg);
-                } catch (const std::system_error& e) {
-                    COCAINE_LOG_WARNING(logger, "failed to send error to forward dispatch - {}", error::to_string(e));
-                    d.backward_stream.send<protocol::error>(e.code(), "failed to send error to forward dispatch");
-                    peer->schedule_reconnect();
-                }
-            });
+        backward_dispatch.on<protocol::chunk>()
+            .execute(std::bind(&vicodyn_dispatch_t::on_backward_chunk, this, ph::_1, ph::_2));
+
+        backward_dispatch.on<protocol::choke>()
+            .execute(std::bind(&vicodyn_dispatch_t::on_backward_choke, this, ph::_1));
+
+        backward_dispatch.on<protocol::error>()
+            .execute(std::bind(&vicodyn_dispatch_t::on_backward_error, this, ph::_1, ph::_2, ph::_3));
+
+        backward_dispatch.on_discard([&](const std::error_code& ec) {
+            try {
+                backward_stream.error({}, ec, "vicodyn upstream has been disconnected");
+            } catch (const std::exception& e) {
+                COCAINE_LOG_WARNING(logger, "could not send error {} to upstream - {}", ec, e);
+            }
+        });
+    }
+
+    auto on_forward_chunk(const hpack::headers_t& headers, std::string chunk) -> void {
+        COCAINE_LOG_DEBUG(logger, "processing chunk");
+        chunks.push_back(std::move(chunk));
+        chunk_headers.push_back(headers);
+        forward_stream.chunk(headers, chunks.back());
+    }
+
+    auto on_forward_choke(const hpack::headers_t& headers) -> void {
+        COCAINE_LOG_DEBUG(logger, "processing choke");
+        choke_sent = true;
+        choke_headers = headers;
+        forward_stream.close(headers);
+    }
+
+    auto on_forward_error(const hpack::headers_t& headers, const std::error_code& ec, const std::string& msg) -> void {
+        COCAINE_LOG_INFO(logger, "processing error");
+        forward_stream.error(headers, ec, msg);
+    }
+
+    auto on_backward_chunk(const hpack::headers_t& headers, std::string chunk) -> void {
+        disable_buffering();
+        try {
+            backward_stream.chunk(headers, std::move(chunk));
+        } catch (const std::system_error& e) {
+            on_client_disconnection();
+        }
+    }
+
+    auto on_backward_error(const hpack::headers_t& headers, const std::error_code& ec, const std::string& msg) -> void {
+        COCAINE_LOG_WARNING(logger, "received error from peer {}({}) - {}", ec.message(), ec.value(), msg);
+        proxy.balancer->on_error(peer, ec, msg);
+        if(proxy.balancer->is_recoverable(peer, ec)) {
+            try {
+                retry();
+            } catch(const std::system_error& e) {
+                backward_stream.error({}, e.code(), e.what());
+            }
+        } else {
+            try {
+                backward_stream.error(headers, ec, msg);
+            } catch (const std::system_error& e) {
+                on_client_disconnection();
+            }
+        }
+    };
+
+
+    auto on_backward_choke(const hpack::headers_t& headers) -> void {
+        try {
+            COCAINE_LOG_WARNING(logger, "FUCKING CHOKE");
+            backward_stream.close(headers);
+        } catch (const std::system_error& e) {
+            on_client_disconnection();
+        }
+    }
+
+    auto retry() -> void {
+        mutex.apply([&](){
+            retry_unsafe();
         });
     }
 
     auto disable_buffering() -> void {
-        d.apply([&](data_t& d){
-            disable_buffering(d);
+        mutex.apply([&](){
+            disable_buffering_unsafe();
         });
     }
 
-    auto disable_buffering(data_t& d) -> void {
-        d.buffering_enabled = false;
-        d.enqueue_frame.clear();
-        d.enqueue_headers.clear();
-        d.chunk_headers.clear();
-        d.chunks.clear();
-        COCAINE_LOG_DEBUG(logger, "disabled buffernig");
-    }
-
-    auto send_discard_frame() -> void {
+    auto on_client_disconnection() -> void {
+        // TODO: Do we need lock here?
         COCAINE_LOG_DEBUG(logger, "sending discard frame");
-        d.apply([&](data_t& d) {
-            try {
-                auto ec = make_error_code(error::dispatch_errors::not_connected);
-                if(!d.forward_stream) {
-                    return;
-                }
-                d.forward_stream->send<protocol::error>(hpack::headers_t{}, ec, "vicodyn client was disconnected");
-            } catch (const std::system_error& e) {
-                // pass
-            }
-        });
+        auto ec = make_error_code(error::dispatch_errors::not_connected);
+        forward_stream.error({}, ec, "vicodyn client was disconnected");
     }
 
     auto enqueue(const hpack::headers_t& headers, std::string event) -> void {
-        COCAINE_LOG_DEBUG(logger, "processing enqueue");
-        d.apply([&](data_t& d){
-            try {
-                d.enqueue_frame = std::move(event);
-                d.enqueue_headers = std::move(headers);
-                d.forward_stream = peer->open_stream<io::node::enqueue>(backward_dispatch, d.enqueue_headers,
-                                                                        proxy.app_name, d.enqueue_frame);
-            } catch (const std::system_error& e) {
-                COCAINE_LOG_WARNING(logger, "failed to send enqueue to forward stream - {}", error::to_string(e));
-                peer->schedule_reconnect();
-                //TODO: maybe cycle here?
-                try {
-                    retry(d);
-                } catch(std::system_error& e) {
-                    COCAINE_LOG_WARNING(logger, "could not retry enqueue - {}", error::to_string(e));
-                    d.backward_stream.send<protocol::error>(e.code(), "failed to retry enqueue");
-                }
-            }
+        mutex.apply([&](){
+            enqueue_unsafe(headers, std::move(event));
         });
     }
-
-    auto retry() -> void;
 
     auto on_error(std::error_code ec, const std::string& msg) -> void {
         return proxy.balancer->on_error(peer, ec, msg);
@@ -197,103 +321,65 @@ public:
         return proxy.balancer->is_recoverable(peer, ec);
     }
 
+    auto shared_backward_dispatch() -> std::shared_ptr<dispatch<app_tag>> {
+        return std::shared_ptr<dispatch<app_tag>>(shared_from_this(), &backward_dispatch);
+    }
+
+    auto shared_forward_dispatch() -> std::shared_ptr<dispatch<app_tag>> {
+        return std::shared_ptr<dispatch<app_tag>>(shared_from_this(), &forward_dispatch);
+    }
+
 private:
-    auto retry(data_t& d) -> void;
-};
-
-class backward_dispatch_t : public dispatch<app_tag> {
-    using protocol = io::protocol<app_tag>::scope;
-
-    proxy_t& proxy;
-    upstream<app_tag> backward_stream;
-    std::shared_ptr<forward_dispatch_t> forward_dispatch;
-
-public:
-    backward_dispatch_t(const std::string& name, proxy_t& _proxy, upstream<app_tag> back_stream):
-        dispatch(name),
-        proxy(_proxy),
-        backward_stream(std::move(back_stream))
-    {
-        on<protocol::chunk>().execute([this](const hpack::headers_t& headers, std::string chunk) mutable {
-            forward_dispatch->disable_buffering();
-            try {
-                backward_stream = backward_stream.send<protocol::chunk>(headers, std::move(chunk));
-            } catch (const std::system_error& e) {
-                forward_dispatch->send_discard_frame();
-            }
-        });
-
-        on<protocol::error>().execute([this](const hpack::headers_t& headers, std::error_code ec, std::string msg) mutable {
-            COCAINE_LOG_WARNING(forward_dispatch->logger, "received error from peer {}({}) - {}", ec.message(), ec.value(), msg);
-            forward_dispatch->on_error(ec, msg);
-            if(forward_dispatch->is_recoverable(ec)) {
-                try {
-                    forward_dispatch->retry();
-                } catch(const std::system_error& e) {
-                    backward_stream.send<protocol::error>(hpack::headers_t{}, e.code(), e.what());
-                }
-            } else {
-                try {
-                    backward_stream.send<protocol::error>(headers, ec, msg);
-                } catch (const std::system_error& e) {
-                    forward_dispatch->send_discard_frame();
-                }
-            }
-        });
-
-        on<protocol::choke>().execute([this](const hpack::headers_t& headers) mutable {
-            forward_dispatch->disable_buffering();
-            try {
-                backward_stream.send<protocol::choke>(headers);
-            } catch (const std::system_error& e) {
-                forward_dispatch->send_discard_frame();
-            }
-        });
-
+    auto disable_buffering_unsafe() -> void {
+        buffering_enabled = false;
+        enqueue_frame.clear();
+        enqueue_headers.clear();
+        chunk_headers.clear();
+        chunks.clear();
+        COCAINE_LOG_DEBUG(logger, "disabled buffernig");
     }
 
-    auto attach(std::shared_ptr<forward_dispatch_t> f_dispatch) -> void {
-        forward_dispatch = std::move(f_dispatch);
-    }
-
-    auto discard(const std::error_code& ec) -> void override {
+    auto enqueue_unsafe(const hpack::headers_t& headers, std::string event) -> void {
+        COCAINE_LOG_DEBUG(logger, "processing enqueue");
+        enqueue_frame = std::move(event);
+        enqueue_headers = std::move(headers);
         try {
-            backward_stream.send<protocol::error>(ec, "vicodyn upstream has been disconnected");
-        } catch (const std::exception& e) {
-            COCAINE_LOG_WARNING(forward_dispatch->logger, "could not send error {} to upstream - {}", ec, e);
+            auto u = peer->open_stream<io::node::enqueue>(shared_backward_dispatch(), enqueue_headers, proxy.app_name, enqueue_frame);
+            forward_stream = safe_stream_t(std::move(u));
+        } catch (const std::system_error& e) {
+            COCAINE_LOG_WARNING(logger, "failed to send enqueue to forward stream - {}", error::to_string(e));
+            peer->schedule_reconnect();
+            //TODO: maybe cycle here?
+            try {
+                retry_unsafe();
+            } catch(std::system_error& e) {
+                COCAINE_LOG_WARNING(logger, "could not retry enqueue - {}", error::to_string(e));
+                backward_stream.error({}, e.code(), "failed to retry enqueue");
+            }
+        }
+    }
+
+    auto retry_unsafe() -> void {
+        COCAINE_LOG_INFO(logger, "retrying");
+        retry_counter++;
+        if(!buffering_enabled) {
+            throw error_t("buffering is already disabled - response chunk was sent");
+        }
+        if(retry_counter > proxy.balancer->retry_count()) {
+            throw error_t("maximum number of retries reached");
+        }
+        peer = proxy.choose_peer(enqueue_headers, enqueue_frame);
+        logger.reset(new blackhole::wrapper_t(*proxy.logger, {{"peer", peer->uuid()}}));
+        auto u = peer->open_stream<io::node::enqueue>(shared_backward_dispatch(), enqueue_headers, proxy.app_name, enqueue_frame);
+        forward_stream = safe_stream_t(std::move(u));
+        for(size_t i = 0; i < chunks.size(); i++) {
+            forward_stream.chunk(chunk_headers[i], chunks[i]);
+        }
+        if(choke_sent) {
+            forward_stream.close(choke_headers);
         }
     }
 };
-
-auto forward_dispatch_t::retry() -> void {
-    d.apply([&](data_t& d) {
-        retry(d);
-    });
-}
-
-auto forward_dispatch_t::retry(data_t& d) -> void {
-    COCAINE_LOG_INFO(logger, "retrying");
-    d.retry_counter++;
-    if(!d.buffering_enabled) {
-        throw error_t("buffering is already disabled - response chunk was sent");
-    }
-    if(d.retry_counter > proxy.balancer->retry_count()) {
-        throw error_t("maximum number of retries reached");
-    }
-    peer = proxy.choose_peer(d.enqueue_headers, d.enqueue_frame);
-    logger.reset(new blackhole::wrapper_t(*proxy.logger, {{"peer", peer->uuid()}}));
-//    auto dispatch_name = format("{}/{}/streaming/backward", proxy.name(), d.enqueue_frame);
-//    auto backward_dispatch = std::make_shared<backward_dispatch_t>(dispatch_name, proxy, d.backward_stream, shared_from_this());
-    //TODO: remove duplication
-    d.forward_stream = peer->open_stream<io::node::enqueue>(backward_dispatch, d.enqueue_headers, proxy.app_name, d.enqueue_frame);
-    for(size_t i = 0; i < d.chunks.size(); i++) {
-        d.forward_stream->send<protocol::chunk>(d.chunk_headers[i], d.chunks[i]);
-    }
-    if(d.choke_sent) {
-        d.forward_stream->send<protocol::choke>(d.choke_headers);
-    }
-
-}
 
 auto proxy_t::make_balancer(const dynamic_t& args, const dynamic_t::object_t& extra) -> api::vicodyn::balancer_ptr {
     auto balancer_conf = args.as_object().at("balancer", dynamic_t::empty_object);
@@ -314,41 +400,18 @@ proxy_t::proxy_t(context_t& context, peers_t& peers, const std::string& name, co
 {
     COCAINE_LOG_DEBUG(logger, "created proxy for app {}", app_name);
     on<event_t>([&](const hpack::headers_t& headers, slot_t::tuple_type&& args, slot_t::upstream_type&& backward_stream){
-//        backward_stream = backward_stream.send<app_protocol::chunk>("");
-//        backward_stream = backward_stream.send<app_protocol::chunk>("HI");
-
-//        io::aux::encoded_buffers_t buffer;
-//        msgpack::packer<io::aux::encoded_buffers_t> packer(buffer);
-//        io::type_traits<std::pair<unsigned , std::vector<std::pair<std::string, std::string>>>>::pack(packer, {200, {}});
-//        backward_stream = backward_stream.send<app_protocol::chunk>(std::string(buffer.data(), buffer.size()));
-//
-//
-//        io::aux::encoded_buffers_t buffer2;
-//        msgpack::packer<io::aux::encoded_buffers_t> packer2(buffer2);
-//        io::type_traits<std::string>::pack(packer2, "body");
-//
-//        backward_stream = backward_stream.send<app_protocol::chunk>(std::string(buffer2.data(), buffer2.size()));
-//        backward_stream.send<app_protocol::choke>();
-//        auto dispatch = std::make_shared<slot_t::dispatch_type>("");
-//        dispatch->on<app_protocol::error>([this](std::error_code, std::string){});
-//        dispatch->on<app_protocol::chunk>([this](std::string){});
-//        dispatch->on<app_protocol::choke>([this](){});
-//        return result_t(dispatch);
-
         auto event = std::get<0>(args);
         std::shared_ptr<peer_t> peer;
         try {
             peer = choose_peer(headers, event);
             COCAINE_LOG_DEBUG(logger, "chosen peer {}", peer);
-            auto dispatch_name = format("{}/{}/streaming/backward", this->name(), event);
-            auto backward_dispatch = std::make_shared<backward_dispatch_t>(dispatch_name, *this, backward_stream);
+            auto dispatch_name = format("{}/{}/streaming", this->name(), event);
 
             dispatch_name = format("{}/{}/streaming/forward", this->name(), event);
-            auto forward_dispatch = std::make_shared<forward_dispatch_t>(*this, dispatch_name, backward_stream, backward_dispatch, peer);
+            auto dispatch = std::make_shared<vicodyn_dispatch_t>(*this, dispatch_name, backward_stream, peer);
             //TODO: remove this and move creation of backward_disptch inside f_d
-            backward_dispatch->attach(forward_dispatch);
-            forward_dispatch->enqueue(headers, event);
-            return result_t(forward_dispatch);
+            dispatch->enqueue(headers, event);
+            return result_t(dispatch->shared_forward_dispatch());
         } catch (const std::system_error& e) {
             COCAINE_LOG_WARNING(logger, "could not process enqueue via {} - {}", peer, error::to_string(e));
             backward_stream.send<app_protocol::error>(e.code(), e.what());

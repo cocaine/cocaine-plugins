@@ -22,8 +22,7 @@ public:
     using app_protocol = io::protocol<io::stream_of<std::string>::tag>::scope;
     using active_peers_t = std::vector<std::string>;
 
-    friend class forward_dispatch_t;
-    friend class backward_dispatch_t;
+    friend class vicodyn_dispatch_t;
 
     proxy_t(context_t& context, peers_t& peers, const std::string& name, const dynamic_t& args, const dynamic_t::object_t& extra);
 
