@@ -24,7 +24,8 @@ public:
 
     friend class vicodyn_dispatch_t;
 
-    proxy_t(context_t& context, peers_t& peers, const std::string& name, const dynamic_t& args, const dynamic_t::object_t& extra);
+    proxy_t(context_t& context, asio::io_service& loop, peers_t& peers, const std::string& name,
+            const dynamic_t& args, const dynamic_t::object_t& extra);
 
     auto empty() -> bool;
 
@@ -37,9 +38,9 @@ private:
     auto make_balancer(const dynamic_t& args, const dynamic_t::object_t& extra) -> api::vicodyn::balancer_ptr;
 
     context_t& context;
+    asio::io_service& loop;
     peers_t& peers;
     std::string app_name;
-    executor::owning_asio_t executor;
     api::vicodyn::balancer_ptr balancer;
 
     const std::unique_ptr<logging::logger_t> logger;

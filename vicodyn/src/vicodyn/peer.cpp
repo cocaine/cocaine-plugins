@@ -38,8 +38,10 @@ peer_t::peer_t(context_t& context, asio::io_service& loop, endpoints_t endpoints
     timer(loop),
     logger(context.log(format("vicodyn_peer/{}", uuid))),
     connecting(),
-    d({std::move(uuid), std::move(endpoints), std::chrono::system_clock::now(), std::move(extra)})
-{}
+    d({std::move(uuid), std::move(endpoints), std::chrono::system_clock::now(), std::move(extra), {}})
+{
+    d.x_cocaine_cluster = d.extra.at("x-cocaine-cluster", "").as_string();
+}
 
 auto peer_t::schedule_reconnect() -> void {
     COCAINE_LOG_INFO(logger, "scheduling reconnection of peer {} to {}", uuid(), endpoints());
@@ -150,6 +152,9 @@ auto peer_t::extra() const -> const dynamic_t::object_t& {
     return d.extra;
 }
 
+auto peer_t::x_cocaine_cluster() const -> const std::string& {
+    return d.x_cocaine_cluster;
+}
 
 peers_t::peers_t(context_t& context):
     context(context),
@@ -159,7 +164,7 @@ peers_t::peers_t(context_t& context):
 auto peers_t::register_peer(const std::string& uuid, const endpoints_t& endpoints, dynamic_t::object_t extra)
     -> std::shared_ptr<peer_t>
 {
-    return data.apply([&](data_t& data){
+    return apply([&](data_t& data){
         auto& peer = data.peers[uuid];
         if(!peer) {
             peer = std::make_shared<peer_t>(context, executor.asio(), endpoints, uuid, std::move(extra));
@@ -175,44 +180,40 @@ auto peers_t::register_peer(const std::string& uuid, const endpoints_t& endpoint
 }
 
 auto peers_t::register_peer(const std::string& uuid, std::shared_ptr<peer_t> peer) -> void {
-    data.apply([&](data_t& data) {
+    apply([&](data_t& data) {
         data.peers[uuid] = std::move(peer);
     });
 }
 
 auto peers_t::erase_peer(const std::string& uuid) -> void {
-    data.apply([&](data_t& data){
+    apply([&](data_t& data){
         data.peers.erase(uuid);
     });
 }
 
 auto peers_t::register_app(const std::string& uuid, const std::string& name) -> void {
-    data.apply([&](data_t& data) {
+    apply([&](data_t& data) {
         data.apps[name].insert(uuid);
     });
 }
 
 auto peers_t::erase_app(const std::string& uuid, const std::string& name) -> void {
-    data.apply([&](data_t& data) {
+    apply([&](data_t& data) {
         data.apps[name].erase(uuid);
     });
 }
 
 auto peers_t::erase(const std::string& uuid) -> void {
     erase_peer(uuid);
-    data.apply([&](data_t& data) {
+    apply([&](data_t& data) {
         for(auto pair : data.apps) {
             pair.second.erase(uuid);
         }
     });
 }
 
-auto peers_t::inner() -> synchronized<data_t>& {
-    return data;
-}
-
 auto peers_t::peer(const std::string& uuid) -> std::shared_ptr<peer_t> {
-    return data.apply([&](data_t& data) -> std::shared_ptr<peer_t>{
+    return apply_shared([&](const data_t& data) -> std::shared_ptr<peer_t>{
         auto it = data.peers.find(uuid);
         if (it != data.peers.end()) {
             return it->second;

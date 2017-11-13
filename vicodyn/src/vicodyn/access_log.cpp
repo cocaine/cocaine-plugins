@@ -21,11 +21,11 @@ access_log_t::~access_log_t() {
 }
 
 auto access_log_t::add(blackhole::attribute_t attribute) -> void {
-    attributes.push_back(std::move(attribute));
+    attributes->push_back(std::move(attribute));
 }
 
 auto access_log_t::add_checkpoint(std::string name) -> void {
-    attributes.push_back({name, format("{} ms", current_duration_ms())});
+    attributes->emplace_back(std::move(name), format("{} ms", current_duration_ms()));
 }
 
 auto access_log_t::finish() -> void {
@@ -49,7 +49,7 @@ auto access_log_t::write(int level, const std::string& msg) -> void {
     static std::string d("total_duration");
     add_checkpoint(d);
 
-    blackhole::view_of<blackhole::attributes_t>::type view(attributes.begin(), attributes.end());
+    blackhole::view_of<blackhole::attributes_t>::type view(attributes.unsafe().begin(), attributes.unsafe().end());
 
     COCAINE_LOG(logger, logging::priorities(level), msg, view);
 }

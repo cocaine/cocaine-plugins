@@ -56,6 +56,8 @@ public:
 
     auto extra() const -> const dynamic_t::object_t&;
 
+    auto x_cocaine_cluster() const -> const std::string&;
+
 private:
     auto schedule_reconnect(std::shared_ptr<cocaine::session_t>& session) -> void;
 
@@ -72,6 +74,7 @@ private:
         std::vector<asio::ip::tcp::endpoint> endpoints;
         std::chrono::system_clock::time_point last_active;
         dynamic_t::object_t extra;
+        std::string x_cocaine_cluster;
     } d;
 
 };
@@ -93,10 +96,24 @@ private:
     context_t& context;
     std::unique_ptr<logging::logger_t> logger;
     executor::owning_asio_t executor;
-    synchronized<data_t> data;
+    data_t data;
+    mutable boost::shared_mutex mutex;
 
 
 public:
+    template<class F>
+    auto apply_shared(F&& f) const -> decltype(f(std::declval<const data_t&>())) {
+        boost::shared_lock<boost::shared_mutex> lock(mutex);
+        return f(data);
+    }
+
+    template<class F>
+    auto apply(F&& f) -> decltype(f(std::declval<data_t&>())) {
+        boost::unique_lock<boost::shared_mutex> lock(mutex);
+        return f(data);
+    }
+
+
     peers_t(context_t& context);
 
     auto register_peer(const std::string& uuid, const endpoints_t& endpoints, dynamic_t::object_t extra) -> std::shared_ptr<peer_t>;
@@ -110,8 +127,6 @@ public:
     auto erase_app(const std::string& uuid, const std::string& name) -> void;
 
     auto erase(const std::string& uuid) -> void;
-
-    auto inner() -> synchronized<data_t>&;
 
     auto peer(const std::string& uuid) -> std::shared_ptr<peer_t>;
 };

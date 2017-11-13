@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cocaine/locked_ptr.hpp>
+
 #include <blackhole/attributes.hpp>
 #include <blackhole/logger.hpp>
 
@@ -29,7 +31,7 @@ private:
 
     blackhole::logger_t& logger;
     clock_t::time_point start_time;
-    blackhole::attributes_t attributes;
+    synchronized<blackhole::attributes_t> attributes;
     std::atomic_flag closed;
 };
 

@@ -138,7 +138,7 @@ vicodyn_t::vicodyn_t(context_t& _context, const std::string& _local_uuid, const 
         dynamic_t result = dynamic_t::empty_object;
         dynamic_t& peers_result = result.as_object()["peers"];
 
-        peers.inner().apply([&](const vicodyn::peers_t::data_t& data) mutable {
+        peers.apply_shared([&](const vicodyn::peers_t::data_t& data) mutable {
             if(uuid.empty()) {
                 peers_result = data.peers;
             } else {
@@ -154,7 +154,7 @@ vicodyn_t::vicodyn_t(context_t& _context, const std::string& _local_uuid, const 
     d->on<io::vicodyn::apps>([&](std::string app) {
         dynamic_t result = dynamic_t::empty_object;
         dynamic_t& app_result = result.as_object()["apps"];
-        peers.inner().apply([&](const vicodyn::peers_t::data_t& data) mutable {
+        peers.apply_shared([&](const vicodyn::peers_t::data_t& data) mutable {
             if(app.empty()) {
                 app_result = data.apps;
             } else {
@@ -169,7 +169,7 @@ vicodyn_t::vicodyn_t(context_t& _context, const std::string& _local_uuid, const 
     });
     d->on<io::vicodyn::info>([&]() {
         dynamic_t result = dynamic_t::empty_object;
-        peers.inner().apply([&](const vicodyn::peers_t::data_t& data) {
+        peers.apply_shared([&](const vicodyn::peers_t::data_t& data) {
             result.as_object()["apps"] = data.apps;
             result.as_object()["peers"] = data.peers;
         });
@@ -231,7 +231,7 @@ auto vicodyn_t::consume(const std::string& uuid,
             peers.register_app(uuid, name);
             auto it = mapping.find(name);
             if(it == mapping.end()) {
-                auto proxy = std::make_unique<vicodyn::proxy_t>(context, peers, "virtual::" + name, args, extra);
+                auto proxy = std::make_unique<vicodyn::proxy_t>(context, executor.asio(), peers, "virtual::" + name, args, extra);
                 auto& proxy_ref = *proxy;
                 auto actor = std::make_unique<tcp_actor_t>(context, std::move(proxy));
                 actor->run();

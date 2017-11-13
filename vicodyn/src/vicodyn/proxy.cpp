@@ -243,7 +243,6 @@ public:
     }
 
     ~vicodyn_dispatch_t() {
-        access->add({"retries", retry_counter});
     }
 
     auto on_forward_chunk(const hpack::headers_t& headers, std::string chunk) -> void {
@@ -251,7 +250,7 @@ public:
         chunks.push_back(std::move(chunk));
         chunk_headers.push_back(headers);
         forward_stream.chunk(headers, chunks.back());
-        access->add_checkpoint("after_fchunk");
+//        access->add_checkpoint("after_fchunk");
     }
 
     auto on_forward_choke(const hpack::headers_t& headers) -> void {
@@ -296,6 +295,7 @@ public:
             } catch (const std::system_error& e) {
                 on_client_disconnection();
             }
+            access->add({"retries", retry_counter});
             access->fail(ec, msg);
         }
     };
@@ -309,6 +309,7 @@ public:
         } catch (const std::system_error& e) {
             on_client_disconnection();
         }
+        access->add({"retries", retry_counter});
         access->finish();
     }
 
@@ -370,7 +371,7 @@ private:
         try {
             auto u = peer->open_stream<io::node::enqueue>(shared_backward_dispatch(), enqueue_headers, proxy.app_name, enqueue_frame);
             forward_stream = safe_stream_t(std::move(u));
-            access->add_checkpoint("after_enqueue");
+//            access->add_checkpoint("after_enqueue");
         } catch (const std::system_error& e) {
             COCAINE_LOG_WARNING(logger, "failed to send enqueue to forward stream - {}", error::to_string(e));
             peer->schedule_reconnect();
@@ -394,8 +395,8 @@ private:
             throw error_t("maximum number of retries reached");
         }
         peer = proxy.choose_peer(enqueue_headers, enqueue_frame);
-        access->add_checkpoint("retry");
-        access->add({"peer", peer->uuid()});
+//        access->add_checkpoint("retry");
+//        access->add({"peer", peer->uuid()});
         logger.reset(new blackhole::wrapper_t(*proxy.logger, {{"peer", peer->uuid()}}));
         auto u = peer->open_stream<io::node::enqueue>(shared_backward_dispatch(), enqueue_headers, proxy.app_name, enqueue_frame);
         forward_stream = safe_stream_t(std::move(u));
@@ -405,7 +406,7 @@ private:
         if(choke_sent) {
             forward_stream.close(choke_headers);
         }
-        access->add_checkpoint("after_retry");
+//        access->add_checkpoint("after_retry");
     }
 };
 
@@ -413,33 +414,31 @@ auto proxy_t::make_balancer(const dynamic_t& args, const dynamic_t::object_t& ex
     auto balancer_conf = args.as_object().at("balancer", dynamic_t::empty_object);
     auto name = balancer_conf.as_object().at("type", "simple").as_string();
     auto balancer_args = balancer_conf.as_object().at("args", dynamic_t::empty_object).as_object();
-    return context.repository().get<api::vicodyn::balancer_t>(name, context, peers, executor.asio(), app_name,
+    return context.repository().get<api::vicodyn::balancer_t>(name, context, peers, loop, app_name,
                                                               balancer_args, extra);
 }
 
-proxy_t::proxy_t(context_t& context, peers_t& peers, const std::string& name, const dynamic_t& args,
+proxy_t::proxy_t(context_t& context, asio::io_service& loop, peers_t& peers, const std::string& name, const dynamic_t& args,
                  const dynamic_t::object_t& extra) :
     dispatch(name),
     context(context),
+    loop(loop),
     peers(peers),
     app_name(name.substr(sizeof("virtual::") - 1)),
     balancer(make_balancer(args, extra)),
     logger(context.log(name))
 {
-    COCAINE_LOG_DEBUG(logger, "created proxy for app {}", app_name);
+//    COCAINE_LOG_DEBUG(logger, "created proxy for app {}", app_name);
     on<event_t>([&](const hpack::headers_t& headers, slot_t::tuple_type&& args, slot_t::upstream_type&& backward_stream){
         auto access = std::make_shared<access_log_t>(*logger);
         auto event = std::get<0>(args);
         std::shared_ptr<peer_t> peer;
         peer = choose_peer(headers, event);
-        access->add({"peer", peer->uuid()});
-        COCAINE_LOG_DEBUG(logger, "chosen peer {}", peer);
+//        access->add({"peer", peer->uuid()});
+//        COCAINE_LOG_DEBUG(logger, "chosen peer {}", peer);
         auto dispatch_name = format("{}/{}/streaming", this->name(), event);
-
-        dispatch_name = format("{}/{}/streaming/forward", this->name(), event);
         auto dispatch = std::make_shared<vicodyn_dispatch_t>(*this, access, dispatch_name, backward_stream, peer);
-        //TODO: remove this and move creation of backward_disptch inside f_d
-        dispatch->enqueue(headers, event);
+        dispatch->enqueue(headers, std::move(event));
         return result_t(dispatch->shared_forward_dispatch());
     });
 }
@@ -449,7 +448,7 @@ auto proxy_t::choose_peer(const hpack::headers_t& headers, const std::string& ev
 }
 
 auto proxy_t::empty() -> bool {
-    return peers.inner().apply([&](peers_t::data_t& data) -> bool {
+    return peers.apply_shared([&](const peers_t::data_t& data) -> bool {
         auto it = data.apps.find(app_name);
         if(it == data.apps.end() || it->second.empty()) {
             return true;
@@ -459,7 +458,7 @@ auto proxy_t::empty() -> bool {
 }
 
 auto proxy_t::size() -> size_t {
-    return peers.inner().apply([&](peers_t::data_t& data) -> size_t {
+    return peers.apply([&](const peers_t::data_t& data) -> size_t {
         auto it = data.apps.find(app_name);
         if(it == data.apps.end()) {
             return 0u;

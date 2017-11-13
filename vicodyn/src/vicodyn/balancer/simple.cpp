@@ -7,21 +7,19 @@ namespace vicodyn {
 namespace balancer {
 
 template<class Iterator, class Predicate>
-auto choose_random_if(Iterator begin, Iterator end, Predicate p) -> Iterator {
-    size_t count = std::count_if(begin, end, p);
-    if(count == 0) {
+auto choose_random_if(Iterator begin, Iterator end, size_t size, Predicate p) -> Iterator {
+    std::vector<Iterator> chosen;
+    chosen.reserve(size);
+    while(begin != end) {
+        if(p(*begin)) {
+            chosen.push_back(begin);
+        }
+        begin++;
+    }
+    if(chosen.empty()) {
         return end;
     }
-    size_t idx = rand() % count + 1;
-    for(;begin != end; begin++){
-        if(p(*begin)) {
-            idx--;
-        }
-        if(idx == 0) {
-            return begin;
-        }
-    }
-    return begin;
+    return chosen[rand() % chosen.size()];
 }
 
 simple_t::simple_t(context_t& ctx, peers_t& peers, asio::io_service& loop, const std::string& app_name,
@@ -39,19 +37,19 @@ simple_t::simple_t(context_t& ctx, peers_t& peers, asio::io_service& loop, const
 auto simple_t::choose_peer(const hpack::headers_t& /*headers*/, const std::string& /*event*/)
     -> std::shared_ptr<cocaine::vicodyn::peer_t>
 {
-    return peers.inner().apply([&](peers_t::data_t& mapping) {
-        auto& apps = mapping.apps[app_name];
-        auto sz = apps.size();
-        if(sz == 0) {
+    return peers.apply_shared([&](const peers_t::data_t& mapping) {
+        auto apps_it = mapping.apps.find(app_name);
+        if(apps_it == mapping.apps.end() || apps_it->second.empty()) {
             COCAINE_LOG_WARNING(logger, "peer list for app {} is empty", app_name);
             throw error_t("no peers found");
         }
-        auto it = choose_random_if(mapping.peers.begin(), mapping.peers.end(),
+        auto& apps = apps_it->second;
+        auto it = choose_random_if(mapping.peers.begin(), mapping.peers.end(), mapping.peers.size(),
             [&](const peers_t::peers_data_t::value_type pair) -> bool {
-                if(x_cocaine_cluster != pair.second->extra().at("x-cocaine-cluster", "").as_string()) {
+                if(!pair.second->connected()) {
                     return false;
                 }
-                if(!pair.second->connected()) {
+                if(x_cocaine_cluster != pair.second->x_cocaine_cluster()) {
                     return false;
                 }
                 return apps.count(pair.second->uuid());

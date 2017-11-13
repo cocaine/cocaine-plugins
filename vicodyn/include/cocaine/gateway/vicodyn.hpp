@@ -72,6 +72,7 @@ private:
     auto cleanup(proxy_map_t& map, proxy_map_t::iterator it, const std::string uuid) -> proxy_map_t::iterator;
 
     context_t& context;
+    executor::owning_asio_t executor;
     dynamic_t::object_t locator_extra;
     api::gateway_ptr wrapped_gateway;
     vicodyn::peers_t peers;
