@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.34) unstable; urgency=low
+
+  * Changed: антмат лох (поназаливал версий самостоятельно).
+
+ -- Evgeny Safronov <division494@gmail.com>  Wed, 15 Nov 2017 14:45:12 +0300
+
 cocaine-plugins (0.12.14.33) unstable; urgency=low
 
   * Added: better logs in vicodyn, access log.
