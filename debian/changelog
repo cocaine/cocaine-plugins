@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.35) unstable; urgency=low
+
+  * Added: named lock for unicorn with extra data.
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 23 Nov 2017 16:22:12 +0300
+
 cocaine-plugins (0.12.14.34) unstable; urgency=low
 
   * Changed: антмат лох (поназаливал версий самостоятельно).
