@@ -15,11 +15,13 @@
 
 #include "cocaine/cluster/unicorn.hpp"
 
-#include "cocaine/dynamic/endpoint.hpp"
+#include "cocaine/dynamic/constructors/endpoint.hpp"
+#include "cocaine/dynamic/converters/endpoint.hpp"
 
 #include <cocaine/context.hpp>
 #include <cocaine/context/quote.hpp>
 #include <cocaine/errors.hpp>
+#include <cocaine/format/exception.hpp>
 #include <cocaine/logging.hpp>
 #include <cocaine/rpc/actor.hpp>
 #include <cocaine/unicorn/value.hpp>
@@ -147,7 +149,6 @@ unicorn_cluster_t::subscriber_t::subscriber_t(unicorn_cluster_t& parent) :
         timer(parent, [=](){subscribe();})
 {}
 
-
 auto unicorn_cluster_t::subscriber_t::subscribe() -> void {
     auto cb = std::bind(&unicorn_cluster_t::subscriber_t::on_children, this, ph::_1);
     const auto& path = parent.config.path;
@@ -183,7 +184,7 @@ auto unicorn_cluster_t::subscriber_t::update_state(std::vector<std::string> node
             }
             auto& subscription = subscriptions[node];
             if(!subscription.endpoints.empty()) {
-                COCAINE_LOG_DEBUG(parent.log, "relinking node {}", node);
+                COCAINE_LOG_INFO(parent.log, "relinking node {}", node);
                 parent.locator.link_node(node, subscription.endpoints);
             } else {
                 COCAINE_LOG_INFO(parent.log, "subscribing on a new node {}", node);
@@ -219,6 +220,7 @@ auto unicorn_cluster_t::subscriber_t::on_node(std::string uuid, std::future<resp
             subscription.endpoints = std::move(endpoints);
             parent.locator.link_node(uuid, subscription.endpoints);
         } catch(const std::exception& e){
+            COCAINE_LOG_WARNING(parent.log, "failure during subscription on node {} - {}", uuid, e);
             subscriptions[uuid].endpoints.clear();
             timer.defer_retry();
         }
@@ -233,7 +235,7 @@ unicorn_cluster_t::unicorn_cluster_t(
     const cocaine::dynamic_t& args
 ):
     cluster_t(_context, _locator, mode, name, args),
-    log(_context.log("unicorn")),
+    log(_context.log("unicorn/cluster")),
     config(args),
     context(_context),
     locator(_locator),

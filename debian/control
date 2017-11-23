@@ -4,7 +4,7 @@ Priority: extra
 Maintainer: Andrey Sibiryov <kobolog@yandex-team.ru>
 Build-Depends: cmake,
  debhelper (>= 7.0.13),
- libcocaine-dev (>= 0.12.14.16),
+ libcocaine-dev (>= 0.12.14.21),
  libarchive-dev,
  uuid-dev,
  libcgroup-dev,
@@ -217,7 +217,7 @@ Description: Cocaine - Graphite Service (debug symbols)
 Package: libcocaine-plugin-unicorn3
 Architecture: any
 Section: libs
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core3 (>= 0.12.14.21)
 Description: Cocaine - Unicorn Service
  Unified configuration service for cocaine.
 
@@ -299,7 +299,7 @@ Description: Metrics proxy and sending service (cocaine plugin includes)
 
 Package: libcocaine-plugin-vicodyn3
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core3 (>= 0.12.14.16)
+Depends: ${shlibs:Depends}, ${misc:Depends}, libcocaine-core3 (>= 0.12.14.21)
 Description: Vicodyn gateway
  Vicodyn gateway
 

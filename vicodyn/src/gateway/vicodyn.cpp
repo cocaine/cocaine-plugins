@@ -8,6 +8,9 @@
 #include <cocaine/context/quote.hpp>
 #include <cocaine/context/signal.hpp>
 #include <cocaine/dynamic.hpp>
+#include <cocaine/dynamic/constructors/endpoint.hpp>
+#include <cocaine/dynamic/constructors/set.hpp>
+#include <cocaine/dynamic/constructors/shared_ptr.hpp>
 #include <cocaine/format/endpoint.hpp>
 #include <cocaine/format/exception.hpp>
 #include <cocaine/format/vector.hpp>
@@ -24,50 +27,6 @@
 #include <blackhole/logger.hpp>
 
 namespace cocaine {
-
-template<class T>
-struct dynamic_constructor<std::set<T>> {
-    static const bool enable = true;
-
-    static inline
-    void
-    convert(const std::set<T>& from, dynamic_t::value_t& to) {
-        dynamic_constructor<dynamic_t::array_t>::convert(dynamic_t::array_t(), to);
-
-        auto& array = boost::get<detail::dynamic::incomplete_wrapper<dynamic_t::array_t>>(to).get();
-        array.reserve(from.size());
-
-        for(const auto& e: from) {
-            array.emplace_back(e);
-        }
-    }
-};
-
-template<class T>
-struct dynamic_constructor<std::shared_ptr<T>> {
-    static const bool enable = true;
-
-    static inline
-    void
-    convert(const std::shared_ptr<T>& from, dynamic_t::value_t& to) {
-        if(from) {
-            dynamic_constructor<typename std::remove_const<T>::type>::convert(*from, to);
-        } else {
-            to = dynamic_t::null_t();
-        }
-    }
-};
-
-template<>
-struct dynamic_constructor<asio::ip::tcp::endpoint> {
-    static const bool enable = true;
-
-    static inline
-    void
-    convert(const asio::ip::tcp::endpoint& from, dynamic_t::value_t& to) {
-        to = boost::lexical_cast<std::string>(from);
-    }
-};
 
 template<>
 struct dynamic_constructor<vicodyn::peer_t> {
