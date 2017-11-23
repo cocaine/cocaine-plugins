@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.36) unstable; urgency=low
+
+  * Fixed: ODR violation.
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 23 Nov 2017 20:01:12 +0300
+
 cocaine-plugins (0.12.14.35) unstable; urgency=low
 
   * Added: named lock for unicorn with extra data.
