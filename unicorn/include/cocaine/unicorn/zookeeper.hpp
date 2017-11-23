@@ -15,7 +15,7 @@
 
 #pragma once
 
-#include "cocaine/api/unicorn.hpp"
+#include "cocaine/api/v15/unicorn.hpp"
 
 #include "cocaine/zookeeper/connection.hpp"
 
@@ -24,9 +24,7 @@
 namespace cocaine {
 namespace unicorn {
 
-class zookeeper_t :
-    public api::unicorn_t
-{
+class zookeeper_t : public api::v15::unicorn_t {
     cocaine::context_t& context;
     std::unique_ptr<api::executor_t> executor;
     const std::string name;
@@ -67,6 +65,8 @@ public:
     auto increment(callback::increment callback, const path_t& path, const value_t& value) -> scope_ptr override;
 
     auto lock(callback::lock callback, const path_t& path) -> scope_ptr override;
+
+    auto named_lock(callback::lock callback, const path_t& path, const value_t& value) -> scope_ptr override;
 
 private:
     template<class Action, class Callback, class... Args>

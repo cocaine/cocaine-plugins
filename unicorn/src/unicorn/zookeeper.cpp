@@ -497,12 +497,12 @@ private:
     uint64_t depth;
 
 public:
-    lock_t(callback::lock wrapped, zookeeper_t& parent, path_t folder) :
+    lock_t(callback::lock wrapped, zookeeper_t& parent, path_t folder, value_t value) :
         safe(std::make_shared<lock_scope_t>(), std::move(wrapped)),
         parent(parent),
         folder(std::move(folder)),
         path(this->folder + "/lock"),
-        value(time(nullptr)),
+        value(std::move(value)),
         depth(0)
     {}
 
@@ -612,7 +612,7 @@ auto zookeeper_t::run_command(Callback callback, Args&& ...args) -> scope_ptr {
 }
 
 zookeeper_t::zookeeper_t(cocaine::context_t& _context, const std::string& _name, const dynamic_t& args) :
-    api::unicorn_t(_context, name, args),
+    api::v15::unicorn_t(_context, name, args),
     context(_context),
     executor(new cocaine::executor::owning_asio_t()),
     name(_name),
@@ -653,7 +653,11 @@ auto zookeeper_t::increment(callback::increment callback, const path_t& path, co
 }
 
 auto zookeeper_t::lock(callback::lock callback, const path_t& path) -> scope_ptr {
-    return run_command<lock_t>(std::move(callback), path);
+    return run_command<lock_t>(std::move(callback), path, value_t(time(nullptr)));
+}
+
+auto zookeeper_t::named_lock(callback::lock callback, const path_t& path, const value_t& value) -> scope_ptr {
+    return run_command<lock_t>(std::move(callback), path, value);
 }
 
 }}

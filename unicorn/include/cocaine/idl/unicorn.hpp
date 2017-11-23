@@ -39,6 +39,7 @@ struct unicorn_final_tag;
 * "lock" moves protocol to locked_tag which also controls lifetime of the lock.
 * It has only unlock method leading to terminal transition.
 */
+
 struct unicorn {
     struct create {
         typedef unicorn_tag tag;
@@ -252,6 +253,25 @@ struct unicorn {
         >::tag upstream_type;
     };
 
+    struct named_lock {
+        typedef unicorn_tag tag;
+
+        static const char* alias() {
+            return "named_lock";
+        }
+
+        typedef unicorn_final_tag dispatch_type;
+
+        typedef boost::mpl::list<
+            cocaine::unicorn::path_t,
+            cocaine::unicorn::value_t
+        > argument_type;
+
+        typedef stream_of <
+            bool
+        >::tag upstream_type;
+    };
+
     struct close {
         typedef unicorn_final_tag tag;
         static const char* alias() {
@@ -278,7 +298,8 @@ struct protocol<unicorn_tag> {
         // alias for del method
         unicorn::remove,
         unicorn::increment,
-        unicorn::lock
+        unicorn::lock,
+        unicorn::named_lock
     > messages;
 
     typedef unicorn scope;

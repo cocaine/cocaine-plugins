@@ -51,7 +51,7 @@ public:
     typedef typename io::aux::protocol_impl<typename io::event_traits<Event>::upstream_type>::type protocol;
 
     unicorn_slot_t(const unicorn_service_t& service_,
-                   std::shared_ptr<api::unicorn_t> unicorn_,
+                   std::shared_ptr<api::v15::unicorn_t> unicorn_,
                    Method method_,
                    std::shared_ptr<api::authentication_t> auth_,
                    std::shared_ptr<api::authorization::unicorn_t> authorization_) :
@@ -176,7 +176,7 @@ private:
 
 private:
     const unicorn_service_t& service;
-    std::shared_ptr<api::unicorn_t> unicorn;
+    std::shared_ptr<api::v15::unicorn_t> unicorn;
     Method method;
 
     std::shared_ptr<api::authentication_t> auth;
@@ -205,18 +205,24 @@ struct response_of<io::unicorn::lock> {
     typedef streamed<typename result_of<io::unicorn::lock>::type> type;
 };
 
+template<>
+struct response_of<io::unicorn::named_lock> {
+    typedef streamed<typename result_of<io::unicorn::named_lock>::type> type;
+};
+
 template<typename Event>
 struct method_of {
     typedef boost::mpl::map<
-        boost::mpl::pair<io::unicorn::subscribe, decltype(&api::unicorn_t::subscribe)>,
-        boost::mpl::pair<io::unicorn::children_subscribe, decltype(&api::unicorn_t::children_subscribe)>,
-        boost::mpl::pair<io::unicorn::put, decltype(&api::unicorn_t::put)>,
-        boost::mpl::pair<io::unicorn::get, decltype(&api::unicorn_t::get)>,
-        boost::mpl::pair<io::unicorn::create, decltype(&api::unicorn_t::create_default)>,
-        boost::mpl::pair<io::unicorn::del, decltype(&api::unicorn_t::del)>,
-        boost::mpl::pair<io::unicorn::remove, decltype(&api::unicorn_t::del)>,
-        boost::mpl::pair<io::unicorn::increment, decltype(&api::unicorn_t::increment)>,
-        boost::mpl::pair<io::unicorn::lock, decltype(&api::unicorn_t::lock)>
+        boost::mpl::pair<io::unicorn::subscribe, decltype(&api::v15::unicorn_t::subscribe)>,
+        boost::mpl::pair<io::unicorn::children_subscribe, decltype(&api::v15::unicorn_t::children_subscribe)>,
+        boost::mpl::pair<io::unicorn::put, decltype(&api::v15::unicorn_t::put)>,
+        boost::mpl::pair<io::unicorn::get, decltype(&api::v15::unicorn_t::get)>,
+        boost::mpl::pair<io::unicorn::create, decltype(&api::v15::unicorn_t::create_default)>,
+        boost::mpl::pair<io::unicorn::del, decltype(&api::v15::unicorn_t::del)>,
+        boost::mpl::pair<io::unicorn::remove, decltype(&api::v15::unicorn_t::del)>,
+        boost::mpl::pair<io::unicorn::increment, decltype(&api::v15::unicorn_t::increment)>,
+        boost::mpl::pair<io::unicorn::lock, decltype(&api::v15::unicorn_t::lock)>,
+        boost::mpl::pair<io::unicorn::named_lock, decltype(&api::v15::unicorn_t::named_lock)>
     >::type mapping;
 
     typedef typename boost::mpl::at<mapping, Event>::type type;
@@ -231,7 +237,7 @@ using slot_of = unicorn_slot_t<
 
 struct register_slot_t {
     unicorn_service_t& dispatch;
-    std::shared_ptr<api::unicorn_t> unicorn;
+    std::shared_ptr<api::v15::unicorn_t> unicorn;
     std::shared_ptr<api::authentication_t> auth;
     std::shared_ptr<api::authorization::unicorn_t> authorization;
 
@@ -256,7 +262,7 @@ unicorn_service_t::unicorn_service_t(context_t& context, asio::io_service& asio_
     service_t(context, asio_, name_, args),
     dispatch<io::unicorn_tag>(name_),
     log(context.log("audit", {{"service", name()}})),
-    unicorn(api::unicorn(context, args.as_object().at("backend", "core").as_string()))
+    unicorn(api::v15::unicorn(context, args.as_object().at("backend", "core").as_string()))
 {
     typedef io::unicorn scope;
 
@@ -265,15 +271,16 @@ unicorn_service_t::unicorn_service_t(context_t& context, asio::io_service& asio_
 
     register_slot_t r{*this, unicorn, auth, authorization};
 
-    r.on<scope::subscribe>(&api::unicorn_t::subscribe);
-    r.on<scope::children_subscribe>(&api::unicorn_t::children_subscribe);
-    r.on<scope::put>(&api::unicorn_t::put);
-    r.on<scope::get>(&api::unicorn_t::get);
-    r.on<scope::create>(&api::unicorn_t::create_default);
-    r.on<scope::del>(&api::unicorn_t::del);
-    r.on<scope::remove>(&api::unicorn_t::del);
-    r.on<scope::increment>(&api::unicorn_t::increment);
-    r.on<scope::lock>(&api::unicorn_t::lock);
+    r.on<scope::subscribe>(&api::v15::unicorn_t::subscribe);
+    r.on<scope::children_subscribe>(&api::v15::unicorn_t::children_subscribe);
+    r.on<scope::put>(&api::v15::unicorn_t::put);
+    r.on<scope::get>(&api::v15::unicorn_t::get);
+    r.on<scope::create>(&api::v15::unicorn_t::create_default);
+    r.on<scope::del>(&api::v15::unicorn_t::del);
+    r.on<scope::remove>(&api::v15::unicorn_t::del);
+    r.on<scope::increment>(&api::v15::unicorn_t::increment);
+    r.on<scope::lock>(&api::v15::unicorn_t::lock);
+    r.on<scope::named_lock>(&api::v15::unicorn_t::named_lock);
 }
 
 unicorn_dispatch_t::unicorn_dispatch_t(const std::string& name_) :

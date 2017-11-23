@@ -68,7 +68,7 @@ public:
     {}
 
     operator bool() {
-        return stream;
+        return stream.is_initialized();
     }
 
     auto chunk(const hpack::headers_t& headers, std::string data) -> bool {

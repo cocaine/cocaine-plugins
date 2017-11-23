@@ -16,8 +16,8 @@
 #pragma once
 
 #include "cocaine/idl/unicorn.hpp"
+#include "cocaine/api/v15/unicorn.hpp"
 
-#include <cocaine/api/unicorn.hpp>
 #include <cocaine/api/service.hpp>
 #include <cocaine/rpc/dispatch.hpp>
 
@@ -45,7 +45,7 @@ public:
 private:
     std::shared_ptr<logging::logger_t> log;
 
-    std::shared_ptr<api::unicorn_t> unicorn;
+    std::shared_ptr<api::v15::unicorn_t> unicorn;
 };
 
 class unicorn_dispatch_t :
