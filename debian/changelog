@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.37) unstable; urgency=low
+
+  * Refactored: remove unicorn discovery useless and harmfull checks.
+
+ -- Anton Matveenko <antmat@me.com>  Tue, 28 Nov 2017 15:14:12 +0300
+
 cocaine-plugins (0.12.14.36) unstable; urgency=low
 
   * Fixed: ODR violation.
