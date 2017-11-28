@@ -213,7 +213,7 @@ auto unicorn_cluster_t::subscriber_t::on_node(std::string uuid, std::future<resp
             }
             subscription.endpoints = std::move(endpoints);
             parent.locator.link_node(uuid, subscription.endpoints);
-            COCAINE_LOG_INFO("linked node {}", uuid);
+            COCAINE_LOG_INFO(parent.log, "linked node {}", uuid);
         } catch(const std::exception& e){
             COCAINE_LOG_WARNING(parent.log, "failure during subscription on node {} - {}", uuid, e);
             subscriptions[uuid].endpoints.clear();
