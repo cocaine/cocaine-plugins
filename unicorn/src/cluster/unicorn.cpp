@@ -42,8 +42,7 @@ typedef api::unicorn_t::response response;
 
 unicorn_cluster_t::cfg_t::cfg_t(const dynamic_t& args) :
         path(args.as_object().at("path", "/cocaine/discovery").as_string()),
-        retry_interval(args.as_object().at("retry_interval", 1u).as_uint()),
-        check_interval(args.as_object().at("check_interval", 60u).as_uint())
+        retry_interval(args.as_object().at("retry_interval", 10u).as_uint())
 {}
 
 unicorn_cluster_t::timer_t::timer_t(unicorn_cluster_t& parent, std::function<void()> callback) :
@@ -67,10 +66,6 @@ auto unicorn_cluster_t::timer_t::defer_retry() -> void {
     defer(boost::posix_time::seconds(parent.config.retry_interval));
 }
 
-auto unicorn_cluster_t::timer_t::defer_check() -> void {
-    defer(boost::posix_time::seconds(parent.config.check_interval));
-}
-
 unicorn_cluster_t::announcer_t::announcer_t(unicorn_cluster_t& parent) :
         parent(parent),
         timer(parent, [=](){announce();}),
@@ -88,7 +83,6 @@ auto unicorn_cluster_t::announcer_t::announce() -> void {
     try {
         auto callback = std::bind(&announcer_t::on_set, this, ph::_1);
         scope = parent.unicorn->create(std::move(callback), path, endpoints, true, false);
-        timer.defer_check();
     } catch (const std::system_error& e) {
         COCAINE_LOG_WARNING(parent.log, "could not announce self in unicorn - {}", error::to_string(e));
         timer.defer_retry();
@@ -154,7 +148,6 @@ auto unicorn_cluster_t::subscriber_t::subscribe() -> void {
     const auto& path = parent.config.path;
     children_scope = parent.unicorn->children_subscribe(std::move(cb), path);
     COCAINE_LOG_INFO(parent.log, "subscribed for updates on path {} (may be prefixed)", path);
-    timer.defer_check();
 }
 
 auto unicorn_cluster_t::subscriber_t::on_children(std::future<response::children_subscribe> future) -> void {
@@ -174,6 +167,7 @@ auto unicorn_cluster_t::subscriber_t::update_state(std::vector<std::string> node
             if(!nodes_set.count(it->first)) {
                 parent.locator.drop_node(it->first);
                 it = subscriptions.erase(it);
+                COCAINE_LOG_INFO(parent.log, "dropped node {}", it->first);
             } else {
                 it++;
             }
@@ -219,6 +213,7 @@ auto unicorn_cluster_t::subscriber_t::on_node(std::string uuid, std::future<resp
             }
             subscription.endpoints = std::move(endpoints);
             parent.locator.link_node(uuid, subscription.endpoints);
+            COCAINE_LOG_INFO("linked node {}", uuid);
         } catch(const std::exception& e){
             COCAINE_LOG_WARNING(parent.log, "failure during subscription on node {} - {}", uuid, e);
             subscriptions[uuid].endpoints.clear();

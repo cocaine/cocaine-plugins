@@ -37,7 +37,6 @@ public:
 
         unicorn::path_t path;
         size_t retry_interval;
-        size_t check_interval;
     };
 
     class timer_t {
@@ -48,7 +47,6 @@ public:
     public:
         timer_t(unicorn_cluster_t& parent, std::function<void()> callback);
         auto defer_retry() -> void;
-        auto defer_check() -> void;
 
     private:
         auto defer(const boost::posix_time::time_duration& duration) -> void;
@@ -74,8 +72,6 @@ public:
         auto on_check(std::future<response::subscribe> future) -> void;
 
         auto set_and_check_endpoints() -> bool;
-
-        auto set_timer(const boost::posix_time::time_duration& duration) -> void;
 
         auto defer_announce_retry() -> void;
     };
