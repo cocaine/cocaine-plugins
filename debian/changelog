@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.14.38) unstable; urgency=low
+
+  * Fixed: dbg packages dependencies.
+  * Fixed: invalidated iterator dereference.
+
+ -- Anton Matveenko <antmat@me.com>  Mon, 04 Dec 2017 16:46:12 +0300
+
 cocaine-plugins (0.12.14.37) unstable; urgency=low
 
   * Refactored: remove unicorn discovery useless and harmfull checks.
