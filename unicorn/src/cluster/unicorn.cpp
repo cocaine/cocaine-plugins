@@ -165,9 +165,10 @@ auto unicorn_cluster_t::subscriber_t::update_state(std::vector<std::string> node
     subscriptions.apply([&](subscriptions_t& subscriptions) {
         for(auto it = subscriptions.begin(); it != subscriptions.end();) {
             if(!nodes_set.count(it->first)) {
-                parent.locator.drop_node(it->first);
+                auto uuid = it->first;
+                parent.locator.drop_node(uuid);
                 it = subscriptions.erase(it);
-                COCAINE_LOG_INFO(parent.log, "dropped node {}", it->first);
+                COCAINE_LOG_INFO(parent.log, "dropped node {}", uuid);
             } else {
                 it++;
             }
