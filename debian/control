@@ -269,7 +269,7 @@ Description: Storage and index support based on postgress (cocaine plugin)
 
 Package: libcocaine-plugin-postgres-dbg
 Architecture: any
-Depends: ${misc:Depends}
+Depends: ${misc:Depends}, libcocaine-plugin-postgres3 (= ${binary:Version})
 Description: Storage and index support based on postgress (cocaine plugin debug files)
  Storage and index support based on postgress.
 
@@ -287,7 +287,7 @@ Description: Metrics proxy and sending service (cocaine plugin)
 
 Package: libcocaine-plugin-metrics-dbg
 Architecture: any
-Depends: ${misc:Depends}
+Depends: ${misc:Depends}, libcocaine-plugin-metrics3 (= ${binary:Version})
 Description: Metrics proxy and sending service (cocaine plugin debug files)
  Service for serving current metrics via cocaine protocol and pushing them outside by timer.
 
