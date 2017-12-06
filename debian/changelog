@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.39) unstable; urgency=low
+
+  * Fixed: subscribe for own node always in unicorn discovery.
+
+ -- Anton Matveenko <antmat@me.com>  Wed, 06 Dec 2017 13:22:12 +0300
+
 cocaine-plugins (0.12.14.38) unstable; urgency=low
 
   * Fixed: dbg packages dependencies.
