@@ -158,7 +158,7 @@ auto watch_cb(zhandle_t* zh, int type, int state, const char* path, void* watch_
     });
     if(watcher) {
         std::string watched_path;
-        if(path){
+        if(type != ZOO_SESSION_EVENT && path){
             watched_path = path + c->cfg.prefix.size();
         }
         watcher->operator()({type, state, std::move(watched_path)});

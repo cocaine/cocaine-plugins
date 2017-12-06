@@ -114,23 +114,26 @@ auto unicorn_cluster_t::announcer_t::on_set(std::future<response::create> future
     try {
         future.get();
         COCAINE_LOG_INFO(parent.log, "announced self in unicorn");
-        auto cb = std::bind(&announcer_t::on_check, this, ph::_1);
-        scope = parent.unicorn->subscribe(std::move(cb), std::move(path));
     } catch (const std::system_error& e) {
-        if(e.code() == error::node_exists) {
-            COCAINE_LOG_INFO(parent.log, "announce checked");
+        if(e.code() != error::node_exists) {
+            COCAINE_LOG_ERROR(parent.log, "could not announce local services: {} ", error::to_string(e));
+            timer.defer_retry();
             return;
         }
-        COCAINE_LOG_ERROR(parent.log, "could not announce local services: {} ", error::to_string(e));
-        timer.defer_retry();
+        COCAINE_LOG_INFO(parent.log, "announce checked");
     }
+    auto cb = std::bind(&announcer_t::on_check, this, ph::_1);
+    scope = parent.unicorn->subscribe(std::move(cb), std::move(path));
 }
 
 auto unicorn_cluster_t::announcer_t::on_check(std::future<response::subscribe> future) -> void {
     try {
-        if (future.get().version() < 0) {
+        auto value = future.get();
+        if (value.version() < 0) {
             COCAINE_LOG_ERROR(parent.log, "announce disappeared, retrying");
             timer.defer_retry();
+        } else {
+            COCAINE_LOG_INFO(parent.log, "fetched announce - {}", value.value());
         }
     } catch (const std::system_error& e) {
         COCAINE_LOG_ERROR(parent.log, "announce disappeared: {}, retrying", error::to_string(e));
