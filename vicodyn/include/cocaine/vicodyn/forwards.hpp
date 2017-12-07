@@ -25,6 +25,7 @@ namespace cocaine {
 namespace vicodyn {
 
 class dispatch_t;
+class request_context_t;
 
 } // namespace vicodyn
 } // namespace cocaine

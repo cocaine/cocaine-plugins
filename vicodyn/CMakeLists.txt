@@ -6,7 +6,7 @@ ADD_LIBRARY(vicodyn SHARED
         src/api/vicodyn/balancer.cpp
         src/gateway/vicodyn.cpp
         src/module.cpp
-        src/vicodyn/access_log.cpp
+        src/vicodyn/request_context.cpp
         src/vicodyn/balancer/simple.cpp
         src/vicodyn/proxy.cpp
         src/vicodyn/peer.cpp

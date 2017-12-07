@@ -23,7 +23,8 @@ public:
                const std::string& app_name, const dynamic_t& conf, const dynamic_t::object_t& locator_extra);
 
     virtual
-    auto choose_peer(const hpack::headers_t& headers, const std::string& event) -> std::shared_ptr<cocaine::vicodyn::peer_t> = 0;
+    auto choose_peer(const std::shared_ptr<cocaine::vicodyn::request_context_t>& request_context,
+                     const hpack::headers_t& headers, const std::string& event) -> std::shared_ptr<cocaine::vicodyn::peer_t> = 0;
 
     virtual
     auto retry_count() -> size_t = 0;

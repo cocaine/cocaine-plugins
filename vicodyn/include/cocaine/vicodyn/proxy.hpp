@@ -31,9 +31,6 @@ public:
 
     auto size() -> size_t;
 
-    auto choose_peer(const hpack::headers_t& headers, const std::string& event)
-        -> std::shared_ptr<peer_t>;
-
 private:
     auto make_balancer(const dynamic_t& args, const dynamic_t::object_t& extra) -> api::vicodyn::balancer_ptr;
 

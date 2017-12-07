@@ -34,8 +34,8 @@ simple_t::simple_t(context_t& ctx, peers_t& peers, asio::io_service& loop, const
     COCAINE_LOG_INFO(logger, "created simple balancer for app {}", app_name);
 }
 
-auto simple_t::choose_peer(const hpack::headers_t& /*headers*/, const std::string& /*event*/)
-    -> std::shared_ptr<cocaine::vicodyn::peer_t>
+auto simple_t::choose_peer(const std::shared_ptr<request_context_t>& /*request_context*/, const hpack::headers_t& /*headers*/,
+                           const std::string& /*event*/) -> std::shared_ptr<cocaine::vicodyn::peer_t>
 {
     return peers.apply_shared([&](const peers_t::data_t& mapping) {
         auto apps_it = mapping.apps.find(app_name);
