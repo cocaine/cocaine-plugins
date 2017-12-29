@@ -64,7 +64,7 @@ public:
     auto
     start_app(const std::string& name, const std::string& profile, callback_type callback) -> void;
 
-    auto pause_app(const std::string& name) -> void;
+    auto pause_app(const std::string& name) -> deferred<void>;
 
     // TODO: Flags are bad!
     auto info(const std::string& name, io::node::info::flags_t flags) const -> dynamic_t;

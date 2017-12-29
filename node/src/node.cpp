@@ -367,9 +367,11 @@ node_t::start_app(const std::string& name, const std::string& profile, callback_
     });
 }
 
-void
-node_t::pause_app(const std::string& name) {
+auto
+node_t::pause_app(const std::string& name) -> deferred<void> {
     COCAINE_LOG_DEBUG(log, "processing `pause_app` request, app: '{}'", name);
+
+    auto d = deferred<void>();
 
     apps.apply([&](std::map<std::string, std::shared_ptr<node::app_t>>& apps) {
         auto it = apps.find(name);
@@ -379,8 +381,14 @@ node_t::pause_app(const std::string& name) {
                 cocaine::format("app '{}' is not running", name));
         }
 
-        apps.erase(it);
+        auto app = apps.erase(it)->second;
+        std::async(std::launch::async, [=]() mutable {
+            app.reset();
+            d.close();
+        });
     });
+
+    return d;
 }
 
 auto
