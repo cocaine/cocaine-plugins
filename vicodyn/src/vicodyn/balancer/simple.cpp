@@ -28,6 +28,7 @@ simple_t::simple_t(context_t& ctx, peers_t& peers, asio::io_service& loop, const
     peers(peers),
     logger(ctx.log(format("balancer/simple/{}", app_name))),
     args(args),
+    _retry_count(args.as_object().at("retry_count", 4u).as_uint()),
     app_name(app_name),
     x_cocaine_cluster(locator_extra.at("x-cocaine-cluster", "").as_string())
 {
@@ -45,7 +46,7 @@ auto simple_t::choose_peer(const std::shared_ptr<request_context_t>& /*request_c
         }
         auto& apps = apps_it->second;
         auto it = choose_random_if(mapping.peers.begin(), mapping.peers.end(), mapping.peers.size(),
-            [&](const peers_t::peers_data_t::value_type pair) -> bool {
+            [&](const peers_t::peers_data_t::value_type& pair) -> bool {
                 if(!pair.second->connected()) {
                     return false;
                 }
@@ -64,17 +65,17 @@ auto simple_t::choose_peer(const std::shared_ptr<request_context_t>& /*request_c
 }
 
 auto simple_t::retry_count() -> size_t {
-    return args.as_object().at("retry_count", 10u).as_uint();
+    return _retry_count;
 }
 
-auto simple_t::on_error(std::shared_ptr<peer_t> peer, std::error_code ec, const std::string& msg) -> void {
+auto simple_t::on_error(const std::shared_ptr<peer_t>& peer, std::error_code ec, const std::string& msg) -> void {
     COCAINE_LOG_WARNING(logger, "peer errored - {}({})", ec.message(), msg);
     if(ec.category() == error::node_category() && ec.value() == error::node_errors::not_running) {
         peers.erase_app(peer->uuid(), app_name);
     }
 }
 
-auto simple_t::is_recoverable(std::shared_ptr<peer_t>, std::error_code ec) -> bool {
+auto simple_t::is_recoverable(const std::shared_ptr<peer_t>&, std::error_code ec) -> bool {
     bool queue_is_full = (ec.category() == error::overseer_category() && ec.value() == error::queue_is_full);
     bool unavailable = (ec.category() == error::node_category() && ec.value() == error::not_running);
     bool disconnected = (ec.category() == error::dispatch_category() && ec.value() == error::not_connected);

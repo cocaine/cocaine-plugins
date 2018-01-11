@@ -17,6 +17,7 @@ class simple_t: public api::vicodyn::balancer_t {
     peers_t& peers;
     std::unique_ptr<logging::logger_t> logger;
     dynamic_t args;
+    size_t _retry_count;
     std::string app_name;
     std::string x_cocaine_cluster;
 
@@ -29,9 +30,9 @@ public:
 
     auto retry_count() -> size_t override;
 
-    auto on_error(std::shared_ptr<peer_t>, std::error_code, const std::string&) -> void override;
+    auto on_error(const std::shared_ptr<peer_t>&, std::error_code, const std::string&) -> void override;
 
-    auto is_recoverable(std::shared_ptr<peer_t>, std::error_code ec) -> bool override;
+    auto is_recoverable(const std::shared_ptr<peer_t>&, std::error_code ec) -> bool override;
 
 };
 

@@ -118,9 +118,10 @@ auto peer_t::connect() -> void {
         try {
             COCAINE_LOG_INFO(logger, "suceesfully connected peer {} to {}", uuid(), endpoints());
             auto ptr = std::make_unique<asio::ip::tcp::socket>(std::move(*socket));
+            auto new_session = context.engine().attach(std::move(ptr), nullptr);
             session.apply([&](std::shared_ptr<session_t>& session) {
                 connecting = false;
-                session = context.engine().attach(std::move(ptr), nullptr);
+                session = std::move(new_session);
                 d.last_active = std::chrono::system_clock::now();
             });
         } catch(const std::exception& e) {
@@ -206,6 +207,7 @@ auto peers_t::erase_app(const std::string& uuid, const std::string& name) -> voi
 auto peers_t::erase(const std::string& uuid) -> void {
     erase_peer(uuid);
     apply([&](data_t& data) {
+        data.peers.erase(uuid);
         for(auto pair : data.apps) {
             pair.second.erase(uuid);
         }

@@ -8,7 +8,8 @@ namespace vicodyn {
 request_context_t::request_context_t(blackhole::logger_t& logger) :
     logger(logger),
     start_time(clock_t::now()),
-    closed(ATOMIC_FLAG_INIT)
+    closed(ATOMIC_FLAG_INIT),
+    retry_counter(0)
 {}
 
 request_context_t::~request_context_t() {
@@ -67,12 +68,13 @@ auto request_context_t::write(int level, const std::string& msg) -> void {
     for (const auto& peer: *sync_peers) {
         view.emplace_back("peer", peer->uuid());
     }
+    view.emplace_back("retry_cnt", retry_counter);
     for (const auto& checkpoint: *sync_checkpoints) {
         auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(checkpoint.when - start_time);
         view.emplace_back(blackhole::string_view(checkpoint.message, checkpoint.msg_len), ms.count());
     }
 
-    COCAINE_LOG(logger, logging::priorities(level), msg);
+    COCAINE_LOG(logger, logging::priorities(level), msg, view);
 }
 
 } // namespace vicodyn

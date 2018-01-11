@@ -30,10 +30,10 @@ public:
     auto retry_count() -> size_t = 0;
 
     virtual
-    auto on_error(std::shared_ptr<cocaine::vicodyn::peer_t> peer, std::error_code ec, const std::string& msg) -> void = 0;
+    auto on_error(const std::shared_ptr<cocaine::vicodyn::peer_t>& peer, std::error_code ec, const std::string& msg) -> void = 0;
 
     virtual
-    auto is_recoverable(std::shared_ptr<cocaine::vicodyn::peer_t> peer, std::error_code ec) -> bool = 0;
+    auto is_recoverable(const std::shared_ptr<cocaine::vicodyn::peer_t>& peer, std::error_code ec) -> bool = 0;
 };
 
 } // namespace peer

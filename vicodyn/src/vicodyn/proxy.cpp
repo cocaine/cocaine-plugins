@@ -282,6 +282,7 @@ public:
                 request_context->add_checkpoint("recoverable_error");
                 retry();
             } catch(const std::system_error& e) {
+                COCAINE_LOG_WARNING(logger, "failed to retry enqueue - {}", e.what());
                 backward_stream.error({}, e.code(), e.what());
                 request_context->add_checkpoint("after_recoverable_error_failed_retry");
             }
@@ -380,6 +381,7 @@ private:
         }
     }
 
+    //    TODO: mutexes are bad here, we need to find a way not to block on retries
     auto retry_unsafe() -> void {
         COCAINE_LOG_INFO(logger, "retrying");
         request_context->register_retry();
@@ -452,7 +454,7 @@ auto proxy_t::empty() -> bool {
 }
 
 auto proxy_t::size() -> size_t {
-    return peers.apply([&](const peers_t::data_t& data) -> size_t {
+    return peers.apply_shared([&](const peers_t::data_t& data) -> size_t {
         auto it = data.apps.find(app_name);
         if(it == data.apps.end()) {
             return 0u;
