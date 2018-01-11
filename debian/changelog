@@ -1,3 +1,10 @@
+cocaine-plugins (0.12.14.42) unstable; urgency=low
+
+  * Refactored: improve vicodyn perf.
+  * Fixed: retries.
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 11 Jan 2018 15:30:12 +0300
+
 cocaine-plugins (0.12.14.41) unstable; urgency=low
 
   * Fix: launch app stop as async operation.
