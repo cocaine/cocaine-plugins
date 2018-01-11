@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.43) unstable; urgency=low
+
+  * Fixed: logical bug in safe_stream_t.
+
+ -- Anton Matveenko <antmat@me.com>  Thu, 11 Jan 2018 16:05:12 +0300
+
 cocaine-plugins (0.12.14.42) unstable; urgency=low
 
   * Refactored: improve vicodyn perf.
