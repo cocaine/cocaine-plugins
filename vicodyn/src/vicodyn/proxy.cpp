@@ -82,18 +82,18 @@ public:
     auto close(const hpack::headers_t& headers) -> bool {
         if(!closed && stream) {
             stream->send<protocol::choke>(headers);
+            closed = true;
             return true;
         }
-        closed = true;
         return false;
     }
 
     auto error(const hpack::headers_t& headers, std::error_code ec, std::string msg) -> bool {
         if(!closed && stream) {
             stream->send<protocol::error>(headers, std::move(ec), std::move(msg));
+            closed = true;
             return true;
         }
-        closed = true;
         return false;
     }
 };
