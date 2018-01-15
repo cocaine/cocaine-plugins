@@ -64,7 +64,6 @@ struct spooled_dispatch_t: public dispatch<io::isolate_spooled_tag> {
             COCAINE_LOG_INFO(log, "spool::cancel");
         });
     }
-
 };
 
 struct spawned_dispatch_t: public dispatch<io::isolate_spawned_tag> {
@@ -172,14 +171,15 @@ public:
                 0;
 
             response[uuid] = {{
-                "mock_isolate", {
-                    {"cpu", static_cast<std::uint64_t>(cpu % 100)},
-                    {"sys_time", ru.ru_stime.tv_sec},
-                    {"user_time", ru.ru_utime.tv_sec},
-                    {"rss", ru.ru_maxrss},
-                    {"ioread", ru.ru_inblock},
-                    {"iowrite", ru.ru_oublock},
-            }}};
+                {"cpu", static_cast<std::uint64_t>(cpu % 100)},
+                {"sys_time", ru.ru_stime.tv_sec},
+                {"user_time", ru.ru_utime.tv_sec},
+                {"rss", ru.ru_maxrss},
+                {"ioread", ru.ru_inblock},
+                {"iowrite", ru.ru_oublock},
+                {"net_tx_bytes", ru.ru_nvcsw},
+                {"net_rx_bytes", ru.ru_nivcsw},
+            }};
         }
 
         upstream.send<protocol::value>(response);

@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <memory>
+#include <unordered_map>
 
 #include <blackhole/logger.hpp>
 #include <blackhole/scope/holder.hpp>
@@ -29,9 +30,10 @@ namespace node {
 class engine_t;
 
 namespace conf {
-    constexpr auto metrics_poll_interval_s = 3u;
+    constexpr auto metrics_poll_interval_s = 5u;
 }
 
+// TODO: Refactor: make small names.
 enum class aggregate_t : unsigned {
         instant,   // treat value `as is`
         aggregate, // isolate returns accumalated value on each request (ioread, etc)
@@ -44,17 +46,36 @@ struct worker_metrics_t {
     struct counter_metric_t {
         using value_type = std::uint64_t;
 
-        aggregate_t type;
+        aggregate_t aggregation;
         metrics::shared_metric<std::atomic<value_type>> value;
         value_type delta; // if is_accumulated = true then delta = value - prev(value), used for app-wide aggration
     };
 
-    using clock_type = std::chrono::system_clock;
-    using counters_table_type = std::unordered_map<std::string, counter_metric_t>;
-    using counters_record_type = counters_table_type::value_type;
+    struct network_metrics_t {
+        using value_type = std::uint64_t;
 
-    counters_table_type common_counters;
+        metrics::shared_metric<std::atomic<value_type>> rx_bytes;
+        metrics::shared_metric<std::atomic<value_type>> tx_bytes;
+    };
+
+    using clock_type = std::chrono::system_clock;
+    using gauge_repr_type = double;
+    using gauge_metrics_type = metrics::shared_metric<metrics::gauge<gauge_repr_type>>;
+
+    std::unordered_map<std::string, counter_metric_t> common_counters;
+    std::unordered_map<std::string, gauge_metrics_type> gauges;
+    std::unordered_map<std::string, network_metrics_t> network;
+
+    //
+    // Context ref is needed to register network metrics on demand.
+    //
+    // TODO: Danger zone! Ensure that `worker_metrics_t` will not outlive
+    //       context someway.
+    //
+    context_t& ctx;
+
     clock_type::time_point update_stamp;
+    std::string name_prefix;
 
     worker_metrics_t(context_t& ctx, const std::string& name_prefix);
     worker_metrics_t(context_t& ctx, const std::string& app_name, const std::string& id);
@@ -64,19 +85,41 @@ struct worker_metrics_t {
 
     auto
     assign(metrics_aggregate_proxy_t&& init) -> void;
+
+    template<typename Integral>
+    auto
+    update_counter(const std::string& name, const aggregate_t desired, const Integral value = 0) -> void;
+
+    template<typename Fn>
+    auto
+    update_gauge(const std::string& name, Fn&& fun) -> void;
 };
 
 struct metrics_aggregate_proxy_t {
     // see worker_metrics_t::counter_metric_t
     struct counter_metric_t {
         using value_type = worker_metrics_t::counter_metric_t::value_type;
+
         // TODO: union?
         aggregate_t type;
         value_type values; // summation of worker_metrics values
         value_type deltas; // summation of worker_metrics deltas
     };
 
+    struct gauge_avg_t {
+        using value_type = worker_metrics_t::gauge_repr_type;
+
+        value_type value;
+        int count;
+
+        auto add(const value_type value) -> void {
+            this->value += value;
+            ++this->count;
+        }
+    };
+
     std::unordered_map<std::string, counter_metric_t> common_counters;
+    std::unordered_map<std::string, gauge_avg_t> gauges;
 
     auto
     operator+(const worker_metrics_t& worker_metrics) -> metrics_aggregate_proxy_t&;

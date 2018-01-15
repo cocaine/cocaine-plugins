@@ -89,11 +89,8 @@ struct isolate {
             std::map<
                 std::string, // worker id
                 std::map<
-                    std::string, // isolate
-                    std::map<
-                        std::string, // metric name
-                        dynamic_t
-                    >
+                    std::string, // metric name
+                    dynamic_t
                 >
             >;
 
