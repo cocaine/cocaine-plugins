@@ -1,3 +1,9 @@
+cocaine-plugins (0.12.14.44) unstable; urgency=low
+
+  * Fixed: Proper locator extra in vicodyn proxy.
+
+ -- Anton Matveenko <antmat@me.com>  Wed, 17 Jan 2018 11:50:12 +0300
+
 cocaine-plugins (0.12.14.43) unstable; urgency=low
 
   * Fixed: logical bug in safe_stream_t.
