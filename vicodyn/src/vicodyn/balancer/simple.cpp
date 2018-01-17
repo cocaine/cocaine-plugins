@@ -53,7 +53,7 @@ auto simple_t::choose_peer(const std::shared_ptr<request_context_t>& /*request_c
                 if(x_cocaine_cluster != pair.second->x_cocaine_cluster()) {
                     return false;
                 }
-                return apps.count(pair.second->uuid());
+                return apps.count(pair.second->uuid()) > 0;
             }
         );
         if(it != mapping.peers.end()) {

@@ -190,7 +190,7 @@ auto vicodyn_t::consume(const std::string& uuid,
             peers.register_app(uuid, name);
             auto it = mapping.find(name);
             if(it == mapping.end()) {
-                auto proxy = std::make_unique<vicodyn::proxy_t>(context, executor.asio(), peers, "virtual::" + name, args, extra);
+                auto proxy = std::make_unique<vicodyn::proxy_t>(context, executor.asio(), peers, "virtual::" + name, args, locator_extra);
                 auto& proxy_ref = *proxy;
                 auto actor = std::make_unique<tcp_actor_t>(context, std::move(proxy));
                 actor->run();
